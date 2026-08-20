@@ -8,7 +8,7 @@ namespace Jde::DB{
 	struct ΓDB SelectClause final{
 		SelectClause()=default;
 		SelectClause( sp<Column> c )ι;
-		SelectClause( const View& t, str alias, const vector<string>& cols )ι;
+		SelectClause( const View& t, str alias, const vector<string>& cols )ε;
 		SelectClause( AliasCol aliasCol )ι;
 		SelectClause( const vector<sp<Column>>& cols, const string& alias={} )ι;
 		SelectClause( const Object& obj )ι:Columns{obj}{};

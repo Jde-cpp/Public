@@ -1,4 +1,4 @@
-#include "SchemaDdl.h"
+﻿#include "SchemaDdl.h"
 #include <jde/fwk/io/file.h>
 #include "TableDdl.h"
 #include <jde/db/DBException.h>
@@ -29,7 +29,6 @@ namespace Jde::DB{
 
 	Ω abbrevName( sv schemaName )ι->string;
 	Ω exists( const DBSchema& config )ι->bool;
-	α GetFlagsData( const jobject& j )ε->flat_map<uint,Value>;
 	α UniqueIndexName( const Index& index, sv tableName, const DB::Syntax& syntax, const vector<Index>& indexes )ε->string;
 
 	α ConfigurationJson( const AppSchema& config )ε->const jobject{
@@ -171,7 +170,7 @@ namespace Jde::DB{
 			let stem = fileName.stem().string();
 			let procViewName = stem.substr( stdPrefix.size() );
 			let dbName = prefix+procViewName;
-			if( Procs.find(dbName)!=Procs.end() || Tables().find(procViewName)!=Tables().end() )
+			if( Tables().find(dbName)!=Tables().end() )
 				return;
 			let text = IO::Load( scriptFile );
 			TRACE( "Executing '{}'", scriptFile.string() );
@@ -232,7 +231,7 @@ namespace Jde::DB{
 				let fqTableName = syntax.QualifiedName( schemaName, dbTable->DBName );
 				let fqSqlTableName = syntax.QualifiedName( schemaName, dbTable->SqlName() );
 				ds.ExecuteSync( {index.Create(name, fqTableName, fqSqlTableName, syntax)} );
-				dbIndexes.push_back( Index{name, tableName, index} );
+				dbIndexes.push_back( Index{name, dbTable->DBName, index} );
 				INFO( "Created index '{}.{}'.", table->DBName, name );
 			}
 			//DdlInsertProcName is empty when there is no server object to create - !HasProcs (sqlite) registers a
@@ -240,12 +239,13 @@ namespace Jde::DB{
 			if( auto procName = table->HasCustomInsertProc ? string{} : table->DdlInsertProcName(); procName.size() ){
 				if( let index = procName.find_first_of('.'); index<procName.size()-1 )
 					procName = procName.substr( index+1 );
-				if( Procs.find(procName)!=Procs.end() )
-						continue;
-
+				let existed = Procs.find( procName )!=Procs.end();
+				if( let drop = syntax.DropProcSql( Ƒ("{}.{}", schemaName, syntax.EscapeDdl(procName)) ); existed && drop.size() )
+					ds.ExecuteSync( {drop} );
 				ds.ExecuteSync( {dbTable->InsertProcCreateStatement(*table)} );
-				Procs.emplace( procName, Procedure{procName} );
-				INFO( "Created proc '{}'.", table->InsertProcName() );
+				if( !existed )
+					Procs.emplace( procName, Procedure{procName} );
+				INFO( "{} proc '{}'.", existed ? "Refreshed"sv : "Created"sv, table->InsertProcName() );
 			}
 		}
 		for( let& [name, view] : config.Views ){
@@ -304,8 +304,8 @@ namespace Jde::DB{
 	α SchemaDdl::Drop( const AppSchema& config )ε->void{
 		if( exists(*config.DBSchema) ){
 			// if catalogs, would have dropped catalog
-			//if( !config.DS()->Syntax().SchemaDropsObjects() )
-			//	DropObjects( config );
+			//C10: a commented-out SchemaDropsObjects() guard stood here; the virtual is gone with it.  Both dialects that
+			//overrode it answered true, so the guard would have skipped DropObjects() on every backend that has schemas.
 			let catalogName = config.DS()->CatalogName();
 			config.DS()->ExecuteSync( {Ƒ("DROP SCHEMA {}", config.DBSchema->Name)} );
 		}
@@ -342,24 +342,11 @@ namespace Jde::DB{
 		}
 	}
 
-	α GetFlagsData( const jobject& j )ε->flat_map<uint,Value>{
-		flat_map<uint,Value> flagsData;
-		if( auto kv = j.find("flagsData"); kv!=j.end() ){
-			uint i=0;
-			for( let& col : kv->value().as_array() ){
-				flagsData.emplace( i==0 ? 0 : 1 << (i-1), Value{string{col.as_string()}} );
-				++i;
-			}
-		}
-		return flagsData;
-	}
-
 	α UniqueIndexName( const DB::Index& index, sv tableName, const DB::Syntax& syntax, const vector<Index>& indexes )ε->string{
 		let baseName = syntax.IndexName( tableName, index.Name ); //dialect owns the composition - schema-wide namespaces (sqlite) qualify with the table.
 		auto indexName = baseName;
-		bool checkOnlyTable = !index.PrimaryKey && !syntax.UniqueIndexNames();
 		for( uint i=2; ; indexName = Ƒ( "{}{}", baseName, i++ ) ){
-			if( find_if(indexes, [&](let& x){ return ToIV(x.Name)==ToIV(indexName) && (!checkOnlyTable || index.TableName==x.TableName);})==indexes.end() )
+			if( find_if(indexes, [&](let& x){ return ToIV(x.Name)==ToIV(indexName);})==indexes.end() )
 				break;
 		}
 		return indexName;

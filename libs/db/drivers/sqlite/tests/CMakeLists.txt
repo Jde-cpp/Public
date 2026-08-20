@@ -8,6 +8,8 @@ message( ${targetName} )
 
 find_package( GTest REQUIRED )
 find_package( Threads REQUIRED )
+list( APPEND CMAKE_PREFIX_PATH ${CMAKE_INSTALL_PREFIX}/sqlite ) #as ../src does - see its CMakeLists.
+find_package( SQLite3 REQUIRED )
 
 if( NOT WIN32 )
 	if( NOT CMAKE_BUILD_TYPE STREQUAL "Debug" )
@@ -19,10 +21,13 @@ endif()
 add_executable( ${targetName} )
 compileOptions( ${targetName} )
 file( GLOB sources *.cpp )
-target_sources( ${targetName} PRIVATE ${sources} )
+#SqliteProcs/SqliteRow are compiled in, not linked: the driver is loaded at runtime, so the registry inside it is
+#unreachable from here.  This gives the tests their own instance of it - isolated from the driver's, which is what
+#lets ProcRegistryTests register throwaway names without disturbing the real twins.
+target_sources( ${targetName} PRIVATE ${sources} ${CMAKE_CURRENT_LIST_DIR}/../src/SqliteProcs.cpp ${CMAKE_CURRENT_LIST_DIR}/../src/SqliteRow.cpp )
 target_compile_definitions( ${targetName} PRIVATE TESTS JDE_SQLITE_EXPORTS )
 sqliteProcDependencies( ${targetName} Jde.DB.Sqlite.AppServer Jde.DB.Sqlite.OpcServer Jde.DB.Sqlite.OpcGateway )
-target_link_libraries( ${targetName} GTest::gtest Threads::Threads )
+target_link_libraries( ${targetName} GTest::gtest Threads::Threads SQLite::SQLite3 )
 target_link_libraries( ${targetName} Jde.Access Jde.DB Jde )
 
 if( NOT WIN32 )

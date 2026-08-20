@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <jde/db/exports.h>
 
 namespace Jde::Access{ struct IAcl; }
@@ -25,7 +25,6 @@ namespace Jde::DB{
 		α GetView( str name, SRCE )ε->const View&;
 		α GetViewPtr( str name, SRCE )ε->sp<View>;
 
-		α FindDefTable( const Table& t1, const Table& t2 )Ι->sp<Table>;
 		α ObjectPrefix()Ι->string;
 		α DBName( str objectName )Ι->string;
 

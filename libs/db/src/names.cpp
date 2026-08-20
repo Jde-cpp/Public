@@ -1,4 +1,4 @@
-#include <jde/db/names.h>
+﻿#include <jde/db/names.h>
 
 #define let const auto
 namespace Jde::DB{
@@ -18,21 +18,19 @@ namespace Jde::DB{
 		return sqlName;
 	}
 	α Names::ToJson( str schemaName )ι->string{
-		std::ostringstream j;
+		string y; y.reserve( schemaName.size() );
 		bool upper = false;
 		for( let ch : schemaName ){
 			if( ch=='_' )
 				upper = true;
 			else if( upper ){
-				j << (char)std::toupper( ch );
+				y += (char)std::toupper( ch );
 				upper = false;
 			}
-			else if( j.tellp()==0 )
-				j << (char)tolower( ch );
 			else
-				j << ch;
+				y += y.empty() ? (char)tolower( ch ) : ch;
 		}
-		return j.str();
+		return y;
 	}
 
 	α Names::ToSingular( sv plural )ι->string{

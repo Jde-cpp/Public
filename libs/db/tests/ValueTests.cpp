@@ -1,5 +1,8 @@
 #include <gtest/gtest.h>
 #include <jde/db/Value.h>
+#include <jde/fwk/chrono.h> //Chrono::ToTimePoint, for the DateTime expectation.
+
+#define let const auto
 
 namespace Jde::DB::Tests{
 	//#22: Value::operator=(uint) must return Value& (was `auto` -> deduced Value, i.e. a by-value copy).
@@ -7,6 +10,71 @@ namespace Jde::DB::Tests{
 		static_assert( std::is_same_v<decltype(std::declval<Value&>() = uint{5}), Value&>, "operator=(uint) must return Value&, not a copy." );
 		Value v; v = uint{7};
 		EXPECT_EQ( v.ToUInt(), 7u );
+	}
+
+	//#34: every `type:` string common-meta.libsonnet exports has to resolve - an unmapped one silently becomes
+	//EType::None, and ColumnDdl then emits a column with no type at all ("x  not null"): a syntax error on MySQL, a
+	//typeless BLOB-affinity column on sqlite.  int16/smallFloat/blob were the three that did not.
+	//#58: Value(EType, const jvalue&) is the path every QL insert/update/filter takes, and had no coverage at all - which
+	//is how #3 (DateTime arriving as a string) went unnoticed.  One case per branch of fromJson, keyed on the EValue the
+	//alternative ends up as, since that is what the drivers bind on.
+	TEST( ValueTests, FromJsonEveryEType ){
+		using enum EType;
+		let alt = []( EType type, const jvalue& j ){ return Value{type, j, SRCE_CUR}.Type(); };
+
+		for( let& type : {VarChar, VarWChar, NText, Text, Uri} )
+			EXPECT_EQ( alt(type, jvalue{"x"}), EValue::String ) << (uint)type;
+		EXPECT_EQ( alt(Bit, jvalue{true}), EValue::Bool );
+		EXPECT_EQ( alt(Int8, jvalue{-3}), EValue::Int8 );
+		for( let& type : {Int16, Int} )
+			EXPECT_EQ( alt(type, jvalue{-5}), EValue::Int32 ) << (uint)type;
+		EXPECT_EQ( alt(Long, jvalue{-6}), EValue::Int64 );
+		//The two narrow unsigned widths land on *different* alternatives, and neither picks a narrow one: the variant has
+		//no uint8/uint16 member, so each resolves by what its typedef is.  uint8 is unsigned char and reaches `int`;
+		//uint16 is uint_fast16_t, which is 32-bit here, so it reaches uint32_t.  Both are value-preserving and every
+		//driver binds them as integers, so this is recorded rather than reported - but it is not by design.
+		EXPECT_EQ( alt(UInt8, jvalue{7}), EValue::Int32 );
+		EXPECT_EQ( alt(UInt16, jvalue{8}), EValue::UInt32 );
+		EXPECT_EQ( alt(UInt, jvalue{9}), EValue::UInt32 );
+		EXPECT_EQ( alt(ULong, jvalue{10}), EValue::UInt64 );
+		for( let& type : {SmallFloat, Float, Decimal, Numeric, Money} )
+			EXPECT_EQ( alt(type, jvalue{1.5}), EValue::Double ) << (uint)type;
+
+		//#3: an ISO string must become a time point, not stay a string - the drivers bind Time as a datetime and a
+		//String as text, so this decides whether the column round-trips at all.
+		for( let& type : {DateTime, SmallDateTime} ){
+			EXPECT_EQ( alt(type, jvalue{"2026-08-01T00:00:00Z"}), EValue::Time ) << (uint)type;
+			EXPECT_EQ( alt(type, jvalue{"$now"}), EValue::String ) << (uint)type; //the one string that survives - the syntax layer turns it into the dialect's now().
+		}
+		EXPECT_EQ( (Value{DateTime, jvalue{"2026-08-01T00:00:00Z"}, SRCE_CUR}.get_time()), Chrono::ToTimePoint("2026-08-01T00:00:00Z", SRCE_CUR) ); //not just the alternative - the value survives the trip.
+
+		//a json null is Null whatever the column says, before the switch is reached.
+		for( let& type : {VarChar, Int, DateTime, Bit} )
+			EXPECT_EQ( alt(type, jvalue{}), EValue::Null ) << (uint)type;
+
+		//the unimplemented families report rather than yielding something wrong.
+		for( let& type : {Binary, VarBinary, Guid, Cursor, RefCursor, Image, Blob, TimeSpan, None} )
+			EXPECT_THROW( (Value{type, jvalue{"x"}, SRCE_CUR}), Exception ) << (uint)type;
+		for( let& type : {Char, WChar} )
+			EXPECT_THROW( (Value{type, jvalue{"x"}, SRCE_CUR}), Exception ) << (uint)type;
+	}
+
+	TEST( ToTypeTests, CommonMetaNamesMap ){
+		using enum EType;
+		const std::pair<sv,EType> exported[]{ //`types:` in libs/db/config/common-meta.libsonnet, in its own order.
+			{"Binary",Binary}, {"Bit",Bit}, {"Blob",Blob}, {"Char",Char}, {"DateTime",DateTime}, {"Decimal",Decimal},
+			{"Float",Float}, {"Guid",Guid}, {"Image",Image}, {"Int",Int}, {"Int8",Int8}, {"Int16",Int16}, {"Long",Long},
+			{"Money",Money}, {"NText",NText}, {"Numeric",Numeric}, {"SmallDateTime",SmallDateTime},
+			{"SmallFloat",SmallFloat}, {"Text",Text}, {"UInt",UInt}, {"UInt8",UInt8}, {"UInt16",UInt16}, {"ULong",ULong},
+			{"VarBinary",VarBinary}, {"Varchar",VarChar} };
+		for( const auto& [name,expected] : exported )
+			EXPECT_EQ( ToType(name), expected ) << name; //ToType is case-insensitive (Str::iv), so the exported casing is what matters.
+
+		//The four common-meta also exports that deliberately stay unmapped: Cursor/RefCursor are proc constructs rather
+		//than column types, TimeSpan has no SQL spelling here, and TChar has no EType at all.  Mapping them would only
+		//move the failure into Syntax::ToString, which has no branch for any of them.  The WARN is the guard.
+		for( const sv name : {"Cursor"sv, "RefCursor"sv, "TimeSpan"sv, "TChar"sv} )
+			EXPECT_EQ( ToType(name), None ) << name;
 	}
 
 	TEST( ValueTests, Equality ){

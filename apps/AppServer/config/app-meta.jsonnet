@@ -29,9 +29,9 @@ local common = import 'common-meta.libsonnet';
 		instances:{
 			columns: {
 				instanceId: common.pkSequenced,
-				programId: tables.programs.columns.programId+{ pkTable: "programs", i:1 },
+				programId: tables.programs.columns.programId+{ pkTable: "programs", i:1, sk:null },
 				name: common.valuesColumns.name+{ i:2 },
-				hostId: tables.hosts.columns.hostId+{ pkTable: "hosts", i:3 },
+				hostId: tables.hosts.columns.hostId+{ pkTable: "hosts", i:3, sk:null },
 			},
 			customInsertProc: true,
 			naturalKeys:[["program_id", "name"]]
@@ -49,13 +49,13 @@ local common = import 'common-meta.libsonnet';
 				instanceId: tables.instances.columns.instanceId+{ pkTable: "instances", sk:0, i:0 },
 				type: common.valuesColumns.name+{ sk:1, i:1 },
 				tag: common.types.ulong+{ sk:2, i:2 },
-				levelId: tables.logLevels.columns.levelId+{ pkTable: "log_levels", i:3 }
+				levelId: tables.logLevels.columns.levelId+{ pkTable: "log_levels", i:3, sk:null }
 			},
 		},
 		connections:{
 			columns: {
 				connectionId: common.pkSequenced,
-				instanceId: tables.instances.columns.instanceId+{ pkTable: "instances", i:1 },
+				instanceId: tables.instances.columns.instanceId+{ pkTable: "instances", i:1, sk:null },
 				created: common.targetColumns.created+{ i:2 },
 				deleted: common.targetColumns.deleted+{ i:3 },
 				pid: common.types.ulong+{ i:4 },

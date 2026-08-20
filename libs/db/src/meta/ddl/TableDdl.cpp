@@ -1,4 +1,4 @@
-#include "TableDdl.h"
+﻿#include "TableDdl.h"
 #include "ColumnDdl.h"
 #include <jde/db/generators/Syntax.h>
 #include "Index.h"
@@ -51,7 +51,7 @@ namespace Jde::DB{
 		string procName = InsertProcName();
 		if( let index = procName.find_first_of('.'); index<procName.size()-1 )
 			procName = procName.substr( index+1 );
-		osCreate << "create procedure " << this->Schema->DBSchema->Name << "." << syntax.EscapeDdl( procName ) << "(";
+		osCreate << syntax.CreateProcSql() << " " << this->Schema->DBSchema->Name << "." << syntax.EscapeDdl( procName ) << "(";
 		osInsert << "\tinsert into " << SqlName() << "(";
 		osValues << "\t\tvalues(";
 		let prefix = syntax.ProcParameterPrefix().empty() ? "_" : syntax.ProcParameterPrefix();
@@ -72,7 +72,7 @@ namespace Jde::DB{
 		}
 		osInsert << " )" << endl;
 		osValues << " );" << endl;
-		let seqCol = /*syntax.DriverReturnsLastInsertId() ? nullptr :*/ SequenceColumn();
+		let seqCol = SequenceColumn(); //C10: the commented-out DriverReturnsLastInsertId() guard went with the virtual - it had been dead since the file was written, and every dialect answered true.
 		if( seqCol ){
 			osCreate << delimiter;
 			if( syntax.PrefixOut() )

@@ -232,7 +232,12 @@ namespace Jde{
 	}
 #undef LoadLibrary
 	α Process::LoadLibrary( const fs::path& path )ε->void*{
-		auto p = ::LoadLibraryA( path.string().c_str() ); THROW_IFX( !p, IO::IOException(path, GetLastError(), "Can not load library") );
+		//LOAD_WITH_ALTERED_SEARCH_PATH resolves the module's own imports from *its* directory rather than the exe's.  The
+		//drivers are loaded out of bin/ beside their dependencies (sqlite3.dll, libcrypto-3-x64.dll), while the exe doing
+		//the loading may live in bin/<target>/ - the default order searches next to the exe, so a driver that is present
+		//still fails to load with 126.  The flag requires a fully-qualified native path, hence the normalize.
+		var native = path.lexically_normal().make_preferred().string();
+		auto p = ::LoadLibraryExA( native.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH ); THROW_IFX( !p, IO::IOException(path, GetLastError(), "Can not load library") );
 		INFOT( ELogTags::App, "({})Opened"sv, path.string() );
 		return p;
 	}

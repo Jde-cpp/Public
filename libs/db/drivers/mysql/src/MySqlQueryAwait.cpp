@@ -24,6 +24,8 @@ namespace Jde::DB::MySql{
 
 		mysql::any_connection conn( co_await asio::this_coro::executor );
 		co_await conn.async_connect( _ds->ConnectionParams() );
+		mysql::results tz;//UTC session, matching the sync Session ctor - see the note there and in field.cpp.
+		co_await conn.async_execute( "set time_zone='+00:00'", tz );
 		if( _sql.IsProc )
 			_sql.Text = Ƒ( "call {}", move(_sql.Text) );
 		DB::Log( _sql, _sl );

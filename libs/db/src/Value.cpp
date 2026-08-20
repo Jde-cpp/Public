@@ -31,7 +31,10 @@ namespace Jde::DB{
 		case UInt: value = AsNumber<uint32>( j ); break;
 		case ULong: value = AsNumber<uint>( j ); break;
 		case SmallFloat: case Float: case Decimal: case Numeric: case Money: value = AsNumber<double>( j ); break;
-		case DateTime: case SmallDateTime: value = AsString( j ); break; //should be $now
+		case DateTime: case SmallDateTime:{
+			auto iso = AsString( j );
+			value = iso=="$now" ? Value::Underlying{move(iso)} : Value::Underlying{ DBTimePoint{Chrono::ToTimePoint(move(iso), sl)} };
+		} break;
 		case None: case Binary: case VarBinary: case Guid: case Cursor: case RefCursor: case Image: case Blob: case TimeSpan:
 			THROW( "EValue {} is not implemented.", (uint)type );
 		case WChar: case Char: default:
@@ -121,7 +124,7 @@ namespace Jde{
 			type=EType::SmallDateTime;
 		else if( typeName=="float" )
 			type=EType::Float;
-		else if( typeName=="real" )
+		else if( typeName=="real" || typeName=="smallFloat" )//smallFloat: the name common-meta.libsonnet exports; `real` is the T-SQL spelling.
 			type=EType::SmallFloat;
 		else if( typeName=="bool" )
 			type=EType::Bit;
@@ -139,7 +142,7 @@ namespace Jde{
 			type = EType::VarWChar;
 		else if(typeName=="nchar")
 			type = EType::WChar;
-		else if( typeName=="smallint" )
+		else if( typeName=="smallint" || typeName=="int16" )//int16: the name common-meta.libsonnet exports; `smallint` is the T-SQL spelling.
 			type = EType::Int16;
 		else if( typeName=="uint16" )
 			type = EType::UInt16;
@@ -165,6 +168,8 @@ namespace Jde{
 			type = EType::Bit;
 		else if( typeName=="binary" )
 			type = EType::Binary;
+		else if( typeName=="blob" )
+			type = EType::Blob;
 		else if( typeName=="decimal" )
 			type = EType::Decimal;
 		else if( typeName=="numeric" )

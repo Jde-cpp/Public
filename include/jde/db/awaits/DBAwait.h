@@ -55,7 +55,7 @@ namespace Jde::DB{
 			TAwait<T>{sl},TSelect<T>( ds, move(sql), fnctn, sl )
 		{}
 		α Suspend()ι->void override{ TSelect<T>::Select( TAwait<T>::_h ); }
-		α await_resume()ι->T override{
+		α await_resume()ε->T override{
 			if( TSelect<T>::_exception )
 				TSelect<T>::_exception->Throw();
 			return move( TSelect<T>::_result );//await_resume is terminal; move the member out (CacheAwait's miss path then moves it into the cache, one copy total).
@@ -68,7 +68,7 @@ namespace Jde::DB{
 			_cacheName{ move(cacheName) }
 		{}
 		α await_ready()ι->bool override;
-		α await_resume()ι->T override;
+		α await_resume()ε->T override;
 	private:
 		sp<const T> _cache;
 		string _cacheName;
@@ -79,7 +79,7 @@ namespace Jde::DB{
 		return _cache!=nullptr;
 	}
 
-	Ŧ CacheAwait<T>::await_resume()ι->T{
+	Ŧ CacheAwait<T>::await_resume()ε->T{
 		if( _cache )
 			return *_cache;
 		auto y = TSelectAwait<T>::await_resume();

@@ -13,11 +13,6 @@ namespace Jde::DB {
 namespace Jde::DB::Odbc{
 	struct OdbcDataSource : IDataSource{
 		α Select( Sql&& s, RowΛ f, bool outParams, SRCE )ε->uint;
-		α Select( Sql&& s, RowΛ f, SRCE )ε->uint override;
-		α Select( Sql&& s, SRCE )ε->vector<Row> override;
-		α ExecuteSync( Sql&& sql, SRCE )ε->uint override;
-		α ExecuteScalerSync( Sql&& sql, EValue outValue, SRCE )ε->DB::Value override;
-		α ExecuteNoLog( Sql&& sql, SRCE )ε->uint override;
 		α InsertSeqSyncUInt( InsertClause&& insert, SRCE )ε->uint override;
 		α Query( Sql&& sql, bool outParams, SRCE )ε->QueryAwait override;
 
@@ -29,14 +24,7 @@ namespace Jde::DB::Odbc{
 		α SetConfig( const jobject& config )ε->void override;
 		α SetConnectionString( string x )ι->void;
 	private:
-		struct Params final{
-			α HasOut()Ι->bool{ return OutValue!=EValue::Null; }
-			RowΛ* Function{};
-			EValue OutValue{EValue::Null};
-			bool Log{true};
-			bool Sequence{};
-		};
-		α ExecDirect( Sql&& sql, SL sl, Params&& params )Ε->uint;
+		α Execute( Sql&& sql, SL sl, Params params )ε->uint override; //C1: the one primitive; IDataSource implements the sync wrappers over it.
 		up<MsSql::MsSqlSchemaProc> _schemaProc;
 		string _connectionString;
 	};

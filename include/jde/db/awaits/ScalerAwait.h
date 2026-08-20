@@ -20,22 +20,24 @@ namespace Jde::DB{
 		variant<Sql,InsertClause> _sql;
 	};
 
+	Τ α ScalerExecute( TAwait<T>& self, sp<IDataSource>&& ds, variant<Sql,InsertClause>&& sql, SL sl )ι->ScalerAwaitOpt<T>::Task{
+		try{
+			auto opt = co_await ScalerAwaitOpt<T>{ move(ds), move(sql), sl };
+			if( opt )
+				self.Resume( move(*opt) );
+			else
+				self.ResumeExp( Exception{"No value returned", ELogLevel::Error, sl} );
+		}
+		catch( runtime_error& e ){
+			self.ResumeExp( move(e) );
+		}
+	}
+
 	Τ struct ScalerAwait : TAwait<T>{
 		using base = TAwait<T>;
 		ScalerAwait( sp<IDataSource> ds, variant<Sql,InsertClause>&& s, SL sl )ι:base{sl}, _ds{ds}, _sql{move(s)}{}
 		α Suspend()ι->void override{ Execute(); }
-		α Execute()ι->ScalerAwaitOpt<T>::Task{
-			try{
-				auto opt = co_await ScalerAwaitOpt<T>{ move(_ds), move(_sql), base::_sl };
-				if( opt )
-					base::Resume( move(*opt) );
-				else
-					base::ResumeExp( Exception{"No value returned", ELogLevel::Error, base::_sl} );
-			}
-			catch( runtime_error& e ){
-				base::ResumeExp( move(e) );
-			}
-		}
+		α Execute()ι->ScalerAwaitOpt<T>::Task{ return ScalerExecute<T>( *this, move(_ds), move(_sql), base::_sl ); }
 	private:
 		sp<IDataSource> _ds;
 		variant<Sql,InsertClause> _sql;
@@ -60,13 +62,12 @@ namespace Jde::DB{
 		[this](Exception&& e){OnError(move(e));},
 		base::_sl );
 	}
+	//#53: GetOpt, not Get.  Get on a NULL cell ASSERTs and returns T{}, so the async ScalerOpt answered an *engaged*
+	//optional{0} where ScalerSyncOpt - which goes through Row::GetOpt - answers nullopt, and Scaler<T> then returned 0
+	//instead of reporting "No value returned".  One API, one answer.  The try/catch is gone with it: Row::Get and
+	//ResumeScaler are both Ι, so nothing in here could ever have thrown.
 	Ŧ ScalerAwaitOpt<T>::OnRow( optional<Row> r )ι->void{
-		try{
-			base::ResumeScaler( r ? r->template Get<T>(0) : optional<T>{} );
-		}
-		catch( runtime_error& e ){
-			base::ResumeExp( move(e) );
-		}
+		base::ResumeScaler( r ? r->template GetOpt<T>(0) : optional<T>{} );
 	}
 	Ŧ ScalerAwaitOpt<T>::OnError( Exception&& e )ι->void{
 		base::ResumeExp( move(e) );

@@ -9,8 +9,8 @@ namespace Jde::DB{
 	struct IDataSource;
 namespace MsSql{
 	struct MsSqlSchemaProc final : IServerMeta{
-		MsSqlSchemaProc( sp<IDataSource> dataSource )ι:
-			IServerMeta{ dataSource }
+		MsSqlSchemaProc( IDataSource& ds )ι:
+			IServerMeta{ ds }
 		{}
 		α LoadTables( sv schemaName, sv tablePrefix )Ε->flat_map<string,sp<Table>> override;
 		α LoadTable( str schemaName, str tableName, SL sl )Ε->sp<TableDdl> override;

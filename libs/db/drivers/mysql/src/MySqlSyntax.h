@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <jde/db/generators/Syntax.h>
 #include <jde/db/generators/FromClause.h> //complete Join for UsingClause.
 #include <jde/db/meta/Column.h>
@@ -20,22 +20,20 @@ namespace Jde::DB::MySql{
 
 			return Ƒ( "ALTER TABLE {} ALTER COLUMN {} SET DEFAULT {}", tableName, columnName, v );
 		}
-		α AltDelimiter()Ι->sv override{ return "$$"; }
 		α CanSetDefaultSchema()Ι->bool override{ return true; }
 		α CatalogSelect()Ι->sv override{ return {}; }
 		α CreatePrimaryKey( str tableName, str columns )Ι->string override{ return Ƒ("CONSTRAINT {}_pk PRIMARY KEY( {} )", tableName, columns); } //columns: comma-separated for composite keys.
 		α DateTimeSelect( sv columnName )Ι->string override{ return Ƒ( "UNIX_TIMESTAMP({})", columnName ); }
-		α DriverReturnsLastInsertId()Ι->bool override{ return true; }
-		α EscapeDdl( sv sql )Ι->string override{
-			const auto parts = Str::Split( sql, '.' );
-			string y;
-			for( const auto part : parts )
-				y += '`'+string{part}+"`.";
-			y.pop_back();
-			return y;
-		}
+		α QuoteChars()Ι->std::pair<char,char> override{ return {'`','`'}; }
 		α GuidType()Ι->sv override{ return "binary" ; }
-		α HasLength( EType /*type*/ )Ι->bool override{ return true; }
+		α ToString( EType type )Ι->string override{
+			using enum EType;
+			return type==Float ? "double" : type==SmallFloat ? "float" : type==Blob ? "blob" : Syntax::ToString( type );
+		}
+		α HasLength( EType type )Ι->bool override{
+			using enum EType;
+			return Syntax::HasLength( type ) || type==Bit || type==Guid;
+		}
 		α HasCatalogs()Ι->bool override{ return false; }
 		α HasUnsigned()Ι->bool override{ return true; }
 		α IdentityColumnSyntax()Ι->sv override{ return "AUTO_INCREMENT"; }
@@ -58,17 +56,25 @@ namespace Jde::DB::MySql{
 			throw Exception{ sl, Jde::ELogLevel::Debug, "Operator '{}' has no SQL form.", DB::ToString(op) };
 		}
 		α PatternParam( EOperator op, str pattern, SRCE )Ε->string override{
-			if( op==EOperator::Regex )
-				return pattern; //ICU dialect: near enough to ECMAScript for the patterns the filters accept.
-			if( op==EOperator::Glob )
-				return GlobToRegex( pattern );
-			throw Exception{ sl, Jde::ELogLevel::Debug, "Operator '{}' has no SQL form.", DB::ToString(op) };
+			PatternOperator( op, sl );
+			return op==EOperator::Regex
+				? pattern //ICU dialect: near enough to ECMAScript for the patterns the filters accept.
+				: GlobToRegex( pattern );
 		}
 		α PrefixOut()Ι->bool override{ return true; }
+		//`values(col)` rather than the 8.0.19 `as new` alias: MariaDB, which this driver's error categories also cover,
+		//only understands the older form.
+		α UpsertSuffix( const vector<sv>& /*keyColumns*/, const vector<sv>& updateColumns )Ι->string override{
+			string y{ " on duplicate key update " };
+			for( uint i=0; i<updateColumns.size(); ++i )
+				y += Ƒ( "{}{}=values({})", i ? ", " : "", updateColumns[i], updateColumns[i] );
+			return y;
+		}
+		α CreateProcSql()Ι->sv override{ return "create procedure"; } //MySQL has no create-or-replace for procedures.
+		α DropProcSql( sv qualifiedName )Ι->string override{ return Ƒ("drop procedure if exists {}", qualifiedName); }
 		α ProcParameterPrefix()Ι->sv override{ return {}; }
 		α ProcStart()Ι->sv override{ return "begin"; }
 		α ProcEnd()Ι->sv override{ return "end"; }
-		α SchemaDropsObjects()Ι->bool override{ return true; }
 		α SchemaSelect()Ι->sv override{ return "select database() from dual;"; }
 		α SpecifyIndexCluster()Ι->bool override{ return false; }
 		α SysSchema()Ι->sv override{ return "sys"; }
@@ -80,6 +86,5 @@ namespace Jde::DB::MySql{
 				: Syntax::UsingClause( join );
 		}
 		α UtcNow()Ι->sv override{ return "CURRENT_TIMESTAMP()"; }
-		α ZeroSequenceMode()Ι->sv override{ return "SET @@session.sql_mode = CASE WHEN @@session.sql_mode NOT LIKE '%NO_AUTO_VALUE_ON_ZERO%' THEN CASE WHEN LENGTH(@@session.sql_mode)>0 THEN CONCAT_WS(',',@@session.sql_mode,'NO_AUTO_VALUE_ON_ZERO') ELSE 'NO_AUTO_VALUE_ON_ZERO' END ELSE @@session.sql_mode END"; }
 	};
 }

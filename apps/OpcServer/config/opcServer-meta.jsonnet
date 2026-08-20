@@ -29,14 +29,14 @@ local common = import 'common-meta.libsonnet';
 	views:{
 		objectNodes:{
 			comment: "Objects nodes of a server",
-			columns:{serverId: tables.servers.columns.serverId}
+			columns:{serverId: tables.servers.columns.serverId+{ sequence:false, insertable:false, sk:null }}
 				+tables.nodeIds.columns
 				+common.filter(tables.objects.columns, "nodeId"),
 			customInsertProc: true
 		},
 		objectTypeNodes:{
 			comment: "Objects nodes of a server",
-			columns:{serverId: tables.servers.columns.serverId}
+			columns:{serverId: tables.servers.columns.serverId+{ sequence:false, insertable:false, sk:null }}
 				+tables.nodeIds.columns
 				+common.filter(tables.objectTypes.columns, "nodeId"),
 			customInsertProc: true
@@ -44,7 +44,7 @@ local common = import 'common-meta.libsonnet';
 		serverBrowseNames:{
 			comment: "Browse names of a server",
 			columns:{
-				serverId: tables.servers.columns.serverId,
+				serverId: tables.servers.columns.serverId+{ sequence:false, insertable:false, sk:null },
 				browseId: tables.browseNames.columns.browseId+{ i:1 },
 				ns: tables.browseNames.columns.ns+{ i:2 },
 				name: tables.browseNames.columns.name+{ i:3 }
@@ -53,7 +53,7 @@ local common = import 'common-meta.libsonnet';
 		serverNodeIds:{
 			comment: "Nodes of a server",
 			columns:{
-				serverId: tables.servers.columns.serverId+{ i:0 },
+				serverId: tables.servers.columns.serverId+{ i:0, sequence:false, insertable:false, sk:null },
 				nodeId: tables.nodeIds.columns.nodeId+{ i:1 },
 				ns: tables.nodeIds.columns.ns+{ i:2 },
 				number: tables.nodeIds.columns.number+{ i:3 },
@@ -68,7 +68,7 @@ local common = import 'common-meta.libsonnet';
 		},
 		variableNodes:{
 			comment: "Variable nodes of a server",
-			columns:{serverId: tables.servers.columns.serverId}
+			columns:{serverId: tables.servers.columns.serverId+{ sequence:false, insertable:false, sk:null }}
 				+tables.nodeIds.columns
 				+common.filter(tables.variables.columns, "nodeId")+{
 				variantDataTypeId: tables.variants.columns.dataTypeId+{ i:331 },
@@ -91,7 +91,7 @@ local common = import 'common-meta.libsonnet';
 			columns:{
 				nodeId: nodeId+{ pkTable:"node_ids", sk:0, i:0, comment:"parent" },
 				browseId: tables.browseNames.columns.browseId+{ sk:1, pkTable:"browse_names", i:1 },
-				variantId: tables.variants.columns.variantId+{ pkTable:"variants", i:2 },
+				variantId: tables.variants.columns.variantId+{ pkTable:"variants", i:2, sk:null },
 			},
 			customInsertProc: true,
 			ops: ["None"]
@@ -180,7 +180,7 @@ local common = import 'common-meta.libsonnet';
 		},
 		variables:nodeTableProps+{
 			columns: nodeColumns+{
-				variantId: tables.variants.columns.variantId+{ pkTable:"variants", i:223, nullable: true },
+				variantId: tables.variants.columns.variantId+{ pkTable:"variants", i:223, nullable: true, sk:null },
 				dataTypeId: nodeId+{ pkTable: "node_ids", nullable: true, i:224 },
 				valueRank: types.int+{ i:225, nullable: true },
 				arrayDims: types.varchar+{ i:226, length: 256, nullable: true },

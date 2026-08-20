@@ -33,7 +33,7 @@
 				"CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=lld -Wl,/ignore:longsections -ldbgeng",
 				"CMAKE_MODULE_LINKER_FLAGS": "-fuse-ld=lld -Wl,/ignore:longsections -ldbgeng",
 				"CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-				"VCPKG_TARGET_TRIPLET": "x64-windows-static-md",
+				"VCPKG_TARGET_TRIPLET": "x64-windows",
 				"VCPKG_INSTALLED_DIR": "$env{VCPKG_ROOT}/installed"
 			}
 		},

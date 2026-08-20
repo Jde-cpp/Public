@@ -1,4 +1,4 @@
-#include <jde/db/generators/Syntax.h>
+﻿#include <jde/db/generators/Syntax.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
 #include <jde/db/generators/FromClause.h>
@@ -23,6 +23,12 @@ namespace Jde::DB{
 		using enum EOperator;
 		switch( op ){
 		case Equal: case NotEqual: case Greater: case GreaterOrEqual: case Less: case LessOrEqual:
+			//One value, one placeholder - the same count check the pattern operators below make, and for the same reason.
+			//`eq:["a","b"]` used to render a single '?' against two bound params: N>=2 surfaced as an opaque driver bind
+			//error (sqlite SQLITE_RANGE, MySQL wrong_num_params), and N==0 was worse - sqlite ran the statement with the
+			//placeholder left NULL and quietly returned nothing.
+			if( size!=1 )
+				throw Exception{ sl, Jde::ELogLevel::Debug, "'{}' takes a single value, not {}.", DB::ToString(op), size };
 			return Ƒ( "{}{}?", col.FQName(), OperatorStrings[(uint)op] ); //punctuation: self-delimiting, no spaces needed.
 		case In: case NotIn:
 			if( size==0 ) //`col in ()` is invalid SQL; an empty IN matches nothing, an empty NOT IN matches everything.
@@ -51,9 +57,8 @@ namespace Jde::DB{
 		throw Exception{ sl, Jde::ELogLevel::Debug, "SQL Server has no '{}' operator (REGEXP_LIKE is 2025+); use 'glob'.", DB::ToString(op) };
 	}
 	α Syntax::PatternParam( EOperator op, str pattern, SL sl )Ε->string{
-		if( op==EOperator::Glob )
-			return GlobToLike( pattern );
-		throw Exception{ sl, Jde::ELogLevel::Debug, "SQL Server has no '{}' operator (REGEXP_LIKE is 2025+); use 'glob'.", DB::ToString(op) };
+		PatternOperator( op, sl ); //C14: validates - throws this dialect's one unsupported-operator message.  Only Glob returns.
+		return GlobToLike( pattern );
 	}
 
 	//'*'->'%' and '?'->'_'; a literal '%'/'_' becomes a one-element class ('[%]'), which is how T-SQL escapes them
@@ -138,16 +143,16 @@ namespace Jde::DB{
 	}
 
 	α Syntax::EscapeDdl( sv sql )Ι->string{
-		let parts = Str::Split( sql, '.' );
+		let [open, close] = QuoteChars();
 		string y;
-		for( let part : parts )
-			y += '['+string{part}+"].";
+		for( let part : Str::Split(sql, '.') )
+			y += open+string{part}+close+'.';
 		y.pop_back();
 		return y;
 	}
 	α Syntax::HasLength( EType type )Ι->bool{
 		using enum EType;
-		return type == VarChar || type == Binary || type == Char || type == VarBinary;
+		return type == VarChar || type == Binary || type == Char || type == VarBinary || type == VarWChar || type == WChar;
 	}
 
 	α Syntax::Limit( str input, uint limit, uint skip )Ε->string{
@@ -201,6 +206,7 @@ namespace Jde::DB{
 		else if( type == Decimal ) typeName = "decimal";
 		else if( type == Numeric ) typeName = "numeric";
 		else if( type == Money ) typeName = "money";
+		else if( type == Blob ) typeName = "varbinary(max)";
 		else ERR( "Unknown datatype({}).", (uint)type );
 		return typeName;
 	}

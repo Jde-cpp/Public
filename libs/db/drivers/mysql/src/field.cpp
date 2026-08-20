@@ -13,6 +13,10 @@ namespace Jde::DB{
 			case UInt32: return mysql::field_view( v.get_uint32() );
 			case UInt64: return mysql::field_view( v.get_uint() );
 			case Double: return mysql::field_view( v.get_double() );
+			//The driver's one datetime convention: a DATETIME column holds UTC wall time.  This builds the value from a
+			//UTC time_point and MySqlRow::ToValue reads it straight back as one, which only agrees with the server's own
+			//CURRENT_TIMESTAMP/UNIX_TIMESTAMP once the session zone is UTC - which is why every connection sets it
+			//(MySqlDataSource's Session ctor, MySqlQueryAwait::Main).
 			case Time: {
 				using namespace std::chrono;
 				DBTimePoint time = v.get_time();//duration<_GLIBCXX_CHRONO_INT64_T, nano>
