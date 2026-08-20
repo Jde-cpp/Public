@@ -23,7 +23,7 @@
 	</ng-container>
 	@for( column of objectColumnNames; track column ){
 		<ng-container [matColumnDef]="column">
-			<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header [style]="columnStyle(column)"> {{columnName(column)}} </mat-header-cell>
+			<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header [disabled]="!sortable(column)" [style]="columnStyle(column)"> {{columnName(column)}} </mat-header-cell>
 			<mat-cell *matCellDef="let row" [style]="columnStyle(column)"> {{objectValue(row[column])}} </mat-cell>
 		</ng-container>
 	}

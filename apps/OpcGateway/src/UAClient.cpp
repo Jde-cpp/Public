@@ -40,6 +40,13 @@ namespace Jde::Opc::Gateway{
 		client = nullptr;
 		return erased;
 	}
+	α UAClient::ConnectionCounts()ι->flat_map<ServerCnnctnNK,uint32>{
+		flat_map<ServerCnnctnNK,uint32> y;
+		sl _{ _clientsMutex };
+		for( let& [target, creds] : _clients )
+			y[target] = (uint32)creds.size();
+		return y;
+	}
 	α UAClient::StatusCounts()ι->tuple<uint,uint>{
 		vector<sp<UAClient>> clients;
 		{

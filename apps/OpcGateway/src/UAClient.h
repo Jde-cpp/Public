@@ -33,6 +33,7 @@ namespace Jde::Opc::Gateway{
 		Ω GetClient( string id, Credential cred, SRCE )ι{ return ConnectAwait{move(id), move(cred), sl}; }
 		Ω Find( str id, const Gateway::Credential& cred )ι->sp<UAClient>;
 		Ω StatusCounts()ι->tuple<uint,uint>;//{connected clients, monitored items} for the status query.
+		Ω ConnectionCounts()ι->flat_map<ServerCnnctnNK,uint32>;
 		Ω Find( UA_Client* ua, SRCE )ε->sp<UAClient>;
 		Ω TryFind( UA_Client* ua, SRCE )ι->sp<UAClient>;
 		Ω RemoveClient( sp<UAClient>&& client )ι->bool;

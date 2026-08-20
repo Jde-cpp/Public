@@ -10,6 +10,9 @@ local logsDir = args.logsDir;
 		embeddedOpcServer:: false
 	},
 	opc: args.opc,
+	ql:{
+		introspection: [ "../../config/introspection/serverConnection.jsonnet" ] //relative to this file, as in Opc.Gateway.jsonnet: the ServerConnection extension QLTests asserts on.
+	},
 	access:{
 		trustedCertDirs: [
 			"$(ProgramData)/Jde-Cpp/$(PRODUCT_NAME)/ssl/certs"

@@ -82,7 +82,8 @@ function( sync=false )
 			"introspection/di.jsonnet",
 			"introspection/ia.jsonnet",
 			"introspection/machineTool.jsonnet",
-			"introspection/additive.jsonnet"
+			"introspection/additive.jsonnet",
+			"introspection/serverConnection.jsonnet"
 		]
 	},
 	credentials:{

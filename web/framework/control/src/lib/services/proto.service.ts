@@ -16,7 +16,6 @@ import { computed, Signal } from '@angular/core';
 import { EProvider, User } from 'jde-spa';
 import { StringUtils } from '../utils/StringUtils';
 
-interface IStringResult{ id:number; value:string; }
 export interface IError{ requestId?:number; message: string; sc?:number; httpStatus?:number; }//sc is the proto `code`; httpStatus avoids the opc StatusCode collision.
 
 type TransformInput = (x:any)=>any;

@@ -13,7 +13,7 @@ namespace Jde::Opc::Gateway{
 		ConnectAwait( ServerCnnctnNK opc, SessionPK sessionId, UserPK user, SRCE )ι;
 		ConnectAwait( ServerCnnctnNK opc, const Web::Server::SessionInfo& session, SRCE )ι;
 		α Suspend()ι->void override;
-		α await_resume()ε->sp<UAClient> override{ return Promise() ? base::await_resume() : _result; }
+		α await_resume()ε->sp<UAClient> override;
 		Ω Resume( sp<UAClient> client )ι->void;
 		Ω Resume( str target, Credential cred, const UAClientException&& e )ι->void;
 	private:
@@ -22,6 +22,7 @@ namespace Jde::Opc::Gateway{
 		Ω EraseRequests( str opcNK, Credential cred, lg& _ )ι->vector<ConnectAwait::Handle>;
 		string _opcTarget;
 		Credential _cred;
+		SessionPK _sessionId{};//non-zero only on the web-session ctors: a successful connect is recorded in _sessions so opcSessions counts it.
 		sp<UAClient> _result;
 	};
 }

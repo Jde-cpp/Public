@@ -9,6 +9,7 @@
 #include "../types/UAClientException.h"
 #include "DataTypeQLAwait.h"
 #include "NodeQLAwait.h"
+#include "OpcSessionsQLAwait.h"
 #include "VariableQLAwait.h"
 #define let const auto
 
@@ -34,11 +35,15 @@ namespace Jde::Opc::Gateway{
 
 	Ω needsClient( const QL::Input& q )ι->bool{
 		let tableName = q.JTableName();
-		return !tableName.starts_with( "serverConnection" ) && tableName!="__type" && tableName!="status";
+		return !tableName.starts_with( "serverConnection" ) && tableName!="__type" && tableName!="status" && tableName!="opcSessions";
 	}
 	α GatewayQLAwait::Test( QL::TableQL& q, QL::Creds executer, SL sl )->up<TAwait<jvalue>>{
 		up<TAwait<jvalue>> await;
-		if( needsClient(q) )
+		if( q.JsonName=="opcSessions" )
+			await = mu<OpcSessionsQLAwait>( move(q), move(executer), sl );
+		else if( ServerCnnctnSessionsQLAwait::IsApplicable(q) )
+			await = mu<ServerCnnctnSessionsQLAwait>( move(q), move(executer), sl );
+		else if( needsClient(q) )
 			await = mu<GatewayQLAwait>( move(q), move(executer), sl );
 		else if( q.JsonName=="__type" && !q.Args.contains("name") ){ //why?
 			NodeId nodeId{ q.Args };
@@ -63,11 +68,11 @@ namespace Jde::Opc::Gateway{
 			else if( _query.JsonName.starts_with("dataType") )
 				y = co_await DataTypeQLAwait{ move(_query), move(_client), _sl };
 			else if( _query.JsonName=="serverDescription" )//connection attributes are sync UA services - run them on the client's strand.
-				y = co_await UAStrandAwait<jvalue>{ _client, [this]()->jvalue{ return ServerDescription( move(_query), _client ); }, _sl };
+				y = co_await UAStrandAwait<jvalue>{ _client, [this]()->jvalue { return ServerDescription( move(_query), _client ); }, _sl };
 			else if( _query.JsonName=="securityPolicyUri" )
-				y = co_await UAStrandAwait<jvalue>{ _client, [this]()->jvalue{ return SecurityPolicyUri( move(_query), _client ); }, _sl };
+				y = co_await UAStrandAwait<jvalue>{ _client, [this]()->jvalue { return SecurityPolicyUri( move(_query), _client ); }, _sl };
 			else if( _query.JsonName=="securityMode" )
-				y = co_await UAStrandAwait<jvalue>{ _client, [this]()->jvalue{ return SecurityMode( move(_query), _client ); }, _sl };
+				y = co_await UAStrandAwait<jvalue>{ _client, [this]()->jvalue { return SecurityMode( move(_query), _client ); }, _sl };
 			else
 				throw Exception{ _sl, {}, "Unknown query type: {}", _query.JsonName };
 			Resume( move(y) );

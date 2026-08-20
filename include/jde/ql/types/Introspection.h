@@ -37,6 +37,7 @@ namespace Jde::QL{
 		string Name;
 		vector<Field> Fields;
 		vector<EnumValue> EnumValues;
+		bool Extend{}; //jsonnet `extend: true`: Fields are appended to the DB table's introspected fields instead of replacing them (e.g. a live field a custom query grafts onto DB rows).
 	};
 
 	struct Introspection final{

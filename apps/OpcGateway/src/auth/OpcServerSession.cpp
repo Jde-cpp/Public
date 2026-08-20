@@ -66,6 +66,7 @@ namespace Jde::Opc{
 
 	α Gateway::AuthCache( const Credential& cred, const ServerCnnctnNK& opcNK, SessionPK sessionId )ι->optional<bool>{
 		optional<bool> authenticated;
+		Jde::UserPK matchedUser; //by value: the reference into _sessions is dead once the insert below runs.
 		ul _{ _sessionsMutex };
 		for( let& [_,sessionConnections] : _sessions ){
 			auto p = sessionConnections.find(opcNK);
@@ -80,12 +81,16 @@ namespace Jde::Opc{
 			}
 			else
 				authenticated = existingCred==cred;
-			if( authenticated.has_value() )
+			if( authenticated.has_value() ){
+				matchedUser = existingCred.UserPK();
 				break;
+			}
 		};
-		if( authenticated && *authenticated )
-			_sessions[sessionId][opcNK] = cred;
-
+		if( authenticated && *authenticated ){
+			auto stored = cred;
+			stored.SetUserPK( matchedUser ); //the incoming credential never carries the user - the matched one does.
+			_sessions[sessionId][opcNK] = move( stored );
+		}
 		return authenticated;
 	}
 
@@ -106,6 +111,20 @@ namespace Jde::Opc{
 			}
 		}
 		return cred;
+	}
+	α Gateway::SessionCounts()ι->vector<SessionCount>{
+		flat_map<tuple<ServerCnnctnNK,ETokenType,Jde::UserPK>,uint32> counts;
+		{
+			sl _{ _sessionsMutex };
+			for( let& [_,sessionConnections] : _sessions ){ //at most one credential per opcNK per session - no per-session dedup needed.
+				for( let& [opcNK,cred] : sessionConnections )
+					++counts[ {opcNK, cred.Type(), cred.UserPK()} ];
+			}
+		}
+		vector<SessionCount> y; y.reserve( counts.size() );
+		for( let& [key,count] : counts )
+			y.emplace_back( get<0>(key), get<1>(key), get<2>(key), count );
+		return y;
 	}
 }
 namespace Jde::Opc{

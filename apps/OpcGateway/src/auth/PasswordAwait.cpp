@@ -23,6 +23,7 @@ namespace Jde::Opc::Gateway{
 	α PasswordAwait::AddSession( Access::ProviderPK providerPK )ι->Web::Client::ClientSocketAwait<Web::FromServer::SessionInfo>::Task{
 		try{
 			auto sessionInfo = co_await AppClient()->AddSession( _opcNK, _cred.LoginName(), providerPK, _endpoint, false );
+			_cred.SetUserPK( Jde::UserPK{sessionInfo.user_pk()} ); //the identity AppServer resolved for this login - opcSessions reports it.
 			Gateway::AddSession( sessionInfo.session_id(), _opcNK, move(_cred) );
 			Resume( move(sessionInfo) );
 		}

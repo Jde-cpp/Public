@@ -70,7 +70,7 @@ namespace Jde::Web::Server{
 			if( auto& s = _request.body(); s.size() )
 				_body = Json::Parse( move(s) );
 			else
-				_body = {};
+				_body.emplace();
 		}
 		return *_body;
 	}

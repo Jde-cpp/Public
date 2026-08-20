@@ -3,6 +3,7 @@
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Table.h>
 #include <jde/ql/ql.h>
+#include <jde/ql/types/Introspection.h>
 
 #define let const auto
 namespace Jde{
@@ -335,8 +336,12 @@ namespace Jde::QL{
 			table.Alias = move(alias);
 			if( system.size() ){
 				if( system=="__type" ){
-					if( auto typeName = table.FindPtr<jstring>( "name" ); typeName && *typeName!="logTags" )
-						table.SetDBTable( DB::AppSchema::GetViewPtr( schemas, DB::Names::ToPlural(DB::Names::FromJson(*typeName)), sl ) );
+					if( auto typeName = table.FindPtr<jstring>( "name" ); typeName && *typeName!="logTags" ){
+						let viewName = DB::Names::ToPlural( DB::Names::FromJson(*typeName) );
+						let preDefined = FindIntrospection( *typeName );
+						let configOnly = preDefined && !preDefined->Extend; //a config-declared type may have no view (e.g. a live sub-object's type); an extend:true entry still needs its table.
+						table.SetDBTable( configOnly ? DB::AppSchema::FindView( schemas, viewName ) : DB::AppSchema::GetViewPtr( schemas, viewName, sl ) );
+					}
 				}
 				else if( system=="__schema" ){
 					THROW_IF( schemas.empty() || schemas[0]->Tables.empty(), "No schemas found." );

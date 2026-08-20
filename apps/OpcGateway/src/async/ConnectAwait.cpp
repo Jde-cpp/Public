@@ -11,16 +11,26 @@ namespace Jde::Opc::Gateway{
 		optional<Credential> cred;
 		if( sessionId ){
 			cred = GetCredential( sessionId, opc );
-			if( !cred && user ) //if user/pwd would have cred, otherwise use jwt
+			if( !cred && user ){ //if user/pwd would have cred, otherwise use jwt
 				cred = Credential{ Ƒ("{:x}", sessionId) };
+				cred->SetUserPK( user );//opcSessions joins user{} on this; a stored credential already carries it.
+			}
 		}
 		return cred;
 	}
 	ConnectAwait::ConnectAwait( ServerCnnctnNK opc, SessionPK sessionId, UserPK user, SL sl )ι:
 		base{sl},
 		_opcTarget{ move(opc) },
-		_cred{ credential(sessionId, user, _opcTarget).value_or(Credential{}) }
+		_cred{ credential(sessionId, user, _opcTarget).value_or(Credential{}) },
+		_sessionId{ sessionId }
 	{}
+	α ConnectAwait::await_resume()ε->sp<UAClient>{
+		auto client = Promise() ? base::await_resume() : _result;
+		//A jwt-backed web session's connect never goes through PasswordAwait, so record it here or opcSessions never sees it. None = anonymous/no user - not a session worth counting.
+		if( client && _sessionId && _cred.Type()!=ETokenType::None && !GetCredential(_sessionId, _opcTarget) )
+			AddSession( _sessionId, _opcTarget, _cred );
+		return client;
+	}
 	ConnectAwait::ConnectAwait( ServerCnnctnNK opc, const Web::Server::SessionInfo& session, SL sl )ι:
 		ConnectAwait{ move(opc), session.SessionId, session.UserPK, sl }
 	{}

@@ -3,10 +3,9 @@ import { ProtoService, ETransport, IError } from './proto.service';
 import { AuthStore } from './auth.store';
 
 class TestService extends ProtoService<object,object>{
-	constructor( authStore:AuthStore ){ super( Object, {} as HttpClient, ETransport.Unsecure, authStore ); }
+	constructor( authStore:AuthStore ){ super( {create:()=>({}), encode:()=>({finish:()=>new Uint8Array()})}, {} as HttpClient, ETransport.Unsecure, authStore ); }//codec object per the ts-proto refactor - the abstract encode() hook is gone.
 	protected override processMessage():void{}
 	protected override handleConnectionError():void{}
-	protected override encode():any{ return null; }
 	register( requestId:number ):Promise<unknown>{ return new Promise( (resolve,reject)=>this._callbacks.set(requestId, {resolve, reject} as any) ); }
 }
 

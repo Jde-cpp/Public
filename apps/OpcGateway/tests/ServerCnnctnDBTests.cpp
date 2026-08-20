@@ -78,10 +78,11 @@ namespace Jde::Opc::Gateway::Tests{
 		if( existingOpcPK )
 			PurgeServerCnnctn( existingOpcPK );
 		let createdId = BlockAwait<CreateServerCnnctnAwait,ServerCnnctnPK>( CreateServerCnnctnAwait{} );
-		let selectAll = "serverConnections{ id name attributes created updated deleted target description certificateUri isDefault url }";
+		let selectAll = "serverConnections{ id name attributes created updated deleted target description certificateUri isDefault url opcSessions{ count } }";
 		let selectAllJson = QL().QuerySync<jarray>( selectAll, {}, {UserPK::System} );
 		TRACET( _tags, "selectAllJson={}", serialize(selectAllJson) );
 		let id = Json::AsNumber<ServerCnnctnPK>( Json::AsObject(selectAllJson[0]), "id" );
+		THROW_IF( !Json::FindNumberPath<uint32>(Json::AsObject(selectAllJson[0]), "opcSessions/count"), "opcSessions{{count}} missing from '{}'", serialize(selectAllJson[0]) ); //live total grafted onto the DB row; 0 is fine here.
 		THROW_IF( createdId!=id, "createdId={} id={}", createdId, id );
 		return CrudImpl2( id );
 	}

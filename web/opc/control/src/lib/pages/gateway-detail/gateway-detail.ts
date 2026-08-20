@@ -47,6 +47,6 @@ export class GatewayDetail implements OnInit, OnDestroy{
 }
 
 export const gatewayTableSettings:TableSettings = {
-	columns: ["name", "certificateUri", "url", "description" ],
+	columns: ["name", "certificateUri", "url", {name:"opcSessions", displayName:"Sessions", selection:"count"}, {name:"opcConnections", displayName:"Connections", selection:"count"}, "description" ],
 	sort: "name"
 }
