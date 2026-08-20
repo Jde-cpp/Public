@@ -46,4 +46,7 @@ namespace Jde::Opc::Gateway{
 	α AuthCache( const Credential& credential, const ServerCnnctnNK& opcNK, SessionPK sessionId )ι->optional<bool>;
 	α Logout( SessionPK sessionId )ι->void;
 	α GetCredential( SessionPK sessionId, str opcId )ι->optional<Credential>;
+	struct SessionCount{ ServerCnnctnNK Connection; ETokenType Type; Jde::UserPK UserPK; uint32 Count; };
+	//one row per distinct (Connection,Type,UserPK); Count = web sessions holding that credential on that connection.
+	α SessionCounts()ι->vector<SessionCount>;
 }

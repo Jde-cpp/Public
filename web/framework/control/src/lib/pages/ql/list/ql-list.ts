@@ -143,8 +143,14 @@ export class QLList implements OnInit, OnDestroy{
 		if( view.isSystem && !profile.views.find(v=>v.name==view.name && v.isSystem) )
 			view.type = ViewType.User;
 		profile.upsertView( view, this.collectionName(), this.profileStore );
-		if( view.type==ViewType.User )
-			this.profileStore.save( `qlList/${this.collectionName()}/views`, profile.views.filter(v=>v.isUser).map(v=>v.toJson(this.tableSettings())) );
+		if( view.type==ViewType.User ){
+			try{
+				this.profileStore.save( `qlList/${this.collectionName()}/views`, profile.views.filter(v=>v.isUser).map(v=>v.toJson(this.tableSettings())) );
+			}
+			catch( e ){
+				this.snackbar.exception( "Could not save view.", e );
+			}
+		}
 
 		await this.reload();
 		this.isSettings.set( false );

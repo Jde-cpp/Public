@@ -10,8 +10,9 @@
 namespace Jde::Access{ struct Authorize; }
 namespace Jde::DB{ struct AppSchema; }
 namespace Jde::QL{
-	struct Introspection; struct IQL; struct LocalQL;
+	struct Introspection; struct Object; struct IQL; struct LocalQL;
 	α AddIntrospection( Introspection&& x )ι->void;
+	α FindIntrospection( sv typeName )ι->const Object*; //config-declared type, nullptr if none.
 	Ŧ AsId( const jobject& j, SRCE )ε->T;
 	Ŧ AsId( const jvalue& j, SRCE )ε->T;
 	α SetSystemMutations( flat_set<string>&& x )ι->void;

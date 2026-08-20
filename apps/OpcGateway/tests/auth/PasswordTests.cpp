@@ -59,6 +59,11 @@ namespace Jde::Opc::Gateway::Tests{
 		ASSERT_TRUE( creds );
 		EXPECT_EQ( "user1", creds->LoginName() );
 		EXPECT_EQ( _password, creds->Password() );
+		EXPECT_TRUE( creds->UserPK() ) << "the stored credential should carry the identity AppServer resolved for the login (also through the AuthCache copy).";
+		let counts = SessionCounts(); //opcSessions source: one (connection,type,user) row covering all 3 logins.
+		auto count = find_if( counts, [&](let& c){ return c.Connection==opcId && c.Type==ETokenType::Username && c.UserPK==creds->UserPK(); } );
+		ASSERT_NE( count, counts.end() );
+		EXPECT_GE( count->Count, 3u );
 		EXPECT_NE( _sessionIds[0], _sessionIds[1] );
 		EXPECT_NE( _sessionIds[0], _sessionIds[2] );
 		EXPECT_NE( _sessionIds[1], _sessionIds[2] );

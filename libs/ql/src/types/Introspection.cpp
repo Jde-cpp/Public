@@ -15,6 +15,7 @@ namespace Jde{
 	using namespace Json;
 	QL::Introspection _introspection;
 	α QL::AddIntrospection( Introspection&& x )ι->void{ _introspection += move(x); }
+	α QL::FindIntrospection( sv typeName )ι->const QL::Object*{ return _introspection.Find( typeName ); }
 
 namespace QL{
 	α Schemas()ι->const vector<sp<DB::AppSchema>>&;
@@ -93,7 +94,8 @@ namespace QL{
 
 
 	Object::Object( sv name, const jobject& j )ε:
-		Name{ name }{
+		Name{ name },
+		Extend{ FindBool(j, "extend").value_or(false) }{
 		for( let& field : FindDefaultArray(j, "fields") )
 			Fields.emplace_back( AsObject(field) );
 		for( let& enumValue : FindDefaultArray(j, "enumValues") )
@@ -277,13 +279,22 @@ namespace QL{
 
 	α QueryType( const TableQL& typeTable )ε->jobject{
 		let& typeName = typeTable.As<jstring>( "name" ); //variable-aware: raw Args holds the '\b$var' marker when the caller binds name via $variables, which made Find miss the config types.
-		auto dbTable = DB::AsTable( typeTable.DBTable() );
+		auto dbTable = DB::AsTable( typeTable.DBTable() ); //null for a config-only type (Parser uses FindView when the name is pre-defined) - then preDefined answers everything.
+		let preDefined = _introspection.Find( typeName );
+		let extend = preDefined && preDefined->Extend && dbTable; //the DB fields first, then the config's extra ones; without a table there is nothing to extend, so the config replaces.
 		jobject y;
 		for( let& qlTable : typeTable.Tables ){
-			if( let preDefined = _introspection.Find(typeName); preDefined )
+			if( preDefined && !extend )
 				y = preDefined->ToJson( qlTable );
-			else if( qlTable.JsonName=="fields" )
+			else if( qlTable.JsonName=="fields" ){
+				THROW_IF( !dbTable, "__type '{}' has no table and no introspection entry.", typeName );
 				y = introspectFields( typeName, *dbTable, qlTable );
+				if( extend ){
+					auto& fields = y["fields"].as_array();
+					for( let& field : preDefined->Fields )
+						fields.push_back( field.ToJson(qlTable) );
+				}
+			}
 			else if( qlTable.JsonName=="enumValues" ){
 				if( typeName=="logTags" ){
 					jarray enumValues;

@@ -60,9 +60,17 @@ export class GraphQLTable{
 
 	isAllSelected(){ return this.selections().selected.length==this.dataSource()().length; }
 	isSelected( row:any ){ return this.selections().isSelected(row); }
-	columnName( colName:string ){ return StringUtils.capitalize(colName); }
+	columnName( colName:string ){ return this.displayedFields().find(f=>f.name===colName)?.displayName ?? StringUtils.capitalize(colName); }
 	columnStyle( colName:string ){ return this.displayedFields().find(f=>f.name===colName)?.style || {}; }
-	objectValue( obj: any ): string{ return typeof obj === 'string' ? obj : obj?.name || ''; }
+	objectValue( obj: any ): string{
+		if( obj==null || typeof obj === 'string' )
+			return obj ?? '';
+		if( obj.name!=undefined )
+			return obj.name;
+		const values = Object.values( obj ).filter( v=>v!=null );//no `name` - a single remaining property is the display value, e.g. opcSessions{count}.
+		return values.length==1 ? `${values[0]}` : '';
+	}
+	sortable( colName:string ){ return this.displayedFields().find(f=>f.name===colName)?.type.underlyingKind!=FieldKind.OBJECT; }//orderBy on a grafted object field is a server error.
 
 	dataSource=input.required<Signal<any[]>>();
 	displayedFields = input.required<ViewField[]>();

@@ -42,8 +42,8 @@ export enum Operator{
 	Between
 }
 //hidden = queried but not necessarily shown eg id
-export type ViewFieldSettings = {name?:string, displayName?:string, style?:Style, defaultView?:boolean/*=!hidden*/, hidden?:boolean};
-type ViewFieldJson = {name:string, hidden?:boolean, displayName?:string, style?:Style};
+export type ViewFieldSettings = {name?:string, displayName?:string, style?:Style, defaultView?:boolean/*=!hidden*/, hidden?:boolean, selection?:string/*OBJECT/UNION sub-selection, e.g. "count" -> `name{count}`; defaults to "id name"/"id"*/};
+type ViewFieldJson = {name:string, hidden?:boolean, displayName?:string, style?:Style, selection?:string};
 export type Filter = { operator: Operator, value: DbScalar[] };
 export class Flex{
 	constructor( value:string|number ){
@@ -98,12 +98,14 @@ export class ViewField{
 			this.style = copyFrom.style;
 			this._displayed = copyFrom._displayed;
 			this.displayName = copyFrom.displayName;
+			this.selection = copyFrom.selection;
 		}else if( "qlField" in args ){
 			const settings = args.settings;
 			this.qlField = args.qlField;
 			this.style = settings?.style;
 			this._displayed = settings?.hidden ? false : undefined;
 			this.displayName = settings?.displayName ?? StringUtils.idToDisplay( this.name );
+			this.selection = settings?.selection;
 		}else{
 			const serialized = args as {field: ViewFieldJson, schema: TableSchema};
 			const json = serialized.field;
@@ -111,6 +113,7 @@ export class ViewField{
 			this.style = json.style;
 			this._displayed = !json.hidden;//explicit, not the type default: toJson always stamps hidden when a field isn't displayed, so no flag means displayed - the default would re-hide an ID/list column the user checked
 			this.displayName = json.displayName ?? StringUtils.idToDisplay( this.name );
+			this.selection = json.selection;
 		}
 	}
 	toJson( customDisplay:boolean=false ):ViewFieldJson{
@@ -121,16 +124,24 @@ export class ViewField{
 			y["displayName"] = this.displayName;
 		if( this.style )
 			y["style"] = this.style;
+		if( this.selection )
+			y["selection"] = this.selection;
 		return y;
+	}
+	//what query() emits for this field: composite kinds need a sub-selection - an explicit one from settings, else the framework's {id name}/{id} convention (proto.service.fieldColumns).
+	get queryText():string{
+		const selection = this.selection ?? (this.type.underlyingKind==FieldKind.OBJECT ? "id name" : this.type.underlyingKind==FieldKind.UNION ? "id" : undefined);
+		return selection ? `${this.name}{${selection}}` : this.name;
 	}
 	get displayed():boolean{ return this._displayed ?? (this.type.ofType?.name!="ID" && this.name!="attributes" && this.type.kind!=FieldKind.LIST); }
 	set displayed(x){this._displayed=x;} private _displayed:boolean|undefined;
 
 	qlField: Field;
-	get name(){ return this.qlField.name; }
+	get name(){ return this.qlField?.name; }
 	displayName:string;
 	get type(){ return this.qlField.type; }
 	style?: Style;
+	selection?:string;
 };
 
 type ViewConfigArgs = { configColumns:(string|ViewFieldSettings)[], sort:Sort[], filters?:{name: string, filter: Filter} };
@@ -267,7 +278,7 @@ export class View{
 		if( deletedField )
 				deletedField.displayed = showDeleted;
 
-		let fieldStr = this.fields.filter( f=>f.displayed || f.name=="id" || f.name=="target" ).map( f=>f.name ).join(" ");//id/target are queried even when hidden:  id is the mutation key, target the navigation key
+		let fieldStr = this.fields.filter( f=>f.displayed || f.name=="id" || f.name=="target" ).map( f=>f.queryText ).join(" ");//id/target are queried even when hidden:  id is the mutation key, target the navigation key
 		let args = [];
 		let vars:Record<string, DbScalar[]|DbScalar|null> = {};
 		if( this.limit )

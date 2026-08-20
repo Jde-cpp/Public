@@ -30,7 +30,6 @@ export class GatewayResolver implements Resolve<GatewayData> {
 		const pageSettings = new PageSettings( routing.tableSettings );
 		const schema = await gateway.schemaWithEnums( "ServerConnection", (m)=>console.log(m) );
 		var profile = new PageProfile();
-		const viewCols = schema.fields.map( f=>f.name );
 		const defaultView = new View( routing.tableSettings, schema );
 		profile.views.push( defaultView );
 		await profile.loadViews( schema.collectionName, this.profileStore, schema );

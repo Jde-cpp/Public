@@ -63,8 +63,10 @@ export class LogEntries{
 	static tagName( tag:string ):string{
 		return LogEntries.orderTags( tag.split(TagSeparator) ).map( LogEntries.partName ).join( TagSeparator );
 	}
+	//a part whose display spelling capitalize() cannot guess - the wire keeps the long name, the row shows the short one.
+	static partNames: Record<string,string> = { socket: "Sock" };
 	private static partName( part:string ):string{
-		return part.length==2 ? part.toUpperCase() : StringUtils.capitalize( part );
+		return LogEntries.partNames[part] ?? (part.length==2 ? part.toUpperCase() : StringUtils.capitalize( part ));
 	}
 	static columns: Record<string,string> = {
 		time: "Time",

@@ -336,7 +336,7 @@ namespace Jde::DB{
 		try{
 			return config.DS()->ScalerSyncOpt<string>( {string{config.DS()->Syntax().SchemaExistsSql()}, {Value{config.Name}}} ).has_value();
 		}
-		catch( DBException& e ){
+		catch( Exception& e ){
 			e.SetLevel( ELogLevel::Debug );
 			return false;//connected to schema which doesn't exist.
 		}

@@ -12,7 +12,7 @@ namespace Jde::Opc::Gateway::Tests{
 		let sessionId = *Str::TryTo<SessionPK>(_jwt->SessionId, nullptr, 16);
 		TRACE( "UserPK: {:x}, SessionId: {:x}", _jwt->UserPK.Value, sessionId );
 		auto con = GetConnection( OpcServerTarget );
-		Credential cred{ _jwt->Payload() };
+		Credential cred{ _jwt->Payload() }; cred.SetUserPK( _jwt->UserPK );
 		_client = BlockTAwait<sp<UAClient>>( ConnectAwait{move(con.Target), cred} );
 		AddSession( sessionId, OpcServerTarget, move(cred) );
 	}

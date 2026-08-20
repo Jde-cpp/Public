@@ -1,5 +1,6 @@
 ﻿#include <jde/db/IDataSource.h>
 #include <jde/db/generators/Syntax.h>
+#include <stdexcept>
 
 #define let const auto
 namespace Jde::DB{
@@ -8,7 +9,7 @@ namespace Jde::DB{
 			Select( move(sql), f, sl );
 			return true;
 		}
-		catch( const Exception& ){
+		catch( const runtime_error& ){
 			return false;
 		}
 	}

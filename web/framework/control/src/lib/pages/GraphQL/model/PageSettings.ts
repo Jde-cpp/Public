@@ -38,7 +38,13 @@ export class PageProfile{
 	}
 	showDeleted!:boolean;
 	currentViewIndex:number=0;
-	get view():View{ return this.views[this.currentViewIndex]; }
+	get view():View{
+		if( this.currentViewIndex>=this.views.length ){
+			console.error( `Invalid currentViewIndex: ${this.currentViewIndex}` );
+			this.currentViewIndex = 0;
+		}
+		return this.views[this.currentViewIndex];
+	}
 	views:View[] = [];
 }
 export class PageSettings{
