@@ -8,7 +8,7 @@
 #include <jde/opc/uatypes/Logger.h>
 #include <jde/tests/SpdlogTestListener.h>
 #include <jde/tests/testMain.h>
-#include "../src/StartupAwait.h"
+#include "../src/opcServerStartup.h"
 #include "../../AppServer/src/appStartup.h"
 #define let const auto
 
@@ -16,37 +16,22 @@ namespace Jde{
 #ifndef _MSC_VER
 	α Process::ProductName()ι->sv{ return "Tests.OpcServer"; }
 #endif
-	up<std::exception> _error;
-
- 	Ω startup( int argc, char **argv, atomic_flag& done )ε->VoidAwait::Task{
+	Ω startup( int argc, char **argv )ε->void{
 		Logging::AddTagParser( mu<Opc::UALogParser>() );
 		Process::Startup( argc, argv, "Tests.OpcServer", "OpcServer tests", true );
 		Opc::Server::AppClient()->InitLogging( Opc::Server::AppClient() );
-		try{
-			if( Settings::FindBool("/testing/embeddedAppServer").value_or(true) )//the fresh db enrolls the client cert every run: /access/trustedCertDirs anchors its dir, StartupAwait ensures the cert, and TrustVerify rescans - no pre-anchoring of the CLIENT cert here.  The other direction (client trusts each embedded server's cert) is covered by Web::Server::Start's self-anchor.
-				App::Server::AppStartup( Settings::AsObject("/http/app") );
-			co_await Opc::Server::StartupAwait{ Settings::AsObject("/http/opcServer"), Settings::AsObject("/credentials/opcServer") };
-		}
-		catch( runtime_error& e ){
-			auto p = ToUP( move(e) );
-			_error = move(p);
-		}
-		done.test_and_set();
-		done.notify_one();
+		if( Settings::FindBool("/testing/embeddedAppServer").value_or(true) )//the fresh db enrolls the client cert every run: /access/trustedCertDirs anchors its dir, Opc::Server::Startup ensures the cert, and TrustVerify rescans - no pre-anchoring of the CLIENT cert here.  The other direction (client trusts each embedded server's cert) is covered by Web::Server::Start's self-anchor.
+			App::Server::AppStartup( Settings::AsObject("/http/app") );
+		Opc::Server::Startup( Settings::AsObject("/http/opcServer"), Settings::AsObject("/credentials/opcServer") );
 	}
 }
 
 α main( int argc, char **argv )->int{
 	using namespace Jde;
 	::testing::InitGoogleTest( &argc, argv );
-	atomic_flag done;
-	startup( argc, argv, done );
-	done.wait( false );
 	int result{ EXIT_FAILURE };
 	try{
-		if( _error ){
-			throw *_error;
-		}
+		startup( argc, argv );
 		::testing::GTEST_FLAG( filter ) = Settings::FindString( "/testing/tests" ).value_or( "*" );
 		Jde::SpdlogTestListener::Config( ::testing::UnitTest::GetInstance()->listeners() );
 		result = CheckTestsRan( RUN_ALL_TESTS() );

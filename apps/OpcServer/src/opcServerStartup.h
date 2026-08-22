@@ -1,16 +1,7 @@
 #pragma once
 
-namespace Jde::DB{ struct AppSchema; }
-
 namespace Jde::Opc::Server{
-	α Schemas()ι->const vector<sp<DB::AppSchema>>&;
-	struct StartupAwait final : VoidAwait{
-		StartupAwait( jobject webServerSettings, jobject userName, SRCE )ι:VoidAwait{sl},_webServerSettings{move(webServerSettings)}, _userName{move(userName)}{}
-	private:
-		α Suspend()ι->void override{ Execute(); }
-		α Execute()ι->VoidAwait::Task;
-
-		jobject _webServerSettings;
-		jobject _userName;
-	};
+	//Blocks until the server is up: schema sync, web server, AppServer connect, access configure, UA server run, then the
+	//db/mutation/config-file loads.  Call from a thread that does not run the io pool (main) - each step blocks on an awaitable.
+	α Startup( jobject webServerSettings, jobject userName )ε->void;
 }
