@@ -27,4 +27,11 @@ describe('ProtoService.processError', () => {
 		expect( service.processError( {what:'expired', code:0, statusCode:401} as any, 8 ) ).toBe( false );//no callback registered - the credential is stale regardless.
 		expect( authStore.logout ).toHaveBeenCalled();
 	});
+
+	//access-review3 #17: a denial is 403 now, not 401 - the server used to answer 401 for "lacks Administer" and this policy
+	//logged the user out.  The complement of the case above: a 403 is a permission error, handled or not, never a logout.
+	it('a 403 never logs the user out, even when unhandled', () => {
+		expect( service.processError( {what:'denied', code:0, statusCode:403} as any, 9 ) ).toBe( false );//no callback registered.
+		expect( authStore.logout ).not.toHaveBeenCalled();
+	});
 });

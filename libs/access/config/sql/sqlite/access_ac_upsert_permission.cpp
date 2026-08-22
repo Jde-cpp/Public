@@ -4,12 +4,15 @@
 
 //Twin of ../mysql/access_ac_upsert_permission.sql.
 //	params: [0]=_identityId, [1]=_allowed, [2]=_denied, [3]=_resourceId; out _permission_id returned as the result row.
+//An upsert on (identity, resource):  resource_id already encodes the criteria, so the lookup asks nothing about it - the old
+//`criteria is null` (a column only access_resources has) could never match a criteria-scoped resource, every re-grant minted a
+//new permission, and the identity's rights became the OR of every grant ever made (access-review3 #12).
 namespace Jde::DB::Sqlite::AccessProcs{
 	α RegisterAccessAcUpsertPermission( IProcs& procs )ι->void{
 		procs.RegisterProc( "access_ac_upsert_permission", [&procs]( sqlite3& db, const vector<Value>& params, RowΛ* onRow, SL sl )->uint{
 			auto permissionId = procs.ScalarUInt( db,
-				"select max(permission_id) from access_acl join access_permission_rights using(permission_id) join access_resources using(resource_id)"
-				" where resource_id=? and identity_id=? and criteria is null", {params[3], params[0]}, sl );
+				"select max(permission_id) from access_acl join access_permission_rights using(permission_id)"
+				" where resource_id=? and identity_id=?", {params[3], params[0]}, sl );
 			uint y;
 			if( !permissionId ){
 				procs.ExecuteStatement( db, "insert into access_permissions( is_role ) values( ? )", {Value{false}}, nullptr, sl );

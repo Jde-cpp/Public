@@ -131,4 +131,27 @@ namespace Jde::Access::Tests{
 		EXPECT_THROW( AddToGroup( groupD, {groupA}, GetRoot() ), Exception );
 		//TODO test implement deleted members.
 	}
+
+	//access-review3 #8's other half:  the hook's key set had diverged from getChildParentParams' (`id` only against either), so a
+	//fix that merely swallowed the throw would have skipped TestAddGroupMember for the `identityId` spelling and let a cycle in.
+	//The ancestry check has to fire under either spelling.
+	TEST_F( GroupTests, AncestryCheckFiresByParentColumnName ){
+		let root = GetRoot();
+		const GroupPK outer{ GetId(GetGroup("review8-outer", root)) };
+		const GroupPK inner{ GetId(GetGroup("review8-inner", root)) };
+		if( !IsMember("review8-outer", inner, root) )
+			AddToGroup( outer, {inner}, root );
+		EXPECT_THROW( QL().QuerySync<jvalue>(Ƒ("mutation addGroup( identityId:{}, memberId:[{}] )", inner.Value, outer.Value), {}, root), Exception ); //outer into inner - its own ancestor.
+		EXPECT_FALSE( IsMember("review8-inner", outer, root) ) << "the cycle must not have been written";
+		EXPECT_THROW( QL().QuerySync<jvalue>(Ƒ("mutation addGroup( identityId:{}, memberId:[{}] )", inner.Value, inner.Value), {}, root), Exception ); //itself.
+		RemoveFromGroup( outer, {inner}, root );
+		PurgeGroup( inner, root );
+		PurgeGroup( outer, root );
+	}
+
+	//access-review3 #9 (ql-review3 #5):  GroupAwait::Select adds is_group through TableQL::AddFilter, whose as_object() on a
+	//client-supplied `filter` arg was a terminate.  Refused as an unknown column now.
+	TEST_F( GroupTests, ScalarFilterArgIsRefusedNotFatal ){
+		EXPECT_THROW( QL().QuerySync<jarray>("groups( filter:\"x\" ){ id }", {}, GetRoot()), Exception );
+	}
 }

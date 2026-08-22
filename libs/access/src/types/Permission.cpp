@@ -12,15 +12,18 @@ namespace Jde::Access{
 		PK{pk}, ResourcePK{resourcePK}, Allowed{allowed}, Denied{denied}
 	{}
 
+	//Missing means None:  RoleMAwait::AddPermission defaults an omitted allowed/denied to 0, and a notification carries only the
+	//keys the mutation sent (Json::Combine of its args, TrimColumns copies what is present) - so the key can be absent here,
+	//and this is noexcept:  AsNumber would have thrown across it into std::terminate (access-review3 #6).
 	α getRights( const jobject& o, sv key )ι->ERights{
 		auto rights{ ERights::None };
 		if( let array = Json::FindArray(o, key); array )
 			rights = ToRights( *array );
 		else
-			rights = (ERights)Json::AsNumber<uint>(o, key); //opc rights use all 64 bits
+			rights = (ERights)Json::FindNumber<uint>(o, key).value_or(0); //the same vocabulary as the names array, just not spelled out.
 		return rights;
 	}
-	Permission::Permission( const jobject& o )ι:
+	Permission::Permission( const jobject& o )ε:
 		PK{ Json::AsNumber<PermissionPK>(o, "id") },
 		ResourcePK{ Json::FindNumberPath<Access::ResourcePK>(o, "resource/id").value_or(0) },
 		Allowed{ getRights(o, "allowed") },

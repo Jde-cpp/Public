@@ -2,6 +2,13 @@
 #include <jde/fwk/io/json.h>
 #include <jde/fwk/str.h>
 #include <jde/access/server/awaits/AclAwait.h>
+#include <jde/access/Authorize.h>
+#include <jde/access/AccessListener.h>
+#include <jde/db/IDataSource.h>
+#include <jde/db/meta/AppSchema.h>
+#include <jde/db/meta/Table.h>
+#include "../src/accessInternal.h"
+#include "../src/awaits/AclLoadAwait.h"
 #include "globals.h"
 
 #define let const auto
@@ -11,6 +18,8 @@ namespace Jde::Access::Tests{
 	α AddRoleMember( RolePK parentRolePK, RolePK childRolePK, UserPK executer )ε->jobject;
 	α RemoveRolePermission( RolePK rolePK, PermissionPK permissionPK, UserPK executer )ε->jvalue;
 	α RemoveRoleMember( RolePK parentRolePK, RolePK childRolePK, UserPK executer )ε->jvalue;
+	α InsertRoleMember( RolePK parentRolePK, RolePK childRolePK, UserPK executer )ε->jvalue;
+	α GetRoleChild( RolePK parentRolePK, RolePK childRolePK, UserPK executer )ε->jobject;
 	using namespace Json;
 	class AclTests : public ::testing::Test{
 	protected:
@@ -123,6 +132,19 @@ namespace Jde::Access::Tests{
 		EXPECT_THROW( AddRolePermission(rolePK, resourceName, ERights::All, ERights::None, executer), Exception );
 		restoreResource( "roles", GetRoot() );
 		EXPECT_THROW( CreateAcl(_usersPKs["intruder"], rolePK, executer), Exception );
+		//review #3 #1 - RoleMAwait's add/remove branches gate on the executer, not only the cycle check.
+		let childRolePK = GetId( Get("role", "EnabledPermissionsTestChild", GetRoot()) );
+		EXPECT_THROW( InsertRoleMember(rolePK, childRolePK, executer), Exception );
+		EXPECT_THROW( RemoveRoleMember(rolePK, childRolePK, executer), Exception );
+		EXPECT_TRUE( GetRoleChild(rolePK, childRolePK, GetRoot()).empty() );
+		let permissionPK = GetId( AddRolePermission(rolePK, resourceName, ERights::Read, ERights::None, GetRoot()) );
+		EXPECT_THROW( RemoveRolePermission(rolePK, permissionPK, executer), Exception );
+		EXPECT_FALSE( GetRolePermission(rolePK, resourceName, GetRoot()).empty() );
+		let aclPermissionPK = GetId( _users["reader"] );//a direct acl grant, not a role member - access_role_remove would drop its rights row unscoped.
+		EXPECT_THROW( RemoveRolePermission(rolePK, aclPermissionPK, executer), Exception );
+		EXPECT_EQ( GetId(SelectAcl(_usersPKs["reader"], resourceName)), aclPermissionPK );
+		RemoveRolePermission( rolePK, permissionPK, GetRoot() );//an admin still passes the gate.
+		EXPECT_TRUE( GetRolePermission(rolePK, resourceName, GetRoot()).empty() );
 	}
 
 	TEST_F( AclTests, EnabledPermissions ){
@@ -243,13 +265,157 @@ namespace Jde::Access::Tests{
 		let groupId2 = TestUnauthCrud( resourceName, "AclTests-PurgeAcl-Group", executer );
 		TestUnauthPurge( resourceName, groupId2, executer );
 	}
+	//access-review3 #5:  the permissionRight change subscription was registered under `permissions` while updatePermissionRight
+	//publishes under `permission_rights`, so AccessListener::PermissionUpdated never fired and a grant narrowed through the UI kept
+	//its old rights in the cache until restart.  ql-review3 #8 re-keyed it; SubscriptionTests pins the fan-out with an explicit
+	//subscription, this pins the startup registration end to end - the mutation, then Authorize::Rights.
+	TEST_F( AclTests, UpdatePermissionRightReachesTheCache ){
+		let resourceName = "groups";
+		restoreResource( resourceName, GetRoot() );
+		UserPK executer{ GetId( GetUser("permissionUpdateUser", GetRoot()) ) };
+		let permissionPK = Json::AsNumber<PermissionRightsPK>( GetAcl(executer, resourceName, ERights::All, ERights::None), "id" );
+		ASSERT_EQ( Authorizer()->Rights("access", resourceName, executer), ERights::All );
+		auto update = [&]( sv args ){ QL().QuerySync<jvalue>( Ƒ("mutation updatePermissionRight( id:{}, {} )", permissionPK, args), {}, GetRoot() ); };
+
+		update( "allowed:0, denied:0" );
+		EXPECT_EQ( Authorizer()->Rights("access", resourceName, executer), ERights::None ); //revoked - without a restart.
+		update( Ƒ("allowed:{}", underlying(ERights::All)) ); //widened, denied omitted - a partial update must leave the other side alone.
+		EXPECT_EQ( Authorizer()->Rights("access", resourceName, executer), ERights::All );
+		update( Ƒ("denied:{}", underlying(ERights::Update)) );
+		EXPECT_EQ( Authorizer()->Rights("access", resourceName, executer), ERights::All & ~ERights::Update );
+		PurgeAcl( executer, permissionPK, GetRoot() );
+	}
+	//access-review3 #6:  Permission's jobject ctor was noexcept but read id/allowed/denied with the throwing Json::AsNumber.  The
+	//mutation layer defaults an omitted allowed/denied to 0 and the notification is built from the mutation's args, so a
+	//roleAdded without one of them crossed the noexcept boundary in RoleChanged and took the process down with std::terminate -
+	//every subscriber's, the AppServer's included.  Drive the real listener with those payloads directly;  the permission pk is
+	//invented, the cache is the subject.
+	TEST_F( AclTests, PartialPermissionRightPayloadDoesNotTerminate ){
+		let resourceName = "groups";
+		restoreResource( resourceName, GetRoot() );
+		let resourcePK = GetId( SelectResource(resourceName, GetRoot()) );
+		UserPK executer{ GetId( GetUser("partialPayloadUser", GetRoot()) ) };
+		let rolePK = GetId( Get("role", "PartialPayloadRole", GetRoot()) );
+		CreateAcl( executer, rolePK, GetRoot() );
+		ASSERT_EQ( Authorizer()->Rights("access", resourceName, executer), ERights::None ); //the role holds nothing yet.
+
+		AccessListener listener{ QLPtr() };
+		let roleAdded = (QL::SubscriptionId)underlying( ESubscription::Role | ESubscription::Added );
+		auto notify = [&]( jobject permissionRight ){
+			permissionRight["resource"] = jobject{ {"id", resourcePK} };
+			listener.OnChange( jvalue{jobject{{"roleAdded", jobject{{"id", rolePK}, {"permissionRight", move(permissionRight)}}}}}, roleAdded );
+		};
+		constexpr PermissionPK fakePK{ 987654321 };
+		notify( {{"id", fakePK}, {"allowed", underlying(ERights::Read)}} ); //denied omitted - used to terminate here.
+		EXPECT_EQ( Authorizer()->Rights("access", resourceName, executer), ERights::Read );
+		notify( {{"id", fakePK}, {"denied", underlying(ERights::Read)}} ); //allowed omitted - None, as the mutation would have stored.
+		EXPECT_EQ( Authorizer()->Rights("access", resourceName, executer), ERights::None );
+		EXPECT_THROW( notify({{"allowed", underlying(ERights::All)}}), Exception ); //id omitted - unusable:  refused, not cached under pk 0, not terminated on.
+		EXPECT_EQ( Authorizer()->Rights("access", resourceName, executer), ERights::None );
+		//take the invented permission back out through the Removed path.  The role and its acl row stay (Get/CreateAcl are
+		//get-or-create):  access_role_purge trips the acl fk on a role that is still assigned - finding 13, not this one.
+		listener.OnChange( jvalue{jobject{{"roleRemoved", jobject{{"id", rolePK}, {"permissionRight", jobject{{"id", fakePK}}}}}}}, (QL::SubscriptionId)underlying(ESubscription::Role | ESubscription::Removed) );
+		EXPECT_EQ( Authorizer()->Rights("access", resourceName, executer), ERights::None );
+	}
+	//access-review3 #11:  purgeAcl gated on which key the client sent - role:{id} meant Administer of `roles`, whatever the pk was -
+	//so a roles admin could revoke any identity's direct grant on any resource by spelling its pk as a role.  The gate now comes
+	//from access_permissions.is_role, either spelling is accepted, and the notification carries the key the pk is, so the cache's
+	//RemoveAcl finds the right entry whichever the client sent.
+	TEST_F( AclTests, PurgeAclGatesOnWhatThePkIs ){
+		restoreResource( "roles", GetRoot() );
+		restoreResource( "groups", GetRoot() );
+		UserPK rolesAdmin{ GetId( GetUser("purgeAclRolesAdmin", GetRoot()) ) };
+		UserPK groupsAdmin{ GetId( GetUser("purgeAclGroupsAdmin", GetRoot()) ) };
+		UserPK victim{ GetId( GetUser("purgeAclVictim", GetRoot()) ) };
+		let rolesAdminPK = GetId( GetAcl(rolesAdmin, "roles", ERights::Administer, ERights::None) );
+		let groupsAdminPK = GetId( GetAcl(groupsAdmin, "groups", ERights::Administer, ERights::None) );
+		let grantPK = GetId( GetAcl(victim, "groups", ERights::Read, ERights::None) ); //a direct grant...
+		let rolePK = GetId( Get("role", "PurgeAclGateRole", GetRoot()) );
+		AddRolePermission( rolePK, "groups", ERights::Update, ERights::None, GetRoot() );
+		CreateAcl( victim, rolePK, GetRoot() ); //...and a role assignment, in the same pk space.
+		ASSERT_EQ( Authorizer()->Rights("access", "groups", victim), ERights::Read | ERights::Update );
+		auto purge = [&]( IdentityPK identity, sv key, uint pk, UserPK executer ){
+			BlockTAwait<jvalue>( Server::AclQLAwait{QL::ParseM(Ƒ("purgeAcl( identity:{{ id:{} }}, {}:{{ id:{} }} )", identity.Underlying(), key, pk), {}, Schemas()), executer} );
+		};
+
+		EXPECT_THROW( purge(victim, "role", grantPK, rolesAdmin), Exception ); //the finding:  a direct grant spelled as a role.
+		EXPECT_EQ( GetId(SelectAcl(victim, "groups")), grantPK );
+		EXPECT_THROW( purge(victim, "permissionRight", rolePK, groupsAdmin), Exception ); //the mirror:  a role spelled as a permission.
+		EXPECT_FALSE( SelectAcl(victim, rolePK).empty() );
+		EXPECT_EQ( Authorizer()->Rights("access", "groups", victim), ERights::Read | ERights::Update );
+
+		purge( victim, "permissionRight", rolePK, rolesAdmin ); //the right admin under the "wrong" spelling - what the pk is decides.
+		EXPECT_TRUE( SelectAcl(victim, rolePK).empty() );
+		EXPECT_EQ( Authorizer()->Rights("access", "groups", victim), ERights::Read ); //and the cache dropped the role, not a permission of that pk.
+		purge( victim, "role", grantPK, groupsAdmin );
+		EXPECT_TRUE( SelectAcl(victim, "groups").empty() );
+		EXPECT_EQ( Authorizer()->Rights("access", "groups", victim), ERights::None );
+		PurgeAcl( rolesAdmin, rolesAdminPK, GetRoot() );
+		PurgeAcl( groupsAdmin, groupsAdminPK, GetRoot() );
+	}
+	//access-review3 #12:  access_ac_upsert_permission looked the existing grant up with `criteria is null` - a column only
+	//access_resources has, and one resource_id already pins - so for a criteria-scoped resource the lookup never matched, every
+	//createAcl minted a new permission, and the identity's rights became the OR of every grant ever made (User::operator+= ORs
+	//allowed and denied), live and after a reload.  Criteria-null resources - everything the UI reaches - were unaffected.
+	TEST_F( AclTests, RegrantOnCriteriaResourceUpserts ){
+		let root = GetRoot();
+		const UserPK system{ UserPK::System }; //grants on a resource root holds no rights over - System early-passes TestAdmin.
+		constexpr sv schema{ "access" }, target{ "aclUpsert" }, criteria{ "nodeId:{ eq: 12 }" }; //in `access`, or the resources subscription's schema filter keeps it out of the cache and TestAdmin fail-opens; criteria-scoped, so CheckDefaults' criteria:null count is untouched.
+		let select = Ƒ( R"(resources( schemaName:"{}", target:"{}", criteria:"{}" ){{ id }})", schema, target, criteria );
+		auto resources = QL().QuerySync<jarray>( select, {}, root );
+		if( resources.empty() ){
+			QL().QuerySync<jvalue>( Ƒ(R"(createResource( schemaName:"{}", name:"{}", target:"{}", criteria:"{}", allowed:255 ))", schema, target, target, criteria), {}, system );
+			resources = QL().QuerySync<jarray>( select, {}, root );
+		}
+		ASSERT_EQ( resources.size(), 1u );
+		let resourcePK = GetId( Json::AsObject(resources[0]) );
+		const UserPK user{ GetId(GetUser("aclUpsertUser", root)) };
+		auto grant = [&]( ERights allowed )->PermissionRightsPK{
+			let q = Ƒ( "createAcl( identity:{{ id:{} }}, permissionRight:{{ allowed:{}, denied:0, resource:{{ id:{} }} }} ){{ permissionRight{{id}} }}", user.Value, underlying(allowed), resourcePK );
+			return Json::AsNumber<PermissionRightsPK>( BlockTAwait<jvalue>( Server::AclQLAwait{QL::ParseM(q, {}, Schemas()), system} ).as_object(), "permissionRight/id" );
+		};
+		auto aclRows = [&]{ return QL().QuerySync<jarray>( Ƒ("acl( identityId:{} ){{ identityId permissionRight{{ id }} }}", user.Value), {}, root ).size(); };
+
+		let first = grant( ERights::Read | ERights::Administer );
+		ASSERT_EQ( aclRows(), 1u );
+		EXPECT_NO_THROW( Authorizer()->TestAdmin(resourcePK, user) );
+		let second = grant( ERights::Read ); //narrowed by a re-grant - the upsert the proc's name promises.
+		EXPECT_EQ( second, first ) << "the same (identity, resource) has to come back as the same permission";
+		EXPECT_EQ( aclRows(), 1u ) << "not a second acl row";
+		EXPECT_THROW( Authorizer()->TestAdmin(resourcePK, user), Exception ) << "Administer is gone live, not OR'd in from the first grant";
+		let reloaded = BlockAwait<AclLoadAwait, flat_multimap<IdentityPK,PermissionRole>>( AclLoadAwait{QLPtr(), system} );
+		EXPECT_EQ( reloaded.count(IdentityPK{user}), 1u ) << "and after a reload"; //the user holds nothing else.
+		PurgeAcl( user, first, system );
+		Purge( "resource", resourcePK, root ); //leave no trace.
+	}
+	//access-review3 #14's sharper shape:  holding an acl grant or a group membership, purgeUser deleted access_users and then failed
+	//on access_identities - an orphan identity row no api could purge, committed on the autocommit dialects.  The users purgeProc
+	//takes the children first, so the identity goes cleanly.
+	TEST_F( AclTests, PurgeUserWithGrantAndMembership ){
+		let root = GetRoot();
+		restoreResource( "groups", root );
+		const UserPK user{ GetId(GetUser("purgeUserInUse", root)) };
+		GetAcl( user, "groups", ERights::All, ERights::None );
+		const GroupPK group{ GetId(GetGroup("purgeUserInUseGroup", root)) };
+		AddToGroup( group, {user}, root );
+		auto countRows = [&]( str table, sv column ){ let& dbTable = *GetTable( table ); return dbTable.Schema->DS()->ScalerSync<uint>( DB::Sql{Ƒ("select count(*) from {} where {}=?", dbTable.SqlName(), column), {DB::Value{user.Value}}} ); };
+		ASSERT_EQ( countRows("acl", "identity_id"), 1u );
+		ASSERT_EQ( countRows("groups", "member_id"), 1u );
+
+		EXPECT_NO_THROW( PurgeUser(user, root) );
+		EXPECT_TRUE( SelectUser("purgeUserInUse", root, nullopt, true).empty() ) << "no orphaned identity row";
+		EXPECT_EQ( countRows("acl", "identity_id"), 0u );
+		EXPECT_EQ( countRows("groups", "member_id"), 0u );
+		EXPECT_EQ( countRows("identities", "identity_id"), 0u );
+		PurgeGroup( group, root );
+	}
+	//access-review3 #21:  acl was ops:["None"], so ResourceSync never created its resource row and the read gate below had nothing
+	//to gate with - this test used to hand-create the row, which is exactly what no deployment does.  acl has ops now, so the
+	//row is there from the sync, disabled like every other, and an operator enables the gate by restoring it.
 	TEST_F( AclTests, ReadAuthorization ){
 		auto resource = SelectResource( "acl", GetRoot(), true );
-		if( resource.empty() ){ //never synced (ops:None) - create disabled like ResourceSyncAwait.
-			QL().QuerySync( "createResource( schemaName:\"access\", name:\"acl\", target:\"acl\", allowed:255, description:\"From ReadAuthorization test\" ){id}", {}, {UserPK::System} );
-			resource = SelectResource( "acl", GetRoot(), true );
-			Delete( "resources", GetId(resource), GetRoot() );
-		}
+		ASSERT_FALSE( resource.empty() ) << "ResourceSync has to create the acl resource";
+		ASSERT_FALSE( resource.at("deleted").is_null() ) << "created disabled, like every synced resource";
 		let permissionPK = CreateAcl( GetRoot(), ERights::All, ERights::None, "acl", {UserPK::System} ); //grant root while disabled.
 		restoreResource( "acl", GetRoot() );
 		let intruder = _usersPKs["intruder"];
@@ -260,7 +426,7 @@ namespace Jde::Access::Tests{
 		Delete( "resources", GetId(resource), GetRoot() );
 		BlockTAwait<jvalue>( Server::AclQLSelectAwait{QL::ParseQuery(q, vars, Schemas()), intruder} ); //fail-open when disabled.
 		PurgeAcl( GetRoot(), permissionPK, GetRoot() );
-		Purge( "resource", GetId(resource), GetRoot() ); //leave no trace - ResourceTests.CheckDefaults counts rows.
+		//the row stays, disabled, as the sync left it - ResourceTests.CheckDefaults counts it now.
 	}
 	//remove user from group/role.
 }

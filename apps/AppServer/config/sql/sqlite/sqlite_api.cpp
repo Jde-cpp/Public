@@ -26,4 +26,5 @@ void RegisterProcs( Jde::DB::Sqlite::IProcs& procs ){
 	AccessProcs::RegisterAccessUserInsert( procs );
 	AccessProcs::RegisterAccessUserInsertKey( procs );
 	AccessProcs::RegisterAccessUserInsertLogin( procs );
+	AccessProcs::RegisterAccessUserPurge( procs );
 }

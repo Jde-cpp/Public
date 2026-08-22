@@ -30,6 +30,7 @@ namespace Jde::Access::Server{
 		α RemovePermission( RolePK parentRolePK )ι->DB::ExecuteAwait::Task;
 
 		QL::MutationQL _mutation;
+		jobject _args; //ExtrapolateVariables() - AddRole/AddPermission/RemoveRole reference into it across their suspensions.
 		UserPK _userPK;
 	};
 }

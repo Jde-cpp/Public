@@ -23,24 +23,10 @@ namespace Jde::Access{
 		return authorizer ? authorizer : shared_from_this();
 	}
 	α Authorize::AddResource( ResourcePK resourcePK, string schema, string resourceTarget, string criteria )ι->void{
-		Jde::sl _{ Mutex };
+		ul _{ Mutex };
 		SchemaResources[schema][resourceTarget][criteria] = resourcePK;
 	}
 
-	α Authorize::FindResource( const Resource& resource, ul& l )Ι->const Resource*{
-		auto pk = resource.PK;
-		if( !pk && resource.Schema.size() && resource.Target.size() )
-			pk = FindActiveResourcePK( resource.Schema, resource.Target, resource.Criteria, l ).value_or( 0 );
-		if( auto p = pk ? Resources.find(pk) : Resources.end(); p!=Resources.end() )
-			return &p->second;
-		else if( /*resource.Schema.empty() &&*/ resource.Target.size() ){
-			for( let& [pk,existing] : Resources ){
-				if( (resource.Schema.empty() || existing.Schema==resource.Schema) && existing.Target==resource.Target && existing.Criteria.empty() )
-					return &existing;
-			}
-		}
-		return nullptr;
-	}
 	α Authorize::GetSchema( str resourceTarget, SL sl )ε->string{
 		Jde::sl _{ Mutex };
 		for( let& [_,resource] : Resources ){
@@ -94,7 +80,7 @@ namespace Jde::Access{
 		if( executer==UserPK{UserPK::System} )
 			return;
 		auto user = Users.find( executer );
-		THROW_IFX( user==Users.end(), Access::AccessException(sl, executer, "User not found.") );
+		THROW_IFX( user==Users.end(), Access::AccessException(sl, executer, EHttpStatus::Unauthorized, "User not found.") ); //not a known user - anonymous or stale - the one case the client's 401 policy is for.
 		THROW_IFX( user->second.IsDeleted, Access::AccessException(sl, executer, "User is deleted.") );
 		let configured = user->second.ResourceRights( resource.PK );
 		THROW_IFX( !empty(configured.Denied & ERights::Administer), Access::AccessException(sl, executer, "User denied admin access to '{}'.", resource.Target) );
@@ -129,7 +115,7 @@ namespace Jde::Access{
 		if( auto user = Users.find(userPK); user!=Users.end() )
 			return user->second.Name;
 		else
-			return std::to_string( userPK );
+			return std::to_string( userPK.Value );
 	}
 
 	α Authorize::RecursiveUsers( GroupPK groupPK, const ul& l, bool clear )ι->flat_set<UserPK>{
@@ -285,32 +271,34 @@ namespace Jde::Access{
 		ul _{ Mutex };
 		Resources[resource.PK] = move( resource );
 	}
+	//A pk names one row.  No pk - the fan-out could not pick one, because a by-target delete hit several - names every row of that
+	//schema+target, and the db changed all of them, so the cache does too (access-review3 #22).
 	α Authorize::UpdateResourceDeleted( ResourcePK pk, sv schemaName, const jobject& args, bool restored )ε->void{
 		ul _{ Mutex };
 		if( !pk )
 			pk = Json::FindNumber<ResourcePK>( args, "id" ).value_or( 0 );
 		let target = Json::FindSV( args, "target" );
-		auto pkResource = find_if( Resources, [&](auto&& pkResource){
-			let& r = pkResource.second;
-			return ( pk && pk==r.PK ) || ( r.Schema==schemaName && target && *target==r.Target );
-		} );
-		// ie Testing schema where testing app isn't started.
-		THROW_IFX( pkResource==Resources.end(), Exception(SRCE_CUR, ELogLevel::Debug, "Resource not found pk: {}, schema:'{}', args:'{}'", pk, schemaName, serialize(args)) );
-		auto& resource = pkResource->second;
-
-		resource.IsDeleted = restored ? optional<DB::DBTimePoint>{} : DB::DBClock::now();
-		if( resource.Criteria.empty() ){
-			if( auto resources = resource.IsDeleted ? SchemaResources.find(resource.Schema) : SchemaResources.end(); resources!=SchemaResources.end() ){
-				resources->second.erase( resource.Target );
-				DBGT( _ptags, "[{}.{}.{}]Deleted from schema resource.", resource.Schema, resource.Target, resource.PK );
-			}
-			else if( !resource.IsDeleted ){
-				auto& targetResources = SchemaResources.try_emplace( string{resource.Schema} ).first->second;
-				auto& criteras = targetResources.try_emplace( resource.Target ).first->second;
-				criteras.try_emplace( {}, resource.PK );
-				DBGT( _ptags, "[{}.{}.{}]Restored from schema resource.", resource.Schema, resource.Target, resource.PK );
+		uint applied{};
+		for( auto&& [resourcePK, resource] : Resources ){ //&&: flat_map iterates a proxy pair.
+			if( pk ? pk!=resource.PK : !((schemaName.empty() || resource.Schema==schemaName) && target && *target==resource.Target) ) //no schema in the mutation means the db matched the target in every schema.
+				continue;
+			++applied;
+			resource.IsDeleted = restored ? optional<DB::DBTimePoint>{} : DB::DBClock::now();
+			if( resource.Criteria.empty() ){
+				if( auto resources = resource.IsDeleted ? SchemaResources.find(resource.Schema) : SchemaResources.end(); resources!=SchemaResources.end() ){
+					resources->second.erase( resource.Target );
+					DBGT( _ptags, "[{}.{}.{}]Deleted from schema resource.", resource.Schema, resource.Target, resource.PK );
+				}
+				else if( !resource.IsDeleted ){
+					auto& targetResources = SchemaResources.try_emplace( string{resource.Schema} ).first->second;
+					auto& criteras = targetResources.try_emplace( resource.Target ).first->second;
+					criteras.try_emplace( {}, resource.PK );
+					DBGT( _ptags, "[{}.{}.{}]Restored from schema resource.", resource.Schema, resource.Target, resource.PK );
+				}
 			}
 		}
+		// ie Testing schema where testing app isn't started.
+		THROW_IFX( !applied, Exception(SRCE_CUR, ELogLevel::Debug, "Resource not found pk: {}, schema:'{}', args:'{}'", pk, schemaName, serialize(args)) );
 	}
 
 
@@ -391,23 +379,26 @@ namespace Jde::Access{
 	}
 	α Authorize::AddRolePermission( RolePK rolePK, PermissionPK member, ERights allowed, ERights denied, const jobject& jResource )ι->void{
 		ul l{ Mutex };
-		if( auto permssion = Permissions.find(member); permssion!=Permissions.end() ){
-			permssion->second.Allowed = allowed;
-			permssion->second.Denied = denied;
+		Resource resource{ jResource };
+		optional<ResourcePK> resourcePK;
+		if( auto p = FindResource(resource, l); p )
+			resourcePK = p->PK;
+		else if( resource.PK ){ //new resource
+			auto& saved = Resources.emplace( resource.PK, move(resource) ).first->second;
+			ASSERT( saved.Schema.size() && saved.Target.size() );
+			SchemaResources[saved.Schema][saved.Target][saved.Criteria] = saved.PK;
+			resourcePK = saved.PK;
 		}
-		else{
-			Resource resource{ jResource };
-			if( auto p = FindResource(resource, l); p )
-				Permissions.emplace( member, Permission{member, p->PK, allowed, denied} );
-			else if( !resource.PK ){
-				CRITICAL( "[{}]Resource '{}' not found for role permission.", member, resource.Target );
-			}else{ //new resource
-				auto& saved = Resources.emplace( resource.PK, move(resource) ).first->second;
-				ASSERT( saved.Schema.size() && saved.Target.size() );
-				SchemaResources[saved.Schema][saved.Target][saved.Criteria] = saved.PK;
-				Permissions.emplace( member, Permission{member, saved.PK, allowed, denied} );
-			}
+		if( auto permission = Permissions.find(member); permission!=Permissions.end() ){ //a re-grant, or a purged pk the db reused (sqlite) - the entry outlives PurgeAcl/RemoveRoleChildren, so take the resource from the payload like AddAcl does, not from the stale entry.
+			permission->second.Allowed = allowed;
+			permission->second.Denied = denied;
+			if( resourcePK )
+				permission->second.ResourcePK = *resourcePK;
 		}
+		else if( resourcePK )
+			Permissions.emplace( member, Permission{member, *resourcePK, allowed, denied} );
+		else
+			CRITICAL( "[{}]Resource '{}' not found for role permission.", member, resource.Target );
 		auto role = Roles.try_emplace( rolePK, rolePK, false );
 		role.first->second.Members.emplace( PermissionRole{std::in_place_index<0>, member} );
 		Recalc( l );

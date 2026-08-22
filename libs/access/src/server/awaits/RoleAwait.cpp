@@ -19,18 +19,23 @@ namespace Jde::Access::Server{
 
 	//{ mutation addRole(id:42, allowed:255, denied:0, resource:{target:"users"}) }
 	//{ mutation addRole(id:11, role:{id:13}) }
+	//Suspend is noexcept, so nothing here may throw:  the arg shapes are checked, not asserted - a non-object `role` or
+	//`permissionRight` from a client used to reach Json::AsObject and take the process down (access-review3 #7).  The args live
+	//on the await rather than this frame:  the coroutines take them by reference, and AddPermission reads `rights` again after
+	//its admin check, which suspends when the schema's authorizer is remote.
 	α RoleMAwait::Add()ι->void{
 		let rolePK = _mutation.Id<RolePK>();
-		let args = _mutation.ExtrapolateVariables();
-		if( auto role = args.find("role"); role!=args.end() )
-			AddRole( rolePK, Json::AsObject(role->value()) );
-		else if( auto rights = args.find("permissionRight"); rights!=args.end() )
-			AddPermission( rolePK, Json::AsObject(rights->value()) );
+		_args = _mutation.ExtrapolateVariables();
+		if( auto role = _args.if_contains("role"); role && role->is_object() )
+			AddRole( rolePK, role->get_object() );
+		else if( auto rights = _args.if_contains("permissionRight"); rights && rights->is_object() )
+			AddPermission( rolePK, rights->get_object() );
 		else
-			ResumeExp( Exception{"Invalid mutation, expecting 'role' or 'permissionRight'."} );
+			ResumeExp( Exception{"Invalid mutation, expecting object 'role' or 'permissionRight'."} );
 	}
 	α RoleMAwait::AddRole( RolePK parentRolePK, const jobject& childRole )ι->DB::ExecuteAwait::Task{
 		try{
+			Authorizer().TestAdmin( "roles", _userPK, _sl );//TestAddRoleMember below is only the cycle check - the executer gate is here, as in AclQLAwait::InsertRole.
 			let& table = GetTable( "role_members" );
 			uint rowCount{};
 			for( auto childRolePK : Json::ToVector<RolePK>(Json::AsValue(childRole, "id")) ){
@@ -144,16 +149,17 @@ namespace Jde::Access::Server{
 	//{ mutation removeRole(id:11, role:{id:13}) }
 	α RoleMAwait::Remove()ι->void{
 		let rolePK = _mutation.Id<RolePK>();
-		let args = _mutation.ExtrapolateVariables();
-		if( auto role = args.find("role"); role!=args.end() )
-			RemoveRole( rolePK, Json::AsObject(role->value()) );
-		else if( args.contains("permissionRight") )
-			RemovePermission( rolePK );
+		_args = _mutation.ExtrapolateVariables();
+		if( auto role = _args.if_contains("role"); role && role->is_object() )
+			RemoveRole( rolePK, role->get_object() );
+		else if( _args.contains("permissionRight") )
+			RemovePermission( rolePK ); //reads the id inside its own try.
 		else
-			ResumeExp( Exception{"Invalid mutation, expecting 'role' or 'permissionRight'."} );
+			ResumeExp( Exception{"Invalid mutation, expecting object 'role' or 'permissionRight'."} );
 	}
 	α RoleMAwait::RemoveRole( RolePK parentRolePK, const jobject& childRole )ι->DB::ExecuteAwait::Task{
 		try{
+			Authorizer().TestAdmin( "roles", _userPK, _sl );
 			let& table = GetTable( "role_members" );
 			//the membership row only - access_role_remove would also drop the child's access_permissions row, ie purge the role itself.
 			let sql = Ƒ( "delete from {} where {}=? and {}=?", table.DBName, table.GetColumnPtr("role_id")->Name, table.GetColumnPtr("member_id")->Name );
@@ -169,10 +175,12 @@ namespace Jde::Access::Server{
 	}
 	α RoleMAwait::RemovePermission( RolePK parentRolePK )ι->DB::ExecuteAwait::Task{
 		try{
+			let permissionPK = _mutation.AsPathNumber<PermissionPK>( "permissionRight/id" );
+			Authorizer().TestAdminPermission( permissionPK, _userPK, _sl );//admin of the permission's resource, the same right AddPermission requires to grant it.
 			let& table = GetTable( "roles" );
 			DB::InsertClause remove{ DB::Names::ToSingular(table.DBName)+"_remove" };
 			remove.Add( parentRolePK );
-			remove.Add( _mutation.AsPathNumber<PermissionPK>("permissionRight/id") );
+			remove.Add( permissionPK );
 			let y = co_await table.Schema->DS()->Execute( remove.Move() );
 			QL::Subscriptions::OnMutation( _mutation, jvalue{} );
 			ResumeScaler( y );

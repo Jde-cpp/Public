@@ -22,8 +22,8 @@ namespace Jde::Access::Server{
 		α InsertPermission( const jobject& permission )ι->TAwait<optional<ResourcePK>>::Task;
 		α InsertPermission( ERights allowed, ERights denied, ResourcePK resourcePK )ι->DB::ScalerAwait<PermissionPK>::Task;
 		α InsertRole()ι->DB::ExecuteAwait::Task;
-		α PurgeAcl()ι->QL::QLAwait<jobject>::Task;
-		α PurgeAcl( IdentityPK::Type identityPK, PermissionPK permissionPK )ι->DB::ExecuteAwait::Task;
+		α PurgeAcl()ι->DB::ScalerAwaitOpt<uint>::Task;
+		α PurgeAcl( IdentityPK::Type identityPK, PermissionPK permissionPK, bool isRole )ι->DB::ExecuteAwait::Task;
 	};
 
 	struct AclQLSelectAwait final : TAwait<jvalue>, noncopyable{

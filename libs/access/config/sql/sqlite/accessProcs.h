@@ -21,6 +21,7 @@ namespace Jde::DB::Sqlite::AccessProcs{
 	α RegisterAccessUserInsert( IProcs& procs )ι->void;
 	α RegisterAccessUserInsertKey( IProcs& procs )ι->void;
 	α RegisterAccessUserInsertLogin( IProcs& procs )ι->void;
+	α RegisterAccessUserPurge( IProcs& procs )ι->void;
 
 	//Body of access_identity_insert, shared with the user_insert procs that `call` it in mysql - sqlite has no
 	//procs (Syntax::HasProcs false), so they call it directly instead.  Defined in access_identity_insert.cpp.

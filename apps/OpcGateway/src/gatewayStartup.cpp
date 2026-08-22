@@ -55,6 +55,7 @@ namespace Jde::Opc{
 			appClient->LoadLogSettings();
 
 		BlockVoidAwait( Access::Client::Configure(accessSchema, {schema}, appClient->QLServer(), UserPK{UserPK::System}, authorize, appClient->Listener(), {}) );
+		Process::AddShutdownFunction( [listener=appClient->Listener()](bool terminate, SL sl){ listener->Shutdown(terminate, sl); } ); //as the AppServer does - the subscriptions otherwise outlive everything they reference (access-review3 #25).
 		Process::AddShutdownFunction( [](bool terminate, SL sl){UAClient::Shutdown(terminate, sl);} );
 		QL::Hook::Add( mu<OpcQLHook>() );
 		INFOT( ELogTags::App, "---Started {}---", "OPC Gateway" );

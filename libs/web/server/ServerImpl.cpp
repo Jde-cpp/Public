@@ -99,7 +99,7 @@ namespace Server{
 			co_return;
 		}
 		catch( Access::AccessException& e ){
-			send( RestException{EHttpStatus::Unauthorized, move(e), move(req), "[{}]{}", reqHandler->UserName(e.Executer), e.what()}, move(stream), contentType );
+			send( RestException{e.HttpStatus(), move(e), move(req), "[{}]{}", reqHandler->UserName(e.Executer), e.what()}, move(stream), contentType ); //the exception owns its status - 403 for a denial, 401 only for an unknown executer (access-review3 #17).
 		}
 		catch( Exception& e ){
 			if( !empty(e.Tags & ELogTags::Parsing) )

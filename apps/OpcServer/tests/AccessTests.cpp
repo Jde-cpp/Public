@@ -1,22 +1,23 @@
 #include "../src/access/UAAccess.h"
+#include "../src/access/OpcAuthorize.h"
 #include "../src/ql/OpcQL.h"
 #define let const auto
 
 namespace Jde::Opc::Server::Tests{
-	using UAAccess::EOpcAccessLevel;
+	using Access::ERights;
 	constexpr ELogTags _tags{ ELogTags::Test };
+	//access-review3 #4:  node ACLs are stored in the generic ERights vocabulary - what node-access.ts writes - and OpcAuthorize
+	//translates them to UA access-level bits (ToAccess).  These seeds used to be UA bits, which the old C-cast passed through.
 	struct AccessTests : ::testing::Test{
 	protected:
-		constexpr static EOpcAccessLevel _readerAllowed = EOpcAccessLevel::Read | EOpcAccessLevel::HistoryRead;
-		constexpr static EOpcAccessLevel _writerAdded =  EOpcAccessLevel::Write | EOpcAccessLevel::HistoryWrite | EOpcAccessLevel::StatusWrite | EOpcAccessLevel::TimestampWrite;
-		constexpr static EOpcAccessLevel _writerAllowed =  _readerAllowed | _writerAdded;
-		constexpr static EOpcAccessLevel _adminAdded = EOpcAccessLevel::SemanticChange;
-		constexpr static EOpcAccessLevel _adminAllowed = _writerAllowed | _adminAdded;
-		constexpr static EOpcAccessLevel _readerDenied = _writerAdded | _adminAdded;
-		constexpr static EOpcAccessLevel _writerDenied = _adminAdded;
-		constexpr static EOpcAccessLevel _adminDenied = EOpcAccessLevel::AllAccess;
+		constexpr static ERights _readerAllowed = ERights::Read;
+		constexpr static ERights _writerAllowed = ERights::Read | ERights::Update;
+		constexpr static ERights _adminAllowed = _writerAllowed | ERights::Administer;
+		constexpr static ERights _readerDenied = ERights::Update | ERights::Delete | ERights::Administer;
+		constexpr static ERights _writerDenied = ERights::Administer;
+		constexpr static ERights _adminDenied = ERights::None;
 
-		Ω addRole( const string& target, EOpcAccessLevel allowed, EOpcAccessLevel denied )ε->void{
+		Ω addRole( const string& target, ERights allowed, ERights denied )ε->void{
 			let userTarget = Ƒ( "{}User", target );
 
 			auto user = _app->QuerySync( "user(target:$target){id}", {{"target", userTarget}} );
@@ -36,7 +37,7 @@ namespace Jde::Opc::Server::Tests{
 			string query{ "addRole( id:$roleId, permissionRight:{allowed:$allowed, denied:$denied, resource:{schemaName:$schema, target:\"nodeIds\"}} )" };
 			_app->QuerySync<jvalue>( move(query), move(vars) );
 
-			vars = { {"roleId", roleId}, {"allowed", underlying(allowed) & ~UA_ACCESSLEVELMASK_HISTORYREAD}, {"denied", 0}, {"schema", _resource}, {"criteria", "ns=4;i=6020"}, {"resourceName", "SignalOn"} }; //Examples/Stacklights/ExampleStacklight/Lamp1/SignalOn
+			vars = { {"roleId", roleId}, {"allowed", underlying(allowed)}, {"denied", underlying(denied)}, {"schema", _resource}, {"criteria", "ns=4;i=6020"}, {"resourceName", "SignalOn"} }; //Examples/Stacklights/ExampleStacklight/Lamp1/SignalOn - the same rights as the root: the generic vocabulary has no separate history-read right to withhold here.
 			query = "addRole( id:$roleId, permissionRight:{allowed:$allowed, denied:$denied, resource:{schemaName:$schema, target:\"nodeIds\", criteria:$criteria, name:$resourceName}} )";
 			_app->QuerySync<jvalue>( move(query), move(vars) );
 
@@ -54,7 +55,7 @@ namespace Jde::Opc::Server::Tests{
 				_roles.emplace( jrole.at("target").get_string(), jrole.at("id").to_number<Access::RolePK>() );
 			if( !_roles.contains("opcTestReaders") ){
 				_app->QuerySync<jvalue>( "createAcl( identity:{id:$testProgUser}, permissionRight:{ allowed:$allowed, denied:0, resource:{schemaName: $schemaName, target:$nodeResTarget}} )",
-					{ {"testProgUser", AppClient()->UserPK().Value}, {"allowed", underlying(EOpcAccessLevel::All)}, {"schemaName", _resource}, {"nodeResTarget", "nodeIds"} } );
+					{ {"testProgUser", AppClient()->UserPK().Value}, {"allowed", underlying(ERights::All)}, {"schemaName", _resource}, {"nodeResTarget", "nodeIds"} } );
 				addRole( "reader", _readerAllowed, _readerDenied );
 			}
 			else{
@@ -82,10 +83,29 @@ namespace Jde::Opc::Server::Tests{
 	string AccessTests::_resource{ "opc."+Settings::FindString("/opcServer/resource").value_or("test") };
 
 	TEST_F( AccessTests, UserAccess ){
-		UAAccess::SessionContext ctx{ "", TimePoint::max(), 0, {(UserPK::Type)_users.at("readerUser")} };
 		let nodeId = UA_NODEID_NUMERIC( 4, 6020 );
-		let accessLevel = ( EOpcAccessLevel )UAAccess::GetUserAccessLevel( _ua->Ptr(), nullptr, nullptr, &ctx, &nodeId, nullptr );
-		EXPECT_EQ( accessLevel, _readerAllowed );
+		let accessLevel = [&]( const string& user ){
+			UAAccess::SessionContext ctx{ "", TimePoint::max(), 0, {(UserPK::Type)_users.at(user)} };
+			return (EAccess)UAAccess::GetUserAccessLevel( _ua->Ptr(), nullptr, nullptr, &ctx, &nodeId, nullptr );
+		};
+		EXPECT_EQ( accessLevel("readerUser"), ToAccess(_readerAllowed) ); //Read|HistoryRead...
+		EXPECT_EQ( underlying(accessLevel("readerUser")) & UA_ACCESSLEVELMASK_WRITE, 0u ); //...and not WRITE, which the cast handed a reader (ERights::Read is 0x2).
+		EXPECT_EQ( accessLevel("writerUser"), ToAccess(_writerAllowed) ); //+Write|HistoryWrite; cast raw, Read|Update=0x6 was WRITE|HISTORYREAD.
+		EXPECT_EQ( accessLevel("adminUser"), ToAccess(_adminAllowed) ); //EAccess::All
+	}
+
+	//the mapping on its own, without a server.
+	TEST( ToAccessTests, GenericRightsTranslateToAccessLevelBits ){
+		static_assert( ToAccess(ERights::All)==EAccess::All );
+		static_assert( ToAccess(ERights::None)==EAccess::None );
+		EXPECT_EQ( ToAccess(ERights::Read), EAccess::Read | EAccess::HistoryRead );
+		EXPECT_EQ( underlying(ToAccess(ERights::Read)) & UA_ACCESSLEVELMASK_WRITE, 0u );
+		EXPECT_NE( underlying(ToAccess(ERights::Update)) & UA_ACCESSLEVELMASK_WRITE, 0u );
+		EXPECT_EQ( underlying(ToAccess(ERights::Update)) & UA_ACCESSLEVELMASK_HISTORYREAD, 0u );
+		EXPECT_EQ( underlying(ToAccess(ERights::Create)) & UA_ACCESSLEVELMASK_READ, 0u );
+		EXPECT_EQ( ToAccess(ERights::Create | ERights::Purge | ERights::Subscribe | ERights::Execute), EAccess::None );
+		EXPECT_EQ( ToAccess(ERights::Delete), EAccess::HistoryWrite );
+		EXPECT_EQ( ToAccess(ERights::Administer), EAccess::StatusWrite | EAccess::TimestampWrite | EAccess::SemanticChange );
 	}
 	TEST_F( AccessTests, Query ){
 		auto q = "roles{ id name permissionRight{id allowed denied resource(schemaName:$schemaName, target:$target, criteria:$criteria){id criteria}} }";
