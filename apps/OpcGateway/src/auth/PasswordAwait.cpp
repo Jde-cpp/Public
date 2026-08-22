@@ -1,6 +1,6 @@
 #include "PasswordAwait.h"
 #include <jde/app/client/IAppClient.h>
-#include "../StartupAwait.h"
+#include "../GatewayAppClient.h"
 #include "../UAClient.h"
 #include "UM.h"
 

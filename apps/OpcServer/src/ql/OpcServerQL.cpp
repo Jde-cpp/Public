@@ -6,7 +6,7 @@
 #include <jde/ql/IQL.h>
 #include <jde/ql/QLAwait.h>
 #include "../awaits/ServerConfigAwait.h"
-#include "../StartupAwait.h"
+#include "OpcQL.h"
 #define let const auto
 
 namespace Jde::Opc::Server{

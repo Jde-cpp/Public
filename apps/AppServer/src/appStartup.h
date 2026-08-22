@@ -1,21 +1,12 @@
-﻿#pragma once
+#pragma once
 #include "usings.h"
-#include <jde/fwk/co/Await.h>
 #include <jde/db/awaits/ExecuteAwait.h>
-#include <jde/app/proto/App.FromClient.pb.h>
-#include <jde/app/proto/App.FromServer.pb.h>
-#include <jde/app/proto/Log.pb.h>
 
-namespace Jde::DB{ struct IDataSource; }
-namespace Jde::QL{ struct TableQL; }
+namespace Jde::DB{ struct AppSchema; }
 
 namespace Jde::App::Server{
-	struct ConfigureDSAwait : VoidAwait{
-		α Suspend()ι->void override;
-	private:
-		α EndAppInstances()ι->DB::ExecuteAwait::Task;
-		α Configure()ι->VoidAwait::Task;
-	};
+	α InitLogging()ι->void;
+	α AppStartup( jobject webServerSettings )ε->void;
 	α AppSchema()ι->sp<DB::AppSchema>;
 }
 namespace Jde::App{

@@ -3,7 +3,7 @@
 #include <jde/app/client/IAppClient.h> //!important
 #include "GatewaySocketSession.h"
 #include "HttpRequestAwait.h"
-#include "StartupAwait.h"
+#include "GatewayAppClient.h"
 #include "ql/GatewayQL.h"
 
 namespace Jde::Opc{

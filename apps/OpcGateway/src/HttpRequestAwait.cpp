@@ -3,7 +3,7 @@
 #include <jde/app/client/IAppClient.h>
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/Value.h>
-#include "StartupAwait.h"
+#include "GatewayAppClient.h"
 #include "UAClient.h"
 #include "auth/PasswordAwait.h"
 #include "jde/fwk/exceptions/Exception.h"
