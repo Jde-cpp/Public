@@ -14,7 +14,11 @@
 # which additionally ships a too-old cmake. If you later hit `GLIBC_x.y not found`,
 # a dep was rebuilt against a newer glibc than the base — bump BASE_IMAGE, or
 # rebuild the deps in-container with the `-repos` preset instead of mounting them.
-ARG BASE_IMAGE=myoung34/github-runner:ubuntu-noble
+# Pinned to a runner-versioned noble tag (not the floating `ubuntu-noble`, which
+# upstream re-points, nor a bare version tag like `2.336.0`, which is focal —
+# glibc 2.31, no liburing-dev, too-old cmake). Match the runner version to the
+# repo so GitHub does not force a self-update+restart after every job.
+ARG BASE_IMAGE=myoung34/github-runner:2.336.0-ubuntu-noble
 FROM ${BASE_IMAGE}
 
 ARG LLVM_VERSION=23

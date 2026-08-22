@@ -27,8 +27,7 @@ namespace Jde::DB{
 		case Int16: case Int: value = AsNumber<int>( j ); break;
 		case Long: value = AsNumber<_int>( j ); break;
 		case UInt8: value = AsNumber<uint8>( j ); break;
-		case UInt16: value = AsNumber<uint16>( j ); break;
-		case UInt: value = AsNumber<uint32>( j ); break;
+		case UInt16: case UInt: value = AsNumber<uint32_t>( j ); break; //exact-width: the fast typedefs are 64-bit on glibc and would land on the uint64 alternative.
 		case ULong: value = AsNumber<uint>( j ); break;
 		case SmallFloat: case Float: case Decimal: case Numeric: case Money: value = AsNumber<double>( j ); break;
 		case DateTime: case SmallDateTime:{

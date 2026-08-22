@@ -29,10 +29,9 @@ namespace Jde::DB::Tests{
 		for( let& type : {Int16, Int} )
 			EXPECT_EQ( alt(type, jvalue{-5}), EValue::Int32 ) << (uint)type;
 		EXPECT_EQ( alt(Long, jvalue{-6}), EValue::Int64 );
-		//The two narrow unsigned widths land on *different* alternatives, and neither picks a narrow one: the variant has
-		//no uint8/uint16 member, so each resolves by what its typedef is.  uint8 is unsigned char and reaches `int`;
-		//uint16 is uint_fast16_t, which is 32-bit here, so it reaches uint32_t.  Both are value-preserving and every
-		//driver binds them as integers, so this is recorded rather than reported - but it is not by design.
+		//The variant has no uint8/uint16 member.  uint8 is unsigned char, which promotes to `int` on every platform.
+		//UInt16/UInt bind as exact-width uint32_t: their fast typedefs are 64-bit on glibc, so binding those would pick
+		//the uint64 alternative on Linux but uint32 on Windows - value-preserving either way, but platform-dependent.
 		EXPECT_EQ( alt(UInt8, jvalue{7}), EValue::Int32 );
 		EXPECT_EQ( alt(UInt16, jvalue{8}), EValue::UInt32 );
 		EXPECT_EQ( alt(UInt, jvalue{9}), EValue::UInt32 );
