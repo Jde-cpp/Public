@@ -4,7 +4,7 @@
 #include <jde/opc/UAException.h>
 #include <jde/web/client/http/ClientHttpAwait.h>
 #include <jde/app/client/IAppClient.h>
-#include "../../src/StartupAwait.h"
+#include "../../src/GatewayAppClient.h"
 #include "../../src/auth/OpcServerSession.h"
 #include "../../src/auth/UM.h"
 #include "../../src/ql/GatewayQL.h"

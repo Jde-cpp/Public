@@ -8,7 +8,7 @@
 #include <jde/opc/uatypes/Value.h>
 #include <open62541/types.h>
 #include <stdexcept>
-#include "StartupAwait.h"
+#include "GatewayAppClient.h"
 #include "async/DataChanges.h"
 #include "jde/fwk/crypto/CryptoSettings.h"
 #include "jde/fwk/settings.h"

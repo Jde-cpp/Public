@@ -6,7 +6,8 @@
 #include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/app/client/IAppClient.h>
 #include <jde/opc/uatypes/Logger.h>
-#include "../src/StartupAwait.h"
+#include "../src/GatewayAppClient.h"
+#include "../src/gatewayStartup.h"
 #include "../src/UAClient.h"
 #include "../../AppServer/src/appStartup.h"
 #include "../../OpcServer/src/opcServerStartup.h"
@@ -34,7 +35,7 @@ namespace Jde{
 			Crypto::EnsureKeyCertificate( sslSettings );
 			Opc::Server::Startup( Settings::AsObject("/http/opcServer"), Settings::AsObject("/credentials/opcServer") );
 		}
-		BlockVoidAwait( Opc::Gateway::StartupAwait{Settings::AsObject("/http/gateway"), Settings::AsObject("/credentials/gateway")} );
+		Opc::Gateway::Startup( Settings::AsObject("/http/gateway"), Settings::AsObject("/credentials/gateway") );
 	}
 }
 

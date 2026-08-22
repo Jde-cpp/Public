@@ -3,7 +3,7 @@
 #include <jde/app/client/AppClientSocketSession.h>
 //#include <jde/app/client/appClient.h>
 #include <jde/app/client/IAppClient.h>
-#include "../StartupAwait.h"
+#include "../GatewayAppClient.h"
 #include "../UAClient.h"
 
 #define let const auto
