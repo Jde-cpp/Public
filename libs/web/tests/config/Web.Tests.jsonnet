@@ -44,6 +44,8 @@ local logsDir = std.extVar("logsDir");
 		# asserts the jump - so keep it far enough above timeout to be unambiguous.
 		socketTimeout: "PT30S",
 		maxLogLength: 31,
+		# Http body cap and, since ql-review3 #16, the websocket message cap too (Streams.cpp read_message_max).  WebTests.BodyLimit
+		# needs it below the 10000 default; SocketTests.EchoAttack sizes its echoes under it and OversizeMessageClosesSocket past it.
 		bodyLimit: 8192,
 		accessControl: {
 			allowOrigin: "sameHost",//any port on the host the client reached us by; "*" restores the wide-open default.

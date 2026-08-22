@@ -135,7 +135,7 @@ namespace Jde::Web{
 		using Server::SessionInfo; using Server::Sessions::UpsertAwait;
 		let info = Server::Sessions::Add( Jde::UserPK{7}, "10.9.9.1", true );//session bound to 10.9.9.1.
 		let id = Ƒ("{:x}", info->SessionId);
-		let resume = []( str authorization, str endpoint )->sp<SessionInfo>{
+		let resume = []( str authorization, str endpoint )->sp<SessionInfo> {
 			return BlockAwait<UpsertAwait,sp<SessionInfo>>( UpsertAwait{ authorization, endpoint, true, nullptr } );
 		};
 		EXPECT_THROW( resume(id, "10.9.9.2"), Exception ) << "a session id must not resume from a different endpoint";
@@ -145,14 +145,23 @@ namespace Jde::Web{
 		Server::Sessions::Remove( info->SessionId );
 	}
 
-	flat_map<RequestId,string> _requests; flat_map<RequestId,string> _responses; mutex _echoMutex;
+	flat_map<RequestId,string> _requests; flat_map<RequestId,string> _responses; flat_map<RequestId,string> _echoFailures; mutex _echoMutex;
+	//Records the outcome either way.  A failed echo used to skip the emplace, so EchoAttack's wait on _requests.size() could never
+	//be met and the suite hung instead of failing - which ql-review3 #16's message cap made routine.
 	α EchoText( uint requestId, string text )->ClientSocketAwait<string>::Task{
-		string y = co_await _clientSession->Echo( text );
-		{
-			lg _{ _echoMutex };
-			_requests.emplace( requestId, move(text) );
-			_responses.emplace( requestId, move(y) );
+		string response; optional<string> failure;
+		try{
+			response = co_await _clientSession->Echo( text );
 		}
+		catch( std::exception& e ){
+			failure = e.what();
+		}
+		lg _{ _echoMutex };
+		_requests.emplace( requestId, move(text) );
+		if( failure )
+			_echoFailures.emplace( requestId, move(*failure) );
+		else
+			_responses.emplace( requestId, move(response) );
 	}
 	//A session created over rest carries the rest timeout; the socket connecting on it must promote it to /http/socketTimeout.
 	TEST_F( SocketTests, SocketPromotesSessionTimeout ){
@@ -184,24 +193,64 @@ namespace Jde::Web{
 	TEST_F( SocketTests, EchoAttack ){
 		Stopwatch sw{ "WebTests::EchoAttack", ELogTags::Test };
 		createSession();
-		constexpr uint payloadBase = 32;
+		//ql-review3 #16 caps a socket message at /http/bodyLimit (Streams.cpp read_message_max), so the largest echo has to stay
+		//under it: past the cap the server drops the session and every request in flight fails - OversizeMessageClosesSocket
+		//covers that.  The envelope is the protobuf framing around echo_text: a few tags and lengths plus the request id.
+		let bodyLimit = Settings::FindNumber<uint>( "/http/bodyLimit" ).value_or( 0 );
 		constexpr uint size = 1000;
+		constexpr uint envelope = 64;
+		ASSERT_GT( bodyLimit, envelope+size ) << "Web.Tests.jsonnet sets /http/bodyLimit; the echoes are sized from it";
+		let payloadBase = (bodyLimit-envelope)/size;
 		string text( payloadBase*size, 'a' );
+		{
+			lg _{ _echoMutex };
+			_requests.clear(); _responses.clear(); _echoFailures.clear();
+		}
 		std::this_thread::sleep_for( 1ms );
 		TRACE( "----------------------------------------------------------------" );
 		for( uint i=1; i<=size; ++i ){
 			EchoText( i, text.substr(0,i*payloadBase) );
 		}
+		//Bounded, so a stranded echo fails the test instead of hanging it.  Each request already has /web/client/socketRequestTimeout
+		//to be answered before the client fails it, so this only trips if that watchdog did not release one.
+		let deadline = steady_clock::now()+30s;
 		for( ;; ){
 			{
 				lg _{ _echoMutex };
 				if( _requests.size()==size )
 					break;
+				ASSERT_LT( steady_clock::now(), deadline ) << Ƒ( "{} of {} echoes completed", _requests.size(), size );
 			}
 			std::this_thread::sleep_for( 10ms );
 		}
+		ASSERT_TRUE( _echoFailures.empty() ) << Ƒ( "{} echoes failed, first [{}]: {}", _echoFailures.size(), _echoFailures.begin()->first, _echoFailures.begin()->second );
 		for( auto&& [id, text] : _requests )
 			ASSERT_EQ( text, _responses[id] );
+	}
+
+	//ql-review3 #16: a socket message is capped at /http/bodyLimit like an http body.  Past it Beast fails the server's read with
+	//message_too_big and the session is dropped, so the client sees its request fail and OnClose run - not a 413, and not a hang:
+	//EchoAttack used to send 32KB echoes and wait forever for answers that could never come.
+	TEST_F( SocketTests, OversizeMessageClosesSocket ){
+		let limit = Settings::FindNumber<uint>( "/http/bodyLimit" ).value_or( 0 );
+		ASSERT_TRUE( limit ) << "Web.Tests.jsonnet sets /http/bodyLimit; without it there is no cap to exceed";
+		createSession();
+		let sessionId = _clientSession->Id();
+		//extra parens: the comma in BlockAwait<A,B> would otherwise split the macro's argument list.
+		EXPECT_THROW( (BlockAwait<ClientSocketAwait<string>,string>( _clientSession->Echo(string(limit+1024, 'a')) )), Exception );
+		for( uint i=0; i<100 && !_clientSession->OnCloseCount(); ++i )
+			std::this_thread::sleep_for( 10ms );
+		EXPECT_EQ( _clientSession->OnCloseCount(), 1u );
+		//and it was the cap that ended it, not the request deadline.
+		vector<Logging::Entry> logs;
+		for( uint i=0; i<100 && logs.empty(); ++i ){
+			logs = Logging::Find( [=](const Logging::Entry& m){
+				return m.Text.contains("exceeded the locally configured limit") && m.Arguments.size()==1 && m.Arguments[0]==Ƒ( "[{:x}]Server::DoRead", sessionId );
+			});
+			if( logs.empty() )
+				std::this_thread::sleep_for( 10ms );
+		}
+		EXPECT_FALSE( logs.empty() ) << "the server should have refused the message as too big";
 	}
 
 	TEST_F( SocketTests, BadSessionId ){
