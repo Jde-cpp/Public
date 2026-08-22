@@ -3,7 +3,7 @@
 #include <jde/db/meta/AppSchema.h>
 #include <jde/app/usings.h>
 #include "../LocalClient.h"
-#include "../LogData.h"
+#include "../appStartup.h"
 #include "../ServerSocketSession.h"
 #include "../WebServer.h"
 #include "jde/fwk/log/break.h"

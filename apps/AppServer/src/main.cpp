@@ -1,7 +1,7 @@
 ﻿#ifdef BOOST_ALL_NO_LIB
 	#include <boost/json/src.hpp>
 #endif
-#include "AppStartupAwait.h"
+#include "appStartup.h"
 #include <jde/fwk/process/process.h>
 #include <jde/fwk/crypto/OpenSsl.h>
 
@@ -16,7 +16,7 @@ namespace Jde{
 		Process::Startup( argc, argv, "Jde.AppServer", "jde-cpp App Server." );
 		App::Server::InitLogging();
 		auto settings = Settings::FindObject( "/http" );
-		BlockVoidAwait( AppStartupAwait{settings ? move(*settings) : jobject{}} );
+		AppStartup( settings ? move(*settings) : jobject{} );
 	}
 }
 

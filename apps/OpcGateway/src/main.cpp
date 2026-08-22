@@ -5,7 +5,8 @@
 #include <jde/fwk/process/process.h>
 #include <jde/app/client/IAppClient.h>
 #include <jde/opc/uatypes/Logger.h>
-#include "StartupAwait.h"
+#include "GatewayAppClient.h"
+#include "gatewayStartup.h"
 
 #define let const auto
 #ifndef _MSC_VER
@@ -21,7 +22,7 @@
 		Opc::Gateway::AppClient()->InitLogging( Opc::Gateway::AppClient() );
 		let webServerSettings = Settings::FindObject( "/http" );
 		let userName = Settings::FindObject( "/credentials" );
-		BlockVoidAwait( Opc::Gateway::StartupAwait{webServerSettings ? *webServerSettings : jobject{}, userName ? *userName : jobject{}} );
+		Opc::Gateway::Startup( webServerSettings ? *webServerSettings : jobject{}, userName ? *userName : jobject{} );
 		exitCode = Process::Pause();
 	}
 	catch( runtime_error& e ){

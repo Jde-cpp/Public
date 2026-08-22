@@ -4,10 +4,10 @@
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Table.h>
 #include "helpers.h"
-#include "../src/LogData.h"
+#include "../src/appStartup.h"
 #define let const auto
 
-//the connections bookkeeping in LogData.cpp: AddConnection's proc-minted pks and EndConnection's deleted stamp.
+//the connections bookkeeping in appStartup.cpp: AddConnection's proc-minted pks and EndConnection's deleted stamp.
 namespace Jde::App::Server::Tests{
 
 	struct LogDataTests : ::testing::Test{

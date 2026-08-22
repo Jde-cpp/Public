@@ -7,7 +7,7 @@
 #include "ServerSocketSession.h"
 #include "jde/fwk/usings.h"
 #include "ql/AppServerQL.h"
-#include "LogData.h"
+#include "appStartup.h"
 
 #define let const auto
 namespace Jde::App::Server{
