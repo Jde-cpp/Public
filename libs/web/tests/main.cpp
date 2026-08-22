@@ -1,7 +1,4 @@
-﻿#ifdef BOOST_ALL_NO_LIB
-#include <boost/json/src.hpp>
-#endif
-#include "gtest/gtest.h"
+﻿#include "gtest/gtest.h"
 #include <jde/fwk/process/thread.h>
 #include <jde/fwk/log/log.h>
 #include <jde/tests/SpdlogTestListener.h>

@@ -153,17 +153,16 @@ namespace Jde::Access::Server{
 		else
 			ResumeExp( Exception{"query not implemented"} );
 	}
-	α AclQLSelectAwait::GetStatement( const QL::TableQL& childTable, sp<DB::Column> joinColumn )ε->optional<DB::Statement>{
+	α AclQLSelectAwait::GetStatement( const QL::TableQL& childTable, sp<DB::Column> joinColumn )ε->DB::Statement{
 		let& table = GetTable( "acl" );
 		auto statement = QL::SelectStatement( childTable );
-		if( auto aclStatement = !statement ? optional<DB::Statement>{} : QL::SelectStatement(Query); aclStatement ){
-			statement->Select += move( aclStatement->Select );
-			statement->Where += aclStatement->Where;
-			statement->From += { joinColumn, table.GetColumnPtr("permission_id"), true };
-			if( auto identities = Query.FindTable("identities"); identities ){
-				if( !(identities->Columns.size()==1 && identities->Columns.front().JsonName=="id") )
-					statement->From += { table.GetColumnPtr("identity_id"), GetTable("identities").GetColumnPtr("identity_id"), true };
-			}
+		auto aclStatement = QL::SelectStatement( Query );
+		statement.Select += move( aclStatement.Select );
+		statement.Where += aclStatement.Where;
+		statement.From += { joinColumn, table.GetColumnPtr("permission_id"), true };
+		if( auto identities = Query.FindTable("identities"); identities ){
+			if( !(identities->Columns.size()==1 && identities->Columns.front().JsonName=="id") )
+				statement.From += { table.GetColumnPtr("identity_id"), GetTable("identities").GetColumnPtr("identity_id"), true };
 		}
 		return statement;
 	}
@@ -171,17 +170,16 @@ namespace Jde::Access::Server{
 		jarray identities;
 		try{
 			auto statement = QL::SelectStatement( identitiesQL );
-			if( auto aclStatement = !statement ? optional<DB::Statement>{} : QL::SelectStatement(Query); aclStatement ){
-				aclStatement->Select += move( statement->Select );
-				aclStatement->From = DB::Join{ GetTable("acl").GetColumnPtr("identity_id"), GetTable("identities").GetColumnPtr("identity_id"), true };
-				auto rows = co_await DS().SelectAsync( aclStatement->Move() );
-				let& columns = aclStatement->Select.Columns;
-				for( auto& row : rows ){
-					jobject jrow;
-					for( uint i=0; i<row.Size() && i<columns.size(); ++i )
-						identitiesQL.SetResult( jrow, get<DB::AliasCol>(columns[i]).Column, move(row[i]) );
-					identities.emplace_back( move(jrow) );
-				}
+			auto aclStatement = QL::SelectStatement( Query );
+			aclStatement.Select += move( statement.Select );
+			aclStatement.From = DB::Join{ GetTable("acl").GetColumnPtr("identity_id"), GetTable("identities").GetColumnPtr("identity_id"), true };
+			auto rows = co_await DS().SelectAsync( aclStatement.Move() );
+			let& columns = aclStatement.Select.Columns;
+			for( auto& row : rows ){
+				jobject jrow;
+				for( uint i=0; i<row.Size() && i<columns.size(); ++i )
+					identitiesQL.SetResult( jrow, get<DB::AliasCol>(columns[i]).Column, move(row[i]) );
+				identities.emplace_back( move(jrow) );
 			}
 			jobject o{ {"identities", identities} };
 			if( Query.IsPlural() )
@@ -201,27 +199,26 @@ namespace Jde::Access::Server{
 	α AclQLSelectAwait::LoadRoles( const QL::TableQL& roleQL )ι->DB::SelectAwait::Task{
 		jarray y;
 		try{
-			if( auto statement = GetStatement(roleQL, GetTable("roles").GetColumnPtr("role_id")); statement ){
-				auto rows = co_await DS().SelectAsync( statement->Move() );
-				let& columns = statement->Select.Columns;
-				for( auto& row : rows ){
-					jobject jrow;
-					jobject* role{};
-					jobject* identity{};
-					for( uint i=0; i<row.Size() && i<columns.size(); ++i ){
-						let& column = get<DB::AliasCol>( columns[i] ).Column;
-						auto& value = row[i];
-						let key = DB::Names::ToJson( column->Name );
-						if( column->Table->Name=="roles" ){
-							if( !role )
-								role = &jrow["role"].emplace_object();
-							( *role )[key=="roleId" ? "id" : key] = value.Move();
-						}
-						else
-							addIdentityColumn( jrow, identity, key, move(value) );
+			auto statement = GetStatement( roleQL, GetTable("roles").GetColumnPtr("role_id") );
+			auto rows = co_await DS().SelectAsync( statement.Move() );
+			let& columns = statement.Select.Columns;
+			for( auto& row : rows ){
+				jobject jrow;
+				jobject* role{};
+				jobject* identity{};
+				for( uint i=0; i<row.Size() && i<columns.size(); ++i ){
+					let& column = get<DB::AliasCol>( columns[i] ).Column;
+					auto& value = row[i];
+					let key = DB::Names::ToJson( column->Name );
+					if( column->Table->Name=="roles" ){
+						if( !role )
+							role = &jrow["role"].emplace_object();
+						( *role )[key=="roleId" ? "id" : key] = value.Move();
 					}
-					y.emplace_back( move(jrow) );
+					else
+						addIdentityColumn( jrow, identity, key, move(value) );
 				}
+				y.emplace_back( move(jrow) );
 			}
 			Resume( move(y) );
 		}
@@ -232,15 +229,14 @@ namespace Jde::Access::Server{
 	α AclQLSelectAwait::LoadPermissions( const QL::TableQL& permissionsQL )ι->DB::SelectAwait::Task{
 		jarray y;
 		try{
-			if( auto statement = GetStatement(permissionsQL, GetTable("permissions").GetColumnPtr("permission_id")); statement ){
-				auto rows = co_await DS().SelectAsync( statement->Move() );
-				let& columns = statement->Select.Columns;
-				for( auto& row : rows ){
-					jobject jrow;
-					for( uint i=0; i<row.Size() && i<columns.size(); ++i )
-						Query.SetResult( jrow, get<DB::AliasCol>(columns[i]).Column, move(row[i]) );
-					y.emplace_back( move(jrow) );
-				}
+			auto statement = GetStatement( permissionsQL, GetTable("permissions").GetColumnPtr("permission_id") );
+			auto rows = co_await DS().SelectAsync( statement.Move() );
+			let& columns = statement.Select.Columns;
+			for( auto& row : rows ){
+				jobject jrow;
+				for( uint i=0; i<row.Size() && i<columns.size(); ++i )
+					Query.SetResult( jrow, get<DB::AliasCol>(columns[i]).Column, move(row[i]) );
+				y.emplace_back( move(jrow) );
 			}
 			Resume( move(y) );
 		}
@@ -251,34 +247,33 @@ namespace Jde::Access::Server{
 	α AclQLSelectAwait::LoadPermissionRights( const QL::TableQL& permissionRights )ι->DB::SelectAwait::Task{
 		jarray y;
 		try{
-			if( auto statement = GetStatement(permissionRights, GetTable("permission_rights").GetColumnPtr("permission_id")); statement ){
-				auto rows = co_await DS().SelectAsync( statement->Move() );
-				let& columns = statement->Select.Columns;
-				for( auto& row : rows ){
-					jobject jrow;
-					jobject* right{};
-					jobject* resource{};
-					jobject* identity{};
-					for( uint i=0; i<row.Size() && i<columns.size(); ++i ){
-						let& column = get<DB::AliasCol>( columns[i] ).Column;
-						auto& value = row[i];
-						let key = DB::Names::ToJson( column->Name );
-						if( column->Table->Name=="permission_rights" || column->Table->Name=="resources" ){
-							if( !right )
-								right = &jrow["permissionRight"].emplace_object();
-							if( column->Table->Name=="permission_rights" )
-								( *right )[key=="permissionId" ? "id" : key] = value.Move();
-							else{
-								if( !resource )
-									resource = &( *right )["resource"].emplace_object();
-								( *resource )[key=="resourceId" ? "id" : key] = value.Move();
-							}
+			auto statement = GetStatement( permissionRights, GetTable("permission_rights").GetColumnPtr("permission_id") );
+			auto rows = co_await DS().SelectAsync( statement.Move() );
+			let& columns = statement.Select.Columns;
+			for( auto& row : rows ){
+				jobject jrow;
+				jobject* right{};
+				jobject* resource{};
+				jobject* identity{};
+				for( uint i=0; i<row.Size() && i<columns.size(); ++i ){
+					let& column = get<DB::AliasCol>( columns[i] ).Column;
+					auto& value = row[i];
+					let key = DB::Names::ToJson( column->Name );
+					if( column->Table->Name=="permission_rights" || column->Table->Name=="resources" ){
+						if( !right )
+							right = &jrow["permissionRight"].emplace_object();
+						if( column->Table->Name=="permission_rights" )
+							( *right )[key=="permissionId" ? "id" : key] = value.Move();
+						else{
+							if( !resource )
+								resource = &( *right )["resource"].emplace_object();
+							( *resource )[key=="resourceId" ? "id" : key] = value.Move();
 						}
-						else
-							addIdentityColumn( jrow, identity, key, move(value) );
 					}
-					y.emplace_back( move(jrow) );
+					else
+						addIdentityColumn( jrow, identity, key, move(value) );
 				}
+				y.emplace_back( move(jrow) );
 			}
 			Resume( move(y) );
 		}

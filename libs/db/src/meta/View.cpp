@@ -72,8 +72,10 @@ namespace Jde::DB{
 		for( let& c : Columns )
 			c->Initialize( self );
 
-		if( QLView )
+		if( QLView ){
 			QLView = schema->GetViewPtr( QLView->Name );
+			QLView->Owner = self;//idempotent: SyncTables re-initializes, and re-assigning the same owner is a no-op.
+		}
 
 		if( Map ){
 			let& pkTable = Map->Parent->PKTable;
@@ -91,8 +93,10 @@ namespace Jde::DB{
 		DBName+=Name;
 	}
 	α View::Authorize( Access::ERights rights, UserPK userPK, SL sl )Ε->void{
-		if( let p=Schema->Authorizer; p )
-			p->Test( Schema->Name, Names::ToJson(Name), rights, userPK, sl );
+		if( let p=Schema->Authorizer; p ){
+			let owner = Owner.lock();//a ql view has no resource of its own - ResourceLoadAwait creates one per table.
+			p->Test( Schema->Name, Names::ToJson(owner ? owner->Name : Name), rights, userPK, sl );
+		}
 	}
 
 	α View::FindColumn( sv name )Ι->sp<Column>{

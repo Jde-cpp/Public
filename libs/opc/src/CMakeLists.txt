@@ -27,6 +27,7 @@ endif()
 target_link_libraries( ${targetName} open62541::open62541 )
 target_link_libraries( ${targetName} OpenSSL::SSL )
 target_link_libraries( ${targetName} fmt::fmt )
+target_link_libraries( ${targetName} Boost::json ) #uatypes headers use jvalue; on Windows this is what makes BOOST_JSON_DECL dllimport (Jde.dll exports Boost.JSON).
 
 target_precompile_headers(${targetName}
   PRIVATE

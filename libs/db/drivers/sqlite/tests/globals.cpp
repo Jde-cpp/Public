@@ -24,11 +24,11 @@ namespace Jde::DB::Sqlite{
 	namespace Tests{
 		struct SqliteQL final : QL::LocalQL{
 			SqliteQL( vector<sp<DB::AppSchema>> schemas, sp<Access::Authorize> authorizer )ι: LocalQL{ move(schemas), move(authorizer) }{}
-			α LogQuery( QL::TableQL&&, SL )ι->up<TAwait<jvalue>> override{ ASSERT(false); return nullptr; }
-			α StatusQuery( QL::TableQL&& )ι->jobject override{ ASSERT(false); return {}; }
+			α LogQuery( QL::TableQL&&, QL::Creds, SL )ε->up<TAwait<jvalue>> override{ ASSERT(false); return nullptr; }
+			α StatusQuery( QL::TableQL&&, QL::Creds, SL )ε->jobject override{ ASSERT(false); return {}; }
 			α CustomQuery( QL::TableQL&, QL::Creds, SL )ι->up<TAwait<jvalue>> override{ return nullptr; }
 			α CustomMutation( QL::MutationQL&, QL::Creds, SL )ι->up<TAwait<jvalue>> override{ ASSERT(false); return nullptr; }
-			α LogSettingsQuery( QL::TableQL&&, SL )ι->up<TAwait<jvalue>> override{ ASSERT(false); return nullptr; }
+			α LogSettingsQuery( QL::TableQL&&, QL::Creds, SL )ε->up<TAwait<jvalue>> override{ ASSERT(false); return nullptr; }
 		};
 
 		//A file-backed cluster's db is shared (cached in _clusters) across every fixture, so reset it once per process -

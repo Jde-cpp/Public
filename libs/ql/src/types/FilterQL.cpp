@@ -3,6 +3,7 @@
 #include <jde/fwk/chrono.h>
 #include <jde/db/names.h>
 #include <jde/db/generators/Functions.h>
+#include <jde/db/generators/Syntax.h>//C9: ParseGlobClass - named directly here, so included directly.
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
 #include <jde/ql/types/TableQL.h>
@@ -21,27 +22,26 @@ namespace Jde::QL{
 
 	//Whether c matches the class starting at pattern[p] ('['), advancing p past the ']'.  nullopt when the class is
 	//unterminated - the '[' is a literal then, as in sqlite.
+	//C9: the extent and the negation come from DB::ParseGlobClass, the one statement of that grammar, shared with
+	//GlobToLike and GlobToRegex.  Only the *matching* is ql's - the other two translate the body rather than test it.
 	Ω matchClass( sv pattern, uint& p, char c )ι->optional<bool>{
-		uint i{ p+1 };
-		let negate = i<pattern.size() && (pattern[i]=='^' || pattern[i]=='!');
-		if( negate )
-			++i;
+		let parsed = DB::ParseGlobClass( pattern, p );
+		if( !parsed )
+			return {};
+		let& body = parsed->Body;
 		bool matched{};
-		for( bool first{true}; i<pattern.size(); first=false ){
-			if( pattern[i]==']' && !first ){ //a ']' first is a literal, not the terminator.
-				p = i+1;
-				return matched!=negate;
-			}
-			if( i+2<pattern.size() && pattern[i+1]=='-' && pattern[i+2]!=']' ){
-				matched = matched || (c>=pattern[i] && c<=pattern[i+2]);
+		for( uint i{}; i<body.size(); ){
+			if( i+2<body.size() && body[i+1]=='-' ){//a trailing '-' has nothing to span, so it is a member - and Body excludes the ']' that used to have to be checked for here.
+				matched = matched || (c>=body[i] && c<=body[i+2]);
 				i += 3;
 			}
 			else{
-				matched = matched || c==pattern[i];
+				matched = matched || c==body[i];
 				++i;
 			}
 		}
-		return {};
+		p = parsed->Close+1;
+		return matched!=parsed->Negate;
 	}
 
 	//sqlite GLOB semantics: '*' any run, '?' one character, '[abc]'/'[a-z]'/'[^abc]' classes.  Iterative with a single
@@ -134,8 +134,8 @@ namespace Jde::QL{
 			WARN( "A '{}' filter needs a string pattern, not '{}' - it can not match.", spelling, serialize(value) );
 			return {};
 		}
-		if( text->size()>MaxPatternLength ){
-			WARN( "A '{}' pattern of {} characters exceeds the {} limit - it can not match.", spelling, text->size(), MaxPatternLength );
+		if( let maxLength = op==DB::EOperator::Glob ? MaxPatternLength : MaxRegexLength; text->size()>maxLength ){
+			WARN( "A '{}' pattern of {} characters exceeds the {} limit - it can not match.", spelling, text->size(), maxLength );
 			return {};
 		}
 		string pattern{ *text };
@@ -278,14 +278,45 @@ namespace Jde{
 		return ToEnum<DB::EOperator>( QLOperatorStrings, op ).value_or( DB::EOperator::Equal );
 	}
 
+	namespace QL{ α GetEnumValues( const DB::View& table, SRCE )ε->flat_map<uint,string>; }//ops/SelectAwait.cpp - cached, but blocking.
+
+	α QL::FilterColumn( const DB::View& dbTable, sv jsonName, SL sl )ε->sp<DB::Column>{
+		if( jsonName=="id" )
+			return !dbTable.IsView() && AsTable(dbTable).Extends ? AsTable(dbTable).Extends->GetPK() : dbTable.GetPK();//can't have left join users where users.id=42
+		let name = DB::Names::FromJson( jsonName );
+		if( auto column = dbTable.FindColumn(name); column )
+			return column;
+		//#20: `provider` is not a column of users_ql - it is how provider_id *renders*, through the enum table's name.
+		//Filtering and ordering resolve to the id column, so neither depends on the display join being in the statement.
+		if( auto pEnum = dbTable.FindColumn(string{name}+"_id"); pEnum && pEnum->PKTable )
+			return pEnum;
+		return dbTable.GetColumnPtr( name, sl );//throws, naming table and column, exactly as before.
+	}
+	//An enum column filtered by its display name ("Google"), which is the only spelling the client has - DB::Value{UInt,string}
+	//would throw.  The map is the one addColumn renders through.
+	Ω toFilterValue( const DB::Column& column, const jvalue& v, SL sl )ε->DB::Value{
+		//The pk table's own view is where the names live (providers -> providers_ql), which is how addColumn renders them - and
+		//it is the rule to follow rather than Column::IsEnum(), which is false for providers (its view has more than two columns).
+		if( let s = v.if_string(); s && column.PKTable ){
+			let pkTable = column.PKTable->QLView ? column.PKTable->QLView : column.PKTable;
+			if( pkTable->FindColumn("name") ){
+				for( let& [id,name] : QL::GetEnumValues(*pkTable, sl) ){
+					if( name==*s )
+						return DB::Value{ column.Type, id };
+				}
+				THROWSL( "[{}.{}]'{}' is not a value of '{}'.", column.Table ? column.Table->Name : string{}, column.Name, string{*s}, pkTable->Name );
+			}
+		}
+		return DB::Value{ column.Type, v };
+	}
+
 	α QL::ToWhereClause( const TableQL& table, const DB::View& dbTable, bool includeDeleted )ε->DB::WhereClause{
+		table.CheckVariables();
 		DB::WhereClause where;
 		for( let& [name,filters] : table.Filter().ColumnFilters ){
 			if( name=="orderBy" || name=="limit" || name=="offset" || name=="skip" )
 				continue;
-			auto column = name!="id"
-				? dbTable.GetColumnPtr( DB::Names::FromJson(name) )
-				: !dbTable.IsView() && AsTable(dbTable).Extends ? AsTable(dbTable).Extends->GetPK() : dbTable.GetPK(); //can't have left join users where users.id=42
+			auto column = FilterColumn( dbTable, name );
 			if( name=="deleted" )
 				includeDeleted = false;
 			for( auto& filter : filters ){
@@ -298,7 +329,7 @@ namespace Jde{
 						if( v.is_null() )
 							haveNull = true;
 						else
-							params.push_back( DB::Value{column->Type, v} );
+							params.push_back( toFilterValue(*column, v, SRCE_CUR) );
 					}
 					where.Add( column, filter.Operator, move(params), haveNull );
 				}
@@ -314,7 +345,7 @@ namespace Jde{
 					if( json->is_array() )
 						where.Add( column, filter.Operator, DB::ToValue<uint>(Json::FromArray<uint>(json->get_array())) );
 					else
-						where.Add( column, filter.Operator, DB::Value{column->Type, *json} );
+						where.Add( column, filter.Operator, toFilterValue(*column, *json, SRCE_CUR) );
 				}
 			}
 		}

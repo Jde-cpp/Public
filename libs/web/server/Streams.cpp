@@ -2,6 +2,7 @@
 #include <boost/asio/steady_timer.hpp>
 #include <jde/web/server/IWebsocketSession.h>
 #include <jde/web/server/HttpRequest.h>
+#include <jde/web/server/Server.h>
 
 #define let const auto
 namespace Jde::Web::Server{
@@ -36,6 +37,9 @@ namespace Jde::Web::Server{
 			if( _closing )
 				return;
 			_ws.set_option( websocket::stream_base::timeout::suggested(beast::role_type::server) );
+			//#16: Beast defaults this to 16 MB, so the socket accepted a query three orders of magnitude past what the http
+			//path allows - and the parser recursed through all of it on an 8 MB io thread stack.  Same limit as /graphql.
+			_ws.read_message_max( Server::BodyLimit() );
 			_ws.set_option( websocket::stream_base::decorator( []( websocket::response_type& res ){
 				res.set( http::field::server, ServerVersion(IsSsl) );
 			}) );

@@ -17,7 +17,6 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				groupId: tables.groups.columns.identityId+{ criteria: null },
 				groupTarget: targetColumns.target,
 				memberId: tables.groups.columns.memberId,
-				providerId: tables.providers.columns.providerId+{ pkTable: "providers", nullable:true, sk:null },
 				isGroup: tables.identities.columns.isGroup
 			}+targetColumns,
 			naturalKeys: tables.identities.naturalKeys,

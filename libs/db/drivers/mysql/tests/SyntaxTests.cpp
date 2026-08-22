@@ -192,6 +192,7 @@ namespace Jde::DB::MySql::Tests{
 		EXPECT_EQ( GlobToRegex("[a-c]at"), "^[a-c]at$" ); //classes are spelled the same in both languages.
 		EXPECT_EQ( GlobToRegex("[!a-c]at"), "^[^a-c]at$" );//glob's '!' negation becomes regex '^'.
 		EXPECT_EQ( GlobToRegex("[^a-c]at"), "^[^a-c]at$" );
+		EXPECT_EQ( GlobToRegex("[]x]y"), "^[]x]y$" );     //C9: a ']' first in the class is a member, and POSIX spells it the same way.
 		EXPECT_EQ( GlobToRegex("[abc"), "^\\[abc$" );     //unterminated class -> a literal '[', as in sqlite.
 	}
 

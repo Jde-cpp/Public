@@ -117,7 +117,7 @@ namespace Jde::Web::Server{
 		Stream = nullptr;
 	}
 
-	α IWebsocketSession::AddSubscription( string&& query, jobject vars, RequestId requestId, SL sl )ε->flat_set<QL::SubscriptionId>{
+	α IWebsocketSession::AddSubscription( string&& query, jobject vars, RequestId requestId, Jde::UserPK executer, SL sl )ε->flat_set<QL::SubscriptionId>{
 		auto subs = QL::ParseSubscriptions( move(query), move(vars), Schemas(), sl );
 		flat_set<QL::SubscriptionId> subscriptionIds;//client ids.
 		vector<QL::Subscription> logSubs;
@@ -133,7 +133,7 @@ namespace Jde::Web::Server{
 		if( !logSubs.empty() )
 			Logging::GetLogger<SubscribeLog>().Add( shared_from_this(), move(logSubs) );
 		if( _listener )
-			QL::Subscriptions::Listen( _listener, move(subs) );
+			QL::Subscriptions::Listen( _listener, move(subs), executer, sl );//gated: the ungated overload is for in-process registration.
 		return subscriptionIds;
 	}
 	α IWebsocketSession::RemoveSubscription( vector<QL::SubscriptionId>&& ids, RequestId requestId, SL /*sl*/ )ι->void{

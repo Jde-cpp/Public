@@ -36,7 +36,8 @@ namespace Jde::App::Server{
 			return await;
 		return nullptr;
 	}
-	α AppServerQL::LogSettingsQuery( QL::TableQL&& ql, SL sl )ι->up<TAwait<jvalue>>{
+	α AppServerQL::LogSettingsQuery( QL::TableQL&& ql, QL::Creds executer, SL sl )ε->up<TAwait<jvalue>>{
+		RequireAuthenticated( executer, "logSettings", sl ); //the live tag/level configuration of every instance.
 		return mu<LogSettingsAwait>( move(ql), sl );
 	}
 }

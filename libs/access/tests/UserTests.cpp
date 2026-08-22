@@ -23,6 +23,33 @@ namespace Jde::Access{
 		ASSERT_EQ( actual, expected );
 	}
 
+	//ql-review3 #20: `provider` is not a column of users_ql - it is how provider_id renders, through the enum table's name.
+	//addColumn knew that and the filter/orderBy paths did not, so the ql-list's own filter and sort dialogs - which offer every
+	//field __type advertises, `provider` among them - came back `[users_ql.provider]Could not find column.`
+	//ql-review3 #20: `provider` is not a column of users_ql - it is how provider_id renders, through the enum table's name.
+	//addColumn knew that and the filter/orderBy paths did not, so the ql-list's own filter and sort dialogs - which offer every
+	//field __type advertises, `provider` among them - came back `[users_ql.provider]Could not find column.`
+	TEST_F( UserTests, FilterAndOrderByEnumDisplayName ){
+		let root = GetRoot();
+		let byId = QL().QuerySync<jarray>( "users(providerId:["+std::to_string(underlying(EProviderType::Google))+"]){ id }", {}, root );
+		ASSERT_FALSE( byId.empty() );
+		EXPECT_EQ( serialize(QL().QuerySync<jarray>(R"(users(provider:["Google"]){ id })", {}, root)), serialize(byId) ) << "the display name has to select the same rows as its id";
+		EXPECT_EQ( serialize(QL().QuerySync<jarray>(R"(users(provider:"Google"){ id })", {}, root)), serialize(byId) ); //scalar as well as array.
+		//the id column filtered by a *name*:  the client only ever has the name, and DB::Value{UInt,"Google"} used to throw.
+		EXPECT_EQ( serialize(QL().QuerySync<jarray>(R"(users(providerId:["Google"]){ id })", {}, root)), serialize(byId) );
+
+		EXPECT_NO_THROW( QL().QuerySync<jarray>(R"(users(orderBy:[{provider:"asc"}]){ id })", {}, root) );//sorts by the id column - the display join is not guaranteed to be in the statement.
+	}
+	TEST_F( UserTests, FilterByUnknownEnumNameThrows ){
+		try{
+			QL().QuerySync<jarray>( R"(users(provider:["NotAProvider"]){ id })", {}, GetRoot() );
+			ADD_FAILURE() << "parsed";
+		}
+		catch( const Exception& e ){
+			EXPECT_NE( string{e.what()}.find("NotAProvider"), string::npos ) << e.what();
+		}
+	}
+
 	TEST_F( UserTests, Crud ){
 		const string target{ "crud" };
 		let existingUser = GetUser( target, GetRoot() );

@@ -62,6 +62,40 @@ namespace Jde::QL{
 		};
 		return extrapolate( Args );
 	}
+	//#36: an unbound $name extrapolated to json null, and null is a value - `users(target:$targt)` became `target is null` and
+	//returned 0 rows with nothing said, while `updateGroup(name:$typo)` wrote one.  The name itself is only knowable before the
+	//substitution, so the check is here rather than at the predicate.  Variables may be null on a hand-built Input: then nothing
+	//is bound.
+	α Input::UnboundVariables()Ι->vector<string>{
+		vector<string> y;
+		function<void( const jobject& )> walk = [&]( const jobject& o )ι->void{
+			auto check = [&]( const jstring& s ){
+				auto name = string{ sv{s}.substr(2) };
+				if( !Variables || !Variables->if_contains(name) )
+					y.push_back( move(name) );
+			};
+			for( let& [key, value] : o ){
+				if( value.is_string() && value.get_string().starts_with(Escape) )
+					check( value.get_string() );
+				else if( value.is_object() )
+					walk( value.get_object() );
+				else if( value.is_array() ){
+					for( let& item : value.get_array() ){
+						if( item.is_string() && item.get_string().starts_with(Escape) )
+							check( item.get_string() );
+						else if( item.is_object() )
+							walk( item.get_object() );
+					}
+				}
+			}
+		};
+		walk( Args );
+		return y;
+	}
+	α Input::CheckVariables( SL sl )Ε->void{
+		let unbound = UnboundVariables();
+		THROW_IFSL( unbound.size(), "Could not find variable{} '{}' in variables: {}", unbound.size()==1 ? "" : "s", Str::Join(unbound, "', '"), Variables ? serialize(*Variables) : string{"{}"} );
+	}
 	α Input::GetKey( SL sl )Ε->DB::Key{
 		let y = FindKey();
 		THROW_IFSL( !y, "Could not find id or target in mutation  query: {}, variables: {}", serialize(Args), serialize(*Variables) );

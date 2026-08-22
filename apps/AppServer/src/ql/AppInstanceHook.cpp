@@ -54,7 +54,6 @@ namespace Jde::App::Server{
 		QL::MutationQL _mutation;
 		UserPK _userPK;
 		sp<IApp> _appClient;
-		jobject _variables;
 	};
 
 	α AppInstanceHook::Stop( const QL::MutationQL& m, UserPK userPK, SL sl )ι->up<TAwait<jvalue>>{

@@ -34,7 +34,7 @@ namespace Jde::Access::Server{
 		{}
 		α Suspend()ι->void;
 	private:
-		α GetStatement( const QL::TableQL& childTable, sp<DB::Column> joinColumn )ε->optional<DB::Statement>;
+		α GetStatement( const QL::TableQL& childTable, sp<DB::Column> joinColumn )ε->DB::Statement;
 		α LoadRoles( const QL::TableQL& permissionRightsQL )ι->DB::SelectAwait::Task;
 		α LoadPermissionRights( const QL::TableQL& permissionRightsQL )ι->DB::SelectAwait::Task;
 		α LoadPermissions( const QL::TableQL& permissionsQL )ι->DB::SelectAwait::Task;

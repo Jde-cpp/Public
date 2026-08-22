@@ -5,18 +5,36 @@
 #define let const auto
 
 namespace Jde::Web::Server{
+	Ω toMinLevel( const QL::Filter& filter, ELogLevel dflt )ι->ELogLevel{
+		let kv = filter.ColumnFilters.find( "level" );
+		if( kv==filter.ColumnFilters.end() || kv->second.size()!=1 )
+			return dflt;
+		let& filterValue = kv->second.front();
+		//#57: a number as well as a name.  `level:{gte:3}` used to fall to the else and leave the floor at Trace, so the client
+		//was sent every entry and SubscribeLog::Add pushed Trace into the logger's tag threshold for the whole process.
+		optional<ELogLevel> level;
+		if( filterValue.Value.is_string() )
+			level = ToLogLevel( filterValue.Value.get_string() );
+		else if( filterValue.Value.is_number() )
+			level = (ELogLevel)filterValue.Value.to_number<uint8>();
+		if( !level )
+			return dflt;
+		using enum DB::EOperator;
+		//#57: only an operator that bounds the level from below may raise the floor.  `lte`/`lt`/`ne` admit entries beneath the
+		//value, and Write's test is `m.Level>=MinLevel` - taking the value as a floor there would drop what was asked for.
+		switch( filterValue.Operator ){
+		case Greater: return (ELogLevel)( underlying(*level)+1 );
+		case GreaterOrEqual: case Equal: return *level;
+		default: return dflt;
+		}
+	}
+
 	struct LogSubscription final : QL::Subscription{
 		LogSubscription( LogSubscription&& sub )ι=default;
 		LogSubscription( QL::Subscription&& sub )ε:
 			QL::Subscription{ move(sub) }{
 			let& filter = Fields.Filter();
-			if( let kv = filter.ColumnFilters.find("level"); kv != filter.ColumnFilters.end() && kv->second.size()==1 ){
-				let& filterValue = kv->second.front();
-				auto level = filterValue.Value.is_string() ? ToLogLevel( filterValue.Value.get_string() ) : ELogLevel::Trace;
-				if( filterValue.Operator==DB::EOperator::Greater )
-					level = ( ELogLevel )( underlying(level)+1 );
-				MinLevel = level;
-			}
+			MinLevel = toMinLevel( filter, MinLevel );
 			if( let kv = filter.ColumnFilters.find("tags"); kv != filter.ColumnFilters.end()  && kv->second.size()==1 )
 				Tags = ToLogTags( kv->second.front().Value );
 		}

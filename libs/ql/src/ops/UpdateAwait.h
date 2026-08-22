@@ -30,6 +30,7 @@ namespace Jde::QL{
 		UserPK _userPK;
 		up<Exception> _exception;
 		vector<DB::UpdateClause> _updates;
+		jobject _input;
 		flat_map<string,flat_map<uint,string>> _enums; //enum table name -> its values, fetched by UpdateBefore so the synchronous build never waits on the db.
 	};
 }

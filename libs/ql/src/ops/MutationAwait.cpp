@@ -22,9 +22,15 @@ namespace Jde::QL{
 			if( auto await = _ql ? _ql->CustomMutation( _mutation, _creds, _sl ) : nullptr; await )
 				y = co_await move(*await);
 			else{
+				_mutation.CheckVariables( _sl );
 				auto table = _mutation.DBTable;
-				switch( _mutation.Type ){
 				using enum EMutationQL;
+				//MutationQL leaves DBTable null for system-shaped or empty names ("createStatus", "create"), and the crud ops read
+				//through it before they authorize - View::Authorize dereferences `this`.  Start/Stop are hook-implemented and resolve
+				//no table, and Execute has its own message, so the guard can not go above the switch.  Mirrors UpdateAwait::await_ready.
+				if( let type=_mutation.Type; type!=Start && type!=Stop && type!=Execute )
+					THROW_IF( !table, "Table not found for mutation '{}'.", _mutation.ToString() );
+				switch( _mutation.Type ){
 				case Update:
 				case Delete:
 				case Restore:

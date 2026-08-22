@@ -1,0 +1,32 @@
+{
+	"folders": [
+		{
+			"path": "src"
+		},
+		{
+			"path": "drivers/mysql/src",
+			"name": "mysql"
+		},
+		{
+			"path": "drivers/mysql/tests",
+			"name": "mysql-tests"
+		},
+		{
+			"path": "drivers/odbc/src",
+			"name": "odbc"
+		},
+		{
+			"path": "drivers/odbc/tests",
+			"name": "odbc-tests"
+		},
+		{
+			"path": "drivers/sqlite/src",
+			"name": "sqlite"
+		},
+		{
+			"path": "drivers/sqlite/tests",
+			"name": "sqlite-tests"
+		}
+	],
+	"settings": {}
+}

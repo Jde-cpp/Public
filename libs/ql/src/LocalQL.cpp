@@ -28,17 +28,27 @@ namespace Jde::QL{
 		SubscribeQueryAwait( vector<Subscription>&& sub, sp<IListener> listener, UserPK executer, SRCE )ι:
 			base{sl}, _executer{executer}, _listener{listener}, _subscriptions{move(sub)}{}
 		α await_ready()ι->bool override{
-			for_each( _subscriptions, [&]( Subscription& sub ){
-				if( !sub.Id )
-					sub.Id = Subscription::NextId();
-				_result.push_back( sub.Id );
-			} );
-			Subscriptions::Listen( _listener, move(_subscriptions) );
+			try{
+				for_each( _subscriptions, [&]( Subscription& sub ){
+					if( !sub.Id )
+						sub.Id = Subscription::NextId();
+					_result.push_back( sub.Id );
+				} );
+				Subscriptions::Listen( _listener, move(_subscriptions), _executer, _sl );
+			}
+			catch( Exception& e ){
+				_exception = e.Move();
+			}
 			return true;
 		}
 		α Suspend()ι->void override{}
-		α await_resume()ι->vector<SubscriptionId> override{ return _result; }
+		α await_resume()ε->vector<SubscriptionId> override{
+			if( _exception )
+				throw move(*_exception);
+			return _result;
+		}
 	private:
+		up<Exception> _exception;
 		UserPK _executer;
 		sp<IListener> _listener;
 		vector<Subscription> _subscriptions;

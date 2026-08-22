@@ -11,11 +11,7 @@ namespace Jde::Access{
 	α AccessListener::Shutdown( bool terminate, SL )ι->void{
 		if( terminate )
 			return;
-		try{
-			BlockVoidAwait( _qlServer->Unsubscribe(move(Ids)) );
-		}
-		catch( runtime_error& )
-		{}
+		_qlServer->Unsubscribe( sp<QL::IListener>{sp<void>{}, this}, {} );
 	}
 	α AccessListener::OnChange( const jvalue& j, QL::SubscriptionId clientId )ε->void{
 		let& root = Json::AsObject(j);
@@ -30,7 +26,12 @@ namespace Jde::Access{
 			return;
 		}
 
-		let pk = Json::AsNumber<uint32>( object, "id" );
+		let id = Json::FindNumber<uint32>( object, "id" );
+		if( !id ){
+			DBGT( ELogTags::Access, "[{}]a notification for event {:x} carried no id - the access cache is stale for that row until a reload: {}", Name, (uint16)underlying(event), serialize(object) );
+			return;
+		}
+		let pk = *id;
 		if( !empty(event & User) )
 			UserChanged( {pk}, event & ~User, object );
 		else if( !empty(event & Group) )
@@ -117,7 +118,6 @@ namespace Jde::Access{
 		}
 	}
 	α AccessListener::PermissionUpdated( PermissionRightsPK pk, const jobject& o )ε->void{
-		Access::Permission permission{ o };
 		let allowed = Json::FindNumber<uint8>( o, "allowed" );
 		let denied = Json::FindNumber<uint8>( o, "denied" );
 		Authorizer().UpdatePermission( pk, allowed ? optional<ERights>((ERights)*allowed) : nullopt, denied ? optional<ERights>((ERights)*denied) : nullopt );

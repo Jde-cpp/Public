@@ -47,8 +47,7 @@ namespace Jde::QL{
 	template<> Ξ QLAwait<jarray>::Execute()ι->TAwait<jvalue>::Task{
 		try{
 			jvalue v = co_await QLAwait<jvalue>{move(_request), move(_statement), _executer, _ql, base::_sl};
-			auto a = Json::AsArray(v);
-			Resume( move(a) );
+			Resume( move(Json::AsArray(v)) );//AsArray returns jarray& - binding it to `auto` copied the whole result first.
 		}
 		catch( runtime_error& e ){
 			ResumeExp( move(e) );

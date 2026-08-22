@@ -11,7 +11,6 @@ namespace Jde::QL{
 		IListener( str name )ι:Name{name}{}
 		β OnChange( const jvalue& j, SubscriptionId clientId )ε->void=0;
 		β OnTraces( App::Proto::FromServer::Traces&& traces )ι->void=0;
-		flat_set<SubscriptionId> Ids;
 		string Name;
 	};
 }
