@@ -8,7 +8,7 @@
 #include <jde/opc/uatypes/Logger.h>
 #include "../src/StartupAwait.h"
 #include "../src/UAClient.h"
-#include "../../AppServer/src/AppStartupAwait.h"
+#include "../../AppServer/src/appStartup.h"
 #include "../../OpcServer/src/StartupAwait.h"
 #include "utils/helpers.h"
 #include <jde/tests/SpdlogTestListener.h>
@@ -27,7 +27,7 @@ namespace Jde{
 		Opc::Gateway::AppClient()->InitLogging( Opc::Gateway::AppClient() );
 		try{
 			if( Settings::FindBool("/testing/embeddedAppServer").value_or(true) )//the fresh db enrolls the gateway+opcServer client certs every run: /access/trustedCertDirs anchors their dirs, each StartupAwait ensures its own cert, and TrustVerify rescans - no pre-anchoring of the CLIENT certs here.  The other direction (client trusts each embedded server's cert) is covered by Web::Server::Start's self-anchor.
-				co_await App::Server::AppStartupAwait{ Settings::AsObject("/http/app") };
+				App::Server::AppStartup( Settings::AsObject("/http/app") );
 			if( Settings::FindBool("/testing/embeddedOpcServer").value_or(true) ){
 				//create both gateway certs (UAClient transport + AppClient SslSettings auth) before the server: not required
 				//anymore (UATrust rescans trustedCertDirs on a failed verify), but it spares the first connect a

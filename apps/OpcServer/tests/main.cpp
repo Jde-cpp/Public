@@ -9,7 +9,7 @@
 #include <jde/tests/SpdlogTestListener.h>
 #include <jde/tests/testMain.h>
 #include "../src/StartupAwait.h"
-#include "../../AppServer/src/AppStartupAwait.h"
+#include "../../AppServer/src/appStartup.h"
 #define let const auto
 
 namespace Jde{
@@ -24,7 +24,7 @@ namespace Jde{
 		Opc::Server::AppClient()->InitLogging( Opc::Server::AppClient() );
 		try{
 			if( Settings::FindBool("/testing/embeddedAppServer").value_or(true) )//the fresh db enrolls the client cert every run: /access/trustedCertDirs anchors its dir, StartupAwait ensures the cert, and TrustVerify rescans - no pre-anchoring of the CLIENT cert here.  The other direction (client trusts each embedded server's cert) is covered by Web::Server::Start's self-anchor.
-				co_await App::Server::AppStartupAwait{ Settings::AsObject("/http/app") };
+				App::Server::AppStartup( Settings::AsObject("/http/app") );
 			co_await Opc::Server::StartupAwait{ Settings::AsObject("/http/opcServer"), Settings::AsObject("/credentials/opcServer") };
 		}
 		catch( runtime_error& e ){

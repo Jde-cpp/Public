@@ -7,7 +7,7 @@
 #include <jde/access/Authorize.h>
 #include <jde/access/server/accessServer.h>
 #include "LocalClient.h" // !important
-#include "LogData.h" // !important
+#include "appStartup.h" // !important
 #include "WebServer.h"
 #define let const auto
 

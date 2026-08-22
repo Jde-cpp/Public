@@ -6,7 +6,7 @@
 #include <jde/ql/QLAwait.h>
 #include "helpers.h"
 #include "../src/LocalClient.h"
-#include "../src/LogData.h"
+#include "../src/appStartup.h"
 #include "../src/ql/AppServerQL.h"
 #define let const auto
 
@@ -38,7 +38,7 @@ namespace Jde::App::Server::Tests{
 	//instance there is no socket, so the push goes back through the local ql - same updateLogSetting either way.
 	TEST_F( InstanceTagLevelTests, PushesLevelsToTheInstance ){
 		let instanceId = Server::AppClient()->InstancePK();
-		ASSERT_TRUE( instanceId ) << "AppStartupAwait registers this process; without its pk there is nothing to push to";
+		ASSERT_TRUE( instanceId ) << "AppStartup registers this process; without its pk there is nothing to push to";
 		let restore = FindConfigured( ELogTags::Threads );
 		RunQL( Ƒ(R"(mutation updateInstanceTagLevel( "id":{}, "text":[{{tags:["threads"],level:"Critical"}}] ))", instanceId) );
 		EXPECT_EQ( FindConfigured(ELogTags::Threads), ELogLevel::Critical ) << "the push should have applied the level in this process";
