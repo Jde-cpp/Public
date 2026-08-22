@@ -320,10 +320,12 @@ namespace Jde::QL{
 			Next();
 			for( auto token = Next(); token!="}" && token.size(); token = Next() ){
 				if( Peek()=="{" || Peek()=="(" ){
-					//system-ness is inherited, not re-derived per child:  `__type{ fields{…} }` needs it, but a *nested* system-shaped
-					//name under a real table ("roles{ id status{ x } }") is a bogus sub-table, and taking the FindView path left its
-					//DBTable null for columnSql to dereference.  Inheriting sends it to GetViewPtr, which throws "Could not find view".
-					table.Tables.push_back( LoadTable(token, vars, schemas, system, sl) );
+					//system-ness is inherited, plus re-derived for a child that is an *explicitly registered* system table
+					//(SetSystemTables, e.g. gateway `serverConnections{ opcSessions{count} }`): those resolve no view and a custom
+					//await grafts them, so they must take the FindView path (null DBTable is fine).  A merely system-*shaped* name
+					//- the `status`/`__x` heuristics in isSystem() - under a real table ("roles{ id status{ x } }") is a bogus
+					//sub-table and stays non-system so it hits GetViewPtr and throws "Could not find view", naming what it missed.
+					table.Tables.push_back( LoadTable(token, vars, schemas, system || _systemTables.contains(token), sl) );
 				}else{
 					THROW_IF( token==",", "don't separate columns with: ',' '{}' @ '{}'.", _text, Index()-1 );
 					//#43: an argument list written where a column belongs was taken literally - `{ (schema:$schemas)id target }` came back
