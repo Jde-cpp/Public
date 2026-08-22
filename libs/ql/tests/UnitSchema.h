@@ -10,6 +10,15 @@ namespace Jde::QL::Tests{
 	Ξ table( sv name, sv json )ε->std::pair<string,sp<DB::Table>>{
 		return { string{name}, ms<DB::Table>( name, Json::Parse(json) ) };
 	}
+	//Initialize wires the tables into the same cyclic graph the real schema is - Column::PKTable to the pk table, whose
+	//View::Children points back, AppSchema::Tables to every table, whose View::Schema points back - and a process-lifetime
+	//schema never lets go of it.  A fresh one per call does, so LeakSanitizer reported every set at exit (736 allocations across
+	//the suite).  Kept reachable here, exactly as the real one is, so the report matches the design rather than the scaffolding.
+	Ξ keepAlive( vector<sp<DB::AppSchema>> schemas )ι->vector<sp<DB::AppSchema>>{
+		static auto& built = *new vector<vector<sp<DB::AppSchema>>>{}; //never destroyed:  a plain static is torn down before LeakSanitizer looks, which is the one moment that matters.
+		built.push_back( schemas );
+		return schemas;
+	}
 	Ξ schemas()ε->vector<sp<DB::AppSchema>>{
 		flat_map<string,sp<DB::Table>> tables{
 			table( "provider_types", R"({"columns":{"provider_type_id":{"sk":0,"i":0},"name":{"i":1}}})" ),
@@ -22,6 +31,6 @@ namespace Jde::QL::Tests{
 		};
 		auto db = ms<DB::DBSchema>( "_qlTests", move(tables), "" );
 		DB::DBSchema::Initialize( {}, db );
-		return { db->AppSchemas.begin()->second };
+		return keepAlive( { db->AppSchemas.begin()->second } );
 	}
 }
