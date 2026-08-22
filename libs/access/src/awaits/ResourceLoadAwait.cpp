@@ -47,11 +47,24 @@ namespace Jde::Access{
 		try{
 			for( let& schema : _schemas ){
 				let schemaName = getSchemaName(schema, _opcServerInstance);
-				auto q = Ƒ( "resources( schemaName:[\"{}\"] ){{target deleted}}", schemaName );
+				auto q = Ƒ( "resources( schemaName:[\"{}\"] ){{id target deleted description}}", schemaName );
 				auto existing = Json::AsArray( co_await *_qlServer->Query(move(q), {}, _executer) );
 				flat_set<string> targets;
-				for( auto& resource : existing )
-					targets.emplace( Json::AsString(Json::AsObject(resource), "target") );
+				for( auto& value : existing ){
+					let& resource = Json::AsObject( value );
+					targets.emplace( Json::AsString(resource, "target") );
+					//A row a sync created and never got to disable:  the disable is a second call, and a failure between the two left the
+					//table denying every non-System user - for good, since a target with a row was then skipped here (access-review3 #24).
+					//Its signature is the sync's own description and not one right on it; an operator who enabled a resource granted something.
+					let deleted = resource.if_contains( "deleted" );
+					if( !(deleted && deleted->is_null()) || Json::FindDefaultSV(resource, "description")!="From installation" )
+						continue;
+					let id = Json::AsNumber<ResourcePK>( resource, "id" );
+					if( Json::AsArray(co_await *_qlServer->Query(Ƒ("permissionRights( resourceId:{} ){{ id }}", id), {}, _executer)).empty() ){
+						INFOT( ELogTags::Access, "[{}.{}]resource {} is active with no rights on it - disabling it, as the installation that created it meant to.", schemaName, Json::AsString(resource, "target"), id );
+						co_await *_qlServer->Query( Ƒ("deleteResource( id:{} )", id), {}, _executer );
+					}
+				}
 
 				for( let& [_,table] : schema->Tables ){
 					auto jsonName = DB::Names::ToJson( table->Name );

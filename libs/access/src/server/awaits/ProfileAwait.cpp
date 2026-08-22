@@ -3,7 +3,6 @@
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Table.h>
 #include <jde/ql/ql.h>
-#include <jde/ql/LocalSubscriptions.h>
 #include "../serverInternal.h"
 
 #define let const auto
@@ -39,7 +38,8 @@ namespace Jde::Access::Server{
 			}
 			jobject y;
 			y["rowCount"] = count;
-			QL::Subscriptions::OnMutation( _mutation, y );
+			//No notification:  profiles are per-user state, and the fan-out has no per-listener identity - it would hand this
+			//target and value blob to every profileUpdated subscriber, i.e. any other logged-in user (access-review3 #16).
 			Resume( move(y) );
 		}
 		catch( runtime_error& e ){

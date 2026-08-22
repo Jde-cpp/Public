@@ -59,6 +59,7 @@ namespace Jde::Opc{
 		appClient->LoadLogSettings();
 
 		BlockVoidAwait( Access::Client::Configure(accessSchema, {uaSchema}, appClient->QLServer(), UserPK{UserPK::System}, remoteAcl, appClient->Listener(), resourceSchema) );
+		Process::AddShutdownFunction( [listener=appClient->Listener()](bool terminate, SL sl){ listener->Shutdown(terminate, sl); } ); //as the AppServer does - the subscriptions otherwise outlive everything they reference (access-review3 #25).
 		QL::Hook::Add( mu<ConstructorHook>() );
 		QL::Hook::Add( mu<ObjectHook>() );
 		QL::Hook::Add( mu<ObjectTypeHook>() );

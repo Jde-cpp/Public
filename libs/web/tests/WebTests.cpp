@@ -46,6 +46,11 @@ namespace Jde::Web{
 	using Web::Client::ClientHttpRes;
 	using Web::Client::ClientHttpResException;
 
+	//access-review3 #29's mirror:  IRequestHandler::UserName has the same fallback, taken when no authorizer is registered.
+	TEST_F( WebTests, UserNameFallbackPrintsThePk ){
+		EXPECT_EQ( "4242", _requestHandler->UserName(UserPK{4242}) );
+	}
+
 	TEST_F( WebTests, IsSsl ){
 		auto await = ClientHttpAwait{ Host, "/ping", Port, {.ContentType="text/ping", .Verb=http::verb::post} };
 		let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( move(await) );
@@ -397,16 +402,23 @@ namespace Jde::Web{
 		EXPECT_EQ( 500u, e->HttpStatus() );
 	}
 
-	//the concrete type (AccessException) has no counterpart in the reconstruction - the stored status is all that keeps a 401 a 401.
+	//the concrete type (AccessException) has no counterpart in the reconstruction - the stored status is all that keeps a 403 a 403.
+	//access-review3 #17:  a denial is Forbidden, not Unauthorized - the client's 401 policy is "the credential is stale" and logged
+	//a merely-unprivileged user out.  Only the unknown-executer case still says 401, and says so explicitly.
 	TEST( AppExceptionProtoTests, StatusSurvivesRoundTrip ){
 		Access::AccessException source{ SRCE_CUR, UserPK{1}, "denied" };
 		source.SetLevel( ELogLevel::NoLog );
+		EXPECT_EQ( EHttpStatus::Forbidden, source.HttpStatus() );
 		let t = App::FromServer::Exception( source, RequestId{1} );
-		EXPECT_EQ( 401u, t.messages(0).exception().status_code() );
+		EXPECT_EQ( 403u, t.messages(0).exception().status_code() );
 
 		auto e = App::ProtoUtils::ToException( Jde::Proto::Exception{t.messages(0).exception()} );
 		EXPECT_EQ( nullptr, dynamic_cast<Access::AccessException*>(e.get()) );
-		EXPECT_EQ( 401u, e->HttpStatus() );
+		EXPECT_EQ( 403u, e->HttpStatus() );
+
+		Access::AccessException unknown{ SRCE_CUR, UserPK{0}, EHttpStatus::Unauthorized, "User not found." };
+		unknown.SetLevel( ELogLevel::NoLog );
+		EXPECT_EQ( 401u, App::FromServer::Exception( unknown, RequestId{2} ).messages(0).exception().status_code() );
 	}
 
 	//status decided at run time, e.g. off the wire - RestException<TStatus> bakes it into the type.

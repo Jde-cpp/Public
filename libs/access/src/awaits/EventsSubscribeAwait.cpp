@@ -48,7 +48,7 @@ namespace Jde::Access{
 			co_await EventTypeSubscribeAwait{ _qlServer, "role", Role, "id", {}, Deleted | Restored | Purged, {}, _executer, _listener };
 			co_await EventTypeSubscribeAwait{ _qlServer, "role", Role, "id permissionRight{id allowed denied resource(schemaName:$schemas){id target schemaName target criteria}} role{id}", {}, Added | Removed, vars, _executer, _listener };
 			co_await EventTypeSubscribeAwait{ _qlServer, "resources", Resources, "id schemaName target criteria deleted", ", schemaName:$schemas", Created, vars, _executer, _listener };
-			co_await EventTypeSubscribeAwait{ _qlServer, "resources", Resources, "id schema target", ", schemaName:$schemas", Deleted | Restored, vars, _executer, _listener };
+			co_await EventTypeSubscribeAwait{ _qlServer, "resources", Resources, "id schemaName target", ", schemaName:$schemas", Deleted | Restored, vars, _executer, _listener }; //schemaName, as Created above and every producer spell it (access-review3 #23) - `schema` was no column, so an id-less delete could never be resolved by name.
 			co_await EventTypeSubscribeAwait{ _qlServer, "permissionRight", Permission, "id allowed denied resource(schema:$schemas)", {}, Updated, vars, _executer, _listener };
 			co_await EventTypeSubscribeAwait{ _qlServer, "acl", Acl, "identity{id} permissionRight{id allowed denied resource(schema:$schemas){id}} role{id}", {}, Created, vars, _executer, _listener };
 			co_await EventTypeSubscribeAwait{ _qlServer, "acl", Acl, "identity{id} permissionRight{id resource(schema:$schemas)} role{id}", {}, Purged, vars, _executer, _listener };

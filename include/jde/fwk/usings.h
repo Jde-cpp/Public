@@ -108,7 +108,7 @@ namespace Jde{
 	Τ struct PK{
 		using Type=T;
 		Type Value{};
-		operator bool()Ι{ return Value!=0; }
+		explicit operator bool()Ι{ return Value!=0; } //std::to_string( pk ) picked bool→int and printed "1"
 		α operator !()Ι{ return Value==0; }
 		α operator ==( const PK& rhs )Ι{ return Value==rhs.Value; }
 		α operator !=( const PK& rhs )Ι{ return Value!=rhs.Value; }

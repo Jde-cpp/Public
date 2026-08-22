@@ -1,4 +1,4 @@
-create or alter proc [dbo].access_role_add( @role_id int, @allowed tinyint, @denied tinyint, @resourceTarget varchar(256), @schema varchar(256), @resourceName varchar(64), @criteria varchar(832), @permission_id int output ) as begin
+create or alter proc [dbo].access_role_add( @role_id int, @allowed bigint, @denied bigint, @resourceTarget varchar(32), @schema varchar(32), @resourceName varchar(64), @criteria varchar(672), @permission_id int output ) as begin
 	set nocount on;
 	declare @resource_id smallint;
 	select @resource_id = resource_id
@@ -7,7 +7,7 @@ create or alter proc [dbo].access_role_add( @role_id int, @allowed tinyint, @den
 		and schema_name = coalesce(@schema, schema_name)
 		and criteria is not distinct from @criteria;
 	if @resource_id is null begin
-		insert into access_resources( target, schema_name, name, criteria ) values( @resourceTarget, @schema, @resourceName, @criteria );
+		insert into access_resources( target, schema_name, name, criteria ) values( @resourceTarget, @schema, coalesce(@resourceName, @resourceTarget), @criteria );
 		set @resource_id = scope_identity();
 	end;
 

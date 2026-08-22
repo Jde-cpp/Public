@@ -7,6 +7,8 @@
 //Jde.QL.Tests, which opens no data source.
 #include "gtest/gtest.h"
 #include <jde/access/AccessListener.h>
+#include <jde/access/Authorize.h>
+#include <jde/access/awaits/EventsSubscribeAwait.h>
 #include "../src/accessInternal.h"
 #include "globals.h"
 #include <jde/ql/IQL.h>
@@ -210,15 +212,24 @@ namespace Jde::Access::Tests{
 
 	//ql-review3 #55: the fan-out delivers without an id on purpose when the lookup was ambiguous or found nothing (ql-review2 #7),
 	//and AccessListener::OnChange read that id with Json::AsNumber, which throws - into the fan-out's catch, which was empty.  So
-	//the real listener in this binary skipped those events and its cache went stale with nothing in the log.  It no longer throws:
-	//there is no row to apply the event to and 0 would apply it to the wrong one, so it says the cache is stale and returns.
-	//Called directly rather than through a mutation, because a throw here is invisible from the outside - ql swallows it either
-	//way, which is the other half of this finding (SubscriptionsTests.AThrowingListenerIsWarnedAbout).
+	//the real listener in this binary skipped those events and its cache went stale with nothing in the log.  Since access-review3
+	//#22 a resources event without an id is resolved by target instead (IdLessResourceDeleteReachesTheCache below); one naming a
+	//target the cache does not hold is refused by name - the mirror of the unknown-pk case - and an event with neither is the
+	//one that says the cache is stale and returns.  Called directly rather than through a mutation, because a throw here is
+	//invisible from the outside - ql swallows it either way, which is the other half (SubscriptionsTests.AThrowingListenerIsWarnedAbout).
 	TEST( SubscriptionTests, AnIdLessNotificationDoesNotThrowOutOfTheListener ){
 		auto listener = ms<Access::AccessListener>( QLPtr() );
 		let deleted = (QL::SubscriptionId)underlying( ESubscription::Resources|ESubscription::Deleted );
+		jvalue nameless{ jobject{ {"resources", jobject{{"description","nothing to find it by"}}} } };
+		EXPECT_NO_THROW( listener->OnChange(nameless, deleted) );
 		jvalue idLess{ jobject{ {"resources", jobject{{"target","subStaleCache"}}} } };//exactly what AmbiguousLookupNotifiesWithoutAnId delivers.
-		EXPECT_NO_THROW( listener->OnChange(idLess, deleted) );
+		try{
+			listener->OnChange( idLess, deleted );
+			ADD_FAILURE() << "an id-less event naming a target the cache does not hold was accepted";
+		}
+		catch( const Exception& e ){
+			EXPECT_NE( string{e.what()}.find("subStaleCache"), string::npos ) << e.what();//dispatched and refused by name, not skipped.
+		}
 
 		//and a payload that does carry one is still dispatched - the tolerance must not swallow the ordinary case.  An id nothing
 		//is registered under reaches ResourceChanged and is refused *there*, by pk, which is the proof that it got that far.
@@ -230,5 +241,45 @@ namespace Jde::Access::Tests{
 		catch( const Exception& e ){
 			EXPECT_NE( string{e.what()}.find("987654321"), string::npos ) << e.what();//it was dispatched with the id, not skipped.
 		}
+	}
+
+	//access-review3 #25:  AccessListener::Shutdown unsubscribed through UnsubscribeAwait with IListener::Ids, which nothing ever
+	//filled - an empty set short-circuits it - so every subscription, and the listener with it, outlived the app's own handle.
+	//It goes through StopListen by listener now, which takes everything when given no ids.  A second listener, subscribed the way
+	//Configure subscribes the real one, so the startup listener the rest of this suite relies on is not the one shut down.
+	TEST( SubscriptionTests, ShutdownUnsubscribesTheListener ){
+		auto listener = ms<Access::AccessListener>( QLPtr() );
+		BlockVoidAwait( Access::EventsSubscribeAwait{QLPtr(), {"access"}, UserPK{UserPK::System}, listener} );
+		listener->Shutdown( false, SRCE_CUR );
+		EXPECT_TRUE( QL::Subscriptions::StopListen(listener, {}).empty() ) << "Shutdown left subscriptions registered";
+	}
+
+	//access-review3 #22 (with #23's column):  tolerating the id-less event was half of it - the cache still kept enforcing rows the
+	//admin had just deleted.  Resources recover by schemaName+target, for every row the by-target delete hit, through the startup
+	//listener's own subscription - which asked for a column called `schema` that no table has, so the name could never match.
+	//In `access`, where that subscription's schema predicate lets the events through; criteria-scoped, so CheckDefaults is untouched.
+	TEST( SubscriptionTests, IdLessResourceDeleteReachesTheCache ){
+		let root = GetRoot();
+		constexpr sv target{ "subIdLessDelete" };
+		let select = Ƒ( R"(resources( schemaName:"access", target:"{}" ){{ id }})", target );
+		for( let& v : QL().QuerySync<jarray>(select, {}, root) ) //a previous run's rows.
+			Purge( "resource", GetId(Json::AsObject(v)), root );
+		for( sv criteria : {"a", "b"} )
+			QL().QuerySync<jvalue>( Ƒ(R"(mutation createResource( schemaName:"access", name:"{0}", target:"{0}", description:"{0}", criteria:"{1}", allowed:255 ))", target, criteria), {}, root );
+		vector<uint32> ids;
+		for( let& v : QL().QuerySync<jarray>(select, {}, root) )
+			ids.push_back( Json::AsNumber<uint32>(Json::AsObject(v), "id") );
+		ASSERT_EQ( ids.size(), 2u );
+		const UserPK nobody{ GetId(GetUser("subIdLessNobody", root)) };
+		for( let id : ids )
+			EXPECT_THROW( Authorizer()->TestAdmin((ResourcePK)id, nobody), Exception ) << "active in the cache, so enforced";
+
+		deleteResource( target ); //by target:  both rows, and a notification with no id.
+		for( let id : ids )
+			EXPECT_NO_THROW( Authorizer()->TestAdmin((ResourcePK)id, nobody) ) << "deleted in the cache as well - a deleted resource fail-opens";
+
+		for( let id : ids )
+			Purge( "resource", id, root );
+		PurgeUser( nobody, root );
 	}
 }

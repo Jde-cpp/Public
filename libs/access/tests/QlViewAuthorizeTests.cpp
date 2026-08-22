@@ -74,4 +74,27 @@ namespace Jde::Access::Tests{
 		if( wasDeleted )
 			Delete( "resources", GetId(resource), GetRoot() );
 	}
+
+	//access-review3 #3's other route:  users{ … groups{} } is Server::CustomQuery's UserAwait, which runs two stock selects -
+	//groups, then the qlView'd users - and the second is the one that used to test "usersQl".  groups is disabled here so the
+	//only table that can refuse the intruder is users.
+	TEST_F( QlViewAuthorizeTests, CustomUserPathIsEnforcedToo ){
+		let groups = SelectResource( "groups", GetRoot(), true );
+		let groupsWasActive = groups.at( "deleted" ).is_null();
+		if( groupsWasActive )
+			Delete( "resources", GetId(groups), GetRoot() );
+
+		constexpr sv ql{ "users{ id loginName groups{ id } }" };
+		EXPECT_NO_THROW( QL().QuerySync<jarray>(string{ql}, {}, GetRoot()) ) << "the query itself has to be valid, or the throw below proves nothing";
+		try{
+			QL().QuerySync<jarray>( string{ql}, {}, _intruder );
+			ADD_FAILURE() << "users was read through UserAwait without authorization";
+		}
+		catch( const Exception& e ){
+			EXPECT_NE( string{e.what()}.find("users"), string::npos ) << e.what(); //refused for users, not for groups.
+		}
+
+		if( groupsWasActive )
+			Restore( "resources", GetId(groups), GetRoot() );
+	}
 }

@@ -24,33 +24,43 @@ namespace Jde::Access::Server{
 		else if( _mutation.Type==QL::EMutationQL::Create )
 			InsertAcl();
 	}
-	α AclQLAwait::PurgeAcl()ι->QL::QLAwait<jobject>::Task{
+	//{ mutation purgeAcl( identity:{id:7}, permissionRight:{id:42} ) } - or role:{id:42}.  A direct grant and a role assignment are
+	//both access_acl rows in one pk space, so the pk is resolved first and the gate comes from what it *is*
+	//(access_permissions.is_role), not from which key the client chose:  keyed on the spelling, a roles admin could revoke any
+	//identity's direct grant on any resource by sending its pk as role:{id} (access-review3 #11).  Either spelling is accepted.
+	α AclQLAwait::PurgeAcl()ι->DB::ScalerAwaitOpt<uint>::Task{
 		try{
-			let identityPK = Json::AsNumber<IdentityPK::Type>( _mutation.Args, "identity/id" );
-			auto permissionPK = Json::FindNumberPath<PermissionPK>( _mutation.Args, "permissionRight/id" );
-			if( !permissionPK ){
-				permissionPK = Json::FindNumberPath<PermissionPK>( _mutation.Args, "role/id" );
+			let args = _mutation.ExtrapolateVariables();
+			let identityPK = Json::AsNumber<IdentityPK::Type>( args, "identity/id" );
+			auto permissionPK = Json::FindNumberPath<PermissionPK>( args, "permissionRight/id" );
+			if( !permissionPK )
+				permissionPK = Json::FindNumberPath<PermissionPK>( args, "role/id" );
+			THROW_IF( !permissionPK, "Could not find permissionRight or role id in '{}'", serialize(args) );
+			let isRole = co_await DS().ScalerOpt<uint>( DB::Sql{Ƒ("select is_role from {} where permission_id=?", GetTable("permissions").DBName), vector<DB::Value>{{*permissionPK}}} );
+			THROW_IF( !isRole, "[{}]Permission not found.", *permissionPK );
+			if( *isRole )
 				Authorizer().TestAdmin( "roles", _executer, _sl );
-			}
-			else{
-				auto q = QL::ParseQuery( Ƒ("permissionRight(id:{}){{resource{{id deleted}}}}", *permissionPK), {}, {GetSchemaPtr()} );
-				let resourcePK = co_await QL::QLAwait<jobject>( move(q), {UserPK::System} );
-				Authorizer().TestAdmin( Json::AsNumber<ResourcePK>(resourcePK, "resource/id"), _executer, _sl );
-			}
-			THROW_IF( !permissionPK, "Could not find permissionRight or role id in '{}'", serialize(_mutation.Args) );
-			PurgeAcl( identityPK, *permissionPK );
+			else
+				Authorizer().TestAdminPermission( *permissionPK, _executer, _sl );
+			//the listener - and any subscriber - branches on the key, so the notification has to carry the one the pk is.
+			const sv key = *isRole ? "role" : "permissionRight", other = *isRole ? "permissionRight" : "role";
+			_mutation.Args.erase( other );
+			_mutation.Args[key] = jobject{ {"id", *permissionPK} };
+			PurgeAcl( identityPK, *permissionPK, *isRole!=0 );
 		}
 		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
-	α AclQLAwait::PurgeAcl( IdentityPK::Type identityPK, PermissionPK permissionPK )ι->DB::ExecuteAwait::Task{
+	α AclQLAwait::PurgeAcl( IdentityPK::Type identityPK, PermissionPK permissionPK, bool isRole )ι->DB::ExecuteAwait::Task{
 		try{
 			let ds = Table().Schema->DS();
 			let aclCount = co_await ds->Execute(
 				DB::Sql{ Ƒ("delete from {} where identity_id=? and permission_id=?", Table().DBName), vector<DB::Value>{{identityPK}, {permissionPK}} }, _sl );
-			co_await ds->Execute(
-				DB::Sql{ Ƒ("delete from {} where permission_id=?", GetTable("permission_rights").DBName), vector<DB::Value>{{permissionPK}} }, _sl );
+			if( aclCount && !isRole ){ //a direct grant's rights row goes with its last acl link;  a role has no rights row, and the acl row was the whole assignment.
+				co_await ds->Execute(
+					DB::Sql{ Ƒ("delete from {} where permission_id=? and not exists( select 1 from {} where permission_id=? )", GetTable("permission_rights").DBName, Table().DBName), vector<DB::Value>{{permissionPK}, {permissionPK}} }, _sl );
+			}
 			jobject y;
 			y["rowCount"] = aclCount;
 			//y["complete"] = true;

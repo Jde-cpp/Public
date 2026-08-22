@@ -3,6 +3,10 @@
 #include <jde/ql/QLAwait.h>
 #include <jde/db/meta/Table.h>
 #include <jde/access/types/Resource.h>
+#include <jde/access/Authorize.h>
+#include <jde/ql/IQL.h>
+#include <jde/ql/LocalQL.h>
+#include "../src/awaits/ResourceLoadAwait.h"
 
 #define let const auto
 namespace Jde::Access::Tests{
@@ -19,10 +23,69 @@ namespace Jde::Access::Tests{
 		return QL().QuerySync<jarray>( ql, {}, GetRoot() );
 	}
 
+	//access-review3 #24:  ResourceSync creates each resource active and disables it in a second, untransacted call.  A failure in
+	//between left the table denying every non-System user, and the next sync skipped any target that had a row, so it never healed.
+	//This is the real LocalQL with the second call refused - the failure the finding describes - and the sync's own next pass.
+	struct DeleteRefusingQL final : QL::IQL{
+		DeleteRefusingQL( sp<QL::IQL> inner )ι:_inner{ move(inner) }{}
+		α Authorizer()ε->Access::Authorize& override{ return _inner->Authorizer(); }
+		α AuthorizerPtr()ε->sp<Access::Authorize> override{ return _inner->AuthorizerPtr(); }
+		α CustomQuery( QL::TableQL& ql, QL::Creds executer, SL sl )ι->up<TAwait<jvalue>> override{ return _inner->CustomQuery( ql, executer, sl ); }
+		α CustomMutation( QL::MutationQL& ql, QL::Creds executer, SL sl )ι->up<TAwait<jvalue>> override{ return _inner->CustomMutation( ql, executer, sl ); }
+		α LogQuery( QL::TableQL&& ql, QL::Creds executer, SL sl )ε->up<TAwait<jvalue>> override{ return _inner->LogQuery( move(ql), executer, sl ); }
+		α LogSettingsQuery( QL::TableQL&& ql, QL::Creds executer, SL sl )ε->up<TAwait<jvalue>> override{ return _inner->LogSettingsQuery( move(ql), executer, sl ); }
+		α StatusQuery( QL::TableQL&& ql, QL::Creds executer, SL sl )ε->jobject override{ return _inner->StatusQuery( move(ql), executer, sl ); }
+		α Query( string query, jobject vars, UserPK executer, bool returnRaw, SL sl )ε->up<TAwait<jvalue>> override{
+			THROW_IF( query.starts_with("deleteResource"), "refused, as the finding's failure: {}", query );
+			return _inner->Query( move(query), move(vars), executer, returnRaw, sl );
+		}
+		α QueryObject( string query, jobject vars, UserPK executer, bool returnRaw, SL sl )ε->up<TAwait<jobject>> override{ return _inner->QueryObject( move(query), move(vars), executer, returnRaw, sl ); }
+		α QueryArray( string query, jobject vars, UserPK executer, bool returnRaw, SL sl )ε->up<TAwait<jarray>> override{ return _inner->QueryArray( move(query), move(vars), executer, returnRaw, sl ); }
+		α Upsert( string query, jobject vars, UserPK executer )ε->jarray override{ return _inner->Upsert( move(query), move(vars), executer ); }
+		α Schemas()Ι->const vector<sp<DB::AppSchema>>& override{ return _inner->Schemas(); }
+		α Subscribe( string&& query, jobject vars, sp<QL::IListener> listener, UserPK executer, SL sl )ε->up<TAwait<vector<QL::SubscriptionId>>> override{ return _inner->Subscribe( move(query), move(vars), listener, executer, sl ); }
+		sp<QL::IQL> _inner;
+	};
+	//AclTests.cpp
+	α CreateAcl( IdentityPK identityPK, ERights allowed, ERights denied, string resource, UserPK executer )ε->PermissionRightsPK;
+	α SelectAcl( IdentityPK identityPK, string resourceTarget )ε->jobject;
+	α PurgeAcl( IdentityPK identityPK, PermissionRightsPK permissionPK, UserPK executer )ε->void;
+	TEST_F( ResourceTests, SyncHealsARowLeftActiveByAnInterruptedInstall ){
+		let root = GetRoot();
+		const UserPK system{ UserPK::System };
+		const string target{ "providerTypes" }; //a synced table nothing here grants on - except root, whom GetRoot grants everything once.
+		let rootGrant = SelectAcl( root, target );
+		ASSERT_FALSE( rootGrant.empty() );
+		PurgeAcl( root, GetId(rootGrant), system ); //or the resource row cannot be purged.
+		auto row = SelectResource( target, root, true );
+		ASSERT_FALSE( row.empty() );
+		Purge( "resource", GetId(row), root ); //un-sync it - the next sync has to create it.
+
+		//what the next start would enforce:  the loader (Loader::Resources) puts every active row into SchemaResources.  In-process a
+		//created row is not enforced until something restores or grants on it - CreateResource fills only Resources - which is why
+		//the finding's lockout is a restart away, and why this looks through the loader rather than at Test().
+		auto loadsActive = [&]()->optional<bool>{
+			let loaded = BlockAwait<ResourceLoadAwait,ResourcePermissions>( ResourceLoadAwait{QLPtr(), Schemas(), {}, system} );
+			auto p = find_if( loaded.Resources, [&](let& kv){ return kv.second.Target==target; } );
+			return p==loaded.Resources.end() ? optional<bool>{} : optional<bool>{ !p->second.IsDeleted };
+		};
+		EXPECT_THROW( BlockVoidAwait( ResourceSyncAwait{ms<DeleteRefusingQL>(QLPtr()), Schemas(), {}, system} ), Exception ); //the create lands, the disable is refused.
+		row = SelectResource( target, root, true );
+		ASSERT_FALSE( row.empty() );
+		ASSERT_TRUE( row.at("deleted").is_null() ) << "left active - the interrupted install";
+		EXPECT_EQ( loadsActive(), optional<bool>{true} ) << "and a restart would enforce it:  deny-all, nobody holds a right on it";
+
+		BlockVoidAwait( ResourceSyncAwait{QLPtr(), Schemas(), {}, system} ); //the next start's sync.
+		row = SelectResource( target, root, true );
+		EXPECT_FALSE( row.at("deleted").is_null() ) << "re-disabled by the sync";
+		EXPECT_EQ( loadsActive(), optional<bool>{false} ) << "and loads disabled - fail-open, as the installation meant";
+		CreateAcl( root, ERights::All, ERights::None, target, system ); //as GetRoot left it.
+	}
+
 	TEST_F( ResourceTests, CheckDefaults ){
 		let ql = "resources( schemaName:\"access\", criteria:null ){ id allowed name attributes created deleted updated target description }";
 		let& resources = QL().QuerySync<jarray>( ql, {}, GetRoot() );
-		ASSERT_EQ( resources.size(), 5 ); //"users", "members", "roles", "resources", "provider_types"
+		ASSERT_EQ( resources.size(), 6 ); //"users", "members", "roles", "resources", "provider_types", "acl" (access-review3 #21)
 		constexpr ERights base = ERights::Create | ERights::Read | ERights::Update | ERights::Delete | ERights::Purge | ERights::Administer;
 		TRACET( ELogTags::Test, "base={:x}", underlying(base) );
 		for( let& v : resources ){
@@ -34,6 +97,8 @@ namespace Jde::Access::Tests{
 				expected = base | ERights::Execute;
 			else if( target=="resources" )
 				expected = ERights::Delete;
+			else if( target=="acl" )
+				expected = ERights::Read | ERights::Administer;
 			ASSERT_EQ( expected, allowed ) << "target=" << target;
 		}
 	}
@@ -67,8 +132,10 @@ namespace Jde::Access::Tests{
  		let restoreJson = QL().QuerySync<jvalue>( restore, {}, GetRoot() );
 		ASSERT_TRUE( !selectResources(target, filter).empty() );
 
- 		let purge = Ƒ( "{{mutation purgeResource(\"id\":{}) }}", id );
- 		ASSERT_TRUE( Tests::SelectGroup("groupTest", GetRoot(), true).empty() );
+		//access-review3 #18:  the purge used to be built and never run, and the closing assertion was about GroupTests' group -
+		//true in every ordering - so purgeResource had no coverage and the criteria-scoped `members` row leaked into the shared db.
+		QL().QuerySync<jvalue>( Ƒ("mutation purgeResource( id:{} )", id), {}, GetRoot() );
+		ASSERT_TRUE( selectResources(target, filter, true).empty() ); //gone, deleted rows included.
 	}
 
 	//ql-review3 #48: the insert-side twin.  getEnumValue had its own flags loop that `continue`d past a non-string element, so
