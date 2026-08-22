@@ -53,24 +53,22 @@ namespace Jde::Access::Server{
 				}
 				membersQL->JsonName = "groupMembers";
 				auto statement = QL::SelectStatement( *membersQL, {}, false );
-				if( statement ){
-					for( let& [name,value] : _query.Args ){
-						if( name=="is_group" )
-							continue;
-						string groupName = name=="id"
-							? "groupId"
-							: name=="target" ? "group_target" : name;
-						membersQL->Args[groupName] = value;
-					}
-					statement->Where = QL::ToWhereClause( *membersQL, groupTable, membersQL->FindColumn("deleted")!=nullptr );
-					//statement->Where.Remove( "is_group" );
-					//statement->Where.Replace( "identities.", "members." );
-					auto membersResult = co_await QL::QLAwait( move(*membersQL), move(*statement), _executer, _sl );
-					if( membersResult.is_array() )
-						members = move( membersResult.get_array() );
-					else if( membersResult.is_object() )
-						members = jarray{ move(membersResult.get_object()) };
+				for( let& [name,value] : _query.Args ){
+					if( name=="is_group" )
+						continue;
+					string groupName = name=="id"
+						? "groupId"
+						: name=="target" ? "group_target" : name;
+					membersQL->Args[groupName] = value;
 				}
+				statement.Where = QL::ToWhereClause( *membersQL, groupTable, membersQL->FindColumn("deleted")!=nullptr );
+				//statement.Where.Remove( "is_group" );
+				//statement.Where.Replace( "identities.", "members." );
+				auto membersResult = co_await QL::QLAwait( move(*membersQL), move(statement), _executer, _sl );
+				if( membersResult.is_array() )
+					members = move( membersResult.get_array() );
+				else if( membersResult.is_object() )
+					members = jarray{ move(membersResult.get_object()) };
 			}
 			if( !members ){
 				Resume( jvalue{move(groups)} );
@@ -104,11 +102,20 @@ namespace Jde::Access::Server{
 		}
 	}
 
-	//{ mutation addGroup( "id":14, "memberId":[15,13] ) }
-	α GroupHook::AddRemoveArgs( const QL::MutationQL& m )ι->std::pair<GroupPK, flat_set<IdentityPK::Type>>{
-		const GroupPK groupPK{ Json::AsNumber<GroupPK::Type>(m.Args, "id") };
+	//{ mutation addGroup( "id":14, "memberId":[15,13] ) } - or "identityId":14, the map parent column's json name, which
+	//QL::getChildParentParams accepts just as readily.  Reading only "id" with AsNumber made the other spelling a terminate:
+	//this is ι, and QL::MutationAwaits::await_ready is a second noexcept frame above it (#13).
+	α GroupHook::AddRemoveArgs( const QL::MutationQL& m )ι->std::pair<optional<GroupPK>, flat_set<IdentityPK::Type>>{
+		let args = m.ExtrapolateVariables();
+		optional<GroupPK> groupPK;
+		if( let p = Json::FindNumber<GroupPK::Type>(args, "id"); p )
+			groupPK = GroupPK{ *p };
+		else if( let map = m.DBTable ? m.DBTable->Map : nullopt; map ){
+			if( let p = Json::FindNumber<GroupPK::Type>(args, DB::Names::ToJson(map->Parent->Name)); p )
+				groupPK = GroupPK{ *p };
+		}
 		flat_set<IdentityPK::Type> memberPKs;
-		auto members = Json::FindValue( m.Args, "memberId" );
+		auto members = Json::FindValue( args, "memberId" );
 		if( members ){
 			if( members->is_array() ){
 				for( auto& member : members->get_array() ){
@@ -124,7 +131,8 @@ namespace Jde::Access::Server{
 		if( m.TableName()=="groups" ){
 			auto [groupPK, memberPKs] = AddRemoveArgs( m );
 			try{
-				Authorizer().TestAddGroupMember( groupPK, move(memberPKs), sl );
+				THROW_IF( !groupPK, "Could not find the group id in '{}' - expected 'id' or the group's parent column.", serialize(m.Args) );
+				Authorizer().TestAddGroupMember( *groupPK, move(memberPKs), sl );
 			}catch( Exception& e ){
 				return mu<QL::ExceptionAwait>( e.Move() );
 			}

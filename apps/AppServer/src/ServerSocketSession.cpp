@@ -306,7 +306,8 @@ namespace Jde::App::Server{
 				try{
 					auto vars = variablesString.empty() ? jobject{} : Json::Parse( move(variablesString) );
 					LogRead( Ƒ("Subscription - {}", ql.substr(0, MaxLogLength())), requestId, ELogLevel::Trace, ELogTags::SocketClientReadSub );
-					Write( FromServer::SubscriptionAck(AddSubscription(move(ql), move(vars), requestId), requestId) );
+					THROW_IF( !_userPK, "A subscription requires an authenticated session." );//as GetJwt does - a socket that never adopted a session id is anonymous.
+					Write( FromServer::SubscriptionAck(AddSubscription(move(ql), move(vars), requestId, *_userPK), requestId) );
 				}
 				catch( runtime_error& e ){
 					WriteException( move(e), requestId );

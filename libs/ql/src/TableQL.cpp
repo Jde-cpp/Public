@@ -35,8 +35,10 @@ namespace Jde::QL{
 
 	α TableQL::AddFilter( const string& column, const jvalue& value )ι->void{
 		auto destination = &Args;
-		if( auto filter = Args.find("filter"); filter!=Args.end() )
-			destination = &filter->value().as_object();
+		if( auto filter = Args.find("filter"); filter!=Args.end() ){
+			if( auto o = filter->value().if_object(); o )
+				destination = o;
+		}
 		( *destination )[column] = value;
 	}
 
@@ -118,7 +120,7 @@ namespace Jde::QL{
 			return {};
 		string sql;
 		for( let& [jsonName, ascending] : json ){
-			let column = DBTable()->GetColumnPtr( DB::Names::FromJson(jsonName) );
+			let column = QL::FilterColumn( *DBTable(), jsonName );//#20: the same resolution the filter uses - an enum display name orders by its id column.
 			if( sql.size()>0 )
 				sql += ", ";
 			sql += column->FQName();
@@ -140,15 +142,24 @@ namespace Jde::QL{
 		for( let& t : Tables ){
 			if( !o.contains(t.JsonName) )
 				o[t.JsonName] = jobject{};
-			t.SetResult( o.at(t.JsonName).as_object(), dbColumn, move(value) );
+			if( auto sub = o.at(t.JsonName).if_object(); sub )
+				t.SetResult( *sub, dbColumn, move(value) );
+			else
+				WARNT( ELogTags::QL, "[{}.{}]a column and a sub-table share this name - the sub-table is not filled for this row.", JsonName, t.JsonName );
 		}
 	}
 	α TableQL::TransformResult( jarray&& result )Ι->jvalue{
 		jvalue v;
 		if( IsPlural() )
 			v = move( result );
-		else
-			v = result.size() ? move( result[0].as_object() ) : jobject{};
+		else if( result.empty() )
+			v = jobject{};
+		else if( auto o = result[0].if_object(); o )
+			v = move( *o );
+		else{
+			DBGT( ELogTags::QL, "[{}]a singular table's first result is a {}, not an object - returning no row.", JsonName, Json::Kind(result[0].kind()) );
+			v = jobject{};
+		}
 		return ReturnRaw ? move( v ) : jobject{ {ReturnName(), move(v)} };
 	}
 	α TableQL::TransformResult( jobject&& result )Ι->jobject{
@@ -184,8 +195,12 @@ namespace Jde::QL{
 				y[c.JsonName] = *p;
 		}
 		for( let& t : Tables ){
-			if( auto p = fullOutput.if_contains(t.JsonName); p )
-				y[t.JsonName] = t.TrimColumns( Json::AsObject(*p) );
+			if( auto p = fullOutput.if_contains(t.JsonName); p ){
+				if( auto o = p->if_object(); o )
+					y[t.JsonName] = t.TrimColumns( *o );
+				else
+					WARNT( ELogTags::QL, "[{}.{}]expected an object for the sub-table, got a {} - omitted.", JsonName, t.JsonName, Json::Kind(p->kind()) );
+			}
 		}
 		return y;
 	}

@@ -9,8 +9,6 @@
 #define let const auto
 
 namespace Jde{
-	flat_set<string> _systemMutations{};
-	α QL::SetSystemMutations( flat_set<string>&& x )ι->void{ _systemMutations = move(x); }
 }
 namespace Jde::QL{
 	α MutationQL::ParseCommand( sv commandName, SL _sl )ε->tuple<string,EMutationQL>{
@@ -49,8 +47,10 @@ namespace Jde::QL{
 
 	α MutationQL::IsMutation( sv name )ι->bool{
 		bool isMutation{ name=="mutation" };
-		for( uint i=name=="query" ? MutationQLStrings.size() : 0; !isMutation && i<MutationQLStrings.size(); ++i )
-			isMutation = name.starts_with( MutationQLStrings[i] );
+		for( uint i=0; !isMutation && i<MutationQLStrings.size(); ++i ){
+			let& verb = MutationQLStrings[i];
+			isMutation = name.size()>verb.size() && name.starts_with( verb ) && isupper( (unsigned char)name[verb.size()] );
+		}
 		return isMutation;
 	}
 }

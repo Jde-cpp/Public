@@ -71,6 +71,35 @@ namespace Jde::Access::Tests{
  		ASSERT_TRUE( Tests::SelectGroup("groupTest", GetRoot(), true).empty() );
 	}
 
+	//ql-review3 #48: the insert-side twin.  getEnumValue had its own flags loop that `continue`d past a non-string element, so
+	//an all-numeric array - which no name lookup could ever match - wrote flags==0 with no error, and the resource was silently
+	//unusable (allowed=0 hides it from the permission table).  Both paths share one parser now.
+	TEST_F( ResourceTests, NumericFlagsAreAnErrorOnInsertToo ){
+		constexpr sv schema{ "qlFlagTests" };
+		constexpr sv target{ "flagNumeric" };
+		let select = Ƒ( R"(resources( schemaName:"{}", target:"{}" ){{ id allowed }})", schema, target );
+		EXPECT_THROW( QL().QuerySync<jvalue>(Ƒ(R"(mutation createResource( schemaName:"{0}", name:"{1}", target:"{1}", allowed:[1,2] ))", schema, target), {}, GetRoot()), Exception );
+		EXPECT_TRUE( QL().QuerySync<jarray>(select, {}, GetRoot()).empty() ) << "the row was created with allowed=0";
+
+		//and the same array through the update path, which has always refused it - the two now refuse it in the same words.
+		QL().QuerySync<jvalue>( Ƒ(R"(mutation createResource( schemaName:"{0}", name:"{1}", target:"{1}", allowed:["Read"] ))", schema, target), {}, GetRoot() );
+		auto rows = QL().QuerySync<jarray>( select, {}, GetRoot() );
+		ASSERT_EQ( rows.size(), 1u );
+		let id = GetId( Json::AsObject(rows[0]) );
+		EXPECT_THROW( QL().QuerySync<jvalue>(Ƒ(R"(mutation updateResource( id:{}, allowed:[1,2] ))", id), {}, GetRoot()), Exception );
+		EXPECT_EQ( serialize(Json::AsObject(QL().QuerySync<jarray>(select, {}, GetRoot())[0]).at("allowed")), R"(["Read"])" );
+		Purge( "resource", id, GetRoot() );
+	}
+	//the control:  a flags array of names still inserts, which is the shape everything in tree sends.
+	TEST_F( ResourceTests, NamedFlagsStillInsert ){
+		constexpr sv schema{ "qlFlagTests" };
+		constexpr sv target{ "flagNamed" };
+		QL().QuerySync<jvalue>( Ƒ(R"(mutation createResource( schemaName:"{0}", name:"{1}", target:"{1}", allowed:["Read","Update"] ))", schema, target), {}, GetRoot() );
+		let rows = QL().QuerySync<jarray>( Ƒ(R"(resources( schemaName:"{}", target:"{}" ){{ id allowed }})", schema, target), {}, GetRoot() );
+		ASSERT_EQ( rows.size(), 1u );
+		EXPECT_EQ( Json::AsArray(Json::AsObject(rows[0]), "allowed").size(), 2u );
+		Purge( "resource", GetId(Json::AsObject(rows[0])), GetRoot() );
+	}
 	TEST_F( ResourceTests, UnknownFlagNameIsAnErrorNotAWipe ){
 		constexpr sv schema{ "qlFlagTests" };
 		constexpr sv target{ "flagTypo" };

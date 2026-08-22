@@ -7,7 +7,7 @@ namespace Jde::Access{ struct IAcl; }
 namespace Jde::DB{
 	struct AppSchema; struct Catalog; struct IDataSource; struct View; struct Syntax;
 	//Cluster > Catalog > Schema > Table > Columns & Rows
-	struct DBSchema{
+	struct ΓDB DBSchema{ //exported like its View/Table/AppSchema neighbours:  Jde.DB is a dll, so the ctor and Initialize are unreachable from a test without it.
 		DBSchema( sv name, const jobject& DBSchema, sp<Access::IAcl> authorizer )ε;
 		DBSchema( sv name, flat_map<string,sp<Table>> tables, sv prefix )ι;
 		virtual ~DBSchema()=default;

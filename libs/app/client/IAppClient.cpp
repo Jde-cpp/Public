@@ -102,10 +102,10 @@ namespace Jde::App::Client{
 	α IAppClient::Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, SL sl )ε->await<jarray>{
 		return Session()->Subscribe( move(query), move(variables), listener, sl );
 	}
-	α IAppClient::Unsubscribe( sp<QL::IListener> listener, vector<QL::SubscriptionId> ids, SL sl )ε->QL::UnsubscribeAwait{
+	α IAppClient::Unsubscribe( sp<QL::IListener> listener, vector<QL::SubscriptionId> ids, SL sl )ε->void{
 		auto removed = Subscriptions::StopListenRemote( listener, move(ids) );
 		Subscriptions::Forget( listener, removed );//or the next reconnect would put back what was just unsubscribed.
-		return QLServer()->Unsubscribe( move(removed), sl );
+		QLServer()->Unsubscribe( listener, move(removed), sl );
 	}
 
 	α IAppClient::Write( vector<Logging::Entry>&& entries )ι->bool{

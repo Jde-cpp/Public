@@ -44,6 +44,9 @@ namespace Jde::DB{
 		struct ParentChildMap{ sp<Column> Parent; sp<Column> Child; };
 		optional<ParentChildMap> Map;//members: identity_id, member_id
 		sp<View> QLView;
+		//The table that declared this one as its qlView, set in View::Initialize.  Weak, or the pair would keep each other
+		//alive.  Authorize tests the owner's name:  a resource exists per table ("users"), never per ql view ("usersQl").
+		wp<View> Owner;
 		sp<DB::AppSchema> Schema;
 		Access::ERights Operations; //user operations.
 		vector<sp<View>> Children;

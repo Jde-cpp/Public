@@ -76,7 +76,7 @@ namespace Jde::DB{
 	}
 	α FromClause::Empty()Ι->bool{ return Joins.empty(); }
 	α FromClause::TryAdd( Join&& join )ι->void{
-		if( !Contains(join.To->Table->Name) )
+		if( !join.To || !Contains(join.To->Table->Name) ) //a null To is the single-table join operator+= merges into - Contains and GetColumnPtr already allow for it.
 			*this += move(join);
 	}
 

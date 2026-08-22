@@ -6,9 +6,6 @@
 //They are disabled rather than absent so the suite stays green while the findings are open - drop the DISABLED_ prefix
 //as each one is fixed and the test becomes its acceptance check.  The two that remain carry no number because they
 //belong to that review's below-the-cut list instead:  the Duration asymmetry (L1) and the UA_STRING guard (L3).
-#ifdef BOOST_ALL_NO_LIB
-	#include <boost/json/src.hpp>
-#endif
 #include "gtest/gtest.h"
 #include <jde/fwk/process/process.h>
 #include <jde/fwk/settings.h>

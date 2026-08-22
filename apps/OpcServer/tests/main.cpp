@@ -28,7 +28,7 @@ namespace Jde{
 			co_await Opc::Server::StartupAwait{ Settings::AsObject("/http/opcServer"), Settings::AsObject("/credentials/opcServer") };
 		}
 		catch( runtime_error& e ){
-			auto p = ToUP( move(e) );
+			auto p = ToExceptionPtr( move(e) );
 			_error = move(p);
 		}
 		done.test_and_set();

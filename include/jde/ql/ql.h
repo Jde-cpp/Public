@@ -15,23 +15,16 @@ namespace Jde::QL{
 	α FindIntrospection( sv typeName )ι->const Object*; //config-declared type, nullptr if none.
 	Ŧ AsId( const jobject& j, SRCE )ε->T;
 	Ŧ AsId( const jvalue& j, SRCE )ε->T;
-	α SetSystemMutations( flat_set<string>&& x )ι->void;
 	α SetSystemTables( flat_set<string>&& jsonNames )ι->void;
-	α IsSystemQuery( const QL::RequestQL& q )ι->bool;
 
-	template<class T=uint32> α FindId( const jobject& j )ι->T;
 	α Configure( const vector<sp<DB::AppSchema>>& schemas )ε->void;
 	α Parse( string query, jobject variables, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw=true, SRCE )ε->RequestQL;
 	α ParseM( string query, jobject variables, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw=true, SRCE )ε->MutationQL;
 	α ParseQuery( string query, jobject variables, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw=true, SRCE )ε->TableQL;
 	α ParseSubscriptions( string query, jobject variables, const vector<sp<DB::AppSchema>>& schemas, SRCE )ε->vector<Subscription>;
-	α SelectStatement( const TableQL& qlTable, optional<bool> includeDeleted=nullopt, bool includeWhere=true )ε->optional<DB::Statement>;
+	α SelectStatement( const TableQL& qlTable, optional<bool> includeDeleted=nullopt, bool includeWhere=true )ε->DB::Statement;
 }
 namespace Jde{
-	Ŧ QL::FindId( const jobject& o )ι->T{
-		const auto value = o.try_at( "id" );
-		return value ? value->to_number<T>() : T{};
-	}
 	Ŧ QL::AsId( const jobject& o, SL sl )ε->T{
 		return Json::AsNumber<T>( o, "id", sl );
 	}

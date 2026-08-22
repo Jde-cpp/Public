@@ -14,7 +14,6 @@ namespace Jde::Opc::Server{
 		α Execute()ι->TAwait<VariantPK>::Task;
 		QL::MutationQL _mutation;
 		Jde::UserPK _executer;
-		jobject _variables;
 	};
 
 	α ConstructorQLAwait::Execute()ι->TAwait<VariantPK>::Task{

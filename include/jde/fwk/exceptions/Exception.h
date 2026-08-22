@@ -57,7 +57,7 @@ namespace Jde{
 		Ω FromPtr( const std::exception_ptr& e, SRCE )ι->up<Exception>; //preserves dynamic type, unlike a ctor which would slice.
 
 		Exception( string value, ExceptionArgs args={}, SRCE )ι;
-		$ Exception( SL sl, ExceptionArgs args, runtime_error&& inner, fmt::format_string<Args...> m="", Args&&... sargs )ι;
+		$ Exception( SL sl, ExceptionArgs args, std::exception&& inner, fmt::format_string<Args...> m="", Args&&... sargs )ι;
 		$ Exception( SL sl, ExceptionArgs args, fmt::format_string<Args...> m, Args&&... sargs )ι;
 
 		virtual ~Exception();
@@ -88,7 +88,7 @@ namespace Jde{
 
 		mutable string _what;
 		mutable bool _logged{};//log once: at construction when Level()>=BreakLevel, otherwise at destruction/explicit Log().
-		up<runtime_error> _inner;
+		up<exception> _inner;
 		variant<sv,string> _format;
 		vector<string> _args;
 		SL _sl;
@@ -102,15 +102,23 @@ namespace Jde{
 		}
 	};
 
-	Ξ ToUP( runtime_error&& e )ι->up<runtime_error>{
+	Ŧ ToExceptionPtr( T&& e )ι->up<T>{
 		auto p = dynamic_cast<Exception*>( &e );
-		return p ? p->Move() : up<runtime_error>{ mu<runtime_error>(e.what()) };//copying the runtime_error base would slice - its what() is the generic implementation string.
+		return p ? p->Move() : up<T>{ mu<T>(e.what()) };
+	}
+	//The T=std::exception instantiation of the above does not compile outside the MSVC STL:  `exception(const char*)` is a
+	//Microsoft extension, and libc++/libstdc++ give std::exception a default ctor only.  A non-Jde inner is only ever read
+	//through what(), and runtime_error carries the message on every standard library - which is what the Exception ctor below
+	//needs, since it takes its inner as std::exception&& to accept a logic_error (std::stoi/stod).
+	Ξ ToExceptionPtr( std::exception&& e )ι->up<std::exception>{//std:: - unqualified `exception` only resolves inside the class above, through std::runtime_error's base.
+		auto p = dynamic_cast<Exception*>( &e );
+		return p ? up<std::exception>{ p->Move() } : up<std::exception>{ mu<runtime_error>(e.what()) };
 	}
 
-	$ Exception::Exception( SL sl, ExceptionArgs args, runtime_error&& inner, fmt::format_string<Args...> m, Args&&... sargs )ι:
+	$ Exception::Exception( SL sl, ExceptionArgs args, exception&& inner, fmt::format_string<Args...> m, Args&&... sargs )ι:
 		runtime_error{ "" },//not '{}': that picks runtime_error(const char*) with a null pointer - libc++ strlen's it.
 		ExceptionArgs{ args },
-		_inner{ ToUP(move(inner)) }, //preserves derived message/type; mu<runtime_error> would slice.
+		_inner{ ToExceptionPtr(move(inner)) }, //preserves derived message/type; mu<runtime_error> would slice.
 		_format{ sv{m.get().data(), m.get().size()} },
 		_sl{ sl }{
 		_args.reserve( sizeof...(sargs) );

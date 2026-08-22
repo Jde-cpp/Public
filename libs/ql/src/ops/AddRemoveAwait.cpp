@@ -14,9 +14,9 @@
 namespace Jde::QL{
 	constexpr ELogTags _tags{ ELogTags::QL };
 
-	AddRemoveAwait::AddRemoveAwait( sp<DB::Table> table, const MutationQL& mutation, UserPK userPK, SL sl )ι:
+	AddRemoveAwait::AddRemoveAwait( sp<DB::Table> table, MutationQL mutation, UserPK userPK, SL sl )ι:
 		base{ sl },
-		_mutation{ mutation },
+		_mutation{ move(mutation) },
 		_table{ table },
 		_userPK{ userPK }
 	{}
@@ -46,20 +46,25 @@ namespace Jde::QL{
 	α AddRemoveAwait::Add()ι->DB::ExecuteAwait::Task{
 		let& map = *_table->Map;
 		let& parentId = map.Parent->Name; let& childId =map.Child->Name;
-		let prefix = Ƒ( "insert into {}({},{})values(?,?", _table->SqlName(), parentId, childId );
+		//#49: the column list has to grow with the placeholders.  It was fixed at the two mapped columns while `input:{…}` appended
+		//a `?` per extra value, so any use of the feature emitted `insert into t(a,b)values(?,?,?)` - a column-count error, every
+		//time.  Nothing in tree sends `input:` on an add, which is why a branch that could never work went unnoticed.
+		string extraColumns;
 		string extraParamsString;
 		vector<DB::Value> extraParams;
 		try{
-			if( auto defParams = Json::FindObject(_mutation.Args, "input"); defParams ){
+			let input = _mutation.ExtrapolateVariables();
+			if( auto defParams = Json::FindObject(input, "input"); defParams ){
 				for( let& [name,value] : *defParams ){
 					if( name=="id" || name==parentId || name==childId )
 						continue;
 					auto pColumn = _table->GetColumnPtr( DB::Names::FromJson(name) );
+					extraColumns += ","+pColumn->Name;
 					extraParamsString += ",?";
 					extraParams.emplace_back( DB::Value{pColumn->Type, value} );
 				}
 			}
-			let sql = prefix + extraParamsString + ")";
+			let sql = Ƒ( "insert into {}({},{}{})values(?,?{})", _table->SqlName(), parentId, childId, extraColumns, extraParamsString );
 			uint result{};
 			for( let& p : _params.ChildParams ){
 				vector<DB::Value> params{ _params.ParentParam, p };
@@ -99,7 +104,7 @@ namespace Jde::QL{
 	}
 	α AddRemoveAwait::RemoveAfter( jvalue v )ι->MutationAwaits::Task{
 		try{
-			co_await Hook::AddAfter( _mutation, _userPK );
+			co_await Hook::RemoveAfter( _mutation, _userPK );
 			Resume( move(v) );
 		}
 		catch( runtime_error& e ){
@@ -148,7 +153,7 @@ namespace Jde::QL{
 				return;
 			}
 			THROW_IF( !_table->Map, "'{}' does not support add/remove.", _table->Name );
-			_params = getChildParentParams( _table->Map->Parent, _table->Map->Child, _mutation.Args );
+			_params = getChildParentParams( _table->Map->Parent, _table->Map->Child, _mutation.ExtrapolateVariables() );
 		}
 		catch( runtime_error& e ){
 			ResumeExp( move(e) );
@@ -163,7 +168,12 @@ namespace Jde::QL{
 			ASSERT( false );
 	}
 	α AddRemoveAwait::Resume( jvalue&& v )ι->void{
-		Subscriptions::OnMutation( _mutation, v );
+		//#47: a statement that matched nothing is not an event.  OnMutation never looked at the result - an integer rowCount is not
+		//an object, so `available` was the args alone and the id the client sent went straight to the listeners.  `deleteUser( id:5,
+		//name:"nomatch" )` ands the extra arg into the where clause, updates 0 rows, and still had AccessListener mark user 5
+		//deleted in memory - "User is deleted" for every later request by 5, until restart, with the row untouched.
+		if( !v.is_number() || v.to_number<uint>() )
+			Subscriptions::OnMutation( _mutation, v );
 		base::Resume( move(v) );
 	}
 }

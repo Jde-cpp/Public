@@ -38,6 +38,12 @@ target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 target_link_libraries( ${targetName} PUBLIC fmt::fmt )
 target_link_libraries( ${targetName} PUBLIC Boost::json )
+if( WIN32 )
+	#Jde.dll is the Boost.JSON dll (see boost() in functions.cmake): io/json.cpp compiles <boost/json/src.hpp> in, so
+	#BOOST_JSON_DECL must be dllexport throughout this target.  Target-wide rather than in json.cpp alone because the PCH
+	#sees the declarations first - baked as dllimport, json.cpp's definitions would be definitions of dllimport functions.
+	target_compile_definitions( ${targetName} PRIVATE BOOST_JSON_SOURCE )
+endif()
 
 if( WIN32 )
 	target_link_libraries( ${targetName} PRIVATE version )

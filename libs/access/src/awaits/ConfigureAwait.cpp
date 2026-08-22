@@ -40,6 +40,7 @@ namespace Jde::Access{
 			ul l{ await.Authorizer->Mutex };
 			await.Authorizer->Acl = move( acl );
 			await.Authorizer->SetUserPermissions( {}, l );
+			l.unlock();//as LoadUsers does:  Subscribe touches none of this, and holding the authorizer's mutex across it deadlocks anything downstream that authorizes.
 			Subscribe( await );
 		}
 		catch( runtime_error& e ){

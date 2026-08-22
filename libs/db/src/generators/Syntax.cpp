@@ -64,6 +64,15 @@ namespace Jde::DB{
 	//'*'->'%' and '?'->'_'; a literal '%'/'_' becomes a one-element class ('[%]'), which is how T-SQL escapes them
 	//without an ESCAPE clause - and which QL::globMatch already reads the same way, so the two stay in step.  Classes
 	//pass through: T-SQL LIKE has them, spelled '[^…]' where glob also accepts '[!…]'.
+	α ParseGlobClass( sv glob, uint open )ι->optional<GlobClass>{
+		let negate = open+1<glob.size() && (glob[open+1]=='^' || glob[open+1]=='!');
+		let bodyStart = open+1+negate;
+		let close = glob.find( ']', bodyStart+1 );//+1: a ']' first in the body is a member, not the terminator.
+		return close==sv::npos
+			? optional<GlobClass>{}
+			: GlobClass{ negate, glob.substr(bodyStart, close-bodyStart), (uint)close };
+	}
+
 	α GlobToLike( sv glob )ι->string{
 		string y;
 		for( uint i{}; i<glob.size(); ++i ){
@@ -75,18 +84,16 @@ namespace Jde::DB{
 			else if( c=='%' || c=='_' )
 				y += Ƒ( "[{}]", c );
 			else if( c=='[' ){
-				let close = glob.find( ']', i+2+(i+1<glob.size() && (glob[i+1]=='^'||glob[i+1]=='!') ? 1 : 0) );
-				if( close==sv::npos ) //unterminated: a literal '[', as in sqlite - and '[' is a LIKE metacharacter too.
+				let parsed = ParseGlobClass( glob, i );
+				if( !parsed ) //unterminated: a literal '[', as in sqlite - and '[' is a LIKE metacharacter too.
 					y += "[[]";
 				else{
 					y += '[';
-					if( glob[i+1]=='!' || glob[i+1]=='^' ){ //glob accepts both spellings of negation; T-SQL only '^'.
+					if( parsed->Negate ) //glob accepts both spellings of negation; T-SQL only '^'.
 						y += '^';
-						++i;
-					}
-					y.append( glob.substr(i+1, close-i-1) );
+					y.append( parsed->Body );
 					y += ']';
-					i = close;
+					i = parsed->Close;
 				}
 			}
 			else
@@ -107,18 +114,16 @@ namespace Jde::DB{
 			else if( c=='?' )
 				y += '.';
 			else if( c=='[' ){
-				let close = glob.find( ']', i+2+(i+1<glob.size() && (glob[i+1]=='^'||glob[i+1]=='!') ? 1 : 0) );
-				if( close==sv::npos ) //unterminated: a literal '[', as in sqlite.
+				let parsed = ParseGlobClass( glob, i );
+				if( !parsed ) //unterminated: a literal '[', as in sqlite.
 					y += "\\[";
 				else{
 					y += '[';
-					if( glob[i+1]=='!' || glob[i+1]=='^' ){
+					if( parsed->Negate )
 						y += '^';
-						++i;
-					}
-					y.append( glob.substr(i+1, close-i-1) ); //ranges and members are spelled the same in both languages.
+					y.append( parsed->Body ); //ranges and members are spelled the same in both languages.
 					y += ']';
-					i = close;
+					i = parsed->Close;
 				}
 			}
 			else{

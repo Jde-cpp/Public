@@ -21,7 +21,7 @@ namespace Jde::Web::Server{
 		α Id()Ι->SocketId{ return _id; }
 		α QueryClient( QL::TableQL query, Jde::UserPK executer, SRCE )ι->QueryClientAwait{ return QueryClientAwait{move(query), executer, shared_from_this(), sl}; }
 		α QueryClient( QL::TableQL&& query, Jde::UserPK executer, QueryClientAwait::Handle h, SRCE )ι->void;
-		α AddSubscription( string&& query, jobject variables, RequestId requestId, SRCE )ε->flat_set<QL::SubscriptionId>;
+		α AddSubscription( string&& query, jobject variables, RequestId requestId, Jde::UserPK executer, SRCE )ε->flat_set<QL::SubscriptionId>;
 		α LogWrite( string&& what, RequestId requestId, ELogLevel level=ELogLevel::Trace, SRCE )ι->void;
 		α RemoveSubscription( vector<QL::SubscriptionId>&& ids, RequestId requestId, SRCE )ι->void;
 		β WriteSubscription( const jvalue& j, RequestId requestId )ι->void=0;

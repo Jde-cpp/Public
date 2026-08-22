@@ -7,7 +7,8 @@ namespace Jde::QL{
 	struct TableQL; struct Pattern;
 	α ToString( DB::EOperator op )ι->string;
 	α ToQLOperator( string op )ι->DB::EOperator;
-	inline constexpr uint MaxPatternLength{ 1024 }; //a longer `regex`/`glob` filter is rejected rather than handed to boost::regex.  Bounds the compile only - BOOST_REGEX_MAX_STATE_COUNT bounds the match.
+	inline constexpr uint MaxPatternLength{ 1024 };
+	inline constexpr uint MaxRegexLength{ 64 };
 
 	struct FilterValue final{
 		FilterValue( DB::EOperator op, jvalue value )ι;
@@ -32,6 +33,9 @@ namespace Jde::QL{
 		flat_map<string,vector<FilterValue>> ColumnFilters;
 	};
 	α ToWhereClause( const TableQL& table, const DB::View& schemaTable, bool includeDeleted=false )ε->DB::WhereClause;
+	//The column a filter or an order-by names, resolved the way addColumn resolves a *selected* column - the pk for "id", the
+	//column itself, or, for an enum's display name, the <name>_id it renders through (#20).  Throws naming the table if none.
+	α FilterColumn( const DB::View& dbTable, sv jsonName, SRCE )ε->sp<DB::Column>;
 
 	template<> Ξ FilterValue::Test( string value )Ι->bool{
 		return Test( DB::Value{move(value)}, ELogTags::QL );

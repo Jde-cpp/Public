@@ -15,12 +15,14 @@ namespace Jde::QL{
 		α await_resume()ε->jvalue override;
 	private:
 		α Execute()ι->TAwait<optional<jvalue>>::Task override;
+		α Authorize( const TableQL& qlTable )ε->void;
 		α Query()ι->void;
 		α Query( DB::Statement statement, SubTables subTables )ε->DB::SelectAwait::Task;
-		α SelectSubTables( optional<DB::Statement> parentSql, vector<TableQL> tables, sp<DB::Table> parentTable, DB::WhereClause where )ε->DB::SelectAwait::Task;
+		α SelectSubTables( DB::Statement parentSql, vector<TableQL> tables, sp<DB::Table> parentTable, DB::WhereClause where )ε->DB::SelectAwait::Task;
 
 		α DS()->DB::IDataSource&{ return *_ds; }
 		sp<DB::IDataSource> _ds;
+		uint _parentKeyIndex{};//#22: where the parent pk sits in the select - the client chooses the column order, so it is not always 0.
 		UserPK _executer;
 		bool _log;
 		TableQL _qlTable;

@@ -21,7 +21,7 @@ namespace Jde{
 			co_await App::Server::AppStartupAwait{ Settings::AsObject("/http/app") };
 		}
 		catch( runtime_error& e ){
-			_error = ToUP( move(e) );
+			_error = ToExceptionPtr( move(e) );
 			if( auto p = dynamic_cast<Exception*>( _error.get() ); p )
 				p->Log();
 		}

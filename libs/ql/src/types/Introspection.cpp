@@ -18,8 +18,6 @@ namespace Jde{
 	α QL::FindIntrospection( sv typeName )ι->const QL::Object*{ return _introspection.Find( typeName ); }
 
 namespace QL{
-	α Schemas()ι->const vector<sp<DB::AppSchema>>&;
-
 	constexpr array<sv,8> FieldKindStrings = { "SCALAR", "OBJECT", "INTERFACE", "UNION", "ENUM", "INPUT_OBJECT", "LIST", "NON_NULL" };
 	α ToFieldKind( sv x ){ return ToEnum<EFieldKind>( FieldKindStrings, x ); }
 	α ToString( EFieldKind x ){ return FromEnum<EFieldKind>( FieldKindStrings, x ); }
@@ -176,10 +174,16 @@ namespace QL{
 				string qlTypeName;
 				auto rootType{ EFieldKind::Scalar };
 				if( !column.PKTable ){
-					if( column.Type==DB::EType::VarBinary || (prefix.size() && column.SKIndex) )//use NID see RolePermission's permissions, varbinary use case is passwords
+					if( prefix.size() && column.SKIndex )//use NID see RolePermission's permissions
 						continue;
 					fieldName = column.IsPK() ? "id" : ToJson( column.Name );
-					qlTypeName = ColumnQL::QLType( column );//column.PKTable.empty() ? ColumnQL::QLType( column ) : dbTable.JsonName();
+					//#40: QLType throws for every type graphql has no spelling for, and that took the whole __type document with it -
+					//opcServer's nodeIds.guid is Guid, and every node table extends node_ids, so `__type(name:"NodeId"){fields{}}` and
+					//each of theirs answered "Query failed.".  A column that can not be named in the schema is left out of it, which is
+					//what the VarBinary case here (users.password) already did by hand and what QuerySchema does since #31.  Not mapped to
+					//String: DB::Value{Guid,json} throws too, so the field would advertise a filter the rest of the stack refuses.
+					try{ qlTypeName = ColumnQL::QLType( column ); }
+					catch( const Exception& ){ continue; }
 				}
 				else{
 					auto childColumn = dbTable.Map ? dbTable.Map->Child : nullptr;
@@ -329,18 +333,24 @@ namespace QL{
 				let childColumn = pDBTable->Map ? pDBTable->Map->Child : nullptr;
 				let jsonType = pDBTable->JsonName();
 
-				jobject field;
-				field["name"] = Ƒ( "create{}"sv, jsonType );
 				let addField = [&jsonType, pDBTable, &fields]( sv name, bool allColumns=false, bool idColumn=true ){
 					jobject field;
 					jarray args;
 					for( let& column : pDBTable->Columns ){
 						if( (column->IsPK() && !idColumn) || (!column->IsPK() && !allColumns) )
 							continue;
+						//#31: QLType throws for the types graphql has no spelling for (users.password is VarBinary), which killed the
+						//whole document.  A column that cannot be named in the schema is left out of it instead.
+						jobject type;
+						try{
+							type["name"] = ColumnQL::QLType( *column );
+						}
+						catch( const Exception& ){
+							continue;
+						}
 						jobject arg;
 						arg["name"] = ToJson( column->Name );
 						arg["defaultValue"] = nullptr;
-						jobject type; type["name"] = ColumnQL::QLType( *column );
 						arg["type"]=type;
 						args.push_back( arg );
 					}
@@ -349,7 +359,7 @@ namespace QL{
 					fields.push_back( field );
 				};
 				if( !childColumn ){
-					addField( "insert", true, false );
+					addField( "create", true, false );//#41: `create` is the verb MutationQLStrings has;  `insert` was rejected by the parser it advertised itself to.
 					addField( "update", true );
 
 					addField( "delete" );
@@ -366,6 +376,6 @@ namespace QL{
 		jmutationType["fields"] = fields;
 		jmutationType["name"] = "Mutation";
 		jobject jSchema; jSchema["mutationType"] = jmutationType;
-		return jmutationType;
+		return jSchema;
 	}
 }}

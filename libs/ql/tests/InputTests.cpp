@@ -52,6 +52,40 @@ namespace Jde::QL::Tests{
 		EXPECT_TRUE( in.ExtrapolateVariables().at("id").is_null() );
 	}
 
+	//#36: that null is indistinguishable from a client's own `deleted: null`, so it became `is null` - 0 rows for a query, a
+	//written NULL for a mutation, silently either way.  The unbound names are only knowable before the substitution.
+	TEST( InputTests, UnboundVariablesNamesEveryUnresolved$ ){
+		TestInput in{ R"({id: $missing, in: {gt: $alsoMissing}, list: [$third, 7, {b: $bound}], plain: "x", n: $bound})", jobject{{"bound",1}} };
+		let unbound = in.UnboundVariables();
+		ASSERT_EQ( unbound.size(), 3u ) << Str::Join( unbound, "," );  //object, nested object and array element - the recursion ExtrapolateVariables makes.
+		EXPECT_NE( find(unbound, "missing"), unbound.end() );
+		EXPECT_NE( find(unbound, "alsoMissing"), unbound.end() );
+		EXPECT_NE( find(unbound, "third"), unbound.end() );
+		EXPECT_EQ( find(unbound, "bound"), unbound.end() );            //bound once at the top level and once inside an array.
+	}
+	TEST( InputTests, NothingUnboundWhenEveryVariableResolves ){
+		TestInput in{ R"({id: $userId, name: $userName, plain: 3})", jobject{{"userId",42},{"userName","bob"}} };
+		EXPECT_TRUE( in.UnboundVariables().empty() );
+		EXPECT_NO_THROW( in.CheckVariables() );
+	}
+	TEST( InputTests, CheckVariablesNamesTheVariableAndTheBindings ){
+		TestInput in{ R"({target: $targt})", jobject{{"target","root"}} };  //the write-up's own typo.
+		try{
+			in.CheckVariables();
+			ADD_FAILURE() << "the typo passed";
+		}
+		catch( const Exception& e ){
+			EXPECT_NE( string{e.what()}.find("targt"), string::npos ) << e.what();   //which one.
+			EXPECT_NE( string{e.what()}.find("target"), string::npos ) << e.what();  //and what was on offer.
+		}
+	}
+	//a literal null is a value, not an unbound variable - the distinction the whole finding rests on.
+	TEST( InputTests, ALiteralNullIsNotAnUnboundVariable ){
+		TestInput in{ R"({deleted: null, criteria: {in: [null, "x"]}})" };
+		EXPECT_TRUE( in.UnboundVariables().empty() );
+		EXPECT_NO_THROW( in.CheckVariables() );
+	}
+
 	//Input.h reads paging from "offset", falling back to the legacy "skip" spelling.
 	TEST( InputTests, LimitAndOffset ){
 		EXPECT_EQ( TestInput{"{limit: 10, offset: 5}"}.Limit(), 10u );

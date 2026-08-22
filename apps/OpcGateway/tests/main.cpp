@@ -10,6 +10,7 @@
 #include "../src/UAClient.h"
 #include "../../AppServer/src/AppStartupAwait.h"
 #include "../../OpcServer/src/StartupAwait.h"
+#include "jde/fwk/exceptions/Exception.h"
 #include "utils/helpers.h"
 #include <jde/tests/SpdlogTestListener.h>
 #include <jde/tests/testMain.h>
@@ -43,7 +44,7 @@ namespace Jde{
 			done.notify_one();
 		}
 		catch( runtime_error& e ){
-			_error = ToUP( move(e) );
+			_error = ToExceptionPtr( move(e) );
 			if( auto p = dynamic_cast<Exception*>( _error.get() ); p )
 				p->Log();
 			done.test_and_set();

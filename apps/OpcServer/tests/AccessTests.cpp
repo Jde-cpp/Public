@@ -1,4 +1,5 @@
 #include "../src/access/UAAccess.h"
+#include "../src/ql/OpcQL.h"
 #define let const auto
 
 namespace Jde::Opc::Server::Tests{
@@ -93,5 +94,21 @@ namespace Jde::Opc::Server::Tests{
 		TRACE( "{}", serialize(vars) );
 		let result = _app->QuerySync<jvalue>( move(q), move(vars) );
 		TRACE( "{}", serialize(result) );
+	}
+
+	//ql-review3 #40: `nodeIds.guid` is EType::Guid, which ColumnQL::QLType has no graphql spelling for, so introspectFields
+	//threw and `__type` answered "Query failed." for the whole document - for NodeId and, through Extends, for every node table.
+	//This is the only schema in the repo with a Guid column, which is why the pin lives here;  the ql-side unit is
+	//IntrospectionTests.AColumnWithNoQLTypeIsOmittedRatherThanFailingTheType.  Server::QL(), not _app: OpcServerAppClient routes
+	//everything but log settings to the app server, whose schema has no node tables.
+	TEST( IntrospectionTests, NodeIdTypeAnswersWithoutItsGuidColumn ){
+		let y = Server::QL().QuerySync<jobject>( R"(__type(name:"NodeId"){ name fields{ name } })", {}, UserPK{UserPK::System} );
+		EXPECT_EQ( Json::AsSV(y, "name"), "NodeId" );
+		flat_set<string> names;
+		for( let& f : Json::AsArray(y, "fields") )
+			names.emplace( Json::AsSV(Json::AsObject(f), "name") );
+		ASSERT_FALSE( names.empty() );
+		EXPECT_FALSE( names.contains("guid") ) << Str::Join( names, "," );  //no graphql spelling - left out, not fatal.
+		EXPECT_FALSE( names.contains("bytes") ) << Str::Join( names, "," ); //varbinary, skipped before this finding too.
 	}
 }

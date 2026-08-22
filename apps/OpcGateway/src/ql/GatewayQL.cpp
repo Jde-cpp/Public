@@ -26,11 +26,12 @@ namespace Jde::Opc::Gateway{
 		up<TAwait<jvalue>> await = GatewayQLMAwait::Test( m, executer, sl );
 		return await;
 	}
-	α GatewayQL::LogSettingsQuery( QL::TableQL&& ql, SL sl )ι->up<TAwait<jvalue>>{
+	α GatewayQL::LogSettingsQuery( QL::TableQL&& ql, QL::Creds executer, SL sl )ε->up<TAwait<jvalue>>{
+		RequireAuthenticated( executer, "logSettings", sl );
 		return mu<App::Client::LogSettingsClientAwait>( move(ql), sl );
 	}
-	α GatewayQL::StatusQuery( QL::TableQL&& ql )ι->jobject{
-		auto y = App::AppQL::StatusQuery( move(ql) );
+	α GatewayQL::StatusQuery( QL::TableQL&& ql, QL::Creds executer, SL sl )ε->jobject{
+		auto y = App::AppQL::StatusQuery( move(ql), executer, sl ); //the base gates it.
 		const auto [clients, monitoredItems] = UAClient::StatusCounts();
 		y["clients"] = clients;
 		y["monitoredItems"] = monitoredItems;

@@ -6,8 +6,8 @@ namespace Jde::Access{
 	enum class ESubscription : uint16;
 	struct AccessListener;
 	struct EventTypeSubscribeAwait : VoidAwait{
-		EventTypeSubscribeAwait( sp<QL::IQL> qlServer, string name, ESubscription type, sv cols, ESubscription events, jobject vars, UserPK executer, sp<AccessListener> listener, SRCE )ι:
-			VoidAwait{sl}, _qlServer{qlServer}, _name{ move(name) }, _type{ type }, _cols{ cols }, _events{ events }, _vars{vars}, _executer{executer}, _listener{listener}
+		EventTypeSubscribeAwait( sp<QL::IQL> qlServer, string name, ESubscription type, sv cols, sv args, ESubscription events, jobject vars, UserPK executer, sp<AccessListener> listener, SRCE )ι:
+			VoidAwait{sl}, _qlServer{qlServer}, _name{ move(name) }, _type{ type }, _cols{ cols }, _args{ args }, _events{ events }, _vars{vars}, _executer{executer}, _listener{listener}
 		{}
 	private:
 		α Suspend()ι->void override{ Subscribe(); }
@@ -16,6 +16,7 @@ namespace Jde::Access{
 		string _name;
 		ESubscription _type;
 		sv _cols;
+		sv _args;
 		ESubscription _events;
 		jobject _vars;
 		UserPK _executer;

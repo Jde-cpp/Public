@@ -70,6 +70,20 @@ namespace Jde{
 		//TODO Implement
 	}
 
+	//The windows half of linux's syslog write (LinuxApp.cpp).  Called from onterminate and the shutdown watchdog - after the
+	//loggers are the likeliest thing wedged - so it must stay static, allocate as little as possible and never throw.
+	α Process::AddApplicationLog( ELogLevel level, str value )ι->void{
+		var type = level==ELogLevel::Critical || level==ELogLevel::Error
+			? EVENTLOG_ERROR_TYPE
+			: level==ELogLevel::Warning ? EVENTLOG_WARNING_TYPE : EVENTLOG_INFORMATION_TYPE;
+		HANDLE source = ::RegisterEventSource( nullptr, string{Process::AppName()}.c_str() );
+		if( !source )
+			return;//nothing to fall back on:  the log is what is broken.
+		const char* strings[]{ value.c_str() };
+		::ReportEvent( source, (WORD)type, 0, 0, nullptr, 1, 0, strings, nullptr );
+		::DeregisterEventSource( source );
+	}
+
 	bool _isService{false};
 	α Process::AsService()ι->bool{
 		_isService = true;

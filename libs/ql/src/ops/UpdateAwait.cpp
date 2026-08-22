@@ -16,6 +16,7 @@
 namespace Jde::QL{
 	using DB::Value;
 	α GetEnumValues( const DB::View& table, SRCE )ε->flat_map<uint,string>; //ops/SelectAwait.cpp - SelectEnumSync, i.e. cached but blocking.
+	α ToFlags( const flat_map<uint,string>& values, const jarray& flags, sv memberName, SRCE )ε->uint;//ops/SelectAwait.cpp - shared with InsertAwait (#48).
 
 	UpdateAwait::UpdateAwait( sp<DB::Table> table, MutationQL mutation, UserPK userPK, SL sl )ι:
 		base{ sl },
@@ -43,9 +44,9 @@ namespace Jde::QL{
 		if( let extends = table.IsView() ? nullptr : AsTable(table).Extends; extends )
 			FlagTables( *extends, y );
 		for( let& c : table.Columns ){
-			if( !c->Updateable || !c->IsFlags() )
+			if( !c->Updateable || c->IsPK() || c->SKIndex || !c->IsFlags() )//#46: the same predicate CreateUpdate uses, so the two walks stay in step.
 				continue;
-			let jvalue = _mutation.Args.if_contains( QLColumn{c}.MemberName() );
+			let jvalue = _input.if_contains( QLColumn{c}.MemberName() );
 			if( let flags = jvalue ? jvalue->if_array() : nullptr; flags && flags->size() )
 				y.push_back( QLColumn{c}.Column->PKTable );
 		}
@@ -70,7 +71,7 @@ namespace Jde::QL{
 		if( pExtendedFromTable )
 			update.Where.Add( table.SurrogateKeys[0], rowKey );
 		else{
-			let& args = _mutation.Args;
+			let& args = _input;
 			if( let id = table.FindPK() ? Json::FindNumber<uint>(args, "id") : optional<uint>{}; id )
 				update.Where.Add( table.FindPK(), DB::Value{*id} );
 			else if( let name = table.FindColumn("name") ? Json::FindSV(args, "name") : optional<sv>{}; name )
@@ -82,9 +83,13 @@ namespace Jde::QL{
 			rowKey = update.Where.Params()[0];
 		}
 
-		let& input = _mutation.Args;
+		let& input = _input;
 		for( let& c : table.Columns ){
-			if( !c->Updateable )
+			//#46: a key column is not a settable one.  `updateable` defaults to true and none of common-meta's sequenced pk
+			//shapes says otherwise, so `updateResource( id:6, resourceId:5006 )` emitted `set resource_id = 5006` and renumbered
+			//the row out from under Authorize's in-memory map;  only sqlite's FKs (created without ON UPDATE CASCADE) stopped
+			//the identities case, and then only where a child row happened to exist.
+			if( !c->Updateable || c->IsPK() || c->SKIndex )
 				continue;
 
 			const QLColumn qlColumn{ c };
@@ -95,22 +100,23 @@ namespace Jde::QL{
 				update.Add( c, DB::Value{c->Type, *jvalue} );
 			else{
 				uint value = 0;
-				if( let flags = jvalue->if_array(); flags && flags->size() ){
-					let& values = EnumValues( qlColumn.Table() );
-					for( let& flagName : *flags ){
-						let name = Json::AsString( flagName );
-						let flag = FindKey( values, name ); THROW_IF( !flag, "Could not find '{}' for {}", name, qlColumn.MemberName() );
-						value |= *flag;
-					}
-				}
+				if( let flags = jvalue->if_array(); flags && flags->size() )
+					value = ToFlags( EnumValues(qlColumn.Table()), *flags, qlColumn.MemberName() );
 				else if( jvalue->is_number() )
 					value = Json::AsNumber<uint>( *jvalue );
 				update.Add( c, {value} );
 			}
 		}
 		THROW_IF( update.Where.Empty(), "There is no where clause." );
-		if( update.Values.size() )
+		if( update.Values.size() ){
+			//#45: an extension row is keyed by whatever the parent's where clause was keyed by, and on the name/target branches that
+			//is the literal, not the row - `update access_users set … where access_users.identity_id='bob'` matched nothing and the
+			//parent's row count was reported as success.  Resolving the parent pk first would mean a blocking select on the mutation
+			//path, so the shape is refused.  Only when this statement has something to set:  `updateGroup( name:…, description:… )`
+			//touches parent columns only, so no extension statement is emitted and the natural key is still the right way to say it.
+			THROW_IF( pExtendedFromTable && !Json::FindNumber<uint>(_input, "id"), "'{}' extends '{}', so setting one of its own columns needs an id - name and target key the parent, not its extension.", table.Name, pExtendedFromTable->Name );
 			_updates.push_back( move(update) );
+		}
 		return rowKey;
 	}
 	α UpdateAwait::CreateDeleteRestore( const DB::Table& table )ε->void{
@@ -134,6 +140,7 @@ namespace Jde::QL{
 	//hands off to UpdateBefore - the same chaining InsertAwait uses.
 	α UpdateAwait::Build()ι->TTask<flat_map<uint,string>>{
 		try{
+			_input = _mutation.ExtrapolateVariables();
 			if( _mutation.Type==EMutationQL::Update ){
 				vector<sp<DB::View>> enumTables;
 				FlagTables( *_table, enumTables );
@@ -183,7 +190,12 @@ namespace Jde::QL{
 		}
 	}
 	α UpdateAwait::Resume( jvalue&& v )ι->void{
-		Subscriptions::OnMutation( _mutation, v );
+		//#47: a statement that matched nothing is not an event.  OnMutation never looked at the result - an integer rowCount is not
+		//an object, so `available` was the args alone and the id the client sent went straight to the listeners.  `deleteUser( id:5,
+		//name:"nomatch" )` ands the extra arg into the where clause, updates 0 rows, and still had AccessListener mark user 5
+		//deleted in memory - "User is deleted" for every later request by 5, until restart, with the row untouched.
+		if( !v.is_number() || v.to_number<uint>() )
+			Subscriptions::OnMutation( _mutation, v );
 		base::Resume( move(v) );
 	}
 	α UpdateAwait::await_resume()ε->jvalue{

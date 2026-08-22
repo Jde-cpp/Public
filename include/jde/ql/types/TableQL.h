@@ -14,7 +14,6 @@ namespace Jde::QL{
 		string JsonName;
 		mutable sp<DB::Column> DBColumn;
 	};
-	struct JsonMembers{ string ParentTable; string ColumnName; };
 	struct TableQL final : Input{
 		TableQL( string jName, jobject args, sp<jobject> variables, const vector<sp<DB::AppSchema>>& schemas, bool system=false, SRCE )ε;
 
@@ -25,13 +24,10 @@ namespace Jde::QL{
 		α DBTableName()Ι->str{ return DBTable() ? DBTable()->Name : Str::Empty(); }
 		α DefaultResult()Ι->jvalue{ return IsPlural() ? jvalue{jarray{}} : jvalue{jobject{}}; }
 		α EraseColumn( sv jsonName )ι->void{ Columns.erase( remove_if( Columns.begin(), Columns.end(), [&](let& c){return c.JsonName==jsonName;}), Columns.end() ); }
-		Ŧ GetArg( sv key )Ι->T;
 		α FindColumn( sv jsonName )Ι->const ColumnQL*{ auto p = find_if( Columns, [&](let& c){return c.JsonName==jsonName;}); return p==Columns.end() ? nullptr : &*p; }
-		α FindDBColumn( sp<DB::Column> dbColumn )Ι->const ColumnQL*;
 		α FindTable( sv jsonPluralName )Ι->const TableQL*;
 		α FindTable( sv jsonPluralName )ι->TableQL*;
 		α ExtractTable( sv jsonPluralName )ι->optional<TableQL>;
-		α FindTablePrefix( sv jsonPluralName )Ι->const TableQL*;
 		α GetTable( sv jsonPluralName, SRCE )ε->TableQL&;
 		α IsPlural()Ι->bool{ return DB::Names::IsPlural(JsonName); }
 		α JTableName()Ι->string override{ return JsonName; }
@@ -47,7 +43,6 @@ namespace Jde::QL{
 
 		string Alias;
 		vector<ColumnQL> Columns;
-		mutable vector<QL::JsonMembers> JsonMembers; //used to map db columns to json names for results.
 		string JsonName;
 		vector<TableQL> Tables;
 		vector<TableQL> InlineFragments; //... on Type { }
@@ -55,9 +50,5 @@ namespace Jde::QL{
 	private:
 		sp<DB::View> _dbTable;
 	};
-	template<>
-	Ξ TableQL::GetArg( sv key )Ι->string{
-		return Json::AsString( Args, key );
-	}
 }
 #undef let

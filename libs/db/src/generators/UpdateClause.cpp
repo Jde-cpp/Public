@@ -31,7 +31,10 @@ namespace Jde::DB{
 				sql.Params.push_back( move(value) );
 			sql.Text += column->Name + " = "+valueText;
 		}
-		if( auto updated = table.FindColumn("updated"); updated && Values.find(updated)==Values.end() )
+		//ql-review3 #45: the statement table's *own* column.  Table::FindColumn resolves through Extends, so an `update access_users`
+		//picked up identities' `updated` and every update of a users-owned column failed with "no such column: updated" - after the
+		//parent half had already committed, untransacted.
+		if( auto updated = table.View::FindColumn("updated"); updated && Values.find(updated)==Values.end() )
 			sql.Text += ", "+updated->Name + " = " + string{ table.Schema->Syntax().UtcNow() };
 		sql.Params.insert( sql.Params.end(), std::make_move_iterator(Where.Params().begin()), std::make_move_iterator(Where.Params().end()) ); //C16: Move() may take the where params with it.
 		sql.Text += '\n' + Where.Move();

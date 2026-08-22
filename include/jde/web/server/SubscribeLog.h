@@ -1,11 +1,11 @@
 #pragma once
 #include <jde/app/usings.h>
+#include "exports.h"
 #include "usings.h"
 
-namespace Jde::QL{ struct Subscription; }
+namespace Jde::QL{ struct Subscription; struct Filter; }
 namespace Jde::Web::Server{
 	struct IWebsocketSession;
-
 	struct SubscribeLog final : Logging::ILogger, noncopyable{
 		SubscribeLog( jobject settings, const uint32& appPK, const App::ConnectionPK& connectionPK )ε:ILogger{ move(settings) }, _appPK(appPK), _connectionPK(connectionPK){}
 		Ω Unsubscribe( SocketId socketId )ι->void;

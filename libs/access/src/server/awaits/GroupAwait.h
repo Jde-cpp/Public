@@ -20,6 +20,6 @@ namespace Jde::Access::Server{
 	struct GroupHook final : QL::IQLHook{
 		α AddBefore( const QL::MutationQL& m, UserPK executer, SRCE )ι->HookResult override;
 	private:
-		α AddRemoveArgs( const QL::MutationQL& m )ι->std::pair<GroupPK, flat_set<IdentityPK::Type>>;
+		α AddRemoveArgs( const QL::MutationQL& m )ι->std::pair<optional<GroupPK>, flat_set<IdentityPK::Type>>;//nullopt: neither spelling of the parent id was sent - reported, not thrown, since this is ι.
 	};
 }
