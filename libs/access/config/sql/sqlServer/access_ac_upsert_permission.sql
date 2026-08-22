@@ -1,14 +1,12 @@
-create or alter proc [dbo].access_ac_upsert_permission( @identityId int, @allowed tinyint, @denied tinyint, @resourceId int, @permission_id int output ) as
+create or alter proc [dbo].access_ac_upsert_permission( @identityId int, @allowed bigint, @denied bigint, @resourceId int, @permission_id int output ) as
 begin
 	set nocount on;
 	set @permission_id = (
 		select max( acl.permission_id )
 		from access_acl acl
 			join access_permission_rights pr on acl.permission_id=pr.permission_id
-			join access_resources r on pr.resource_id=r.resource_id
 		where pr.resource_id=@resourceId
 			and identity_id=@identityId
-			and criteria is null
 	);
 	if @permission_id is null begin
 		insert into access_permissions( is_role ) values( 0 );

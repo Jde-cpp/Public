@@ -1,7 +1,10 @@
 cmake_path( SET jdeRoot NORMALIZE ${CMAKE_CURRENT_LIST_DIR}/.. )
 #Note: file(GLOB) calls repo-wide deliberately omit CONFIGURE_DEPENDS - adding a new source file requires a manual reconfigure.
-#Sole exception: sqliteProcModule (below).  Its targets are MODULEs, where a source missing from a stale glob still
-#links - undefined symbols are legal - and only fails at dlopen; everywhere else a missed source is a link error.
+#Two exceptions.  sqliteProcModule (below): its targets are MODULEs, where a source missing from a stale glob still links -
+#undefined symbols are legal - and only fails at dlopen.  And a gtest executable (libs/access/tests): a new self-contained
+#*Tests.cpp is referenced by no other translation unit, so a stale glob drops it with no link error, no warning and a green
+#ctest run - the suite's own invariant is the opposite of "a missed source is a link error" (access-review3 #30).  Everywhere
+#else a missed source is a link error, which is the check.
 
 if( CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR )
 	message( FATAL_ERROR "In-source builds are not allowed. Configure from an out-of-source build directory, e.g.:\n  cd $JDE_BUILD_DIR/$JDE_COMPILER/<repo-name> && cmake ${CMAKE_SOURCE_DIR} --preset <preset>" )
@@ -27,13 +30,17 @@ function(boost)
 		set( _boostSrc $ENV{REPO_DIR}/boostorg/boost_1_91_0 )
 		include_directories( ${_boostSrc} )
 		add_compile_definitions( BOOST_ALL_NO_LIB=1 )
+		#Boost.JSON is not built as a library: Jde.dll exports it.  io/json.cpp compiles <boost/json/src.hpp> in and the Jde
+		#target defines BOOST_JSON_SOURCE, making BOOST_JSON_DECL dllexport there; BOOST_JSON_DYN_LINK here makes it dllimport
+		#for everyone else, which all link Jde.lib anyway.  (A static boost_json.lib used to give every dll/exe its own copy.)
 		if( NOT TARGET boost_json )
-			add_library( boost_json STATIC ${_boostSrc}/libs/json/src/src.cpp )
+			add_library( boost_json INTERFACE )
 			add_library( Boost::json ALIAS boost_json )
-			target_include_directories( boost_json SYSTEM PUBLIC ${_boostSrc} )
+			target_include_directories( boost_json SYSTEM INTERFACE ${_boostSrc} )
+			target_compile_definitions( boost_json INTERFACE BOOST_JSON_DYN_LINK )
 		endif()
-		#charconv is a compiled library too (the mysql driver's Boost.MySQL needs it).  There is no BoostConfig.cmake in
-		#this source tree, so find_package( Boost COMPONENTS charconv ) cannot work here - build it like json above.
+		#charconv is a compiled library (the mysql driver's Boost.MySQL needs it).  There is no BoostConfig.cmake in this
+		#source tree, so find_package( Boost COMPONENTS charconv ) cannot work here - compile its sources into a static lib.
 		if( NOT TARGET boost_charconv )
 			add_library( boost_charconv STATIC ${_boostSrc}/libs/charconv/src/from_chars.cpp ${_boostSrc}/libs/charconv/src/to_chars.cpp )
 			add_library( Boost::charconv ALIAS boost_charconv )

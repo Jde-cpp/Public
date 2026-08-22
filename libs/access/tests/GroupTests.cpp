@@ -82,6 +82,39 @@ namespace Jde::Access::Tests{
 		PurgeUser( manager, root );
 	}
 
+	//ql-review3 #13: QL::getChildParentParams accepts the map parent column's json name as well as "id", but GroupHook read
+	//only "id", with AsNumber, inside a ι hook - and QL::MutationAwaits::await_ready is a second noexcept frame above it, so
+	//`addGroup( identityId:N, memberId:[M] )` from anyone holding Update on groups terminated the server.
+	TEST_F( GroupTests, AddByParentColumnName ){
+		let root = GetRoot();
+		const GroupPK group{ GetId(GetGroup("review13-group", root)) };
+		const UserPK member{ GetId(GetUser("review13-member", root)) };
+		RemoveFromGroup( group, {member}, root );
+
+		EXPECT_NO_THROW( QL().QuerySync<jvalue>(Ƒ("mutation addGroup( identityId:{}, memberId:[{}] )", group.Value, member.Value), {}, root) );
+		EXPECT_TRUE( IsMember("review13-group", GroupPK{member.Value}, root) ) << "identityId has to mean what id means";
+
+		RemoveFromGroup( group, {member}, root );
+		PurgeGroup( group, root );
+		PurgeUser( member, root );
+	}
+
+	//and neither spelling present is an error the caller receives, not a noexcept frame going down with it.  The ql validator
+	//gets there first (getChildParentParams runs ahead of the hook), so its message is the one that arrives;  GroupHook's own
+	//guard is the backstop for a hook order that ever changes.
+	TEST_F( GroupTests, AddWithNoParentIdThrows ){
+		let root = GetRoot();
+		const UserPK member{ GetId(GetUser("review13-orphan", root)) };
+		try{
+			QL().QuerySync<jvalue>( Ƒ("mutation addGroup( memberId:[{}] )", member.Value), {}, root );
+			ADD_FAILURE() << "expected a throw";
+		}
+		catch( const Exception& e ){
+			EXPECT_NE( string{e.what()}.find("identityId"), string::npos ) << e.what(); //named, delivered, and not a terminate.
+		}
+		PurgeUser( member, root );
+	}
+
 	TEST_F( GroupTests, Recursion ){
 		const GroupPK groupA{ GetId(GetGroup("groupA", GetRoot())) };
 		const GroupPK groupB{ GetId(GetGroup("groupB", GetRoot())) };
@@ -97,5 +130,28 @@ namespace Jde::Access::Tests{
 			AddToGroup( groupC, {groupD}, GetRoot() );
 		EXPECT_THROW( AddToGroup( groupD, {groupA}, GetRoot() ), Exception );
 		//TODO test implement deleted members.
+	}
+
+	//access-review3 #8's other half:  the hook's key set had diverged from getChildParentParams' (`id` only against either), so a
+	//fix that merely swallowed the throw would have skipped TestAddGroupMember for the `identityId` spelling and let a cycle in.
+	//The ancestry check has to fire under either spelling.
+	TEST_F( GroupTests, AncestryCheckFiresByParentColumnName ){
+		let root = GetRoot();
+		const GroupPK outer{ GetId(GetGroup("review8-outer", root)) };
+		const GroupPK inner{ GetId(GetGroup("review8-inner", root)) };
+		if( !IsMember("review8-outer", inner, root) )
+			AddToGroup( outer, {inner}, root );
+		EXPECT_THROW( QL().QuerySync<jvalue>(Ƒ("mutation addGroup( identityId:{}, memberId:[{}] )", inner.Value, outer.Value), {}, root), Exception ); //outer into inner - its own ancestor.
+		EXPECT_FALSE( IsMember("review8-inner", outer, root) ) << "the cycle must not have been written";
+		EXPECT_THROW( QL().QuerySync<jvalue>(Ƒ("mutation addGroup( identityId:{}, memberId:[{}] )", inner.Value, inner.Value), {}, root), Exception ); //itself.
+		RemoveFromGroup( outer, {inner}, root );
+		PurgeGroup( inner, root );
+		PurgeGroup( outer, root );
+	}
+
+	//access-review3 #9 (ql-review3 #5):  GroupAwait::Select adds is_group through TableQL::AddFilter, whose as_object() on a
+	//client-supplied `filter` arg was a terminate.  Refused as an unknown column now.
+	TEST_F( GroupTests, ScalarFilterArgIsRefusedNotFatal ){
+		EXPECT_THROW( QL().QuerySync<jarray>("groups( filter:\"x\" ){ id }", {}, GetRoot()), Exception );
 	}
 }

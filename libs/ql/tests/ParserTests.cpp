@@ -1,7 +1,9 @@
 //Tokenizer + argument parsing.  Everything here is schema-free: Parser::Next/Peek/Trim and the static
 //Parser::ParseArgs are pure string->string/json, so no AppSchema or data source is needed.
 #include <gtest/gtest.h>
+#include <jde/ql/ql.h>
 #include <jde/ql/types/Parser.h>
+#include "UnitSchema.h"
 
 #define let const auto
 
@@ -46,6 +48,26 @@ namespace Jde::QL::Tests{
 		EXPECT_THROW( p.Next(')'), Exception );
 	}
 
+	//review3 #38: Next(char) skipped any backslash followed by a quote as an escaped quote, with no escaped-backslash state, so
+	//a value *ending* in a backslash - which is how every JSON.stringify'd arg spells one - ate its own closing quote and the
+	//scan ran to the end of the request.  parseString has kept the state correctly since #15;  this is the same rule, in the
+	//other scanner.  Only an even run of backslashes before the quote ever mis-scanned, which is why it survived this long.
+	TEST( ParserTests, ValueEndingInABackslashKeepsItsClosingQuote ){
+		const vector<sp<DB::AppSchema>> noSchemas;
+		EXPECT_NO_THROW( QL::Parse(R"(logs(path:"C:\\"){ id })", {}, noSchemas) );
+		EXPECT_NO_THROW( QL::Parse(R"(logs(path:"C:\\", x:1){ id })", {}, noSchemas) );//and with an argument after it.
+		let q = QL::ParseQuery( R"(logs(path:"C:\\"){ id })", {}, noSchemas );
+		EXPECT_EQ( q.As<jstring>("path"), R"(C:\)" );//one backslash - the value the client sent, not a parse error.
+		EXPECT_EQ( parser(R"((a:"x\\") rest)").Next(')'), R"((a:"x\\"))" );
+	}
+	//the control the fix must not break:  an escaped quote is still an escaped quote, and an escaped backslash before one does
+	//not cancel it.
+	TEST( ParserTests, EscapedQuoteStillDoesNotEndTheString ){
+		const vector<sp<DB::AppSchema>> noSchemas;
+		EXPECT_NO_THROW( QL::Parse(R"(logs(path:"a\"b"){ id })", {}, noSchemas) );
+		EXPECT_EQ( parser(R"((a:"x\\\"y") rest)").Next(')'), R"((a:"x\\\"y"))" );
+	}
+
 	TEST( ParserTests, TrimStripsLeadingTokenAndOuterBraces ){
 		auto p = parser( "query { users { id } }" );
 		EXPECT_TRUE( p.Trim("query") );
@@ -83,6 +105,99 @@ namespace Jde::QL::Tests{
 		EXPECT_EQ( in[2].to_number<uint>(), 3u );
 		EXPECT_EQ( args.at("names").as_array().size(), 2u );
 		EXPECT_EQ( args.at("nested").as_object().at("a").as_object().at("b").as_string(), "c" );
+	}
+
+	//review3 #15: an unterminated string ran parseString to the end and it returned json.size(); parseObject added 1 and
+	//substr walked off the end with a std::out_of_range - a logic_error, which no wire handler catches (kSubscription's
+	//ι frame terminated the server, kQuery/HTTP simply never answered).  Both the shape ParseArgs manufactures and the
+	//query text that manufactures it are now ordinary Jde::Exceptions.
+	TEST( ParserTests, UnterminatedStringThrowsAJdeException ){
+		for( let args : {R"({"id})", R"({name: "bob)", R"({name: "a\")"} ){
+			try{
+				Parser::ParseArgs( string{args} );
+				ADD_FAILURE() << args << " parsed";
+			}
+			catch( const Exception& e ){
+				EXPECT_NE( string{e.what()}.find("Expected ending quote"), string::npos ) << e.what();
+			}
+		}
+	}
+	//the query shapes that reach it:  an arg list whose ')' never arrives, which ParseArgs() used to overwrite blindly.
+	TEST( ParserTests, UnterminatedArgListThrowsAJdeException ){
+		const vector<sp<DB::AppSchema>> noSchemas;
+		for( let text : {R"(logs("id")", R"(createLog("id")", R"(subscription userCreated { userCreated("id")"} ){
+			try{
+				QL::Parse( string{text}, {}, noSchemas );
+				ADD_FAILURE() << text << " parsed";
+			}
+			catch( const Exception& e ){
+				EXPECT_NE( string{e.what()}.find("Expected"), string::npos ) << e.what();
+			}
+		}
+	}
+
+	//review3 #18: Next(char) stops at size-1 whether or not it saw the terminator, and ParseArgs() overwrote that last
+	//character with '}' - so `deleteSetting(id:12` was not an error, it was a delete of id *1*.  Same root as #15, one check.
+	//The shapes below are the write-up's own, and the last two are the ones that made it silent: a 2+-character literal is
+	//truncated rather than malformed, where `true` or a single digit happens to break the json and throws anyway.
+	TEST( ParserTests, UnterminatedArgListIsNotSilentlyTruncated ){
+		const vector<sp<DB::AppSchema>> noSchemas;
+		for( let text : {"deleteSetting(id:12", "{ deleteSetting(id:12 }", "mutation{ deleteSetting(id:12", "logs(id:12", "logs(a:$b"} ){
+			try{
+				QL::Parse( string{text}, {}, noSchemas );
+				ADD_FAILURE() << "'" << text << "' parsed";
+			}
+			catch( const Exception& e ){
+				EXPECT_NE( string{e.what()}.find("Expected"), string::npos ) << e.what();
+			}
+		}
+	}
+	//the control the finding names:  the same text, closed.
+	TEST( ParserTests, TerminatedArgListStillParses ){
+		let args = Parser::ParseArgs( R"({id: 12})" );
+		EXPECT_EQ( args.at("id").to_number<uint>(), 12u ); //12, not 1 - the digit the truncation used to eat.
+	}
+	//LoadUnsubscriptions is the other Next(char) caller.
+	TEST( ParserTests, UnterminatedUnsubscribeThrows ){
+		const vector<sp<DB::AppSchema>> noSchemas;
+		try{
+			QL::Parse( "unsubscribe{ id:[1,2]", {}, noSchemas );
+			ADD_FAILURE() << "parsed";
+		}
+		catch( const Exception& e ){
+			//the message matters:  without the check parseObject still refuses it, but for the wrong reason and about the
+			//character the truncation ate rather than the one that never arrived.
+			EXPECT_NE( string{e.what()}.find("to end unsubscribe"), string::npos ) << e.what();
+		}
+		EXPECT_NO_THROW( QL::Parse("unsubscribe{ id:[1,2] }", {}, noSchemas) );
+	}
+
+	//review3 #19: ParseArgs escaped newlines by running Str::Replace over the whole stringified buffer, which caught the
+	//structural ones parseWhitespace copies between tokens as well - so any arg list a client pretty-printed across lines came
+	//back as `(1)boost.json - syntax error`.  The escaping now happens inside parseString, where being in a literal is known.
+	TEST( ParserTests, ParseArgsAcceptsNewlinesBetweenTokens ){
+		let args = Parser::ParseArgs( "{\n\tname: \"x\",\n\tid: 12\n}" );
+		EXPECT_EQ( args.at("name").as_string(), "x" );
+		EXPECT_EQ( args.at("id").to_number<uint>(), 12u );
+
+		EXPECT_NO_THROW( Parser::ParseArgs("{\r\n a:1\r\n}") );  //crlf, as a windows client sends it.
+		EXPECT_NO_THROW( Parser::ParseArgs("{a: {\n b:1 }}") );   //nested object across lines.
+		EXPECT_NO_THROW( Parser::ParseArgs("{a: [1,\n 2]}") );    //and array.
+		EXPECT_NO_THROW( Parser::ParseArgs("{a: 1\t}") );         //tabs always worked - the control that nothing else changed.
+	}
+	//the case the old post-hoc replace was *for*:  a newline inside a string literal still has to be escaped, or json rejects it.
+	TEST( ParserTests, ParseArgsEscapesNewlinesInsideStrings ){
+		let args = Parser::ParseArgs( "{a: \"x\ny\"}" );
+		EXPECT_EQ( args.at("a").as_string(), "x\ny" );
+		let crlf = Parser::ParseArgs( "{a: \"x\r\ny\"}" );
+		EXPECT_EQ( crlf.at("a").as_string(), "x\r\ny" );
+	}
+	//end to end, the write-up's own shape.
+	TEST( ParserTests, MultiLineMutationParses ){
+		let schema = schemas();
+		let request = QL::Parse( "mutation createProvider(\n\tname:\"x\"\n){ id }", {}, schema );
+		ASSERT_TRUE( request.IsMutation() );
+		EXPECT_EQ( Json::AsSV(request.Mutations()[0].Args, "name"), "x" );
 	}
 
 	TEST( ParserTests, ParseArgsKeepsEscapedQuoteInString ){
@@ -129,8 +244,20 @@ namespace Jde::QL::Tests{
 		EXPECT_TRUE( MutationQL::IsMutation("mutation") );
 		EXPECT_TRUE( MutationQL::IsMutation("createUser") );
 		EXPECT_TRUE( MutationQL::IsMutation("purgeGroup") );
+		EXPECT_TRUE( MutationQL::IsMutation("removeGroupMember") );
 		EXPECT_FALSE( MutationQL::IsMutation("users") );
-		EXPECT_FALSE( MutationQL::IsMutation("query") ); //explicitly not a mutation, even though it starts with no verb.
+		EXPECT_FALSE( MutationQL::IsMutation("query") );
+	}
+	//#42: the verb has to begin a type name, not just the string.  Every name here starts with one of the ten verbs and is a
+	//perfectly ordinary table or column name;  each was routed to LoadMutations and refused with "Expected '(' to start
+	//function".  The distinguishing mark is the capital ParseCommand already relies on to cut the json table name out.
+	TEST( MutationQLTests, ATableNameThatMerelyStartsWithAVerbIsNotAMutation ){
+		for( let name : {"startups", "addresses", "removedItems", "createdAt", "stopwatches", "updates", "deleted", "restored", "executions"} )
+			EXPECT_FALSE( MutationQL::IsMutation(name) ) << name;
+		EXPECT_FALSE( MutationQL::IsMutation("create") ) << "a bare verb names no type - `mutation create()` still reaches LoadMutations through the keyword";
+		//and the ones that really are mutations, including a multi-word type and the two map-table verbs.
+		for( let name : {"purgeHistory", "updateLogSetting", "addRoleMember", "startStatus", "stopStatus", "executeThing", "restoreResource", "deleteAc"} )
+			EXPECT_TRUE( MutationQL::IsMutation(name) ) << name;
 	}
 
 	TEST( MutationQLTests, ParseCommand ){

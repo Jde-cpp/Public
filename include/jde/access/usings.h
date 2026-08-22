@@ -21,7 +21,7 @@ namespace Jde::Access{
 		OpcServer = 7
 	};
 
-	enum class ERights : uint{ //opc rights use all 64 bits
+	enum class ERights : uint{ //one vocabulary for every resource, node ACLs included - OpcServer translates to UA masks (OpcAuthorize.h ToAccess), it does not store them here.
 		None=0,
 		Create=0x1,
 		Read=0x2,

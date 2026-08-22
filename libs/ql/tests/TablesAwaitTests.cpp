@@ -1,37 +1,14 @@
 //TablesAwait hands the table to the status/log handlers by rvalue, so the routing decision has to be made before the call and
-//the moving branches have to be terminal - review #5 (use-after-move).  NullQL below is the pathological handler the old code
+//the moving branches have to be terminal - review #5 (use-after-move).  NullQL (NullQL.h) is the pathological handler the old code
 //trusted not to exist: it consumes the table and *still* returns null.  No data source is involved: the tables are `system`,
 //so TableQL leaves _dbTable null, and Resume/ResumeExp are synchronous, so BlockAwait drives the coroutine on this thread.
 #include <gtest/gtest.h>
-#include <jde/ql/IQL.h>
 #include <jde/ql/ops/TablesAwait.h>
+#include "NullQL.h"
 
 #define let const auto
 
 namespace Jde::QL::Tests{
-	struct NullQL final : IQL{
-		α Authorizer()ε->Access::Authorize& override{ throw Exception{"No authorizer."}; }
-		α AuthorizerPtr()ε->sp<Access::Authorize> override{ return {}; }
-		α CustomQuery( TableQL&, Creds, SL )ι->up<TAwait<jvalue>> override{ ++CustomQueryCount; return nullptr; }
-		α CustomMutation( MutationQL&, Creds, SL )ι->up<TAwait<jvalue>> override{ return nullptr; }
-		α LogQuery( TableQL&& ql, SL )ι->up<TAwait<jvalue>> override{ Consumed = mu<TableQL>( move(ql) ); ++LogQueryCount; return nullptr; }
-		α LogSettingsQuery( TableQL&& ql, SL )ι->up<TAwait<jvalue>> override{ Consumed = mu<TableQL>( move(ql) ); ++LogSettingsQueryCount; return nullptr; }
-		α StatusQuery( TableQL&& ql )ι->jobject override{ Consumed = mu<TableQL>( move(ql) ); return jobject{ {"up",true} }; }
-		α Query( string, jobject, UserPK, bool, SL )ε->up<TAwait<jvalue>> override{ return nullptr; }
-		α QueryObject( string, jobject, UserPK, bool, SL )ε->up<TAwait<jobject>> override{ return nullptr; }
-		α QueryArray( string, jobject, UserPK, bool, SL )ε->up<TAwait<jarray>> override{ return nullptr; }
-		α Subscribe( string&&, jobject, sp<IListener>, UserPK, SL )ε->up<TAwait<vector<SubscriptionId>>> override{ return nullptr; }
-		α Upsert( string, jobject, UserPK )ε->jarray override{ return {}; }
-		α Schemas()Ι->const vector<sp<DB::AppSchema>>& override{ return _schemas; }
-
-		up<TableQL> Consumed;
-		uint LogQueryCount{};
-		uint LogSettingsQueryCount{};
-		uint CustomQueryCount{};
-	private:
-		const vector<sp<DB::AppSchema>> _schemas; //empty:  nothing here opens a data source.
-	};
-
 	Ω tables( sv jsonName )ε->vector<TableQL>{
 		const vector<sp<DB::AppSchema>> noSchemas;
 		vector<TableQL> y;
@@ -69,7 +46,8 @@ namespace Jde::QL::Tests{
 		EXPECT_EQ( ql->CustomQueryCount, 0u );
 	}
 
-	//logLevels is a real table:  the log prefixes must not swallow it, so it reaches CustomQuery with the table intact.
+	//logLevels is a real table:  the log routing must not swallow it, so it reaches CustomQuery with the table intact.  It used
+	//to need its own hand-written exclusion from the `log` prefix (#44);  now it is simply not one of the four names.
 	TEST( TablesAwaitTests, LogLevelsIsNotALogQuery ){
 		auto ql = ms<NullQL>();
 		EXPECT_THROW( execute("logLevels", ql), Exception ); //no schema -> the select fallback has no table.
@@ -80,6 +58,22 @@ namespace Jde::QL::Tests{
 	}
 
 	//StatusQuery returns by value, so its result is always set - the select fallback can never see the table it moved.
+	//#6: the three log/status routes were dispatched with no credentials at all - TablesAwait held _creds and passed them only
+	//to CustomQuery and the select fallback, so no implementation could tell an anonymous caller from anyone else.
+	TEST( TablesAwaitTests, LogAndStatusRoutesReceiveTheCredentials ){
+		auto ql = ms<NullQL>();
+		EXPECT_THROW( execute("logs", ql), Exception ); //null handler, as above - the creds are recorded before that.
+		EXPECT_EQ( ql->Received, UserPK{UserPK::System} );
+
+		auto settings = ms<NullQL>();
+		EXPECT_THROW( execute("logSettings", settings), Exception );
+		EXPECT_EQ( settings->Received, UserPK{UserPK::System} );
+
+		auto status = ms<NullQL>();
+		execute( "status", status );
+		EXPECT_EQ( status->Received, UserPK{UserPK::System} );
+	}
+
 	TEST( TablesAwaitTests, StatusQueryResultShortCircuitsTheSelect ){
 		auto ql = ms<NullQL>();
 		let y = execute( "status", ql );
@@ -87,5 +81,34 @@ namespace Jde::QL::Tests{
 		EXPECT_EQ( ql->CustomQueryCount, 0u );
 		ASSERT_TRUE( ql->Consumed );
 		EXPECT_EQ( ql->Consumed->JsonName, "status" );
+	}
+
+	//#44: the prefix test was an exact-match set spelled as a prefix, and it had already been patched once - for logLevels.  Any
+	//future table whose json name starts with `log` would have gone to LogQuery, which takes the table by rvalue, so there is
+	//nothing to fall back on afterwards.  None of these is one of the four names, so each reaches CustomQuery with its table.
+	TEST( TablesAwaitTests, ATableThatMerelyStartsWithLogIsNotALogQuery ){
+		for( let jsonName : {"logbook", "logArchives", "logSettingHistory", "logSettingsHistory", "logins", "logLevel"} ){
+			auto ql = ms<NullQL>();
+			EXPECT_THROW( execute(jsonName, ql), Exception ) << jsonName; //no schema -> the select fallback has no table.
+			EXPECT_EQ( ql->LogQueryCount, 0u ) << jsonName;
+			EXPECT_EQ( ql->LogSettingsQueryCount, 0u ) << jsonName;
+			EXPECT_EQ( ql->CustomQueryCount, 1u ) << jsonName;
+			EXPECT_FALSE( ql->Consumed ) << jsonName; //not moved from - a misroute is unrecoverable.
+		}
+	}
+	//and the four that are:  both spellings of each, routed to their own handler and nowhere else.
+	TEST( TablesAwaitTests, TheFourLogNamesStillRoute ){
+		for( let jsonName : {"log", "logs"} ){
+			auto ql = ms<NullQL>();
+			EXPECT_THROW( execute(jsonName, ql), Exception ) << jsonName;
+			EXPECT_EQ( ql->LogQueryCount, 1u ) << jsonName;
+			EXPECT_EQ( ql->LogSettingsQueryCount, 0u ) << jsonName;
+		}
+		for( let jsonName : {"logSetting", "logSettings"} ){
+			auto ql = ms<NullQL>();
+			EXPECT_THROW( execute(jsonName, ql), Exception ) << jsonName;
+			EXPECT_EQ( ql->LogSettingsQueryCount, 1u ) << jsonName;
+			EXPECT_EQ( ql->LogQueryCount, 0u ) << jsonName;
+		}
 	}
 }

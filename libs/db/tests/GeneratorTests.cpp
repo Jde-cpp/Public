@@ -1,8 +1,10 @@
 #include <gtest/gtest.h>
 #include <jde/db/db.h>
+#include <jde/db/generators/FromClause.h>
 #include <jde/db/generators/InsertClause.h>
 #include <jde/db/generators/Object.h>
 #include <jde/db/generators/Sql.h>
+#include <jde/db/generators/Syntax.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
@@ -58,6 +60,16 @@ namespace Jde::DB::Tests{
 		EXPECT_EQ( (uint)*firstKey.SKIndex, 0u ); //(uint): uint8 formats as a character.
 	}
 
+	//ql-review3 #3: TryAdd read join.To->Table->Name unconditionally, but a null To is a legal Join - it is the single-table
+	//form operator+= merges into, and Contains/GetColumnPtr both allow for it.  A sub-table whose fk could not be resolved
+	//passed one in and segfaulted here rather than at the caller.
+	TEST( FromClauseTests, TryAddNullToDoesNotDereference ){
+		FromClause from;
+		from.TryAdd( Join{ms<Column>("a"), nullptr, false} );
+		ASSERT_EQ( from.Joins.size(), 1u );
+		EXPECT_FALSE( from.HasJoin() ); //a single-table from clause, not a join.
+	}
+
 	TEST( ObjectTests, ValueEquality ){
 		const DB::Object a = DB::Value{5}, b = DB::Value{5}, c = DB::Value{6};
 		EXPECT_TRUE( a==b );
@@ -72,6 +84,24 @@ namespace Jde::DB::Tests{
 	}
 
 	//#25: an Object holding Values must render placeholders (?,?), not the literal `[ 1, 2]` - GetParams appends the values, so the counts must match.
+	//ql-review3 C9: the glob bracket-class grammar used to be written out three times - GlobToLike, GlobToRegex and
+	//QL::matchClass.  It is one function now, so this is where its rules live.  `Body` excludes the '[', the negation and
+	//the ']', and `Close` indexes the ']'.
+	TEST( SyntaxTests, ParseGlobClass ){
+		const auto parse = []( sv glob, uint open=0 ){ return ParseGlobClass( glob, open ); };
+		auto c = parse( "[abc]" );          ASSERT_TRUE( c ); EXPECT_FALSE( c->Negate ); EXPECT_EQ( c->Body, "abc" ); EXPECT_EQ( c->Close, 4u );
+		c = parse( "[a-c]" );               ASSERT_TRUE( c ); EXPECT_EQ( c->Body, "a-c" );   //ranges are body text - only the ql matcher interprets them.
+		c = parse( "[!a-c]" );              ASSERT_TRUE( c ); EXPECT_TRUE( c->Negate ); EXPECT_EQ( c->Body, "a-c" ); EXPECT_EQ( c->Close, 5u );
+		c = parse( "[^a-c]" );              ASSERT_TRUE( c ); EXPECT_TRUE( c->Negate ); EXPECT_EQ( c->Body, "a-c" ); //both spellings of negation.
+		c = parse( "[]x]" );                ASSERT_TRUE( c ); EXPECT_EQ( c->Body, "]x" ); EXPECT_EQ( c->Close, 3u ); //a ']' first is a member, not the terminator.
+		c = parse( "[!]x]" );               ASSERT_TRUE( c ); EXPECT_TRUE( c->Negate ); EXPECT_EQ( c->Body, "]x" ); //…including right after the negation.
+		c = parse( "[a-]" );                ASSERT_TRUE( c ); EXPECT_EQ( c->Body, "a-" );    //a trailing '-' spans nothing, so it is a member.
+		c = parse( "x[ab]y", 1 );           ASSERT_TRUE( c ); EXPECT_EQ( c->Body, "ab" ); EXPECT_EQ( c->Close, 4u ); //not only at index 0.
+		EXPECT_FALSE( parse("[abc") );      //unterminated: the caller treats the '[' as a literal, as sqlite does.
+		EXPECT_FALSE( parse("[") );
+		EXPECT_FALSE( parse("[]") );        //that ']' is a member, so the class is still unterminated.
+	}
+
 	TEST( ObjectTests, ValuesRendersPlaceholders ){
 		DB::Object o = vector<DB::Value>{ DB::Value{1}, DB::Value{2}, DB::Value{3} };
 		EXPECT_EQ( DB::ToString(o), "(?,?,?)" );

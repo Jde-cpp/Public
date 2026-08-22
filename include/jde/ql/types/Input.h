@@ -20,6 +20,8 @@ namespace Jde::QL{
 		α FindKey()Ι->optional<DB::Key>;
 		α GetKey( SRCE )Ε->DB::Key;
 		α ExtrapolateVariables()Ι->jobject;
+		α UnboundVariables()Ι->vector<string>;
+		α CheckVariables( SRCE )Ε->void;
 		α Filter()Ι->const Filter&;
 		β JTableName()Ι->string=0;
 		α Limit()Ι->uint{ return TryNumber<uint>( "limit" ).value_or(0); }

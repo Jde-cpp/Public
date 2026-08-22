@@ -20,6 +20,9 @@ namespace Jde::DB{
 	Φ GlobToLike( sv glob )ι->string;  //T-SQL LIKE: '*'->'%', '?'->'_', a literal '%'/'_' bracket-escaped, '[!…]'->'[^…]'.
 	Φ GlobToRegex( sv glob )ι->string; //anchored regex, for dialects with REGEXP but no GLOB.
 
+	struct GlobClass{ bool Negate; sv Body; uint Close; };//Close indexes the ']'.
+	Φ ParseGlobClass( sv glob, uint open )ι->optional<GlobClass>;
+
 	struct ΓDB Syntax{
 		Ω Instance()->const Syntax&;
 		virtual ~Syntax()=default;

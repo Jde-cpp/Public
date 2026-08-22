@@ -50,6 +50,7 @@ namespace Jde::QL{
 		//α AwaitMutation()ι->TAwait<jvalue>::Task;
 		optional<jvalue> _readyResult;
 		vector<up<TAwait<jvalue>>> _awaitables;
+		up<Exception> _exception;//a hook that throws from the ι collection loop - rethrown from await_resume (#13).
 		const TableQL& _ql;
 		UserPK _userPK;
 	};
@@ -66,19 +67,18 @@ namespace Jde::QL{
 
 	struct MutationAwaits : TAwait<optional<jarray>>{
 		using base=TAwait<optional<jarray>>;
-		MutationAwaits( MutationQL mutation, UserPK executer, Hook::Operation op, SRCE )ι;
-		MutationAwaits( MutationQL mutation, UserPK executer, Hook::Operation op, uint pk=0, SRCE )ι;
+		MutationAwaits( MutationQL mutation, UserPK executer, Hook::Operation op, uint pk, SRCE )ι;
 		α await_ready()ι->bool override;
 		α Suspend()ι->void override;
 		α Execute()ι->IMutationAwait::Task;
 		α await_resume()ε->optional<jarray> override;
 	private:
 		vector<up<TAwait<jvalue>>> _awaitables;
+		up<Exception> _exception;//a hook that throws from the ι collection loop - rethrown from await_resume (#13).
 		MutationQL _mutation;
 		Hook::Operation _op;
 		uint _pk;
 		UserPK _userPK;
-		jobject _variables;
 	};
 
 	namespace Hook{

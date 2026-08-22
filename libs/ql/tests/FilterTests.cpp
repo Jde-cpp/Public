@@ -2,6 +2,7 @@
 //still matches a live query.  ToWhereClause (the SQL half) needs a DB::View, so it is not covered here.
 #include <gtest/gtest.h>
 #include <jde/db/Value.h>
+#include <jde/fwk/chrono.h>
 #include <jde/ql/types/FilterQL.h>
 #include <jde/ql/types/Input.h>
 #include <jde/ql/types/Parser.h>
@@ -32,6 +33,27 @@ namespace Jde::QL::Tests{
 		EXPECT_FALSE( filterValue(DB::EOperator::NotEqual, 42).Test(DB::Value{uint{42}}) );
 		EXPECT_TRUE( filterValue(DB::EOperator::Equal, "bob").Test(DB::Value{string{"bob"}}) );
 		EXPECT_FALSE( filterValue(DB::EOperator::Equal, "bob").Test(DB::Value{string{"alice"}}) );
+	}
+
+	//review3 #4: makeTimes runs from this constructor, and its `add` lambda is ι with a `catch( const runtime_error& )`.
+	//Chrono::ToTimePoint read the zone with std::stoi, which throws std::invalid_argument - a *logic*_error - so an
+	//ISO-shaped literal with a junk offset walked out of the lambda and terminated the process, anonymously, from
+	//`providers(name:"2026-08-02T10:00:00+ab"){ id }`.  ToTimePoint now only throws Jde::Exception, which the lambda catches,
+	//and the literal falls back to being an ordinary string - what an unparseable literal has always done.
+	TEST( FilterTests, MalformedTimeLiteralIsJustAString ){
+		let junk = filterValue( DB::EOperator::Equal, "2026-08-02T10:00:00+ab" );
+		EXPECT_TRUE( junk.Test(DB::Value{string{"2026-08-02T10:00:00+ab"}}) );
+		EXPECT_FALSE( junk.Test(DB::Value{string{"2026-08-02T10:00:00Z"}}) );
+		EXPECT_FALSE( junk.Test(DB::Value{Chrono::ToTimePoint("2026-08-02T10:00:00Z")}) ); //no _times, so a time column cannot match it.
+		EXPECT_NO_THROW( filterValue(DB::EOperator::In, jarray{"2026-08-02T10:00:00Z", "2026-08-02T10:00:00+ab"}) ); //one bad literal in an array drops them all.
+		//#17: the other half of the repro - a junk *fraction* rather than a junk offset.  It reaches ToTimePoint's other
+		//branch (libc++ read this with stod; the %FT%T parse refuses it here), and it must be as harmless as the offset is.
+		EXPECT_NO_THROW( filterValue(DB::EOperator::Equal, "2026-08-02T10:00:00.x") );
+		EXPECT_TRUE( filterValue(DB::EOperator::Equal, "2026-08-02T10:00:00.x").Test(DB::Value{string{"2026-08-02T10:00:00.x"}}) );
+
+		let real = filterValue( DB::EOperator::Equal, "2026-08-02T10:00:00Z" ); //the control: a parseable literal is still compared chronologically.
+		EXPECT_TRUE( real.Test(DB::Value{Chrono::ToTimePoint("2026-08-02T10:00:00Z")}) );
+		EXPECT_FALSE( real.Test(DB::Value{Chrono::ToTimePoint("2026-08-02T10:00:01Z")}) );
 	}
 
 	TEST( FilterTests, RelationalOperators ){
@@ -71,15 +93,52 @@ namespace Jde::QL::Tests{
 		EXPECT_FALSE( matched );
 		EXPECT_FALSE( filterValue(DB::EOperator::Regex, 42).Test(DB::Value{string{"42"}}) );   //not a string.
 		EXPECT_FALSE( filterValue(DB::EOperator::Glob, 42).Test(DB::Value{string{"42"}}) );
-		let tooLong = string( MaxPatternLength+1, 'a' );
-		EXPECT_FALSE( filterValue(DB::EOperator::Regex, jstring{tooLong}).Test(DB::Value{tooLong}) );
+		let tooLongGlob = string( MaxPatternLength+1, 'a' );
+		EXPECT_FALSE( filterValue(DB::EOperator::Glob, jstring{tooLongGlob}).Test(DB::Value{tooLongGlob}) );
+		let tooLongRegex = string( MaxRegexLength+1, 'a' ); //#37: the regex limit is the smaller of the two.
+		EXPECT_FALSE( filterValue(DB::EOperator::Regex, jstring{tooLongRegex}).Test(DB::Value{tooLongRegex}) );
+	}
+
+	//#37: boost's budget is N*S^2 states with S the *pattern length*, so MaxPatternLength=1024 admitted patterns that cost
+	//seconds per 4KB subject - measured 12.3s for a 1000-character `.*` chain, on the log fan-out thread, under
+	//SubscribeLog::Write's lock.  A regex now gets MaxRegexLength instead, and is refused before it is compiled.
+	TEST( FilterTests, ALongRegexIsRefusedRatherThanRun ){
+		let subject = string( 4000, 'a' )+"!"; //the '!' denies the match, so every split of the a's is tried.
+		let chain = []( uint characters ){ string y; while( y.size()+3<=characters ) y += ".*"; return y+"="; };//'=' included in the count.
+		let pattern = chain( 1000 );
+		let start = std::chrono::steady_clock::now();
+		EXPECT_FALSE( filterValue(DB::EOperator::Regex, jstring{pattern}).Test(DB::Value{subject}) );
+		let elapsed = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now()-start );
+		EXPECT_LT( elapsed, std::chrono::milliseconds{50} ) << pattern.size() << "-character pattern took " << elapsed.count() << "ms";
+
+		//and the worst one that is still admitted:  S is capped, so the cost is.  S^2 - a 16th of the length is a 256th of the
+		//work.  Measured here (win-clang debug, this 4KB subject): 127 characters 894ms, 63 characters 220ms.
+		let admitted = chain( MaxRegexLength );
+		ASSERT_LE( admitted.size(), MaxRegexLength );
+		auto worst = filterValue( DB::EOperator::Regex, jstring{admitted} );
+		let start2 = std::chrono::steady_clock::now();
+		EXPECT_FALSE( worst.Test(DB::Value{subject}) );
+		let elapsed2 = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now()-start2 );
+		//and it is paid once, not per row:  a pattern that costs this much has exhausted the budget, which poisons it.
+		let start3 = std::chrono::steady_clock::now();
+		for( uint i{}; i<100; ++i )
+			EXPECT_FALSE( worst.Test(DB::Value{subject}) );
+		let elapsed3 = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now()-start3 );
+		EXPECT_LT( elapsed3, elapsed2 ) << "100 more rows cost " << elapsed3.count() << "ms - the pattern was not poisoned";
+		EXPECT_LT( elapsed2, std::chrono::milliseconds{500} ) << admitted.size() << "-character pattern took " << elapsed2.count() << "ms";
+	}
+	//glob keeps the longer limit:  globMatch walks the subject, it does not backtrack over a compiled machine.
+	TEST( FilterTests, GlobKeepsTheLongerLimit ){
+		let pattern = string( MaxRegexLength+1, '*' );
+		ASSERT_LT( pattern.size(), MaxPatternLength );
+		EXPECT_TRUE( filterValue(DB::EOperator::Glob, jstring{pattern}).Test(DB::Value{string{"anything"}}) );
 	}
 
 	//Catastrophically-backtracking patterns must come back promptly instead of pinning the fan-out thread.  All of these
 	//are valid, tiny, and far inside MaxPatternLength, so the compile-side guards do not see them - only the engine's
 	//own bounds do, which is the whole reason the operator is on boost::regex rather than std::regex.  The first two
-	//shapes are stopped by boost's recursion-depth guard, the `.*`-chains by BOOST_REGEX_MAX_STATE_COUNT.  On libc++,
-	//whose std::regex is unbounded, this test does not finish.
+	//shapes are stopped by boost's recursion-depth guard, the `.*`-chains by the N*S^2 budget (#37: not by
+	//BOOST_REGEX_MAX_STATE_COUNT, which caps only the N^2 term).  On libc++, whose std::regex is unbounded, this never finishes.
 	TEST( FilterTests, CatastrophicRegexIsBounded ){
 		let subject = string( 42, 'a' )+"!"; //the trailing '!' denies the match, forcing every way to split the a's.
 		for( let pattern : {"(a+)+$", "(a|a)*$", ".*.*.*.*.*.*=", "a*a*a*a*a*a*a*a*b"} ){

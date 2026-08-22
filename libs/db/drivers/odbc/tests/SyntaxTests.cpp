@@ -52,6 +52,7 @@ namespace Jde::DB::Odbc::Tests{
 		EXPECT_EQ( GlobToLike("[a-c]at"), "[a-c]at" );  //T-SQL LIKE has classes - they survive.
 		EXPECT_EQ( GlobToLike("[!a-c]at"), "[^a-c]at" );//glob accepts '!' for negation, T-SQL only '^'.
 		EXPECT_EQ( GlobToLike("[^a-c]at"), "[^a-c]at" );
+		EXPECT_EQ( GlobToLike("[]x]y"), "[]x]y" );      //C9: a ']' first in the class is a member - the body passes through verbatim.
 		EXPECT_EQ( GlobToLike("[abc"), "[[]abc" );      //unterminated -> a literal '[', which LIKE also has to escape.
 	}
 

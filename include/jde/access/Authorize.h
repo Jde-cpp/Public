@@ -19,7 +19,9 @@ namespace Jde::Access{
 		α UserName( UserPK userPK )ι->string override;
 
 		α AddResource( ResourcePK resourcePK, string schema, string resourceTarget, string criteria )ι->void;
-		α FindResource( const Resource& resource )Ι->const Resource*{ ul l{Mutex}; return FindResource( resource, l ); }
+		//By value:  the protected overload's pointer aliases Resources, a flat_map any concurrent insert reallocates, so nothing may
+		//carry it past the lock (access-review3 #19).  A shared lock, as this reads only.
+		α FindResource( const Resource& resource )Ι->optional<Resource>{ Jde::sl l{Mutex}; auto p = FindResource( resource, l ); return p ? optional<Resource>{*p} : optional<Resource>{}; }
 		α FindActiveResourcePK( string schema, str resourceName, str criteria )ι->optional<ResourcePK>{ Jde::sl _{Mutex}; return FindActiveResourcePK(schema, resourceName, criteria, _); }
 		α GetSchema( str resourceTarget, SL sl )ε->string;
 
@@ -34,7 +36,7 @@ namespace Jde::Access{
 		α TestAddGroupMember( GroupPK groupPK, flat_set<IdentityPK::Type>&& memberPKs, SRCE )ε->void;
 		α TestAddRoleMember( RolePK parent, RolePK child, SRCE )ε->void;
 	protected:
-		α FindResource( const Resource& resource, ul& l )Ι->const Resource*;
+		Ŧ FindResource( const Resource& resource, T& l )Ι->const Resource*;
 		Ŧ FindActiveResourcePK( str schemaName, str resourceName, str criteria, T& l )Ι->optional<ResourcePK>;
 
 		string _app;
@@ -95,6 +97,20 @@ namespace Jde::Access{
 		friend struct AccessListener; friend struct Loader; friend struct ConfigureAwait; friend struct Server::AuthenticateAwait; friend struct Server::LoginAwait;
 	};
 
+	Ŧ Authorize::FindResource( const Resource& resource, T& l )Ι->const Resource*{
+		auto pk = resource.PK;
+		if( !pk && resource.Schema.size() && resource.Target.size() )
+			pk = FindActiveResourcePK( resource.Schema, resource.Target, resource.Criteria, l ).value_or( 0 );
+		if( auto p = pk ? Resources.find(pk) : Resources.end(); p!=Resources.end() )
+			return &p->second;
+		else if( resource.Target.size() ){
+			for( const auto& [existingPK,existing] : Resources ){
+				if( (resource.Schema.empty() || existing.Schema==resource.Schema) && existing.Target==resource.Target && existing.Criteria.empty() )
+					return &existing;
+			}
+		}
+		return nullptr;
+	}
 	Ŧ Authorize::FindActiveResourcePK( str schemaName, str resourceTarget, str criteria, T& /*lock*/ )Ι->optional<ResourcePK>{
 		if( auto schemaResources = SchemaResources.find(schemaName); schemaResources!=SchemaResources.end() ){
 			if( auto targetResources = schemaResources->second.find(resourceTarget); targetResources!=schemaResources->second.end() ){

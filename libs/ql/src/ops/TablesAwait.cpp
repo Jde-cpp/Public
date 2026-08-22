@@ -17,16 +17,19 @@ namespace Jde::QL{
 					//after the call may read `table` (or a reference into it) again - hence the branches that move are terminal.
 					let& jsonName = table.JsonName;
 					let isStatus = jsonName=="status";
-					let isLogSettings = jsonName.starts_with( "logSetting" );
-					let isLog = !isLogSettings && jsonName.starts_with( "log" ) && !jsonName.starts_with( "logLevel" );
+					//#44: the exact names, not a prefix.  `starts_with("log")` had already had to carve `logLevel` out by hand, and the next
+					//`log*` table would have been handed to LogQuery the same way - which takes the table by rvalue, so there is no recovering
+					//from it.  These four are every spelling any caller sends; a real table named `log*` is now simply not one of them.
+					let isLogSettings = jsonName=="logSetting" || jsonName=="logSettings";
+					let isLog = jsonName=="log" || jsonName=="logs";
 					if( isStatus )
-						result = _ql->StatusQuery( move(table) ); //returns by value - always sets result, so the select fallback below can't see the moved-from table.
+						result = _ql->StatusQuery( move(table), _creds, _sl );
 					else if( isLogSettings || isLog ){
-						auto await = isLogSettings ? _ql->LogSettingsQuery( move(table), _sl ) : _ql->LogQuery( move(table), _sl );
+						auto await = isLogSettings ? _ql->LogSettingsQuery( move(table), _creds, _sl ) : _ql->LogQuery( move(table), _creds, _sl );
 						THROW_IF( !await, "[{}]{} returned null.", returnName, isLogSettings ? "LogSettingsQuery" : "LogQuery" ); //the table is gone - there is nothing left to fall back on.
 						result = co_await *await;
 					}
-					else if( auto await = _ql->CustomQuery( table, _creds, _sl ); await ) //takes an lvalue: ownership stays here.
+					else if( auto await = jsonName=="__schema" ? nullptr : _ql->CustomQuery( table, _creds, _sl ); await )
 						result = co_await *await;
 				}
 				if( !result ){

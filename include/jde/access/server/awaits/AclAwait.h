@@ -22,8 +22,8 @@ namespace Jde::Access::Server{
 		α InsertPermission( const jobject& permission )ι->TAwait<optional<ResourcePK>>::Task;
 		α InsertPermission( ERights allowed, ERights denied, ResourcePK resourcePK )ι->DB::ScalerAwait<PermissionPK>::Task;
 		α InsertRole()ι->DB::ExecuteAwait::Task;
-		α PurgeAcl()ι->QL::QLAwait<jobject>::Task;
-		α PurgeAcl( IdentityPK::Type identityPK, PermissionPK permissionPK )ι->DB::ExecuteAwait::Task;
+		α PurgeAcl()ι->DB::ScalerAwaitOpt<uint>::Task;
+		α PurgeAcl( IdentityPK::Type identityPK, PermissionPK permissionPK, bool isRole )ι->DB::ExecuteAwait::Task;
 	};
 
 	struct AclQLSelectAwait final : TAwait<jvalue>, noncopyable{
@@ -34,7 +34,7 @@ namespace Jde::Access::Server{
 		{}
 		α Suspend()ι->void;
 	private:
-		α GetStatement( const QL::TableQL& childTable, sp<DB::Column> joinColumn )ε->optional<DB::Statement>;
+		α GetStatement( const QL::TableQL& childTable, sp<DB::Column> joinColumn )ε->DB::Statement;
 		α LoadRoles( const QL::TableQL& permissionRightsQL )ι->DB::SelectAwait::Task;
 		α LoadPermissionRights( const QL::TableQL& permissionRightsQL )ι->DB::SelectAwait::Task;
 		α LoadPermissions( const QL::TableQL& permissionsQL )ι->DB::SelectAwait::Task;

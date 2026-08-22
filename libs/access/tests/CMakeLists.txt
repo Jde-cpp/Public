@@ -20,8 +20,8 @@ endif()
 sqliteProcDependencies( ${targetName} Jde.DB.Sqlite.AppServer ) #the ctest run below dlopens these via config/args/sqlite
 
 compileOptions( ${targetName} )
-file(GLOB sources *.cpp )
-file(GLOB headers "*/*.h")
+file( GLOB sources CONFIGURE_DEPENDS *.cpp ) #CONFIGURE_DEPENDS: a new *Tests.cpp is referenced by nothing else, so a stale glob drops it with no link error and a green suite (access-review3 #30) - see the note in functions.cmake.
+file( GLOB headers CONFIGURE_DEPENDS *.h )
 target_sources(${targetName} PRIVATE ${sources} ${headers} )
 
 find_package( GTest REQUIRED )

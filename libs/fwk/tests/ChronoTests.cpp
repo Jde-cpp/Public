@@ -106,6 +106,23 @@ namespace Jde::Tests{
 		EXPECT_NE( parseFailure("garbage-that-ends-in-a-zulu-charZ").find("Could not parse ISO time"), string::npos );
 	}
 
+	//ql-review3 #4: the zone offset is read with std::stoi, which throws std::invalid_argument - a logic_error, not a
+	//runtime_error - so a junk offset escaped every `catch( runtime_error& )` in the callers and terminated the process
+	//(QL::makeTimes' noexcept lambda, from an anonymous `providers(name:"2026-08-02T10:00:00+ab")`).  ToTimePoint now only
+	//throws Jde::Exception.  parseFailure catches Exception, so anything else still takes the suite down with it.
+	TEST( ChronoTests, ToTimePointRejectsAMalformedZone ){
+		for( let iso : {"2026-08-02T10:00:00+ab", "2026-08-02T10:00:00-xy"} ){
+			let what = parseFailure( iso );
+			EXPECT_NE( what.find("Could not parse ISO"), string::npos ) << "'" << iso << "' parsed, or threw something else: " << what;
+		}
+		EXPECT_NO_THROW( Chrono::ToTimePoint("2026-08-02T10:00:00+05:00") ); //the control: a real offset still parses.
+		EXPECT_NO_THROW( Chrono::ToTimePoint("2026-08-02T10:00:00.123456") ); //the fraction is a digit loop now, not a stod.
+		//What is *not* claimed:  stoi takes any numeric prefix and an absent offset reads as zero, so these are accepted as
+		//UTC rather than rejected.  Wrong, but quietly wrong - no longer a terminate, which is what #4 was about.
+		EXPECT_NO_THROW( Chrono::ToTimePoint("2026-08-02T10:00:00+") );
+		EXPECT_NO_THROW( Chrono::ToTimePoint("2026-08-02T10:00:00+0a:00") );
+	}
+
 	//year_month_day::ok() is what separates a real calendar date from an arithmetic one; without it sys_days{ymd}
 	//happily normalizes Feb 30 into March, so a bad date becomes a valid-looking time point a few days out.
 	TEST( ChronoTests, InvalidYmdThrows ){

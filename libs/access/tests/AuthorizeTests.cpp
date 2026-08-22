@@ -287,11 +287,21 @@ namespace Jde::Access::Tests{
 		EXPECT_TRUE( threw ) << "an unknown user must fail the admin check through the awaitable";
 	}
 
+	//access-review3 #29:  the fallback called std::to_string( userPK ), which bound PK's then-implicit operator bool and printed "1"
+	//for every unknown id - the one identifier the "User not found" response carries.  PK's conversion is explicit now, too.
+	TEST( AuthorizeTests, UserNameFallbackPrintsThePk ){
+		auto auth = createAuthorizer();
+		EXPECT_EQ( "4242", auth->UserName(UserPK{4242}) ); //not in Users - the numeric fallback.
+		EXPECT_EQ( "0", auth->UserName(UserPK{0}) );
+	}
+
 	TEST( AuthorizeTests, FindResourceBySchemaTarget ){
 		auto auth = createAuthorizer();
 		let found = auth->FindResource( Resource{jobject{{"schemaName",_schema},{"target",_target}}} );//no pk - resolve from schema/target.
+		static_assert( std::is_same_v<decltype(found), const optional<Resource>> ); //access-review3 #19: a copy, not a pointer into Resources that outlives the lock.
 		ASSERT_TRUE( found );
 		ASSERT_EQ( found->PK, _resourcePK );
+		EXPECT_FALSE( auth->FindResource(Resource{ResourcePK{99}, {}}) ); //unknown pk, no schema/target to fall back on.
 	}
 
 	TEST( AuthorizeTests, GroupCycleGuards ){

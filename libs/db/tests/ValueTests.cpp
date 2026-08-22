@@ -29,12 +29,16 @@ namespace Jde::DB::Tests{
 		for( let& type : {Int16, Int} )
 			EXPECT_EQ( alt(type, jvalue{-5}), EValue::Int32 ) << (uint)type;
 		EXPECT_EQ( alt(Long, jvalue{-6}), EValue::Int64 );
-		//The variant has no uint8/uint16 member.  uint8 is unsigned char, which promotes to `int` on every platform.
-		//UInt16/UInt bind as exact-width uint32_t: their fast typedefs are 64-bit on glibc, so binding those would pick
-		//the uint64 alternative on Linux but uint32 on Windows - value-preserving either way, but platform-dependent.
+		//The narrow unsigned widths land on *different* alternatives, and none picks a narrow one: the variant has no
+		//uint8/uint16 member, so each resolves by what its typedef is.  uint8 is unsigned char and reaches `int`.  uint16 and
+		//uint32 are the uint_fast typedefs, and those are what the platform makes them - 32-bit on MSVC, so uint32_t; 64-bit on
+		//glibc x86_64 (unsigned long), so `uint`.  Recorded per platform rather than pinned:  value-preserving either way and
+		//every driver binds them as integers - but it is not by design, and pinning a width would change what Linux binds.
+		constexpr auto fast16 = sizeof(uint16)==sizeof(uint32_t) ? EValue::UInt32 : EValue::UInt64;
+		constexpr auto fast32 = sizeof(uint32)==sizeof(uint32_t) ? EValue::UInt32 : EValue::UInt64;
 		EXPECT_EQ( alt(UInt8, jvalue{7}), EValue::Int32 );
-		EXPECT_EQ( alt(UInt16, jvalue{8}), EValue::UInt32 );
-		EXPECT_EQ( alt(UInt, jvalue{9}), EValue::UInt32 );
+		EXPECT_EQ( alt(UInt16, jvalue{8}), fast16 );
+		EXPECT_EQ( alt(UInt, jvalue{9}), fast32 );
 		EXPECT_EQ( alt(ULong, jvalue{10}), EValue::UInt64 );
 		for( let& type : {SmallFloat, Float, Decimal, Numeric, Money} )
 			EXPECT_EQ( alt(type, jvalue{1.5}), EValue::Double ) << (uint)type;

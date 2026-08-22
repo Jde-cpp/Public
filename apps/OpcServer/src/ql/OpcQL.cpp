@@ -25,7 +25,8 @@ namespace Jde::Opc::Server{
 		return App::LogSettingsMAwait::IsApplicable( m ) ? mu<App::Client::LogSettingsClientMAwait>( move(m), AppClient(), creds.UserPK(), sl ) : nullptr;
 	}
 
-	α OpcQL::LogSettingsQuery( QL::TableQL&& ql, SL sl )ι->up<TAwait<jvalue>>{
+	α OpcQL::LogSettingsQuery( QL::TableQL&& ql, QL::Creds executer, SL sl )ε->up<TAwait<jvalue>>{
+		RequireAuthenticated( executer, "logSettings", sl );
 		return mu<App::Client::LogSettingsClientAwait>( move(ql), sl );
 	}
 }

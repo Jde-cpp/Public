@@ -10,17 +10,19 @@ namespace Jde::QL{
 	struct PurgeAwait final: TAwait<jvalue>{
 		using base=TAwait<jvalue>;
 		PurgeAwait( sp<DB::Table> table, MutationQL mutation, UserPK userPK, SRCE )ι;
+		α await_ready()ι->bool override;
+		α await_resume()ε->jvalue override;
 		α Suspend()ι->void override{ Before(); }
 	private:
 		α Before()ι->MutationAwaits::Task;
 		α Statements( const DB::Table& table )ε->vector<DB::Sql>;
 		α Execute()ι->DB::ExecuteAwait::Task;
-		α After( Exception e )ι->MutationAwaits::Task;
+		α After( up<runtime_error> e )ι->MutationAwaits::Task;
 		α After( uint y )ι->MutationAwaits::Task;
 		α Resume( jvalue&& v )ι->void;
 		const MutationQL _mutation;
 		sp<DB::Table> _table;
 		UserPK _userPK;
-		jobject _variables;
+		up<Exception> _exception;//#25: the refusal, raised before the hook could run and rethrown from await_resume.
 	};
 }

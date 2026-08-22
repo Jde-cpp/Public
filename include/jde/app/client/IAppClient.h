@@ -1,7 +1,7 @@
 #pragma once
 #include "../IApp.h"
 #include <jde/fwk/crypto/CryptoSettings.h>
-#include <jde/ql/UnsubscribeAwait.h>
+#include <jde/ql/IQL.h>
 #include <jde/web/Jwt.h>
 #include <jde/app/client/awaits/SocketAwait.h>
 #include "AppClientSocketSession.h"
@@ -35,7 +35,7 @@ namespace Jde::App::Client{
 		α CloseSocketSession( bool terminate, SL sl )ι->void;
     α SessionId()Ι->SessionPK{ auto p=LoadSession(); return p ? p->SessionId() : SessionPK{}; }
 		α Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, SRCE )ε->await<jarray>;
-		[[nodiscard]] α Unsubscribe( sp<QL::IListener> listener, vector<QL::SubscriptionId> ids, SRCE )ε->QL::UnsubscribeAwait;//ids empty = all of listener's subscriptions.
+		α Unsubscribe( sp<QL::IListener> listener, vector<QL::SubscriptionId> ids, SRCE )ε->void;
 
 		string ResourceSchema;
 		optional<Crypto::CryptoSettings> SslSettings;

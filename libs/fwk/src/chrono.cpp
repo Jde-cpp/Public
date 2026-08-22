@@ -42,21 +42,26 @@ namespace Jde{
 			let type = is.get();
 			if( num.empty() || type==std::char_traits<char>::eof() )
 				break;
-			let value = std::stod( num );
-			//date units use the exact std::chrono period ratios so ToDuration is the inverse of ToString
-			//(which emits years/months/days) - a month is ~730.5h, not 720h; a year 365.2425d, not 365.25d.
-			if( type=='Y' )
-				duration += duration_cast<Duration>( std::chrono::duration<double,years::period>{value} );
-			else if( !parsingTime && type=='M' )
-				duration += duration_cast<Duration>( std::chrono::duration<double,months::period>{value} );
-			else if( type=='D' )
-				duration += duration_cast<Duration>( std::chrono::duration<double,days::period>{value} );
-			else if( type=='H' )
-				duration += minutes( Round(value*60) );
-			else if( type=='M' )
-				duration += seconds( Round(value*60) );
-			else if( type=='S' )
-				duration += milliseconds( Round(value*1000) );
+			try{
+				let value = std::stod( num );
+				//date units use the exact std::chrono period ratios so ToDuration is the inverse of ToString
+				//(which emits years/months/days) - a month is ~730.5h, not 720h; a year 365.2425d, not 365.25d.
+				if( type=='Y' )
+					duration += duration_cast<Duration>( std::chrono::duration<double,years::period>{value} );
+				else if( !parsingTime && type=='M' )
+					duration += duration_cast<Duration>( std::chrono::duration<double,months::period>{value} );
+				else if( type=='D' )
+					duration += duration_cast<Duration>( std::chrono::duration<double,days::period>{value} );
+				else if( type=='H' )
+					duration += minutes( Round(value*60) );
+				else if( type=='M' )
+					duration += seconds( Round(value*60) );
+				else if( type=='S' )
+					duration += milliseconds( Round(value*1000) );
+			}
+			catch( std::logic_error& e ){
+				throw Exception{ sl, ExceptionArgs{}, move(e), "Could not parse ISO duration token:  {}{}", num, type };
+			}
 		}
 		return duration;
 	}
@@ -88,9 +93,14 @@ namespace Jde{
 				let off = iso.substr( zonePos );
 				let sign = off[0]=='-' ? -1 : 1;
 				string digits; for( char ch : off.substr(1) ) if( ch!=':' ) digits += ch;
-				let oh = digits.size()>=2 ? std::stoi(digits.substr(0,2)) : 0;
-				let om = digits.size()>=4 ? std::stoi(digits.substr(2,2)) : 0;
-				tp -= sign*( hours{oh}+minutes{om} );
+				try{
+					let oh = digits.size()>=2 ? std::stoi(digits.substr(0,2)) : 0;
+					let om = digits.size()>=4 ? std::stoi(digits.substr(2,2)) : 0;
+					tp -= sign*( hours{oh}+minutes{om} );
+				}
+				catch( std::logic_error& e ){
+					throw Exception{ sl, ExceptionArgs{}, move(e), "Could not parse ISO time zone offset:  {}", off };
+				}
 			}
 			else{
 				std::istringstream is{ iso };
@@ -135,9 +145,15 @@ namespace Jde{
 				let off = iso.substr( zonePos );
 				let sign = off[0]=='-' ? -1 : 1;
 				string digits; for( char ch : off.substr(1) ) if( ch!=':' ) digits += ch;
-				let oh = digits.size()>=2 ? std::stoi(digits.substr(0,2)) : 0;
-				let om = digits.size()>=4 ? std::stoi(digits.substr(2,2)) : 0;
-				tp -= sign*( hours{oh}+minutes{om} );
+				try{
+					let oh = digits.size()>=2 ? std::stoi(digits.substr(0,2)) : 0;
+					let om = digits.size()>=4 ? std::stoi(digits.substr(2,2)) : 0;
+					tp -= sign*( hours{oh}+minutes{om} );
+
+				}
+				catch( std::logic_error& e ){
+					throw Exception{ sl, ExceptionArgs{}, move(e), "Could not parse ISO time zone offset:  {}", off };
+				}
 			}
 			return tp;
 		#endif

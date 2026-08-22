@@ -14,6 +14,7 @@ namespace Jde::QL{
 	constexpr ELogTags _tags{ ELogTags::QL };
 	Ω getEnumValue( const DB::Column& c, const QLColumn& qlCol, const jvalue& v )->Value;
 	α GetEnumValues( const DB::View& table, SRCE )ε->flat_map<uint,string>;
+	α ToFlags( const flat_map<uint,string>& values, const jarray& flags, sv memberName, SRCE )ε->uint;//ops/SelectAwait.cpp - shared with UpdateAwait (#48).
 
 	InsertAwait::InsertAwait( sp<DB::Table> table, MutationQL m, UserPK executer, SL sl )ι:
 		InsertAwait( table, move(m), false, executer, sl )
@@ -41,10 +42,21 @@ namespace Jde::QL{
 		for( let& [key,value] : input ){ //look for nested tables.
 			if( auto nestedTable = value.is_object() ? table.Schema->FindTable(DB::Names::FromJson(DB::Names::ToPlural(key))) : nullptr; nestedTable ){
 				let& o = value.get_object();
-				if( o.size()==1 && o.contains("id") && nestedTable->SurrogateKeys.size() )
-					_nestedIds.emplace( nestedTable->SurrogateKeys[0]->Name, DB::Value{Json::AsNumber<uint>(o, "id")} );
-				else
+				if( o.size()==1 && o.contains("id") && nestedTable->SurrogateKeys.size() ){
+					nestedTable->Authorize( Access::ERights::Read, _executer, _sl );
+					//#24: the same rule as the pk branch in AddStatement - `identity:{id:N}` on a table that *extends* identities
+					//would pre-seed the back-fill and bind the new row to N, so the id this insert is about to create is dropped.
+					let extends = table.IsView() ? nullptr : AsTable(table).Extends;
+					if( extends && extends->Name==nestedTable->Name ){
+						WARNT( ELogTags::QL, "[{}]ignoring the supplied '{}' id - an extension row takes its pk from the row it extends.", table.Name, string{key} );
+					}
+					else
+						_nestedIds.emplace( nestedTable->SurrogateKeys[0]->Name, DB::Value{Json::AsNumber<uint>(o, "id")} );
+				}
+				else{
+					nestedTable->Authorize( Access::ERights::Create, _executer, _sl );
 					CreateQuery( *nestedTable, o, true );
+				}
 			}
 		}
 		if( table.Extends && !nested )
@@ -63,13 +75,23 @@ namespace Jde::QL{
 			const QLColumn qlCol{ c };
 			Value value;
 			let memberName = qlCol.MemberName();
-			if( let jvalue = input.if_contains(memberName); jvalue ){// calling a stored proc, so need all columns.
+			//#24: an extension's pk is the parent row's id - it comes from the insert a few lines up, never from the client.
+			//Honouring `identityId:N` (or `id:N`) bound the new users row to an existing identity and left the identities row
+			//this mutation just created an orphan;  ignoring it puts the column in _missingColumns, where Execute fills it in.
+			let isExtensionKey = !_identityInsert && c->IsPK() && !table.IsView() && AsTable(table).Extends;
+			if( isExtensionKey && (input.if_contains(memberName) || input.if_contains("id")) )
+				WARNT( ELogTags::QL, "[{}.{}]ignoring the supplied key - an extension row takes its pk from the row it extends.", table.Name, c->Name );
+			if( let jvalue = isExtensionKey ? nullptr : input.if_contains(memberName); jvalue ){// calling a stored proc, so need all columns.
 				++cNonDefaultArgs;
 				value = c->IsEnum() && (jvalue->is_string() || jvalue->is_array())
 					? getEnumValue( *c, qlCol, *jvalue )
 					: Value{ c->Type, *jvalue };
 			}
-			else if( let id = c->IsPK() ? input.if_contains("id") : nullptr; id )
+			//#24: still ungated beyond the extension check above - the schema seed inserts its enum rows through this branch
+			//(`createRights( name:"None", id:0 )`, which LocalQL::Upsert routes here *without* _identityInsert), so gating it on
+			//_identityInsert as the fix note suggests fails startup.  The extension case, which is the one that binds a new row
+			//to someone else's identity, is handled by isExtensionKey.
+			else if( let id = !isExtensionKey && c->IsPK() ? input.if_contains("id") : nullptr; id )
 				value = Value{ c->Type, *id };
 			else if( !c->Default && c->Insertable ){ //insertable=not populated by stored proc, may [not] be an extension record.
 				THROW_IF( !c->PKTable, "No default for '{}' in '{}'. mutation='{}'", c->Name, table.Name, _mutation.ToString() );
@@ -82,10 +104,13 @@ namespace Jde::QL{
 				value = *c->Default;
 			statement.Add( c, value.Variant );
 		}
-		if( (cNonDefaultArgs || missingColumns.size()) && cNonDefaultArgs!=missingColumns.size() ){//don't want to insert just identity_id in users table.
+		//`missingColumns` only ever grows next to a `++cNonDefaultArgs`, so its size can never exceed the count.  The guard is
+		//therefore true only when cNonDefaultArgs>missingColumns.size()>=0, i.e. cNonDefaultArgs>0 - which is why the old
+		//`(cNonDefaultArgs || missingColumns.size())` disjunct and the empty-InsertClause arm below could never do anything.
+		if( cNonDefaultArgs!=missingColumns.size() ){//don't want to insert just identity_id in users table.
 			if( /*table.SequenceColumn() &&*/ !_identityInsert ) //role does not have a seq column, but has a return param.
 				statement.Add( table.SequenceColumn(), (uint)0ul );
-			_statements.emplace_back( cNonDefaultArgs>0 ? move(statement) : DB::InsertClause{} );
+			_statements.emplace_back( move(statement) );
 			_missingColumns.emplace_back( move(missingColumns) );
 		}
 	}
@@ -144,10 +169,10 @@ namespace Jde::QL{
 			InsertAfter( move(y) );
 		}
 		catch( runtime_error& e ){
-			InsertFailure( move(e) );
+			InsertFailure( ToExceptionPtr(move(e)) );
 		}
 	}
-	α InsertAwait::InsertAfter( jarray&& result )ι->MutationAwaits::Task{
+	α InsertAwait::InsertAfter( jarray result )ι->MutationAwaits::Task{
 		try{
 			let id = result.size() ? Json::FindNumber<uint>(result[0], "id").value_or(0) : 0;
 			co_await Hook::InsertAfter( id, _mutation, _executer );
@@ -157,17 +182,22 @@ namespace Jde::QL{
 			ResumeExp( move(e) );
 		}
 	}
-	α InsertAwait::InsertFailure( runtime_error e )ι->MutationAwaits::Task{
+	//#28: by value, because the coroutine outlives the catch block that built it - but as up<Exception>, so the dynamic type
+	//survives.  ResumeExp( Exception&& ) hands the referent to SetExp, which calls the virtual Move().
+	α InsertAwait::InsertFailure( up<runtime_error> e )ι->MutationAwaits::Task{
 		try{
 			co_await Hook::InsertFailure( _mutation, _executer );
-			ResumeExp( move(e) );
+			ResumeExp( move(*e) );
 		}
 		catch( runtime_error& e2 ){
 			ResumeExp( move(e2) );
 		}
 	}
 	α InsertAwait::Resume( jarray&& v )ι->void{
-		Subscriptions::OnMutation( _mutation, v.size() ? v[0] : jvalue{} );
+		//#47: the insert half - no row means no statement inserted one, and publishing `null` told subscribers a row they could
+		//not identify had appeared.
+		if( v.size() )
+			Subscriptions::OnMutation( _mutation, v[0] );
 		base::Resume( move(v) );
 	}
 
@@ -186,17 +216,8 @@ namespace Jde::QL{
 			let enum_ = FindKey( values, string{v.get_string()} ); THROW_IF( !enum_, "Could not find '{}' for {}", string{v.get_string()}, qlCol.MemberName() );
 			y = *enum_;
 		}
-		else{
-			let& jflags = v.get_array();
-			uint flags{};
-			for( let& jflag : jflags ){
-				if( !jflag.is_string() )
-					continue;
-				let flag = FindKey( values, string{jflag.get_string()} ); THROW_IF( !flag, "Could not find '{}' for {}", string{jflag.get_string()}, qlCol.MemberName() );
-				flags |= *flag;
-			}
-			y = Value{ c.Type, flags };
-		}
+		else
+			y = Value{ c.Type, ToFlags(values, v.get_array(), qlCol.MemberName()) };
 		return y;
 	}
 }

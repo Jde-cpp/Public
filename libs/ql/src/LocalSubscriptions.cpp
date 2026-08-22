@@ -80,6 +80,35 @@ namespace Jde::QL{
 		return y;
 	}
 
+	//#53: the subscription's own arguments are a predicate, and the generic fan-out never evaluated one - only the log path did
+	//(SubscribeLog::Write, column by column).  So `resourcesCreated(schemaName:"opc")` was delivered every createResource, and
+	//the args the parser keeps were projection-only decoration.  A column the mutation says nothing about is not a mismatch, it
+	//is unknowable, and is delivered as before;  paging keys are not predicates.
+	Ω toUnderlying( const jvalue& v )ι->optional<DB::Value::Underlying>{
+		using enum boost::json::kind;
+		switch( v.kind() ){
+		case string: return DB::Value::Underlying{ std::string{v.get_string()} };
+		case int64: return DB::Value::Underlying{ (_int)v.get_int64() };
+		case uint64: return DB::Value::Underlying{ (uint)v.get_uint64() };
+		case double_: return DB::Value::Underlying{ v.get_double() };
+		case bool_: return DB::Value::Underlying{ v.get_bool() };
+		case null: return DB::Value::Underlying{ nullptr };
+		default: return {};//an object or array in the payload is not a scalar to compare against.
+		}
+	}
+	Ω passesFilter( const TableQL& fields, const jobject& available )ι->bool{
+		for( let& [name,filters] : fields.Filter().ColumnFilters ){
+			if( name=="orderBy" || name=="limit" || name=="offset" || name=="skip" )
+				continue;//paging, not a predicate.  subscriptionId is consumed by Subscription's constructor.
+			let p = available.if_contains( name );
+			if( !p )
+				continue;
+			if( let value = toUnderlying(*p); value && !Filter::Test(*value, filters, _tags) )
+				return false;
+		}
+		return true;
+	}
+
 	//comes from a mutation.
 	α Subscriptions::OnMutation( const MutationQL& m, jvalue result )ι->void{
 		OnMutation( m, move(result), nullptr );
@@ -102,7 +131,7 @@ namespace Jde::QL{
 					if( let array = result.try_as_array(); array && array->size() )
 						result = ( *array )[0];
 					let args = m.ExtrapolateVariables();
-					available = result.is_object() ? Json::Combine( args, result.get_object() ) : args;
+					available = result.is_object() ? Json::Combine( result.get_object(), args ) : args;
 					//match every scalar arg that maps to a column - target alone is ambiguous (e.g. resources rows differing only by criteria).
 					//Args only: the result's fields are server-formatted (a `$now` default needn't byte-match what was written) and today carry nothing but id/rowCount anyway.
 					if( !available.contains("id") ){
@@ -110,17 +139,19 @@ namespace Jde::QL{
 							available["id"] = *id;
 					}
 				}
+				if( !passesFilter(sub.Fields, available) )
+					continue;//#53: the subscriber asked for a subset of these events.
 				jobject j;
 				auto value = sub.Fields.TrimColumns( available );
 				j[sub.Fields.JsonName] = move( value );
 				try{
 					sub.Listener->OnChange( j, sub.Id );
 				}
-				catch( std::exception& )
-				{}
+				catch( const runtime_error& e ){
+				}
 			}
 		}
-		catch( const std::exception& ){
+		catch( const runtime_error& e ){
 		}
 	}
 
@@ -139,6 +170,23 @@ namespace Jde::QL{
 			tableOp = listenerSubs.empty() ? _serverSubs.erase( tableOp ) : next( tableOp );
 		}
 		return y;
+	}
+	//#9: a subscription is a standing read of the table - the same rows the client's query would return, delivered as they
+	//change - so it takes the same Read.  Nothing on the subscribe path checked anything before this:  the ops are the only
+	//Authorize sites in ql, and a notification never goes through one.  Read rather than ERights::Subscribe because no acl
+	//grants Subscribe today, so requiring it would refuse every existing subscriber.
+	Ω authorize( const TableQL& table, UserPK executer, SL sl )ε->void{
+		if( let dbTable = table.DBTable(); dbTable )
+			dbTable->Authorize( Access::ERights::Read, executer, sl );
+		for( let& t : table.Tables )
+			authorize( t, executer, sl );
+	}
+	α Subscriptions::Listen( sp<IListener> listener, vector<Subscription>&& subs, UserPK executer, SL sl )ε->void{
+		if( executer.Value!=UserPK::System ){
+			for( let& s : subs )
+				authorize( s.Fields, executer, sl );
+		}
+		Listen( listener, move(subs) );
 	}
 	α Subscriptions::Listen( sp<IListener> listener, vector<Subscription>&& subs )ι->void{
 		ul _{ _serverMutex };

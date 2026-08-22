@@ -1,7 +1,4 @@
-﻿#ifdef BOOST_ALL_NO_LIB
-	#include <boost/json/src.hpp>
-#endif
-#include <jde/opc/uatypes/Logger.h>
+﻿#include <jde/opc/uatypes/Logger.h>
 #include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/app/client/IAppClient.h>
 #include "globals.h"

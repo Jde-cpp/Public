@@ -11,11 +11,7 @@ namespace Jde::Access{
 	α AccessListener::Shutdown( bool terminate, SL )ι->void{
 		if( terminate )
 			return;
-		try{
-			BlockVoidAwait( _qlServer->Unsubscribe(move(Ids)) );
-		}
-		catch( runtime_error& )
-		{}
+		_qlServer->Unsubscribe( sp<QL::IListener>{sp<void>{}, this}, {} );
 	}
 	α AccessListener::OnChange( const jvalue& j, QL::SubscriptionId clientId )ε->void{
 		let& root = Json::AsObject(j);
@@ -30,15 +26,22 @@ namespace Jde::Access{
 			return;
 		}
 
-		let pk = Json::AsNumber<uint32>( object, "id" );
+		let id = Json::FindNumber<uint32>( object, "id" );
+		if( !empty(event & Resources) && (id || object.contains("target")) ){ //no id means the fan-out could not pick one row - a by-target delete that hit several - and the target (with the schema, when the mutation named one) names every row it hit, which UpdateResourceDeleted applies to all of them (access-review3 #22).
+			ResourceChanged( id.value_or(0), event & ~Resources, object );
+			return;
+		}
+		if( !id ){
+			WARNT( ELogTags::Access, "[{}]a notification for event {:x} carried no id, and nothing else finds the row - the access cache is stale for it until a reload: {}", Name, (uint16)underlying(event), serialize(object) );
+			return;
+		}
+		let pk = *id;
 		if( !empty(event & User) )
 			UserChanged( {pk}, event & ~User, object );
 		else if( !empty(event & Group) )
 			GroupChanged( {pk}, event & ~Group, object );
 		else if( !empty(event & Role) )
 			RoleChanged( pk, event & ~Role, object );
-		else if( !empty(event & Resources) )
-			ResourceChanged( pk, event & ~Resources, object );
 		else if( !empty(event & Permission) )
 			PermissionUpdated( pk, object );
 	}
@@ -109,15 +112,20 @@ namespace Jde::Access{
 	α AccessListener::ResourceChanged( ResourcePK resourcePK, ESubscription event, const jobject& o )ε->void{
 		using enum ESubscription;
 		switch( event ){
-			case Created: Authorizer().CreateResource( {resourcePK, o} ); break;
+			case Created:
+				if( !resourcePK ){ //an insert's id comes back from its proc's out row, so this is not expected - but pk 0 in the cache would be worse than a stale one.
+					WARNT( ELogTags::Access, "[{}]a resource Created notification carried no id - not cached: {}", Name, serialize(o) );
+					break;
+				}
+				Authorizer().CreateResource( {resourcePK, o} );
+				break;
 			case Deleted:
 			case Restored:
-				Authorizer().UpdateResourceDeleted( resourcePK, Json::FindDefaultSV(o, "schema"), o, event==Restored );
+				Authorizer().UpdateResourceDeleted( resourcePK, Json::FindDefaultSV(o, "schemaName"), o, event==Restored ); //schemaName - the column is called that (access-review3 #23); "schema" read empty and the by-name fallback could never match.
 				break;
 		}
 	}
 	α AccessListener::PermissionUpdated( PermissionRightsPK pk, const jobject& o )ε->void{
-		Access::Permission permission{ o };
 		let allowed = Json::FindNumber<uint8>( o, "allowed" );
 		let denied = Json::FindNumber<uint8>( o, "denied" );
 		Authorizer().UpdatePermission( pk, allowed ? optional<ERights>((ERights)*allowed) : nullopt, denied ? optional<ERights>((ERights)*denied) : nullopt );

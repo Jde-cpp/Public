@@ -21,8 +21,9 @@
 
 #define let const auto
 namespace Jde::Opc{
-	extern Duration _pingInterval;
-	extern Duration _ttl;
+	//Defined in async/AsyncRequest.cpp as Jde::Opc::Gateway::_pingInterval/_ttl - the extern must sit in that same namespace or it
+	//declares a distinct Jde::Opc:: symbol that no TU defines (undefined at link).  27fe137b moved startup here and flattened it.
+	namespace Gateway{ extern Duration _pingInterval; extern Duration _ttl; }
 	α Gateway::Startup( jobject webServerSettings, jobject userName )ε->void{
 		if( userName.empty() )
 			userName = jobject{ {"name", Ƒ("OpcGateway-{}", Process::HostName())} };
@@ -32,7 +33,6 @@ namespace Jde::Opc{
 		for( let& path : Settings::FindPathArray("/ql/introspection") )
 			QL::AddIntrospection( QL::Introspection{Json::ReadJsonNet(Settings::Directory()/path)} );
 		QL::SetSystemTables( {"dataType", "dataTypes", "discoveryUrls", "logSetting", "node", "nodes", "opcConnections", "opcSessions", "securityMode", "securityPolicyUri", "serverDescription", "variable", "variables"} );
-		QL::SetSystemMutations( {"execute"} );
 		SetSchema( schema );
 		if( Settings::FindBool("/testing/recreateDB").value_or(false) )
 			DB::NonProd::Recreate( *schema, QLPtr() );
@@ -55,6 +55,7 @@ namespace Jde::Opc{
 			appClient->LoadLogSettings();
 
 		BlockVoidAwait( Access::Client::Configure(accessSchema, {schema}, appClient->QLServer(), UserPK{UserPK::System}, authorize, appClient->Listener(), {}) );
+		Process::AddShutdownFunction( [listener=appClient->Listener()](bool terminate, SL sl){ listener->Shutdown(terminate, sl); } ); //as the AppServer does - the subscriptions otherwise outlive everything they reference (access-review3 #25).
 		Process::AddShutdownFunction( [](bool terminate, SL sl){UAClient::Shutdown(terminate, sl);} );
 		QL::Hook::Add( mu<OpcQLHook>() );
 		INFOT( ELogTags::App, "---Started {}---", "OPC Gateway" );

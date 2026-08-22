@@ -20,8 +20,8 @@ namespace Jde::QL{
 		α AddStatement( const DB::Table& table, const jobject& input, optional<DB::Criteria> criteria=nullopt )ε->void;
 		α InsertBefore()ι->MutationAwaits::Task;
 		α Execute()ι->DB::QueryAwait::Task;
-		α InsertAfter( jarray&& result )ι->MutationAwaits::Task;
-		α InsertFailure( runtime_error e )ι->MutationAwaits::Task;
+		α InsertAfter( jarray result )ι->MutationAwaits::Task;
+		α InsertFailure( up<runtime_error> e )ι->MutationAwaits::Task;//#28: up, not a by-value runtime_error - the copy sliced the DB detail (and the 409) off.
 		α Resume( jarray&& v )ι->void;
 
 		UserPK _executer;
@@ -33,6 +33,5 @@ namespace Jde::QL{
 		vector<vector<sp<DB::Column>>> _missingColumns;
 		flat_map<string,DB::Value> _nestedIds;
 		vector<DB::InsertClause> _statements;
-		jobject _variables;
 	};
 }

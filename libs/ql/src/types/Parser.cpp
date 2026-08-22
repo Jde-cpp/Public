@@ -16,19 +16,6 @@ namespace Jde{
 		return name.starts_with("__") || name.starts_with("setting") || name=="status" || name=="logs" || _systemTables.contains(name);
 	}
 
-	α QL::IsSystemQuery( const QL::RequestQL& q )ι->bool{
-		bool y{};
-		if( q.IsQueries() ){
-			for( auto table = q.Queries().begin(); !y && table!=q.Queries().end(); ++table )
-				y = isSystem( table->JTableName() );
-		}
-		else if( q.IsMutation() ){
-			for( auto mutation = q.Mutations().begin(); !y && mutation!=q.Mutations().end(); ++mutation )
-				y = isSystem( mutation->JTableName() );
-		}
-		return y;
-	}
-
 	α QL::Parse( string query, jobject variables, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw, SL /*sl*/ )ε->RequestQL{
 		Parser parser{ Str::TrimFirstLast(move(query), '{', '}'), "{}()," };
 		if( parser.Trim("query") )
@@ -95,11 +82,9 @@ namespace Jde::QL{
 			uint start = i;
 			for( auto ch = _text[i]; i<_text.size()-1 && ch!=end; ch = _text[++i] ){
 				if( ch=='"' ){//string
-					++i;
-					for( ch = _text[i]; i<_text.size() && ch!='"'; ch = _text[++i] ){
-						if( ch=='\\' && i<_text.size()-1 && _text[i+1]=='"' )
-							++i;
-					}
+					bool escape{};
+					for( ch = _text[++i]; i<_text.size() && !(ch=='"' && !escape); ch = _text[++i] )
+						escape = ch=='\\' && !escape;
 					THROW_IF( i>=_text.size(), "Expected ending quote '{}' @ '{}'.", _text, i );
 				}
 			}
@@ -144,13 +129,29 @@ namespace Jde::QL{
 		ASSERT( ch=='"' );
 		y += ch;
 		bool escape{};
-		for( char ch=json[i++]; i<json.size(); ch = json[i++] ){
-			if( ch=='"' && !escape )
+		//#15: the closing quote has to be *seen*, not assumed.  The old loop read its char before testing i<size, so a quote in
+		//the last position exited it the same way running out of input did - and an unterminated string then returned json.size(),
+		//which parseObject added 1 to, walking substr() off the end into a std::out_of_range no wire handler catches.
+		bool closed{};
+		while( i<json.size() ){
+			let c = json[i++];
+			if( c=='"' && !escape ){
+				closed = true;
 				break;
-			escape = ch=='\\' && !escape;
-			y += ch;
+			}
+			escape = c=='\\' && !escape;
+			//#19: a raw newline inside a string literal is escaped *here*, where we know we are inside one.  ParseArgs used to do
+			//it afterwards over the whole buffer, which also caught the structural newlines parseWhitespace copies between tokens
+			//- so every arg list that spanned lines came out as invalid json.
+			if( c=='\n' )
+				y += "\\n";
+			else if( c=='\r' )
+				y += "\\r";
+			else
+				y += c;
 		}
-		y += ch;
+		THROW_IF( !closed, "Expected ending quote in '{}' @ '{}'.", json, i );
+		y += '"';
 		return i;
 	}
 	Ω parseVariable( sv json, string& y )ε->uint{
@@ -270,7 +271,12 @@ namespace Jde::QL{
 				memberValueParse();
 			}
 		};
-		memberValueParse();
+		try{
+			memberValueParse();
+		}
+		catch( std::logic_error e ){
+			throw Exception( SRCE_CUR, {}, move(e), "Could not parse '{}' @ '{}'.", json, i );
+		}
 		THROW_IF( i>=json.size() || json[i]!='}', "Expected '}}' vs '{}' in {} @ '{}'.", json[i], json, i );
 		y+=json[i++];
 		return i;
@@ -279,12 +285,15 @@ namespace Jde::QL{
 	α Parser::ParseArgs( const string& args )ε->jobject{
 		string stringified; stringified.reserve( args.size()*2 );
 		parseObject( args, stringified );
-		return Json::Parse( Str::Replace(stringified, "\n", "\\n") );
+		return Json::Parse( stringified );//#19: parseString escapes the newlines that need it; the rest are structural, and json allows them.
 	}
 	α Parser::ParseArgs()ε->jobject{
 		string params{ Next(')') };
 		THROW_IF( params.empty(), "params.empty()" );
 		THROW_IF( params.front()!='(', "Expected '(' vs {} @ '{}' to start function - '{}'.",  params.front(), Index()-1, Text() );
+		//#15: Next(')') returns what it has when the terminator never arrives, so `logs("id"` came back as `("id"` and
+		//overwriting its back produced the malformed `{"id}` that walked parseString off the end.
+		THROW_IF( params.back()!=')', "Expected ')' vs '{}' @ '{}' to end function - '{}'.", params.back(), Index()-1, Text() );
 		params.front()='{'; params.back() = '}';
 		return ParseArgs( params );
 	}
@@ -311,9 +320,18 @@ namespace Jde::QL{
 			Next();
 			for( auto token = Next(); token!="}" && token.size(); token = Next() ){
 				if( Peek()=="{" || Peek()=="(" ){
-					table.Tables.push_back( LoadTable(token, vars, schemas, system || isSystem(token), sl) );
+					//system-ness is inherited, plus re-derived for a child that is an *explicitly registered* system table
+					//(SetSystemTables, e.g. gateway `serverConnections{ opcSessions{count} }`): those resolve no view and a custom
+					//await grafts them, so they must take the FindView path (null DBTable is fine).  A merely system-*shaped* name
+					//- the `status`/`__x` heuristics in isSystem() - under a real table ("roles{ id status{ x } }") is a bogus
+					//sub-table and stays non-system so it hits GetViewPtr and throws "Could not find view", naming what it missed.
+					table.Tables.push_back( LoadTable(token, vars, schemas, system || _systemTables.contains(token), sl) );
 				}else{
 					THROW_IF( token==",", "don't separate columns with: ',' '{}' @ '{}'.", _text, Index()-1 );
+					//#43: an argument list written where a column belongs was taken literally - `{ (schema:$schemas)id target }` came back
+					//as the columns '(', 'schema:$schemas' and ')', which the select then asked the database for and addColumn refused with
+					//a misleading "column not found".  A legitimate `col(args)` never reaches here: the Peek()=="(" branch above takes it.
+					THROW_IF( token=="(" || token==")", "'{}' is an argument list where a column belongs in '{}' @ '{}' - arguments go on the table, before its '{{'.", token, _text, Index()-1 );
 					if( token=="..." ){
 						THROW_IF( "on"!=Next(), "Expected 'on' after '...' in '{}' @ '{}'.", _text, Index()-1 );
 						table.InlineFragments.push_back( LoadTable(Next(), vars, schemas, system, sl) );
@@ -355,6 +373,25 @@ namespace Jde::QL{
 		}while( jsonName.size() );
 		return results;
 	}
+	//A subscription's columns are json names the parser never resolves - nothing reads them until a notification is trimmed to
+	//them, and a subscription keyed at the wrong table (permissionUpdated against `permissions`, which has neither allowed nor
+	//denied) looked healthy until the notification silently matched nothing.  Says so at subscribe time instead.  Resolution
+	//mirrors addColumn: the column itself, or an enum stem whose <name>_id names a pk table.
+	Ω warnUnknownColumns( const TableQL& table, sv subscription )ι->void{
+		let dbTable = table.DBTable();
+		if( !dbTable )
+			return;//a system table (logs) resolves no view.
+		for( let& c : table.Columns ){
+			let name = DB::Names::FromJson( c.JsonName );
+			if( dbTable->FindColumn(name) || name=="count" )
+				continue;
+			let stem = dbTable->FindColumn( name+"_id" );
+			if( !stem || !stem->PKTable )
+				WARNT( ELogTags::QL, "[{}]subscription '{}' asks for column '{}', which the table does not have - it will never be delivered.", dbTable->Name, subscription, c.JsonName );
+		}
+		for( let& t : table.Tables )
+			warnUnknownColumns( t, subscription );
+	}
 	α Parser::LoadSubscription( sp<jobject> vars, const vector<sp<DB::AppSchema>>& schemas )ε->Subscription{
 		let name = Next();
 		//Sync with MutationQL::EMutationQL
@@ -370,6 +407,7 @@ namespace Jde::QL{
 		Next();	//{
 		Next(); //[userCreated]
 		auto table = LoadTable( tableName, vars, schemas, tableName=="logs" );
+		warnUnknownColumns( table, name );
 		return Subscription{ move(tableName), *type, move(table) };
 
 	}
@@ -385,6 +423,10 @@ namespace Jde::QL{
 		let text{ Next('}') };
 		THROW_IF( text.empty(), "text.empty()" );
 		THROW_IF( text.front()!='{', "Expected '{{' vs {} @ '{}' to start unsubscribe - '{}'.", text.front(), Index()-1, Text() );
+		//#18: the other Next(char) caller, and it has the same hole - the loop stops at size-1 whether or not the terminator
+		//arrived, so an unterminated list arrives here a character short.  parseObject would refuse it too, but for the wrong
+		//reason and about the wrong character.
+		THROW_IF( text.back()!='}', "Expected '}}' vs '{}' @ '{}' to end unsubscribe - '{}'.", text.back(), Index()-1, Text() );
 		string stringified; stringified.reserve( text.size()*2 );
 		parseObject(text, stringified);
 		return Json::FromArray<SubscriptionId>( Json::AsArray(Json::Parse(stringified), "id") );

@@ -17,7 +17,6 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				groupId: tables.groups.columns.identityId+{ criteria: null },
 				groupTarget: targetColumns.target,
 				memberId: tables.groups.columns.memberId,
-				providerId: tables.providers.columns.providerId+{ pkTable: "providers", nullable:true, sk:null },
 				isGroup: tables.identities.columns.isGroup
 			}+targetColumns,
 			naturalKeys: tables.identities.naturalKeys,
@@ -79,6 +78,7 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 			},
 			ops: ["Create", "Read", "Update", "Delete", "Purge", "Administer", "Execute"],
 			extends: "identities",
+			purgeProc: "user_purge", //profiles, acl and group rows reference the identity with no cascade - the proc takes them first (access-review3 #14).
 			qlView: "users_ql"
 		},
 		groups:{
@@ -172,7 +172,7 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 			},
 			customInsertProc: true,
 			map:: { parentId:"identity_id", childId:"permission_id" },//not a map, but connector.
-			ops: ["None"] //handled through admin op.
+			ops: ["Read", "Administer"] //the mutations gate on TestAdmin of the target resource; Read is what AclQLSelectAwait gates on, and with no ops ResourceSync never made a row for it to gate with, so the acl was enumerable by anyone (access-review3 #21).  Created disabled like every synced resource - restore it to enforce.
 		},
 		profiles:{
 			comment: "Per-user UI profile blobs, keyed by page/component",

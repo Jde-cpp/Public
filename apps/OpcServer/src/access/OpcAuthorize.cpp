@@ -101,7 +101,7 @@ namespace Jde::Opc::Server{
 		}
 		if( resource->second.IsDeleted )
 			return EAccess::All; //resource deleted: node no longer protected.
-		auto rights = user->second.ResourceRights( *resourcePK );
-		return ( EAccess )rights.Effective();
+		let rights = user->second.ResourceRights( *resourcePK );
+		return ToAccess( rights.Effective() );//generic rights in, UA access-level bits out - a cast put every right one bit off.
 	}
 }
