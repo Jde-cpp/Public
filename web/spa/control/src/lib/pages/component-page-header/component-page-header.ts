@@ -1,5 +1,5 @@
 import {Component, EventEmitter, Input, Output} from '@angular/core';
-import {ComponentPageTitle} from '../page-title/page-title';
+import {ComponentPageTitle} from '../component-page-title/component-page-title';
 import {MatButtonModule} from '@angular/material/button';
 import {MatIconModule} from '@angular/material/icon';
 import { Router } from '@angular/router';

@@ -6,10 +6,10 @@ import { MatTable } from '@angular/material/table';
 import {FormsModule} from '@angular/forms';
 import { QLListSettings } from './ql-list-settings/ql-list-settings';
 import {SnackbarService} from '../../../shared/snackbar/snackbar-service'
-import {IGraphQL, EnumValue } from '../../../services/IGraphQL';
-import {Field} from '../../../model/ql/schema/Field';
-import {TableSchema}  from '../../../model/ql/schema/TableSchema';
-import {MetaObject}  from '../../../model/ql/schema/MetaObject';
+import {IGraphQL, EnumValue } from '../../../services/graphql';
+import {Field} from '../../../model/ql/schema/field';
+import {TableSchema}  from '../../../model/ql/schema/table-schema';
+import {MetaObject}  from '../../../model/ql/schema/meta-object';
 
 import { ComponentPageTitle, RouteItem, RouteStore, IRouteService, RouteService } from 'jde-spa';
 import { MatIcon } from '@angular/material/icon';
@@ -20,11 +20,11 @@ import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatToolbar } from '@angular/material/toolbar';
 import { MatTooltip } from '@angular/material/tooltip';
 import { ProfileStore } from 'jde-spa';
-import { GraphQLTable } from '../../GraphQL/table/table';
-import { QLListData, QLListResolver, TableSettings } from '../../../services/ql-list.resolver';
+import { GraphQLTable } from '../../graphql/table/graphql-table';
+import { QLListData, QLListResolver, TableSettings } from '../../../services/ql-list-resolver';
 import { SelectionModel } from '@angular/cdk/collections';
-import { View, ViewField, ViewType } from '../../../model/ql/View';
-import { PageProfile } from '../../GraphQL/model/PageSettings';
+import { View, ViewField, ViewType } from '../../../model/ql/view';
+import { PageProfile } from '../../graphql/model/page-settings';
 import { verify } from '../../../utils/utils';
 
 @Component({

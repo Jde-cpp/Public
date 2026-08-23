@@ -13,14 +13,14 @@ import {ActivatedRoute, NavigationEnd, RouterLink, RouterLinkActive} from '@angu
 import {Route, Router, Routes} from '@angular/router';
 import { Title } from '@angular/platform-browser';
 import { BehaviorSubject, filter, Observable } from 'rxjs';
-import {NavigationFocusService} from '../navigation-focus/navigation-focus.service';
+import {NavigationFocusService} from '../navigation-focus/navigation-focus-service';
 import {ThemePicker} from '../theme-picker/theme-picker';
 import { Authorization } from '../authorization/authorization';
-import { Breadcrumbs } from './breadcrumb/breadcrumbs';
+import { Breadcrumbs } from './breadcrumbs/breadcrumbs';
 import { Favorites } from './favorites/favorites-dialog';
 import { ProfileStore } from '../../services/profile/profile-store';
-import { RouteStore } from '../../services/route.store';
-import { RouteItem } from '../../pages/component-sidenav/component-sidenav';
+import { RouteStore } from '../../services/route-store';
+import { RouteItem } from '../../pages/component-sidenav/route-item';
 import { MatAutocomplete } from "@angular/material/autocomplete";
 
 export type Favorite={

@@ -6,8 +6,8 @@ import {ActivatedRoute, Params, Router, RouterModule, RouterLink} from '@angular
 //import {MatRipple} from '@angular/material/core';
 import {combineLatest, Observable, Subscription} from 'rxjs';
 import {NavigationFocus} from '../../shared/navigation-focus/navigation-focus';
-import {ComponentPageTitle} from '../page-title/page-title';
-import {RouteItem} from '../component-sidenav/component-sidenav'
+import {ComponentPageTitle} from '../component-page-title/component-page-title';
+import {RouteItem} from '../component-sidenav/route-item'
 
 @Component({
   selector: 'app-component-category-list',

@@ -113,6 +113,15 @@ declare -a libraryNames=();
 for libraryDir in "${libraries[@]}"; do
 	libraryNames+=( $( basename $(jq -er .name $libraryDir/control/package.json) ) ) || { echo `pwd`; echo no .name in $libraryDir/control/package.json; exit 1; };
 done;
+#One version for the whole repo: the libraries carry the same JDE_VERSION the C++ targets are built with
+#(CMakePresets.common.json, read by jdeVersion in build/common.sh).  Stamped onto the generated
+#projects/<lib>/package.json below rather than into the tracked control/package.json, which stays the source of
+#truth for .name and .peerDependencies only.
+jdeVersion jdeVer;
+echo stamping the libraries at version $jdeVer;
+#the same names as a jq array literal, to spot the sibling jde-* peers below.  jde-proto is deliberately not in it -
+#it is not a workspace library, ships from the tracked web/proto/package.json, and keeps that file's version.
+libraryNamesJson=$(printf '%s\n' "${libraryNames[@]}" | jq -Rsc 'split("\n") | map(select(length > 0))');
 echo -------------------- Start Libraries --------------------;
 for libraryDir in "${libraries[@]}"; do
 	echo $libraryDir - processing;
@@ -146,7 +155,9 @@ for libraryDir in "${libraries[@]}"; do
 	#imports - so copy its peerDependencies over wholesale on every run.  Was a grep for `from 'jde-proto/` that added
 	#that one peer and left the sibling jde-* libraries and the material/cdk/forms/router imports undeclared.
 	peers=$(jq -ec .peerDependencies $libraryDir/control/package.json) || { echo `pwd`; echo no .peerDependencies in $libraryDir/control/package.json; exit 1; };
-	jqEdit projects/$library/package.json ".peerDependencies = $peers";
+	#the version goes on in the same pass, and every sibling jde-* peer is re-pinned to it: control/package.json pins
+	#them at the scaffolded 0.0.1, which no longer resolves once the packages carry a real version.
+	jqEdit projects/$library/package.json ".version = \"$jdeVer\" | .peerDependencies = ($peers | with_entries(.key as \$k | .value = (if ($libraryNamesJson | index(\$k)) then \"$jdeVer\" else .value end)))";
 	#unchecked, a failed cd left cwd at the workspace root and the rm -rf below ran there instead.
 	cd $baseDir/$workspace/projects/$library/src; if [ $? -ne 0 ]; then echo `pwd`; echo cd $baseDir/$workspace/projects/$library/src; exit 1; fi;
 	#public-api.ts is the library's export surface.  It used to be hard-linked by create-library.sh, which only runs

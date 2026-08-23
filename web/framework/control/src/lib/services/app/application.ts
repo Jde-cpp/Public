@@ -1,4 +1,4 @@
-import {ProtoUtils, Timestamp} from '../../utils/protoUtils'
+import {ProtoUtils, Timestamp} from '../../utils/proto-utils'
 import { DatePipe } from '@angular/common';
 
 import * as FromServer from 'jde-proto/App.FromServer';

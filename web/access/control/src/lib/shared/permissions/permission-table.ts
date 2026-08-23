@@ -5,9 +5,9 @@ import { MatSortModule, Sort } from "@angular/material/sort";
 import { MatTable, MatTableModule } from "@angular/material/table";
 import { ProfileStore } from "jde-spa";
 import { verify, EnumKeysPipe, SnackbarService } from "jde-framework";
-import { Permission, Rights } from "../../model/Permission";
-import { AccessService } from "../../services/access.service";
-import { Resource } from "../../model/Resource";
+import { Permission, Rights } from "../../model/permission";
+import { AccessService } from "../../services/access-service";
+import { Resource } from "../../model/resource";
 
 @Component({
 		selector: 'permission-table',

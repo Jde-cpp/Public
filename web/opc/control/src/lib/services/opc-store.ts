@@ -1,12 +1,12 @@
 import { Injectable } from "@angular/core";
-import { CnnctnTarget, ServerCnnctn } from "../model/ServerCnnctn";
+import { CnnctnTarget, ServerCnnctn } from "../model/server-cnnctn";
 import { browseEq, ETypes, Ns, toBrowse } from '../model/types';
-import { NodeRoute } from "../model/NodeRoute";
-import { OpcObject, UaNode, ENodeClass } from "../model/Node";
-import { NodeId, NodeKey } from "../model/NodeId";
+import { NodeRoute } from "../model/node-route";
+import { OpcObject, UaNode, ENodeClass } from "../model/node";
+import { NodeId, NodeKey } from "../model/node-id";
 import { RouteItem } from "jde-spa";
-import { Gateway, GatewayTarget } from "./gateway.service";
-import { Server, ServerProps } from "../model/Server";
+import { Gateway, GatewayTarget } from "./gateway-service";
+import { Server, ServerProps } from "../model/server";
 
 class StoreNode{
 	constructor( node:UaNode ){

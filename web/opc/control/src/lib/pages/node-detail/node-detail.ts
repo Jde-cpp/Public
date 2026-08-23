@@ -1,12 +1,12 @@
 import { Component, computed, Inject, model, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTabsModule } from '@angular/material/tabs';
-import { NodePageData } from '../../services/resolvers/node.resolver';
+import { NodePageData } from '../../services/resolvers/node-resolver';
 import { ActivatedRoute } from '@angular/router';
 import { ComponentPageTitle, RouteItem } from 'jde-spa';
-import { NodeRoute } from '../../model/NodeRoute';
+import { NodeRoute } from '../../model/node-route';
 import { NodeChildren } from './node-children/node-children';
-import { UaNode } from '../../model/Node';
+import { UaNode } from '../../model/node';
 import { NodeAccess } from './node-access/node-access';
 import { ProfileStore } from 'jde-spa';
 

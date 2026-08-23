@@ -3,7 +3,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { ActivatedRoute } from '@angular/router';
 import { AppService, LogDetail, LogSettingsPanel } from 'jde-framework';
 import { ProfileStore, RouteItem, RouteStore } from 'jde-spa';
-import { OpcServer, OpcServerService } from '../../services/opc-server.service';
+import { OpcServer, OpcServerService } from '../../services/opc-server-service';
 
 @Component( {
 		templateUrl: './opc-server-detail.html',

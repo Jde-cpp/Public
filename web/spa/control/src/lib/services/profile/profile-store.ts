@@ -1,5 +1,5 @@
 import { Inject, Injectable, Optional } from '@angular/core';
-import { IProfileService } from './IProfileService';
+import { IProfileService } from './profile-service';
 
 type Constructor<T = object> = new (...args: any[]) => T;
 

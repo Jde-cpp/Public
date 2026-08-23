@@ -10,9 +10,9 @@ import { MatToolbar } from '@angular/material/toolbar';
 import { QLListSettingsFilter } from './ql-list-settings-filter/ql-list-settings-filter';
 import { QLListSettingsDisplay } from './ql-list-settings-display/ql-list-settings-display';
 import { QLListSettingsSort } from './ql-list-settings-sort/ql-list-settings-sort';
-import { View, ViewField } from '../../../../model/ql/View';
+import { View, ViewField } from '../../../../model/ql/view';
 import { ProfileStore } from 'jde-spa';
-import { TableSchema } from '../../../../model/ql/schema/TableSchema';
+import { TableSchema } from '../../../../model/ql/schema/table-schema';
 
 const tabKey = 'qlListSettings';
 

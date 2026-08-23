@@ -6,7 +6,7 @@ import { MatIcon } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTable, MatTableModule } from '@angular/material/table';
 import { MatTooltip } from '@angular/material/tooltip';
-import { LogEntries } from '../LogEntry';
+import { LogEntries } from '../log-entry';
 import { SeverityPicker } from '../../../shared/severity-picker/severity-picker';
 
 import { ELogLevel } from 'jde-proto/Log';

@@ -5,7 +5,7 @@ import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { RouteItem, RouteStore } from 'jde-spa';
-import { Connection } from '../../services/resolvers/app.resolver';
+import { Connection } from '../../services/resolvers/app-resolver';
 import { pageHeading } from '../cards/cards';
 
 @Component({

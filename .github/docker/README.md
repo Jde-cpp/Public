@@ -12,14 +12,22 @@ in. Consumed by [`.github/workflows/linux-ci.yml`](../workflows/linux-ci.yml).
 sudo docker build -t jde-ci-runner:latest .github/docker
 ```
 
-The default base is `myoung34/github-runner:ubuntu-noble` (Ubuntu 24.04, glibc
-2.39). The mounted host-built deps need glibc >= 2.38, so noble clears them;
-`latest` (focal, 2.31) and jammy (2.35) do **not**. If a dep is later rebuilt
-against a newer glibc and you hit `GLIBC_x.y not found`, bump the base to a newer
-tag:
+The base is pinned in the Dockerfile to `myoung34/github-runner:2.336.0-ubuntu-noble`
+(Ubuntu 24.04, glibc 2.39, runner 2.336.0). Base-tag selection has two traps:
+
+- **Distro:** only the `*-ubuntu-noble` tags are noble. The bare version tags
+  (`2.336.0`), `latest`, and `ubuntu-focal` are **focal** — glibc 2.31 (< the 2.38
+  the mounted host deps need), no `liburing-dev` in apt, and a too-old cmake. Jammy
+  (2.35) also fails the glibc floor. Symptom of getting this wrong: `apt` can't find
+  `liburing-dev`, or `GLIBC_x.y not found` when the mounted deps load.
+- **Runner version:** match it to what GitHub currently serves, else the runner
+  self-updates and restarts after *every* job. Check the newest
+  `<version>-ubuntu-noble` tag on
+  [Docker Hub](https://hub.docker.com/r/myoung34/github-runner/tags?name=ubuntu-noble)
+  and bump the pin (or override without editing):
 
 ```bash
-sudo docker build --build-arg BASE_IMAGE=myoung34/github-runner:<newer-tag> \
+sudo docker build --build-arg BASE_IMAGE=myoung34/github-runner:<version>-ubuntu-noble \
   -t jde-ci-runner:latest .github/docker
 ```
 
@@ -70,6 +78,17 @@ Why each non-obvious flag:
 Follow registration with `sudo docker logs -f gha-runner` (look for
 `Listening for Jobs`); the runner then appears under repo **Settings → Actions →
 Runners**.
+
+**Restarting onto a new image / new token:** prefer a graceful stop so the runner
+deregisters its session before exiting —
+```bash
+sudo docker stop gha-runner && sudo docker rm gha-runner   # SIGTERM: entrypoint deregisters
+```
+then re-run the block above. A hard `docker rm -f` (SIGKILL) skips that, so the new
+container logs `A session for this runner already exists` / `Conflict. Retrying
+until reconnected` and loops until GitHub expires the orphaned session (~2 min),
+then prints `Runner reconnected` → `Listening for Jobs` on its own. Harmless, just
+slower — don't keep recreating the container, which only restarts the clock.
 
 ## Notes / trade-offs
 

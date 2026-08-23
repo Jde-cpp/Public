@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatFormFieldModule, MatLabel } from '@angular/material/form-field';
 import {MatInputModule} from '@angular/material/input';
 import { form, FormField, disabled } from '@angular/forms/signals';
-import { Server } from '../../../../model/Server';
+import { Server } from '../../../../model/server';
 
 @Component( {
 	  selector: 'server-properties',
