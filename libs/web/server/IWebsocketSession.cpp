@@ -38,10 +38,13 @@ namespace Jde::Web::Server{
 		});
 	}
 
-#define CHECK_EC( ec,tag,  ... ) if( ec ){ CodeException(static_cast<std::error_code>(ec), tag __VA_OPT__(,) __VA_ARGS__); return; }
 	α IWebsocketSession::OnAccept( beast::error_code ec )ι->void{
 		LogRead( "OnAccept", 0 );
-		CHECK_EC( ec, ELogTags::SocketServerRead );
+		if( ec ){
+			CodeException( static_cast<std::error_code>(ec), ELogTags::SocketServerRead );
+			Close();
+			return;
+		}
 		SendAck( Id() );
 		DoRead();
 	}
@@ -169,17 +172,20 @@ namespace Jde::Web::Server{
 			_pendingQueries.emplace( requestId, make_pair(h, timer) );
 		}
 		auto _ = co_await *timer;
-		lg l{ _pendingQueriesMutex };
-		if( auto it = _pendingQueries.find(requestId); it!=_pendingQueries.end() ){
-			auto h = it->second.first;
-			_pendingQueries.erase( it );
-			if( h ){
-				h.promise().SetExp( Exception{sl, {ELogTags::SocketServerWrite}, "Query {} timed out after {}", hex(requestId), Chrono::ToString(timeout)} );
-				h.resume();
+		QueryClientAwait::Handle pending;
+		{
+			lg l{ _pendingQueriesMutex };
+			if( auto it = _pendingQueries.find(requestId); it!=_pendingQueries.end() ){
+				pending = it->second.first;
+				_pendingQueries.erase( it );
 			}
+			else
+				CRITICALT( ELogTags::SocketServerRead, "[{}]No pending query", hex(requestId) );
 		}
-		else
-			CRITICALT( ELogTags::SocketServerRead, "[{}]No pending query", hex(requestId) );
+		if( pending ){
+			pending.promise().SetExp( Exception{sl, {ELogTags::SocketServerWrite}, "Query {} timed out after {}", hex(requestId), Chrono::ToString(timeout)} );
+			pending.resume();
+		}
 	}
 	α IWebsocketSession::QueryClient( QL::TableQL&& query, Jde::UserPK executer, QueryClientAwait::Handle h, SL sl )ι->void{
 		let requestId = ++_requestId;

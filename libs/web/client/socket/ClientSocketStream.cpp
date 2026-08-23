@@ -6,6 +6,7 @@
 #define let const auto
 namespace Jde::Web::Client{
 	constexpr ELogTags _connectTag{ ELogTags::Socket | ELogTags::Client };
+	constexpr auto _closeTimeout{ 5s };//#13: how long Close waits for a pending write & the close handshake before tearing down the transport.  Same value as the server's Streams.cpp.
 	static string _userAgent{ Ƒ("({})Jde.Web.Client - {}", Process::ProductVersion, BOOST_BEAST_VERSION) };
 	string _sslUserAgent{ Ƒ("({})Jde.Web.Client SSL - {}", Process::ProductVersion, BOOST_BEAST_VERSION) };
 
@@ -66,41 +67,76 @@ namespace Jde::Web::Client{
 		}, _ws );
 	}
 
-	α ClientSocketStream::AsyncWrite( string buffer, sp<IClientSocketSession> /*session*/ )ι->LockAwait::Task{
-		auto guard = co_await _writeLock.Lock();
-		if( _closing.test() )
-			co_return;//close initiated: beast forbids overlapping write-type ops, so drop the frame. guard releases here.
-		_writeGuard = move( guard );
-		_writeBuffer = move( buffer );
-		std::visit( [this](auto&& ws)->void {
-			//initiate on the stream's strand, not the raw ioc: beast streams are not thread-safe, and an off-strand
-			//initiation racing a read completion intermittently loses the write with no completion - OnWrite then never
-			//releases _writeLock and every later frame on the session queues forever (soak finding #3).
-			//self keeps the stream (and the variant ws refers into) alive until the post runs.
-			net::post( ws.get_executor(), [self=shared_from_this(), &ws](){
-				ws.async_write( net::buffer(self->_writeBuffer), beast::bind_front_handler(&ClientSocketStream::OnWrite, self) );
-			});
-		}, _ws );
-	}
-	α ClientSocketStream::OnWrite( beast::error_code ec, uint bytes_transferred )ι->void{
-		_writeBuffer.clear();
-		auto guard = move(_writeGuard);
-		guard.reset();
-		boost::ignore_unused( bytes_transferred );
-		if( ec )
-			CodeException{ static_cast<std::error_code>(ec), ELogTags::SocketClientWrite };//TODO look at returning an error to caller.
+	α ClientSocketStream::AsyncWrite( string buffer, sp<IClientSocketSession> /*session*/ )ι->void{
+		net::dispatch( Strand(), [self=shared_from_this(), buffer=move(buffer)]()mutable{//self keeps the stream (and the variant the ops refer into) alive across the hop.
+			if( self->_closing.test() )
+				return;//close initiated: beast forbids overlapping write-type ops, so drop the frame.
+			self->_writeQueue.push_back( move(buffer) );
+			if( !self->_writing )
+				self->DoWrite();//else OnWrite picks this up.
+		});
 	}
 
-	α ClientSocketStream::Close( sp<IClientSocketSession> session, bool terminate, SL )ι->LockAwait::Task{
-		if( _closing.test_and_set() )
-			co_return;//already closing - a second async_close would overlap the first (write-type op).
-		DBGT( _connectTag, "[{}]Client::Close: {}", hex(session->Id()), session->Host() );
-		auto guard = co_await _writeLock.Lock();//wait out any in-flight write - async_close is a write-type op and must not overlap it.
-		std::visit( [this, session, terminate](auto&& ws)->void {
-			net::post( ws.get_executor(), [self=shared_from_this(), session, terminate, &ws](){//strand, as in AsyncWrite.
-				ws.async_close( terminate ? websocket::close_code::going_away : websocket::close_code::normal, beast::bind_front_handler(&IClientSocketSession::OnClose, session) );
-			});
+	//strand.  One outstanding async_write at a time - the queue is what serializes them, and OnWrite drives the next.
+	α ClientSocketStream::DoWrite()ι->void{
+		_writing = true;
+		std::visit( [this](auto&& ws)->void {
+			ws.async_write( net::buffer(_writeQueue.front()), beast::bind_front_handler(&ClientSocketStream::OnWrite, shared_from_this()) );
 		}, _ws );
-		guard.unlock();//_closing keeps later writers from initiating; release so queued writers wake and drop out.
+	}
+
+	α ClientSocketStream::OnWrite( beast::error_code ec, uint bytes_transferred )ι->void{//strand - beast completes through the stream's executor.
+		boost::ignore_unused( bytes_transferred );
+		_writeQueue.pop_front();
+		_writing = false;
+		if( ec )
+			CodeException{ static_cast<std::error_code>(ec), ELogTags::SocketClientWrite };//TODO look at returning an error to caller.
+		if( _closeSession )//Close arrived while this write was outstanding and left the finish to us.
+			DoClose();
+		else if( !_writeQueue.empty() && !_closing.test() )
+			DoWrite();
+	}
+
+	α ClientSocketStream::Close( sp<IClientSocketSession> session, bool terminate, SL )ι->void{
+		if( _closing.test_and_set() )
+			return;//already closing - a second async_close would overlap the first (write-type op).
+		DBGT( _connectTag, "[{}]Client::Close: {}", hex(session->Id()), session->Host() );
+		net::dispatch( Strand(), [self=shared_from_this(), session=move(session), terminate]()mutable{
+			self->_closeSession = move( session );
+			self->_terminate = terminate;
+			//#13: the server has had this deadline since its own Close rework; this side had none.  AfterHandshake sets
+			//expires_never() on the tcp layer, so an async_write to a peer whose receive window is full never completes - OnWrite
+			//never runs, DoClose never starts, OnClose never fires, and IClientSocketSession::Shutdown's BlockVoidAwait hangs the
+			//process.  On deadline tear the transport down: the aborted op completes on the strand and DoClose finishes without a
+			//handshake.  self keeps the stream alive until the timer resolves either way.
+			self->_closeDeadline = ms<net::steady_timer>( self->Strand(), _closeTimeout );
+			self->_closeDeadline->async_wait( [self]( beast::error_code ec ) {
+				if( ec )
+					return;//cancelled - the close completed in time.
+				self->_transportClosed = true;
+				std::visit( [](auto&& ws)->void{ beast::get_lowest_layer(ws).close(); }, self->_ws );
+			});
+			if( !self->_writing )
+				self->DoClose();//else OnWrite runs it - async_close must not overlap a pending write.
+		});
+	}
+
+	//strand.  _closeSession is the once-only token, and the caller's OnClose is what completes CloseClientSocketSessionAwait.
+	α ClientSocketStream::DoClose()ι->void{
+		auto session = move( _closeSession );
+		if( !session )
+			return;
+		_writeQueue.clear();//nothing queued can go out now.
+		if( _transportClosed ){//#13: a stalled write ate the deadline - the transport is gone, so no close handshake is possible.
+			session->OnClose( beast::error::timeout );
+			return;
+		}
+		std::visit( [this,&session](auto&& ws)->void {
+			ws.async_close( _terminate ? websocket::close_code::going_away : websocket::close_code::normal, [self=shared_from_this(), session]( beast::error_code ec ){
+				if( self->_closeDeadline )
+					self->_closeDeadline->cancel();//#13: completed in time - stand the deadline down before it tears the transport out from under a finished close.
+				session->OnClose( ec );
+			} );
+		}, _ws );
 	}
 }

@@ -124,8 +124,8 @@ namespace Jde::App::Server{
 		if( auto info = Web::Server::Sessions::Find(sessionId); info ){
 			LogWrite( Ƒ("SessionInfo userPK: {}, endpoint: {}, hasSocket: {}", info->UserPK.Value, info->UserEndpoint, info->HasSocket), requestId );
 			Write( FromServer::Session(*info, requestId) );
-		}else
-			WriteException( Exception{Ƒ("[{}] Session not found.", hex(sessionId))}, requestId );
+		}else//NotFound, not the default 500 - the status is the only thing that survives the wire to tell a caller "no such session" from "could not ask", and the gateway caches an anonymous user for the first but must not for the second.
+			WriteException( Exception{Ƒ("[{}] Session not found.", hex(sessionId)), ExceptionArgs{EHttpStatus::NotFound}}, requestId );
 	}
 	α ServerSocketSession::SetSessionId( SessionPK sessionId, RequestId requestId )->Web::Server::Sessions::UpsertAwait::Task{
 		let _ = shared_from_this();
@@ -334,9 +334,6 @@ namespace Jde::App::Server{
 		auto q = query.ToString();
 		LogWrite( Ƒ("QueryClient: {}", q.substr(0,100)), requestId );
 		Write( FromServer::QueryClient(move(q), move(query.Variables), executer, query.ReturnRaw, requestId) );
-	}
-	α ServerSocketSession::OnDisconnect( CodeException&& )ι->void{
-		OnClose();
 	}
 	α ServerSocketSession::OnClose()ι->void{
 		if( !Stream )

@@ -15,7 +15,7 @@ namespace Jde::Web::Client{
 		α Json()Ι->jobject{ return Json::Parse(_body); }
 		α IsError()Ι->bool{ return http::to_status_class(_status)!=http::status_class::successful && _status!=http::status::found; }
 		α IsRedirect()Ι->bool{ return _status==http::status::moved_permanently || _status==http::status::found || _status==http::status::see_other || _status==http::status::temporary_redirect || _status==http::status::permanent_redirect; }
-		α RedirectVariables()Ε->tuple<string,string,PortType>;
+		α RedirectVariables()Ε->tuple<string,string,PortType,bool>;
 		α Status()Ι->http::status{ return _status; }
 	private:
 		string _body;

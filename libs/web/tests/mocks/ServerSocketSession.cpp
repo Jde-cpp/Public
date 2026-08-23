@@ -12,6 +12,7 @@ namespace Jde::Web::Mock{
 	α ServerSocketSession::OnConnect( SessionPK sessionId, RequestId requestId )ι->Server::Sessions::UpsertAwait::Task{
 		try{
 			auto info = co_await Server::Sessions::UpsertAwait{ Ƒ("{:x}", sessionId), _userEndpoint.address().to_string(), true, AppClient(), true };
+			base::SetSessionInfo( info );//as the real sessions do (GatewaySocketSession::SetSessionId, ServerSocketSession::SetSessionId) - without it SessionId() is 0 and nothing bound to the socket knows which session it runs under.
 			Proto::FromServerTransmission t;
 			auto m = t.add_messages();
 			m->set_request_id( requestId );

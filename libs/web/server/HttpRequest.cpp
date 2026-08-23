@@ -80,10 +80,10 @@ namespace Jde::Web::Server{
 		_target = Str::DecodeUri( uri.substr(0, queryStart) );
 		if( queryStart!=sv::npos ){
 			for( let& param : Str::Split(uri.substr(queryStart+1), '&') ){
-				let keyValue = Str::Split( param, '=' );
-				if( keyValue.empty() )
+				if( param.empty() )
 					continue;
-				_params[Str::DecodeUri(keyValue[0])] = keyValue.size()==2 ? Str::DecodeUri(keyValue[1]) : string{};
+				let eq = param.find( '=' );
+				_params[Str::DecodeUri(param.substr(0, eq))] = eq==sv::npos ? string{} : Str::DecodeUri( param.substr(eq+1) );
 			}
 		}
 	}

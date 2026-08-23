@@ -59,7 +59,7 @@ namespace Jde{
 			ASSERT(Promise());
 			Promise()->ResumeExp( move(e), _h );
 		}
-		α ResumeExp( runtime_error&& e )ι{
+		α ResumeExp( std::exception&& e )ι{
 			ASSERT( Promise() );
 			Promise()->ResumeExp( move(e), _h );
 		}

@@ -16,13 +16,13 @@ namespace Jde::Web::Server{
 	steady_clock::duration _restExpirationDuration{};
 	α Sessions::RestSessionTimeout()ι->steady_clock::duration{
 		if( _restExpirationDuration==steady_clock::duration::zero() )
-			_restExpirationDuration = Chrono::ToDuration( Settings::FindSV("/http/timeout").value_or("PT30M") );
+			_restExpirationDuration = Settings::FindDuration( "/http/timeout" ).value_or( 30min );
 		return _restExpirationDuration;
 	}
 	steady_clock::duration _sockExpirationDuration{};
 	Ω sockExpirationDuration(){
 		if( _sockExpirationDuration==steady_clock::duration::zero() )
-			_sockExpirationDuration = Chrono::ToDuration( Settings::FindSV("/http/socketTimeout").value_or("P1D") );
+			_sockExpirationDuration = Settings::FindDuration( "/http/socketTimeout" ).value_or( 24h );
 		return _sockExpirationDuration;
 	}
 	steady_clock::time_point _lastTrim{ steady_clock::now() };
@@ -60,7 +60,13 @@ namespace	Sessions{
 	}
 
 	α Sessions::Remove( SessionPK sessionId )ι->bool{
-		return _sessions.erase( sessionId );
+		let y = _sessions.erase( sessionId );
+		//#5: erasing the entry is not revocation on its own.  Every socket query & subscription executes under the
+		//IWebsocketSession's own sp<SessionInfo>, so an open connection kept running as the removed user until its own timeout
+		//(/http/socketTimeout, a day) - logout & purgeSession were not effective against it.
+		if( let sockets = Web::Server::Internal::CloseSocketSessions(sessionId); sockets )
+			DBG( "[{:x}]Session removed - closing {} socket session(s) bound to it.", sessionId, sockets );
+		return y;
 	}
 
 	α Sessions::Find( SessionPK sessionId )ι->sp<SessionInfo>{
@@ -179,17 +185,38 @@ namespace Sessions{
 						co_return;
 					}
 				}
+				bool denied{}; string remoteEndpoint;
 				try{
 					Web::FromServer::SessionInfo proto{ co_await *await };
-					let expiration = Chrono::ToClock<steady_clock,Clock>( Protobuf::ToTimePoint(proto.expiration()) );
-					info = ms<SessionInfo>( *sessionId, expiration, UserPK{proto.user_pk()}, proto.user_endpoint(), proto.has_socket() );
-					info->UserEndpoint = _endpoint;
-					info->HasSocket = _socket;
+					remoteEndpoint = proto.user_endpoint();
+					//#4: the 3rd party answers a bare Sessions::Find with no endpoint check of its own, so the proof of possession
+					//UpdateExpiration enforces locally has to be repeated on its answer.  Without it, overwriting UserEndpoint below
+					//rebinds a sniffed/guessed id to whoever presented it, and every later request hits the rebound local entry.
+					denied = !sameEndpoint( remoteEndpoint, _endpoint );
+					if( !denied ){
+						let expiration = Chrono::ToClock<steady_clock,Clock>( Protobuf::ToTimePoint(proto.expiration()) );
+						info = ms<SessionInfo>( *sessionId, expiration, UserPK{proto.user_pk()}, remoteEndpoint, proto.has_socket() );
+						info->UserEndpoint = _endpoint;//normalize - sameEndpoint accepts ::ffff: mapped & loopback variants, store what later requests compare against.
+						info->HasSocket = _socket;
+					}
 				}
 				catch( Exception& e ){
-					//anonymous user,
+					//only a *negative answer* may become an anonymous user.  Every failure used to land here, so an AppServer
+					//restart or its request-deadline close - hit while a logged-in user was on the gateway - cached that user as
+					//anonymous under their own session id, and UpdateExpiration then kept refreshing the entry without ever asking
+					//again: permission denied everywhere for RestSessionTimeout, and it outlived the outage.  The status is what
+					//distinguishes them (ServerSocketSession::SessionInfo answers NotFound); it survives the wire on the base.
+					if( e.HttpStatus()!=EHttpStatus::NotFound )
+						throw;//"could not ask" - resume with the exception and cache nothing, so the next request retries.
 					e.SetLevel(ELogLevel::Debug);
 					info = ms<SessionInfo>( *sessionId, steady_clock::now()+RestSessionTimeout(), UserPK{0}, _endpoint, _socket );
+				}
+				if( denied ){//outside the catch - a denial must not fall through to the anonymous-user entry, which would cache an attacker-chosen id.  Same generic answer as the no-3rd-party branch, never an existence oracle.
+					DBGT( ELogTags::HttpServerRead, "[{:x}]Session endpoint '{}' does not match request endpoint '{}' - denying.", *sessionId, remoteEndpoint, _endpoint );
+					if( _throw )
+						throw Exception( SRCE_CUR, ELogLevel::Debug, "[{}]Session not found.", Ƒ("{:x}", *sessionId) );
+					_h.resume();
+					co_return;
 				}
 				upsert( info );
 			}

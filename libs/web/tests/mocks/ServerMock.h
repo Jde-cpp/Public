@@ -10,6 +10,12 @@ namespace Jde::Web::Mock{
 	α Start( jobject settings )ε->void;
 	α Stop()ι->void;
 	α AppClient()ι->sp<App::IApp>;
+	//#4: a 3rd party (an AppServer) that is *not* local, so Sessions::FromSessionId takes the SessionInfoAwait fallback, and that
+	//answers for a session minted at userEndpoint.  AppClient() can't drive it - its IsLocal() is true, which short-circuits the fallback.
+	α ForeignAppClient( string userEndpoint, UserPK userPK={7} )ι->sp<App::IApp>;
+	//#10: a 3rd party whose SessionInfoAwait *fails*, with a caller-chosen status - NotFound is "no such session", anything else is
+	//"could not ask".  The gateway must cache anonymous only for the first.
+	α FailingAppClient( EHttpStatus status )ι->sp<App::IApp>;
 
 	struct RequestHandler final : IRequestHandler{
 		RequestHandler( jobject settings )ι: IRequestHandler{ settings, AppClient() }{}

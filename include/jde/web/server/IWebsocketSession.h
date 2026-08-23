@@ -6,7 +6,6 @@
 #include <jde/fwk/io/protobuf.h>
 #include <jde/ql/usings.h>
 #include <jde/ql/QLAwait.h>
-#include <jde/fwk/co/CoLock.h>
 #include "QueryClientAwait.h"
 
 namespace Jde::DB{ struct AppSchema; }
@@ -32,6 +31,7 @@ namespace Jde::Web::Server{
 		β WriteException( string&& e, RequestId requestId )ι->void=0;
 		α UserPK()Ι{ return _userPK; }
 		α IsOpen()ι->bool{ return StreamPtr()!=nullptr; }//OnClose nulls Stream, so this is the one place that knows the socket behind a registration is gone.
+		α SessionId()ι{ return _sessionInfo ? _sessionInfo->SessionId : SessionPK{}; }//public: Sessions::Remove has to find the sockets bound to a revoked id (#5).
 		β Close()ι->void;
 	protected:
 		sp<ISocketStream> Stream;
@@ -49,7 +49,6 @@ namespace Jde::Web::Server{
 		α ResumeQueryException( RequestId requestId, Exception&& e )ι->bool;//fails a pending QueryClient; false if requestId isn't one of ours, so the caller can try another router (e.g. a forwarded execution).
 		α Schemas()Ι->const vector<sp<DB::AppSchema>>&{ return LocalQL()->Schemas(); }
 		α Session()Ι->const sp<SessionInfo>&{ return _sessionInfo; }
-		α SessionId()ι{ return _sessionInfo ? _sessionInfo->SessionId : SessionPK{}; }
 		α SetSessionId( SessionPK sessionId )ι->void;
 		α SetSessionInfo( sp<SessionInfo> sessionInfo )ι->void{ _sessionInfo = move(sessionInfo); }
 		α Write( string&& m )ι->void;
@@ -57,7 +56,11 @@ namespace Jde::Web::Server{
 	private:
 		α AddTimeout( RequestId requestId, QueryClientAwait::Handle h, Duration timeout, SRCE )ι->TimerAwait::Task;
 		α Disconnect( CodeException&& e )ι{ OnDisconnect(move(e)); }
-		β OnDisconnect( CodeException&& )ι->void{}
+		//#6: every read error other than websocket::error::closed comes here (Streams.cpp DoRead) - beast's idle timeout,
+		//connection_reset, message_too_big.  OnClose is the safe default: a `{}` base silently leaked the session, its
+		//SocketServerListener<->session sp cycle and its fd on any peer that vanished without a close frame.  An override must add
+		//to this, not replace it - call OnClose() (or the base) on every path.
+		β OnDisconnect( CodeException&& )ι->void{ OnClose(); }
 		β OnAccept( beast::error_code ec )ι->void;
 
 		α OnRun()ι->void;

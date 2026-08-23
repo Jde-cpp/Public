@@ -11,19 +11,25 @@ namespace Jde::Web::Server{
 		_settings{settings}
 	{}
 
-	α IRequestHandler::BlockTillStarted()ι->void{
-		while( !_started.test() )
-			_started.wait( false );
+	α IRequestHandler::BlockTillStarted()ε->void{
+		while( _started.load()==EStartState::None )
+			_started.wait( EStartState::None );
+		if( _started.load()==EStartState::Failed )//#11: the exit Server::Start's ε always implied.
+			throw Exception{ SRCE_CUR, ExceptionArgs{ELogTags::Server|ELogTags::Http, 0, EHttpStatus::ServiceUnavailable}, "Web server could not start: {}", _startError };
 	}
 	α IRequestHandler::Start()ι->void{
-		_started.test_and_set();
+		_started.store( EStartState::Started );
+		_started.notify_all();
+	}
+	α IRequestHandler::FailStart( string&& why )ι->void{
+		_startError = move( why );//before the store: the release/acquire pair on _started is what publishes it to BlockTillStarted.
+		_started.store( EStartState::Failed );
 		_started.notify_all();
 	}
 	α IRequestHandler::Stop( bool, SL )ι->void{
 		if( _cancelSignal )
 			_cancelSignal->emit( net::cancellation_type::all );
-//		_cancelSignal = nullptr; heap use after free.
-		_started.clear();
+		_started.store( EStartState::None );
 		_started.notify_all();
 	}
 

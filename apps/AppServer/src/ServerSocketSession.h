@@ -19,8 +19,7 @@ namespace Jde::App::Server{
 		α ConnectionPK()Ι->ConnectionPK{ return _connectionPK; }
 	private:
 		α OnRead( Proto::FromClient::Transmission&& transmission )ι->void override;
-		α OnClose()ι->void override;
-		α OnDisconnect( CodeException&& e )ι->void override;
+		α OnClose()ι->void override;//OnDisconnect is not overridden: the base now routes it here (#6), which is all this override did.
 		α GetJwt( Jde::RequestId requestId )ι->TAwait<jobject>::Task;
 		α Login( string&& jwt, RequestId requestId )ι->TAwait<sp<Web::Server::SessionInfo>>::Task;
 		α ProcessTransmission( Proto::FromClient::Transmission&& transmission, optional<Jde::UserPK> userPK, optional<RequestId> clientRequestId, uint8 depth )ι->void;

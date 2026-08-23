@@ -10,7 +10,8 @@ namespace Jde::App::Client{
 		ILogger{ settings },
 		_client{ move(client) },
 		_delay{ Json::FindDuration(settings, "delay", ELogLevel::Error).value_or(1min) },
-		_maxEntries{ Json::FindNumber<uint32>(settings, "maxEntries").value_or(10'000) }{
+		_maxEntries{ Json::FindNumber<uint32>(settings, "maxEntries").value_or(10'000) },
+		_maxBatch{ Json::FindNumber<uint32>(settings, "maxBatch").value_or(100) }{//#14: ~2 orders of magnitude under the server's 1 MB socket cap at any plausible entry size.
 		Process::AddShutdown( this );
 	}
 	RemoteLog::~RemoteLog(){
@@ -124,10 +125,16 @@ namespace Jde::App::Client{
 			WARN( "Remote log dropped {} entries while the app server was unreachable.", dropped );
 		//Neither path captures `this`: a posted lambda is not covered by ~RemoteLog's wait, so it must not outlive the
 		//object holding a pointer to it.
-		auto write = []( sp<IAppClient> client, vector<Logging::Entry>&& entries )ι{
-			let count = entries.size();
-			if( !client->Write(move(entries)) )
-				WARN( "Remote log lost {} entries - the session closed before the batch reached it.", count );
+		auto write = [maxBatch=_maxBatch]( sp<IAppClient> client, vector<Logging::Entry>&& entries )ι{
+			//#14: one Transmission per batch, not one for the whole backlog.
+			for( uint i=0; i<entries.size(); i+=maxBatch ){
+				let end = std::min<uint>( i+maxBatch, entries.size() );
+				vector<Logging::Entry> batch{ std::make_move_iterator(entries.begin()+i), std::make_move_iterator(entries.begin()+end) };
+				if( !client->Write(move(batch)) ){
+					WARN( "Remote log lost {} entries - the session closed before the batch reached it.", entries.size()-i );
+					break;//the session is gone; every remaining batch would fail the same way.
+				}
+			}
 		};
 		if( post )
 			Post( [write,client=move(client),entries=move(entries)]() mutable{ write(move(client), move(entries)); } );

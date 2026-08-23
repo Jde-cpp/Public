@@ -22,6 +22,7 @@ namespace Jde::App::Client{
 		Duration _delay;
 		//Entries go in whenever the process logs and only come out when the app server is reachable
 		uint32 _maxEntries;
+		uint32 _maxBatch;
 		uint _dropped{};
 		mutex _mutex;
 		bool _running{};

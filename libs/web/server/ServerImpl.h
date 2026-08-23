@@ -15,6 +15,7 @@ namespace Internal{
 	α Stop( sp<IRequestHandler>&& handler, bool terminate, SL sl )ι->void;
 	α RunSocketSession( sp<IWebsocketSession>&& session )ι->void;
 	α RemoveSocketSession( SocketId id )ι->void;
+	α CloseSocketSessions( SessionPK sessionId )ι->uint;
 }
 
 	α AppServerLocal()ι->bool;

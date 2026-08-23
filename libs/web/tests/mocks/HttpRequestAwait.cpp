@@ -92,10 +92,17 @@ namespace Jde::Web::Mock{
 				DBGT( ELogTags::HttpServerWrite, "~/BadAwaitable handler" );
 			 });
 		}
-		else if( _request.Target()=="/redirectLoop" || _request.Target()=="/redirectHost" ){
+		else if( _request.Target()=="/redirectLoop" || _request.Target()=="/redirectHost" || _request.Target()=="/redirectBadPort" || _request.Target()=="/redirectPlain" ){
 			//302 straight back at the client: /redirectLoop points at itself so the hop budget is the only thing that stops it,
 			///redirectHost sends it to the same server under a different host name so the Authorization drop can be observed.
-			let location = _request.Target()=="/redirectLoop" ? string{"/redirectLoop"} : Ƒ( "https://127.0.0.1:{}/authHeader", Port );
+			//L3: /redirectBadPort's port is all digits but far past unsigned long, so RedirectVariables' parse fails - the client
+			//must fail the request rather than strand it.
+			//L4: /redirectPlain names http:// on the same server (it answers both schemes on one port), so the scheme is the only
+			//thing that changes - the client must follow it rather than retry over its original transport.
+			let location = _request.Target()=="/redirectLoop" ? string{"/redirectLoop"}
+				: _request.Target()=="/redirectBadPort" ? string{"https://127.0.0.1:99999999999999999999/authHeader"}
+				: _request.Target()=="/redirectPlain" ? Ƒ( "http://127.0.0.1:{}/authHeader", Port )
+				: Ƒ( "https://127.0.0.1:{}/authHeader", Port );
 			_request.ResponseHeaders.emplace( "Location", location );//set before the move - RestException::Response() emits these.
 			ResumeExp( RestException(EHttpStatus::Found, SRCE_CUR, move(_request), "redirecting") );
 		}

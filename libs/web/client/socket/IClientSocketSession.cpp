@@ -7,6 +7,7 @@
 #include "jde/fwk/log/logTags.h"
 #include "jde/fwk/usings.h"
 #include <jde/app/client/clientSubscriptions.h>
+#include <jde/fwk/process/execution.h>
 
 namespace Jde::Web{
 	constexpr ELogTags _connectTag{ ELogTags::Socket | ELogTags::Client };
@@ -17,7 +18,7 @@ namespace Jde::Web{
 	static optional<uint16> _maxLogLength;
 	α Client::MaxLogLength()ι->uint16{
 		if( !_maxLogLength )
-			_maxLogLength = Settings::FindNumber<uint16>( "http/maxLogLength" ).value_or( 255 );
+			_maxLogLength = Settings::FindNumber<uint16>( "/http/maxLogLength" ).value_or( 255 );//L5: leading slash - without it the path never matched and the default always won, so the setting was inert on the client side.
 		return *_maxLogLength;
 	}
 }
@@ -69,7 +70,11 @@ namespace Jde::Web::Client{
 	α IClientSocketSession::CloseOnError( string reason, SL sl )ι->void{
 		Exception{ sl, ELogLevel::Error, "[{}]Closing socket: {}", Ƒ("{:x}", Id()), reason };
 		if( auto stream = StreamPtr(); stream )
-			stream->Close( shared_from_this(), false, sl );
+			stream->Close( shared_from_this(), false, sl );//OnClose drains _tasks with the close reason.
+		else
+			//#15: no stream, so nothing was going to drain _tasks.  This is the *recovery* path - AddTimeout calls it precisely
+			//because a request went unanswered
+			CloseTasks( net::error::not_connected );
 	}
 
 	α IClientSocketSession::AddTimeout( RequestId requestId, SL sl )ι->TimerAwait::Task{
@@ -150,8 +155,18 @@ namespace Jde::Web::Client{
 	}
 	α IClientSocketSession::Write( string&& m )ι->void{
 		//the hot cross-thread case: a caller writing while a close is running on the strand used to dereference a nulled _stream.
-		if( auto stream = StreamPtr(); stream )
+		if( auto stream = StreamPtr(); stream ){
 			stream->AsyncWrite( move(m), shared_from_this() );
+			return;
+		}
+		//#15: the frame used to be dropped here in silence, while Suspend had already registered the request in _tasks - so
+		//nothing could ever answer it.  Everything pending is equally undeliverable once the stream is gone; fail it now rather
+		//than leave the caller to the request timeout (and, before the fix above, to nothing at all).
+		//Posted, not inline: Write is reached from ClientSocketAwait::Suspend, i.e. from inside await_suspend, and resuming the
+		//caller there re-enters a coroutine that has not finished suspending - the trap CloseClientSocketSessionAwait::await_ready
+		//documents.  The post lets await_suspend return first.
+		DBGT( _writeTag, "[{}]Write on a closed session - failing the pending request(s).", hex(Id()) );
+		Post( [self=shared_from_this()]{ self->CloseTasks( net::error::not_connected ); } );
 	}
 
 	α IClientSocketSession::OnRead( beast::error_code ec, uint bytes_transferred )ι->void{

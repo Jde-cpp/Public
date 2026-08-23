@@ -14,9 +14,9 @@ namespace Jde::Web::Server{
 		//was sent every entry and SubscribeLog::Add pushed Trace into the logger's tag threshold for the whole process.
 		optional<ELogLevel> level;
 		if( filterValue.Value.is_string() )
-			level = ToLogLevel( filterValue.Value.get_string() );
-		else if( filterValue.Value.is_number() )
-			level = (ELogLevel)filterValue.Value.to_number<uint8>();
+			level = ToLogLevel( filterValue.Value.get_string() ); // "error" if not-parsable
+		else if( auto number = filterValue.Value.is_number() ? Json::FindNumber<uint8>(filterValue.Value, {}) : nullopt; number )
+			level = (ELogLevel)*number;
 		if( !level )
 			return dflt;
 		using enum DB::EOperator;
@@ -56,52 +56,125 @@ namespace Jde::Web::Server{
 		LogSubscription Sub;
 	};
 
-	vector<SessionSubscription> _subs; shared_mutex _mutex;
+	vector<sp<SessionSubscription>> _subs; shared_mutex _mutex;
+
+	//O1: what Add overwrote when it lowered a tag-set's floor, so Unsubscribe can put it back.  Prior is the effective level
+	//before the first lowering - what a surviving subscription's floor is compared against; PriorOverride is the explicit
+	//override if there was one, so the restore reinstates it rather than leaving behind one the configuration never had.
+	struct LoweredTag{ ELogLevel Prior; optional<ELogLevel> PriorOverride; };
+	flat_map<ELogTags,LoweredTag> _loweredTags;//guarded by _mutex, like _subs.
+
+	//The level each lowered tag-set should be put back to, given what is left in _subs.  nullopt = ClearLevel, i.e. there was no
+	//override before.  Callers hold _mutex; applying the answer is deliberately left until after they release it, because
+	//SetLevel/ClearLevel call Logging::UpdateCumulative over the logger list and Logging::Log holds that while calling Write,
+	//which takes _mutex - the opposite order.
+	Ω takeRestores()ι->vector<std::pair<ELogTags,optional<ELogLevel>>>{
+		vector<std::pair<ELogTags,optional<ELogLevel>>> y;
+		for( auto it = _loweredTags.begin(); it!=_loweredTags.end(); ){
+			optional<ELogLevel> needed;//the deepest floor the surviving subscriptions on this tag-set still ask for.
+			for( let& s : _subs ){
+				if( s->Sub.Tags==it->first && (!needed || s->Sub.MinLevel<*needed) )
+					needed = s->Sub.MinLevel;
+			}
+			if( needed && *needed<it->second.Prior ){//someone still wants it below where it started - raise it to just what they need, no further.
+				y.emplace_back( it->first, needed );
+				++it;
+			}
+			else{//nothing left lowering it: reinstate exactly what was there, override or none.
+				y.emplace_back( it->first, it->second.PriorOverride );
+				it = _loweredTags.erase( it );
+			}
+		}
+		return y;
+	}
+	Ω applyRestores( const vector<std::pair<ELogTags,optional<ELogLevel>>>& restores )ι->void{
+		auto log = Logging::FindLogger<SubscribeLog>();//Unsubscribe is static; the levels live on the logger instance.
+		if( !log )
+			return;
+		for( let& [tags,level] : restores ){
+			if( level )
+				log->SetLevel( tags, *level );
+			else
+				log->ClearLevel( tags );
+		}
+	}
+
 	α SubscribeLog::Shutdown( bool, SL )ι->void{
 		ul _{ _mutex };
 		_subs.clear();
+		//Deliberately no restoreLevels here: SetLevel/ClearLevel call Logging::UpdateCumulative over the logger list, which is
+		//itself being torn down around this call.  The process is ending, so the floor no longer matters.
+		_loweredTags.clear();
 	}
 
+	//O1: a `logs` subscription defaults to Trace (LogSubscription::MinLevel) and Add pushes that into the logger's tag threshold
+	//for the whole process.  Unsubscribe only erased the entry, so one client connecting and leaving held the process at Trace
+	//until it died.  Put the floor back to whatever the surviving subscriptions still need - or to exactly what was there before.
 	α SubscribeLog::Unsubscribe( SocketId socketId )ι->void{
-		ul _{ _mutex };
-		std::erase_if( _subs, [=](auto&& s){ return s.Session->Id() == socketId; } );
+		vector<std::pair<ELogTags,optional<ELogLevel>>> restores;
+		{
+			ul _{ _mutex };
+			std::erase_if( _subs, [=](auto&& s){ return s->Session->Id() == socketId; } );
+			restores = takeRestores();
+		}
+		applyRestores( restores );//outside _mutex - see takeRestores.
 	}
 
 	α SubscribeLog::Add( sp<Web::Server::IWebsocketSession> session, vector<QL::Subscription>&& subs )ι->void{
 		ul _{ _mutex };
 		for( auto& request : subs ){
-			SessionSubscription s{ session, move(request) };
-			if( s.Sub.MinLevel<MinLevel(s.Sub.Tags) )
-				SetLevel( s.Sub.Tags, s.Sub.MinLevel );
+			auto s = ms<SessionSubscription>( session, move(request) );
+			if( let prior = MinLevel(s->Sub.Tags); s->Sub.MinLevel<prior ){
+				if( !_loweredTags.contains(s->Sub.Tags) ){//O1: remember what to put back, once, before the first lowering overwrites it.
+					optional<ELogLevel> priorOverride;
+					ConfiguredTags().cvisit( s->Sub.Tags, [&priorOverride](auto& kv){ priorOverride = kv.second; } );
+					_loweredTags.emplace( s->Sub.Tags, LoweredTag{prior, priorOverride} );
+				}
+				SetLevel( s->Sub.Tags, s->Sub.MinLevel );
+			}
 			_subs.push_back( move(s) );
 		}
 	}
+
+	thread_local bool _writing{};
+	struct WriteGuard final : noncopyable{
+		WriteGuard()ι{ _writing = true; }
+		~WriteGuard(){ _writing = false; }
+	};
 	α SubscribeLog::Write( const Logging::Entry& m )ι->void{
 		Write( m, _appPK, _connectionPK );
 	}
 	α SubscribeLog::Write( const Logging::Entry& m, uint32 appPK, App::ConnectionPK connectionPK )ι->void{
-		sl _{ _mutex };
-		for( let& s : _subs ){
-			bool valid{ m.Level>=s.Sub.MinLevel };
-			valid = valid && !empty( m.Tags & s.Sub.Tags );
-			if( !valid )
-				continue;
-			let& filter = s.Sub.Fields.Filter();
-			valid = valid && filter.Test( "time", m.Time );
-			valid = valid && filter.Test( "text", m.Text );
-			valid = valid && filter.Test( "line", m.Line );
-			valid = valid && filter.Test( "templateId", m.Id() );
-			valid = valid && filter.Test( "message", m.Message() );
-			valid = valid && filter.Test( "appPK", appPK );
-			valid = valid && filter.Test( "appConnectionPK", connectionPK );
-			if( valid && filter.ColumnFilters.contains("args") ){
-				for( let& arg : m.Arguments ){
-					if( valid = filter.Test("args", arg); !valid )
-						break;
+		if( _writing )
+			return;//re-entered from a session's own WriteSubscription - the subscriber does not want its delivery echoed back to it, and dispatching it would not terminate.
+		WriteGuard guard;
+		vector<sp<SessionSubscription>> matches;
+		{
+			sl _{ _mutex };
+			for( let& s : _subs ){
+				bool valid{ m.Level>=s->Sub.MinLevel };
+				valid = valid && !empty( m.Tags & s->Sub.Tags );
+				if( !valid )
+					continue;
+				let& filter = s->Sub.Fields.Filter();
+				valid = valid && filter.Test( "time", m.Time );
+				valid = valid && filter.Test( "text", m.Text );
+				valid = valid && filter.Test( "line", m.Line );
+				valid = valid && filter.Test( "templateId", m.Id() );
+				valid = valid && filter.Test( "message", m.Message() );
+				valid = valid && filter.Test( "appPK", appPK );
+				valid = valid && filter.Test( "appConnectionPK", connectionPK );
+				if( valid && filter.ColumnFilters.contains("args") ){
+					for( let& arg : m.Arguments ){
+						if( valid = filter.Test("args", arg); !valid )
+							break;
+					}
 				}
+				if( valid )
+					matches.push_back( s );
 			}
-			if( valid )
-				s.Session->WriteSubscription( appPK, connectionPK, m, s.Sub );
 		}
+		for( let& s : matches )//outside the lock - WriteSubscription logs, and that comes back through Logging::Log into this function.
+			s->Session->WriteSubscription( appPK, connectionPK, m, s->Sub );
 	}
 }

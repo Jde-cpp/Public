@@ -24,6 +24,7 @@ namespace Jde{
 		Φ AddShutdown( IShutdown* pShutdown )ι->void;
 		Φ AddCancelSignal( sp<boost::asio::cancellation_signal> s )ι->void;
 		Φ RemoveCancelSignal( const sp<boost::asio::cancellation_signal>& s )ι->void;
+		Φ CancelSignalCount()ι->uint;//how many are retained.  This list only ever grew before web-review3 #12; a count makes the regression visible.
 		Φ Run()->void;
 	}
 }

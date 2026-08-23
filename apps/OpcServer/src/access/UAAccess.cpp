@@ -28,12 +28,33 @@ namespace Jde::Opc::Server{
 	string _schemaName;
 }
 namespace Jde::Opc::Server::UAAccess{
-	Ω expired( const SessionContext* ctx )ι->bool{//non-authenticated paths set Expiration=TimePoint::max(); only JWT/SessionInfo sessions carry a real expiry.
-		if( ctx && ctx->Expiration<Clock::now() ){
-			DBG( "Session for user '{}' expired at '{}'", ctx->UserPK.Value, ToIsoString(ctx->Expiration) );
-			return true;
+	constexpr auto _renewInterval{ 30s };//O2: bounds what a genuinely-dead session costs - one AppServer round trip per interval, not one per node access.
+	//Expiration is the snapshot ActivateSession took and it was never renewed, so a long-lived OPC session hit a hard wall at
+	//whatever the web session's expiry was then - a day for a socket-backed one (/http/socketTimeout) - and every rights, browse
+	//and subscribe check below was denied from that moment on, while the web session behind it was still alive and being
+	//refreshed by the gateway on every request.  Re-ask the authority when the snapshot lapses; deny only if it agrees.
+	Ω expired( SessionContext* ctx )ι->bool{//non-authenticated paths set Expiration=TimePoint::max(); only JWT/SessionInfo sessions carry a real expiry.
+		if( !ctx || ctx->Expiration>=Clock::now() )
+			return false;
+		if( ctx->SessionId && Clock::now()-ctx->LastRenewal>=_renewInterval ){
+			ctx->LastRenewal = Clock::now();
+			try{
+				//Same call ActivateSession made, against the same authority - this is a re-read of the session, not a new one.
+				if( auto await = AppClient()->SessionInfoAwait(ctx->SessionId); await ){
+					let info = BlockAwait<TAwait<Web::FromServer::SessionInfo>, Web::FromServer::SessionInfo>( move(*await) );
+					ctx->Expiration = Protobuf::ToTimePoint( info.expiration() );
+					if( ctx->Expiration>=Clock::now() ){
+						DBG( "[{:x}]Renewed session for user '{}' to '{}'", ctx->SessionId, ctx->UserPK.Value, ToIsoString(ctx->Expiration) );
+						return false;
+					}
+				}
+			}
+			catch( Exception& e ){
+				e.PrependWhat( Ƒ("[{}]Could not renew session for user '{}': {}", hex(ctx->SessionId), ctx->UserPK.Value, e.what()) );
+			}
 		}
-		return false;
+		DBG( "Session for user '{}' expired at '{}'", ctx->UserPK.Value, ToIsoString(ctx->Expiration) );
+		return true;
 	}
 	Ω authorize( sv resource, Access::ERights rights, UserPK userPK )ι->bool{
 		bool allow{ true };
