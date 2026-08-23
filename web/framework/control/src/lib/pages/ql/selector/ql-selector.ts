@@ -4,15 +4,15 @@ import {ActivatedRoute, Router} from '@angular/router';
 import {Sort} from '@angular/material/sort';
 import { MatTable } from '@angular/material/table';
 import {SnackbarService} from '../../../shared/snackbar/snackbar-service'
-import {IGraphQL } from '../../../services/IGraphQL';
-import {Field} from '../../../model/ql/schema/Field';
-import {TableSchema}  from '../../../model/ql/schema/TableSchema';
-import {MetaObject}  from '../../../model/ql/schema/MetaObject';
+import {IGraphQL } from '../../../services/graphql';
+import {Field} from '../../../model/ql/schema/field';
+import {TableSchema}  from '../../../model/ql/schema/table-schema';
+import {MetaObject}  from '../../../model/ql/schema/meta-object';
 
 import { ComponentPageTitle } from 'jde-spa';
-import { GraphQLTable } from '../../GraphQL/table/table';
+import { GraphQLTable } from '../../graphql/table/graphql-table';
 import { SelectionModel } from '@angular/cdk/collections';
-import { View, ViewField } from '../../../model/ql/View';
+import { View, ViewField } from '../../../model/ql/view';
 
 @Component( {
 		selector: 'ql-selector',//.main-content.mat-drawer-container.my-content

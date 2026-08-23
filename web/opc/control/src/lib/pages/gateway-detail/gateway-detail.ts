@@ -4,8 +4,8 @@ import { ActivatedRoute } from '@angular/router';
 import {  ProfileStore } from 'jde-spa';
 import { AppService, LogDetail, LogSettingsPanel, QLList, QLListData, TableSettings } from 'jde-framework';
 import { RouteItem } from 'jde-spa';
-import { GatewayService } from '../../services/gateway.service';
-import { Gateway } from '../../services/gateway.service';
+import { GatewayService } from '../../services/gateway-service';
+import { Gateway } from '../../services/gateway-service';
 
 @Component( {
 		styleUrls: ['gateway-detail.scss'],

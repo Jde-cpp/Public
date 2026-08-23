@@ -6,13 +6,13 @@ import {MatFormFieldModule} from '@angular/material/form-field';
 import { EProvider, IAuth, IEnvironment, User } from 'jde-spa';
 import {FormBuilder, ReactiveFormsModule} from "@angular/forms";
 import {SnackbarService} from '../../../shared/snackbar/snackbar-service';
-import {GoogleAuthService, googleLoginHintKey} from '../../../services/google-auth.service';
+import {GoogleAuthService, googleLoginHintKey} from '../../../services/google-auth-service';
 
 @Component({
     selector: 'app-login-page',templateUrl: './login-page.html',styleUrl: './login-page.scss',
     imports: [MatButtonModule,MatFormFieldModule,MatInputModule,RouterLink,ReactiveFormsModule],
 })
-export class LoginPageComponent implements OnDestroy{
+export class LoginPage implements OnDestroy{
 	constructor( @Inject('IAuth') private authService: IAuth, private snackbar: SnackbarService, @Inject('IEnvironment') private envService: IEnvironment ){
 		effect( async ()=>{
 			if( this.providers?.value()?.includes(EProvider.Google) && !this.showedGoogleLogin ){

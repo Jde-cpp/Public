@@ -1,0 +1,39 @@
+import { ActivatedRouteSnapshot, createUrlTreeFromSnapshot, Resolve, Router, RouterStateSnapshot } from '@angular/router';
+import { inject, Injectable } from '@angular/core';
+import { ProfileStore } from 'jde-spa';
+import { SnackbarService, StringUtils, TableSchema } from 'jde-framework';
+import { Role, RoleNK } from '../model/role';
+import { AccessService } from './access-service';
+
+export class IRoleData{
+	role:Role;
+	schema: TableSchema;
+};
+@Injectable()
+export class RoleResolver implements Resolve<IRoleData> {
+	constructor( private router:Router, private snackbar: SnackbarService ){}
+
+	async load(target:RoleNK, route:ActivatedRouteSnapshot):Promise<IRoleData>{
+		const schema = await this.#ql.schemaWithEnums( "roles", (m)=>console.log(m) );
+
+		let ql = `role( target: ${StringUtils.qlString(target)} ){ id target name created updated ${ProfileStore.showDeleted("roles") ? "deleted" : ""} description permissionRights{id allowed denied resource{id}} roles{id} }`;
+		try{
+			const role = await this.#ql.querySingle(ql);
+			return { role: new Role(role), schema: schema };
+		}catch( e ){
+			this.snackbar.error( `Role not found:  '${target}'` );
+			this.router.navigateByUrl( createUrlTreeFromSnapshot(route, ['..']) );//an injected ActivatedRoute is the ROOT route inside a resolver, so relativeTo sent this to '/';  the snapshot is this route.
+			return null;
+		}
+	}
+	resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<IRoleData>{
+		return this.load( route.paramMap.get("target"), route );
+	}
+
+	#ql = inject( AccessService );
+}
+export class UserSettings{
+	assign( value:UserSettings ){ this.tabIndex = value.tabIndex;  }
+	showDeleted:boolean = false;
+	tabIndex:number=0;
+}

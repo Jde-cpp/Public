@@ -24,6 +24,23 @@ function addHard {
 	fi;
 };
 
+#The version the C++ build stamps into every target - CMakePresets.common.json's JDE_VERSION, the same string
+#`project( … VERSION ${JDE_VERSION} )` uses - into the variable named by $1, normalised to what npm accepts.
+#The presets file to read defaults to $JDE_BASH's, which is the checkout whose build/common.sh was sourced; pass $2
+#to read another one.
+#JDE_VERSION is a date (2026.09.01) and that is not semver: npm's semver rejects leading zeros in a numeric
+#identifier, so semver.valid("2026.09.01") is null and satisfies("2026.09.01","2026.09.01") answers false - a
+#library packed at that version would never match a sibling's peer range.  Drop the zeros: 2026.9.1.
+function jdeVersion {
+	local -n _jdeVersion=$1;
+	local presets=${2:-$JDE_BASH/CMakePresets.common.json};
+	#assign on its own line - `local raw=`cmd`` returns local's status, not the command's, so the || never fires.
+	local raw;
+	raw=`jq -er '.configurePresets[] | select(.name=="common") | .cacheVariables.JDE_VERSION' "$presets" 2> /dev/null` || { echo `pwd`; echo could not read JDE_VERSION from $presets; exit 1; };
+	#a lone 0 is left alone: `0+([0-9])` needs a digit after the zeros, so 1.0.0 does not become 1..
+	_jdeVersion=`echo "$raw" | sed -E 's/(^|\.)0+([0-9])/\1\2/g'`;
+}
+
 #`ng new` emits tsconfig.json with leading /* */ comment lines, which jq cannot parse.  Strip whole-line
 #comments before piping to jq - matching create-library.sh - so a // inside a string value is left alone.
 #Only replace the original once jq has succeeded: `cmd > tmp; rm orig; mv tmp orig` zeroed the file on any failure.

@@ -4,8 +4,8 @@ import { CommonModule } from '@angular/common';
 import {ActivatedRoute, Route, Router, Routes, UrlSegment} from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import {Sort} from '@angular/material/sort';
-import {Field} from '../../../../../model/ql/schema/Field';
-import {TableSchema}  from '../../../../../model/ql/schema/TableSchema';
+import {Field} from '../../../../../model/ql/schema/field';
+import {TableSchema}  from '../../../../../model/ql/schema/table-schema';
 
 import { MatIcon } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -13,8 +13,8 @@ import { MatCheckbox } from '@angular/material/checkbox';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTable, MatTableModule } from '@angular/material/table';
 import { MatToolbar } from '@angular/material/toolbar';
-import { Operator, View, ViewField } from '../../../../../model/ql/View';
-import { StringUtils } from '../../../../../utils/StringUtils';
+import { Operator, View, ViewField } from '../../../../../model/ql/view';
+import { StringUtils } from '../../../../../utils/string-utils';
 import { MatInput } from "@angular/material/input";
 import { Schema } from '@angular/forms/signals';
 

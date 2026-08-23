@@ -4,8 +4,8 @@ import { MAT_TABS_CONFIG } from '@angular/material/tabs';
 import { provideRouter } from '@angular/router';
 import { AppService, AuthStore, ProfileService } from 'jde-framework'
 import { GatewayService, OpcAuthService, OpcStore} from 'jde-opc';
-import {EnvironmentService} from './services/environment.service';
-import { routes } from './app_routing_module';
+import {EnvironmentService} from './services/environment-service';
+import { routes } from './app.routes';
 import { AccessService } from "jde-access";
 
 export const appConfig: ApplicationConfig = {

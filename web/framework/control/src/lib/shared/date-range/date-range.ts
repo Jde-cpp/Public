@@ -4,7 +4,7 @@ import {MatChipListbox, MatChipOption, MatChipsModule} from '@angular/material/c
 import {MatDatepickerInputEvent, MatDatepickerModule, MatDatepickerToggle, MatDateRangeInput, MatDateRangePicker} from '@angular/material/datepicker';
 import {MatFormField, MatFormFieldModule, MatLabel} from '@angular/material/form-field';
 
-import { DateUtils, Day } from '../../utils/dateUtils';
+import { DateUtils, Day } from '../../utils/date-utils';
 //import { IAssignable } from '../../utils/settings';
 
 export enum TimeFrame{None=0, Week=7, Month=30, Quarter=90, Year=360, All=1000}

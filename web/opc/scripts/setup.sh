@@ -17,24 +17,30 @@ addHard styles.scss $sitePath;
 addHard index.html $sitePath;
 addHard favicon.ico $sitePath;
 cd app;
-echo `pwd`: addHard app_routing_module.ts $sitePath/app;
-addHard app_routing_module.ts $sitePath/app;
-addHard app.component.html $sitePath/app;
-addHard app.component.scss $sitePath/app;
-addHard app.component.ts $sitePath/app;
-addHard app.module.ts $sitePath/app;
+#`ng new` scaffolds a hello-world root component (app.ts/app.html/app.scss/app.spec.ts) that this site replaces.
+#addHard rm's its target first, so the three linked names overwrite themselves; the orphan spec has no link to
+#overwrite it and would otherwise keep running against the deleted scaffold under `ng test`.
+rm -f app.spec.ts;
+addHard app.routes.ts $sitePath/app;
+addHard app.html $sitePath/app;
+addHard app.scss $sitePath/app;
+addHard app.ts $sitePath/app;
 rm -f app.config.ts;
 addHard app.config.ts $sitePath/app;
 addHard google-relogin.spec.ts $sitePath/app;
 addHard profile-store.spec.ts $sitePath/app;
-addHard profile.service.spec.ts $sitePath/app;
+addHard profile-service.spec.ts $sitePath/app;
 moveToDir services;
-addHard environment.service.ts $sitePath/app/services;
+addHard environment-service.ts $sitePath/app/services;
 cd ../..;
 moveToDir environments;
 addHard environment.ts $sitePath/environments;
 addHard environment.development.ts $sitePath/environments;
-cd ..;
+cd ../..;
+#the application itself is never published, but stamping it keeps the manifest reporting the same version the
+#libraries and the C++ services carry, so anything reading it (npm ls, a future about-box) agrees with them.
+jdeVersion jdeVer;
+jqEdit package.json ".version = \"$jdeVer\"";
 #create-workspace.sh writes angular.json, but only when the workspace is absent, so the swap is re-applied here on
 #every run.  Without it `ng serve` and `--configuration development` build against the production environment.ts.
 jqEdit angular.json '.projects."my-workspace".architect.build.configurations.development.fileReplacements = [{"replace":"src/environments/environment.ts","with":"src/environments/environment.development.ts"}]';

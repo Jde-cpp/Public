@@ -9,9 +9,9 @@ import { ProfileStore } from 'jde-spa';
 import { DetailResolverData, SnackbarService, IGraphQL, Properties} from 'jde-framework';
 
 import { ServerProperties } from './server-properties/server-properties';
-import { ServerCnnctn, ServerCnnctnProps } from '../../../model/ServerCnnctn';
-import { Gateway, GatewayService } from '../../../services/gateway.service';
-import { Server } from '../../../model/Server';
+import { ServerCnnctn, ServerCnnctnProps } from '../../../model/server-cnnctn';
+import { Gateway, GatewayService } from '../../../services/gateway-service';
+import { Server } from '../../../model/server';
 
 @Component( {
 	templateUrl: './client-detail.html',

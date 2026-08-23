@@ -9,12 +9,12 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { ComponentPageTitle, RouteItem, ProfileStore } from 'jde-spa';
 import { arraysEqual, cloneClassArray, DetailResolverData, SnackbarService, IGraphQL, Properties, QLSelector, Style, TableSettings, TargetRow, toIdArray} from 'jde-framework';
 
-import { RolePK } from '../../model/Role';
+import { RolePK } from '../../model/role';
 import { PermissionTable } from '../../shared/permissions/permission-table';
-import { Permission } from '../../model/Permission';
-import { AccessService } from '../../services/access.service';
-import { GroupPK } from '../../model/Group';
-import { User } from '../../model/User';
+import { Permission } from '../../model/permission';
+import { AccessService } from '../../services/access-service';
+import { GroupPK } from '../../model/group';
+import { User } from '../../model/user';
 
 @Component( {
     templateUrl: './user-detail.html',

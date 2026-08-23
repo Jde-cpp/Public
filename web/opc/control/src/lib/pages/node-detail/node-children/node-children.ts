@@ -5,7 +5,7 @@ import {MatCheckboxChange, MatCheckboxModule} from '@angular/material/checkbox';
 import {MatSelectChange, MatSelectModule} from '@angular/material/select';
 import { Sort } from "@angular/material/sort";
 import {RouterModule, ActivatedRoute, Router} from '@angular/router';
-import { Gateway, GatewayService, SubscriptionResult } from '../../../services/gateway.service';
+import { Gateway, GatewayService, SubscriptionResult } from '../../../services/gateway-service';
 import { ProfileStore } from 'jde-spa';
 import { DateUtils, SnackbarService, ProtoUtils, Timestamp} from 'jde-framework'
 import { EAccess, ETypes } from '../../../model/types';
@@ -13,16 +13,16 @@ import {  MatTableModule } from '@angular/material/table';
 import { Subscription } from 'rxjs';
 import { ComponentPageTitle } from 'jde-spa';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { NodePageData } from '../../../services/resolvers/node.resolver';
-import { OpcNodeRouteService } from '../../../services/routes/opc-node-route.service';
-import { Value, valueString } from '../../../model/Value';
-import { ENodeClass, Variable, UaNode }  from '../../../model/Node';
+import { NodePageData } from '../../../services/resolvers/node-resolver';
+import { OpcNodeRouteService } from '../../../services/routes/opc-node-route-service';
+import { Value, valueString } from '../../../model/value';
+import { ENodeClass, Variable, UaNode }  from '../../../model/node';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDatepickerInputEvent, MatDatepickerModule } from '@angular/material/datepicker';
 import { MatInputModule } from '@angular/material/input';
 import {provideNativeDateAdapter} from '@angular/material/core';
-import { Server } from '../../../model/Server';
-import { NodeId } from '../../../model/NodeId';
+import { Server } from '../../../model/server';
+import { NodeId } from '../../../model/node-id';
 
 @Component({
   selector: 'node-children',

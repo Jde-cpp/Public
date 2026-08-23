@@ -1,7 +1,7 @@
 import {Component, Inject, Signal, inject, resource} from '@angular/core';
 import {Router, RouterLink, RouterLinkActive} from '@angular/router';
 import {MatButtonModule} from '@angular/material/button';
-import { EProvider, IAuth, User } from '../../services/authorization/IAuth';
+import { EProvider, IAuth, User } from '../../services/authorization/auth';
 import { MatIconModule } from '@angular/material/icon';
 
 declare const gapi: any;

@@ -8,8 +8,8 @@ import { MatInputModule } from "@angular/material/input";
 import { MatSelectModule } from "@angular/material/select";
 import { Sort } from "@angular/material/sort";
 import { MatTable, MatTableModule } from "@angular/material/table";
-import { TableSchema } from '../../../../../model/ql/schema/TableSchema';
-import { View } from '../../../../../model/ql/View';
+import { TableSchema } from '../../../../../model/ql/schema/table-schema';
+import { View } from '../../../../../model/ql/view';
 
 
 @Component( {

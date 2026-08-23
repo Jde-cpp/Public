@@ -2,9 +2,9 @@ import { Component, OnDestroy, OnInit, inject, model, signal } from '@angular/co
 import { MatTabsModule } from '@angular/material/tabs';
 import { ActivatedRoute } from '@angular/router';
 import { ProfileStore, RouteItem, RouteStore } from 'jde-spa';
-import { AppService } from '../../../services/app/app.service';
-import { LogDetail } from '../../logs/detail/logs';
-import { LogSettingsPanel } from '../../logs/settings/log-settings';
+import { AppService } from '../../../services/app/app-service';
+import { LogDetail } from '../../logs/detail/log-detail';
+import { LogSettingsPanel } from '../../logs/settings/log-settings-panel';
 
 //Both tabs talk to AppService itself.  Unlike the gateway/opc-server pages there is no per-instance service to build:
 //the AppServer publishes no /appServers discovery endpoint (only /opcGateways and /opcServers), and the environment's
