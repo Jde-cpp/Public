@@ -32,21 +32,23 @@ namespace Jde::Web::Client{
 		_headers{ res.base() }
 	{}
 
-	α ClientHttpRes::RedirectVariables()Ε->tuple<string,string,PortType>{
+	α ClientHttpRes::RedirectVariables()Ε->tuple<string,string,PortType,bool>{
 		let location = string{ _headers[http::field::location] };
 		string host, target;
 		PortType port{ 443 };
+		bool isSsl{ true };
 		if( let schemeEnd = location.find("://"); schemeEnd!=string::npos ){
-			if( location.starts_with("http:") )
+			if( location.starts_with("http:") ){
 				port = 80;
+				isSsl = false;
+			}
 			let hostStart = schemeEnd+3;
 			let targetStart = location.find( '/', hostStart );
 			host = location.substr( hostStart, targetStart==string::npos ? string::npos : targetStart-hostStart );
 			if( let colon = host.find(':'); colon!=string::npos ){
-				let portText = host.substr( colon+1 );
-				if( portText.empty() || portText.find_first_not_of("0123456789")!=string::npos )
-					THROW( "Could not parse redirect:  {}", location );
-				port = (PortType)std::stoul( portText );
+				let port16 = Str::TryTo<PortType>( host.substr(colon+1) );
+				THROW_IF( !port16, "Could not parse redirect:  {}", location );
+				port = *port16;
 				host.resize( colon );
 			}
 			if( host.empty() )
@@ -57,6 +59,6 @@ namespace Jde::Web::Client{
 			target = location;//relative redirect - caller reuses the original host & port.
 		else
 			THROW( "Could not parse redirect:  {}", location );
-		return make_tuple( move(host), move(target), port );
+		return make_tuple( move(host), move(target), port, isSsl );
 	}
 }

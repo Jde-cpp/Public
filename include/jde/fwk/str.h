@@ -1,7 +1,5 @@
 ﻿#pragma once
 #include "jde/fwk/usings.h"
-#ifndef JDE_STR_H
-#define JDE_STR_H
 DISABLE_WARNINGS
 #pragma GCC diagnostic ignored "-Wsubobject-linkage"
 #include <charconv>
@@ -11,6 +9,7 @@ DISABLE_WARNINGS
 #include <boost/archive/iterators/binary_from_base64.hpp>
 #include <boost/archive/iterators/remove_whitespace.hpp>
 #include <boost/archive/iterators/transform_width.hpp>
+#include "exceptions/Exception.h"
 ENABLE_WARNINGS
 
 #define Φ Γ auto
@@ -26,7 +25,7 @@ namespace Jde::Str{
 	Φ Empty()ι->str;
 	Ξ Reserve( uint size )ι->string{ string s; s.reserve(size); return s; }
 
-	template<class T=string> α Decode64( sv s, bool convertFromFileSafe=false )ε->T;
+	template<class T=string> α Decode64( sv s, bool convertFromFileSafe=false, SRCE )ε->T;
 	Φ DecodeUri( sv str )ι->string;
 	template<class T, class I=T::const_iterator> α Encode64( const T& val, bool convertFromFileSafe=false )ι->string;
 
@@ -81,7 +80,7 @@ namespace Jde{
 	Ξ ToSV( Str::iv x )ι->sv{ return Str::ToView<sv,Str::iv>(x); }
 	Ξ ToIV( sv x )ι->Str::iv{ return Str::ToView<Str::iv,sv>(x); }
 
-	Ŧ Str::Decode64( sv s, bool convertFromFileSafe )ε->T{ //https://stackoverflow.com/questions/10521581/base64-encode-using-boost-throw-exception
+	Ŧ Str::Decode64( sv s, bool convertFromFileSafe, SL sl )ε->T{ //https://stackoverflow.com/questions/10521581/base64-encode-using-boost-throw-exception
 		string encoded{ s };
 		if( convertFromFileSafe )
 			encoded = Str::Replace( Str::Replace(encoded, '_', '/'), '-', '+' );
@@ -94,10 +93,15 @@ namespace Jde{
 
 		using namespace boost::archive::iterators;
 		using TW = transform_width<binary_from_base64<remove_whitespace<string::const_iterator>>, 8, 6>;
-		T y{ TW(encoded.begin()), TW(encoded.end()) };
-		if( uint decodedSize = charCount*6/8; y.size()>decodedSize )
-			y.resize( decodedSize );
-		return y;
+		try{
+			T y{ TW(encoded.begin()), TW(encoded.end()) };
+			if( uint decodedSize = charCount*6/8; y.size()>decodedSize )
+				y.resize( decodedSize );
+			return y;
+		}
+		catch( boost::archive::iterators::dataflow_exception& e ){
+			throw Exception{ sl, {}, move(e), "Error decoding base64" };
+		}
 	}
 
 	template<class T, class I> α Str::Encode64( const T& val, bool convertFromFileSafe )ι->string{ //https://stackoverflow.com/questions/7053538/how-do-i-encode-a-string-to-base64-using-only-boost
@@ -152,4 +156,3 @@ namespace Jde{
 	}
 }
 #undef Φ
-#endif

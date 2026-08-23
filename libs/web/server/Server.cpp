@@ -13,6 +13,16 @@ namespace Jde::Web{
 		return bodyLimit;
 	}
 
+	uint socketMessageMax{};
+	α Server::SocketMessageMax()ι->uint{
+		if( !socketMessageMax )
+			//1 MB, not beast's 16 MB default: ql-review3 #16 capped this because the QL parser recursed through a whole
+			//16 MB frame on an 8 MB io thread stack.  Two orders of magnitude above the http body cap is enough for a log
+			//backlog and still far short of that.
+			socketMessageMax = Settings::FindNumber<uint>( "/http/socketMessageMax" ).value_or( 1'000'000 );
+		return socketMessageMax;
+	}
+
 	static optional<uint16> _maxLogLength;
 	α Server::MaxLogLength()ι->uint16{
 		if( !_maxLogLength )

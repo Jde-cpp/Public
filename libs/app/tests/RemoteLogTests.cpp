@@ -19,6 +19,7 @@ namespace Jde::App::Tests{
 				return false;//as the real one does with no session.
 			lg _{ _mutex };
 			_writtenOn = std::this_thread::get_id();
+			_batchSizes.push_back( entries.size() );//#14: one call per Transmission - the sizes are how a test sees the chunking.
 			for( auto& e : entries )
 				Received.push_back( move(e) );
 			return true;
@@ -31,11 +32,13 @@ namespace Jde::App::Tests{
 		//Which thread the batch was written on.  asio::post never runs a handler inline, so this is what separates "wrote
 		//it here" from "handed it to the executor" - a count alone only says the executor happened to be quick.
 		α WrittenOn()ι->std::thread::id{ lg _{_mutex}; return _writtenOn; }
+		α BatchSizes()ι->vector<uint>{ lg _{_mutex}; return _batchSizes; }
 		vector<Logging::Entry> Received;
 	private:
 		atomic<bool> _connected{};
 		mutex _mutex;
 		std::thread::id _writtenOn;
+		vector<uint> _batchSizes;
 	};
 
 	struct RemoteLogTests : ::testing::Test{
@@ -74,6 +77,26 @@ namespace Jde::App::Tests{
 		ASSERT_EQ( texts.size(), 10u ) << "the cap did not hold";
 		EXPECT_EQ( texts.front(), "entry 6" ) << "the newest are what explain the current state - the oldest are what go";
 		EXPECT_EQ( texts.back(), "entry 15" );
+	}
+
+	//web-review3 #14: the whole backlog went out as a single Transmission, so after any app-server outage it exceeded the server's
+	//websocket read_message_max - the read failed with message_too_big, the socket closed, the gateway reconnected after 5s and
+	//resent an even larger backlog.  Remote logging could never re-establish itself after an outage.
+	TEST_F( RemoteLogTests, ChunksTheBacklog ){
+		auto log = Make( {{"maxBatch", 10}} );
+		for( uint i=1; i<=25; ++i )//buffered: the client is not connected yet, exactly as during an outage.
+			log->Write( Entry(Ƒ("entry {}", i)) );
+		_client->SetConnected( true );
+		Flush( *log );
+
+		EXPECT_EQ( 25u, _client->Count() ) << "chunking must not cost entries";
+		let batches = _client->BatchSizes();
+		ASSERT_EQ( 3u, batches.size() ) << "25 entries at maxBatch=10 is 10+10+5, not one oversized frame";
+		EXPECT_EQ( 10u, batches[0] );
+		EXPECT_EQ( 10u, batches[1] );
+		EXPECT_EQ( 5u, batches[2] );
+		EXPECT_EQ( "entry 1", _client->Texts().front() ) << "and order is preserved across the batches";
+		EXPECT_EQ( "entry 25", _client->Texts().back() );
 	}
 
 	//Under the cap nothing is dropped - the bound must not cost entries in the ordinary case.

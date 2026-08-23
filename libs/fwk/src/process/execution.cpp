@@ -57,6 +57,7 @@ namespace Jde{
 	CancellationSignals _cancelSignals;
 	α Execution::AddCancelSignal( sp<asio::cancellation_signal> s )ι->void{ _cancelSignals.Add(s); }
 	α Execution::RemoveCancelSignal( const sp<asio::cancellation_signal>& s )ι->void{ _cancelSignals.Remove(s); }
+	α Execution::CancelSignalCount()ι->uint{ return _cancelSignals.Size(); }
 
 	α CancelSignals()->CancellationSignals&{ return _cancelSignals; }
 

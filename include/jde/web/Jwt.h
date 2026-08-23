@@ -15,7 +15,7 @@ namespace Jde::Web{
 		α Payload()Ι->string;
 		α Aud()Ε->string{ return Json::AsString( Body, "aud" ); }
 		α Iss()Ι->sv{ return Json::FindDefaultSV( Body, "iss" ); }
-		α Expires()Ι->TimePoint{ auto exp = Json::FindNumber<time_t>( Body, "exp" ); return exp ? Clock::from_time_t(*exp) : TimePoint::max(); }
+		α Expires()Ι->TimePoint{ auto exp = Json::FindNumber<time_t>( Body, "exp" ); return Clock::from_time_t( exp ? *exp : Iat+MaxAgeWithoutExpiration ); }
 		string Kid;
 		jobject Body;
 		string HeaderBodyEncoded;
@@ -23,7 +23,7 @@ namespace Jde::Web{
 		Crypto::PublicKey PublicKey;
 		vector<byte> Certificate;//der - travels in the signed body ("x5c") for enrollment chain-verify. When present it is the single source of key material: PublicKey derives from it and n/e are omitted from the wire.
 		string Host;
-		time_t Iat;
+		time_t Iat{};
 		string SessionId;
 		Jde::UserPK UserPK;
 		string UserName;

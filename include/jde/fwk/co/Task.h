@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include <exception>
 #ifndef TASK_H
 #define TASK_H
 #include "../log/break.h"
@@ -13,10 +14,10 @@ namespace Jde{
 		α unhandled_exception()ι->void;
 		β Exp()Ι->const up<Exception>& =0;
 		β MoveExp()ι->up<Exception> =0;
-		β SetExp( Exception&& x )ι->void =0;
-		β SetExp( runtime_error&& x )ι->void =0;
+		β SetExp( Exception&& x )ι->void=0;
+		β SetExp( std::exception&& x )ι->void=0;
 		α ResumeExp( Exception&& e, coroutine_handle<> h )ι->void{ SetExp( move(e) ); h.resume(); };
-		α ResumeExp( runtime_error&& e, coroutine_handle<> h )ι->void{ SetExp( move(e) ); h.resume(); };
+		α ResumeExp( std::exception&& e, coroutine_handle<> h )ι->void{ SetExp( move(e) ); h.resume(); };
 	protected:
 		TResult Expected;
 	};
@@ -34,11 +35,13 @@ namespace Jde{
 		α Resume( TResult&& x, coroutine_handle<> h )ι->void{ SetValue(std::move(x)); h.resume(); };
 //		α ResumeScaler( TResult x, coroutine_handle<> h )ι->void{ SetScaler(x); h.resume(); }; windows doesn't work.
 		α SetExp( Exception&& e )ι->void override{ base::Expected = e.Move(); }
-		α SetExp( runtime_error&& x )ι->void override{
+		α SetExp( std::exception&& x )ι->void override{
 			if( auto p = dynamic_cast<Exception*>(&x); p )
 				SetExp( move(*p) );
+			else if( auto p = dynamic_cast<runtime_error*>(&x); p )
+				base::Expected = mu<Exception>( move(*p) );
 			else
-				base::Expected = mu<Exception>( move(x) );
+				base::Expected = mu<Exception>( x.what() );
 		}
 	};
 	template<class Task>
@@ -47,11 +50,13 @@ namespace Jde{
 		α Exp()Ι->const up<Exception>& override{ return base::Expected; }
 		α MoveExp()ι->up<Exception> override{ return move(base::Expected); }
 		α SetExp( Exception&& x )ι->void override{ base::Expected = x.Move(); }
-		α SetExp( runtime_error&& x )ι->void override{
+		α SetExp( std::exception&& x )ι->void override{
 			if( auto p = dynamic_cast<Exception*>(&x); p )
 				SetExp( move(*p) );
+			else if( auto p = dynamic_cast<runtime_error*>(&x); p )
+				base::Expected = mu<Exception>( move(*p) );
 			else
-				base::Expected = mu<Exception>( move(x) );
+				base::Expected = mu<Exception>( x.what() );
 		}
 	};
 	struct VoidTask{

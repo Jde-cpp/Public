@@ -104,7 +104,7 @@ namespace Server{
 		catch( Exception& e ){
 			if( !empty(e.Tags & ELogTags::Parsing) )
 				send( RestException{EHttpStatus::BadRequest, move(e), move(req), "Query parsing failed."}, move(stream), contentType );
-			if( e.HttpStatus()!=EHttpStatus::InternalServerError )
+			else if( e.HttpStatus()!=EHttpStatus::InternalServerError )
 				send( RestException{move(e), move(req)}, move(stream), contentType );
 			else//braced-init sequences left-to-right: the status reads before move(e) - do not switch to parens.
 				send( RestException{e.HttpStatus(), move(e), move(req), "Query failed."}, move(stream), contentType );
@@ -186,10 +186,12 @@ namespace Server{
 		ctx.use_tmp_dh( net::buffer(dh.data(), dh.size()) );
 	}
 
+	constexpr auto _acceptBackoff{ std::chrono::milliseconds{100} };// short enough that recovery is prompt, long enough that a wedged accept loop is not a busy wait.
 	Ω listen( tcp::endpoint endpoint, sp<IRequestHandler> handler )ι->net::awaitable<void, executor_type>{
 		typename tcp::acceptor::rebind_executor<executor_with_default>::other acceptor{ co_await net::this_coro::executor };
 		if( !initListener(acceptor, endpoint) ){
 			DBGT( ELogTags::App, "!initListener" );
+			handler->FailStart( Ƒ("could not listen on {}:{}", endpoint.address().to_string(), endpoint.port()) );//this co_return is before handler->Start(), so without it Internal::Start parks in BlockTillStarted forever.
 			co_return;
 		}
 
@@ -197,7 +199,18 @@ namespace Server{
 		handler->Start();
 		while( (co_await net::this_coro::cancellation_state).cancelled() == net::cancellation_type::none ){
 			auto [ec, sock] = co_await acceptor.async_accept();
-			if( !ec ){
+			if( ec ){//  Descriptor exhaustion is not a per-connection error - every following
+				//accept fails the same way, so the loop spun at 100% cpu.  Pause long enough for closing sessions on the io
+				//threads to hand descriptors back, and log it: the old `if(!ec)` left the spin with nothing in the log at all.
+				let exhausted = ec==net::error::no_descriptors || ec==boost::system::errc::too_many_files_open_in_system || ec==net::error::no_buffer_space || ec==net::error::no_memory;
+				CodeException{ ec, ELogTags::Server | ELogTags::Http, exhausted ? ELogLevel::Error : ELogLevel::Debug };
+				if( exhausted ){
+					typename net::steady_timer::rebind_executor<executor_with_default>::other backoff{ co_await net::this_coro::executor };
+					backoff.expires_after( _acceptBackoff );
+					co_await backoff.async_wait();
+				}
+			}
+			else{
 				let exec = sock.get_executor();
 				beast::error_code endpointEc;
 				let userEndpoint = sock.remote_endpoint( endpointEc );
@@ -206,13 +219,23 @@ namespace Server{
 					continue;
 				}
 				auto cancelSignal = ms<net::cancellation_signal>();
+				Execution::AddCancelSignal( cancelSignal );
 				net::co_spawn(
 					exec,
 					detectSession( StreamType(move(sock)), move(userEndpoint), cancelSignal, handler.get() ),
 					net::bind_cancellation_slot( cancelSignal->slot(),
-					net::detached)
+					[cancelSignal]( std::exception_ptr e ){
+						Execution::RemoveCancelSignal( cancelSignal );
+						//Do NOT rethrow: net::detached's handler has an empty body (asio/impl/detached.hpp), so it discards this.
+						//Rethrowing lets the exception escape io_context::run(), which kills the executor thread and wedges
+						//Process::Shutdown joining it - Opc.Tests hung after its last test with exactly that.  Log instead:
+						//it keeps what detached silently dropped visible without changing who unwinds.
+						if( e ){
+							try{ std::rethrow_exception( e ); }
+							catch( const std::exception& x ){ DBGT( ELogTags::Server|ELogTags::Http, "Session ended with an exception: {}", x.what() ); }
+						}
+					})
 				);// We dont't need a strand, since the awaitable is an implicit strand.
-				Execution::AddCancelSignal( cancelSignal );
 			}
 		}
 	}
@@ -260,6 +283,19 @@ namespace Server{
 	α Internal::RemoveSocketSession( SocketId id )ι->void{
 		TRACET( ELogTags::SocketServerRead, "erased socket: {:x}", _socketSessions.erase(id) );
 	}
+
+	//#5: revoking a session has to reach the sockets running under it - Sessions::Remove only drops the _sessions entry, and each
+	//IWebsocketSession holds its own sp<SessionInfo>.
+	α Internal::CloseSocketSessions( SessionPK sessionId )ι->uint{
+		vector<sp<IWebsocketSession>> sessions;
+		_socketSessions.cvisit_all( [sessionId, &sessions]( auto& idSession ){
+			if( idSession.second->SessionId()==sessionId )
+				sessions.push_back( idSession.second );
+		} );
+		for( auto& session : sessions )//outside the visit: Close net::dispatch'es, so it runs inline when the caller is already on the stream's strand, and its OnClose erases from _socketSessions - which would deadlock under the visit.
+			session->Close();
+		return sessions.size();
+	}
 }
 	α Server::HandleRequest( HttpRequest req, sp<IRestStream> stream, IRequestHandler* reqHandler )ι->TAwait<sp<SessionInfo>>::Task{
 		try{
@@ -292,11 +328,19 @@ namespace Server{
 		return ELogLevel::Error;
 	}
 
+	Ω allowMethods()ι->str{
+		static const string y = Settings::FindString( "/http/accessControl/allowMethods" ).value_or( "GET, POST, OPTIONS" );
+		return y;
+	}
+	Ω allowHeaders()ι->str{
+		static const string y = Settings::FindString( "/http/accessControl/allowHeaders" ).value_or( "Content-Type, Authorization" );
+		return y;
+	}
 	α Server::SendOptions( const HttpRequest&& req )ι->http::message_generator{
 		auto res = req.Response<http::empty_body>( http::status::no_content );
-		res.set( http::field::access_control_allow_methods, "GET, POST, OPTIONS" );
+		res.set( http::field::access_control_allow_methods, allowMethods() );
 		res.set( http::field::accept_encoding, "gzip" );
-		res.set( http::field::access_control_allow_headers, "*" );//Access-Control-Allow-Origin, Authorization, Content-Type,
+		res.set( http::field::access_control_allow_headers, allowHeaders() );
 		res.set( http::field::access_control_expose_headers, "Authorization" );
 		res.set( http::field::access_control_max_age, "7200" ); //2 hours chrome max
 		return res;

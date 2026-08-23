@@ -1,3 +1,4 @@
+#include <exception>
 #include <jde/web/client/http/ClientHttpSession.h>
 #include <jde/web/client/ClientSsl.h>
 #include <jde/web/client/http/ClientHttpRes.h>
@@ -127,40 +128,40 @@ namespace Jde::Web::Client{
 		}
 		α OnRead( beast::error_code ec, std::size_t bytes_transferred )ι->ClientHttpAwait::Task{
       boost::ignore_unused( bytes_transferred );
-			if( ec )
+			if( ec ){
 				ResumeExp( ClientHttpException{ec, _session, &_req} );
-			else{
+				co_return;
+			}
+			try{
 				ClientHttpRes res{ move(_res) };
 				if( res.IsRedirect() && _args.AllowRedirects ){
 					if( !_args.Redirects ){//budget spent - a server redirecting to itself would otherwise loop forever.
 						ResumeExp( Exception{_sl, {ELogTags::HttpClientRead}, "Too many redirects from {}:{}{} - last Location '{}'.", _session->Host, _session->Port, string{_req.target()}, res[http::field::location]} );
 						co_return;
 					}
-					//RedirectVariables throws on a Location it cannot parse; left outside the catch that escapes OnRead, and since
-					//nothing has resumed the caller yet the await never completes - a malformed 3xx hangs the client instead of failing it.
-					try{
-						auto [host,target,port] = res.RedirectVariables();
-						if( host.empty() ){//relative Location - reuse the original host & port.
-							host = _session->Host;
-							port = _session->Port;
-						}
-						DBG( "redirecting from {}{} to {}", _session->Host, _req.target(), res[http::field::location] );
-						auto args = _args;
-						--args.Redirects;
-						//an Authorization header is a credential for the host it was issued to; a redirect elsewhere must not carry it.
-						//Whoever controls the Location header would otherwise be handed the caller's session id or bearer token.
-						if( args.Authorization.size() && Str::ToLower(host)!=Str::ToLower(_session->Host) ){
-							DBG( "dropping Authorization: redirect leaves {} for {}", _session->Host, host );
-							args.Authorization.clear();
-						}
-						res = co_await ClientHttpAwait{ host, target, _req.body(), port, args, _sl };
+					auto [host,target,port,isSsl] = res.RedirectVariables();
+					auto args = _args;
+					--args.Redirects;
+					if( host.empty() ){//relative Location - reuse the original host, port & scheme.
+						host = _session->Host;
+						port = _session->Port;
 					}
-					catch( runtime_error& e ){
-						ResumeExp( move(e) );
-						co_return;
+					else
+						args.IsSsl = isSsl;
+					DBG( "redirecting from {}{} to {}", _session->Host, _req.target(), res[http::field::location] );
+					//an Authorization header is a credential for the host it was issued to; a redirect elsewhere must not carry it.
+					//Whoever controls the Location header would otherwise be handed the caller's session id or bearer token.
+					let downgrade = _args.IsSsl && !args.IsSsl;
+					if( args.Authorization.size() && (downgrade || Str::ToLower(host)!=Str::ToLower(_session->Host)) ){
+						DBG( "dropping Authorization: redirect leaves {}{} for {}{}", _args.IsSsl ? "https://" : "http://", _session->Host, args.IsSsl ? "https://" : "http://", host );
+						args.Authorization.clear();
 					}
+					res = co_await ClientHttpAwait{ host, target, _req.body(), port, args, _sl };
 				}
 				Resume( move(res) );
+			}
+			catch( std::exception& e ){
+				ResumeExp( move(e) );
 			}
 		}
 	private:

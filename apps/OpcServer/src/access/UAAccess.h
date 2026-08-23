@@ -9,6 +9,7 @@ namespace Jde::Opc::Server::UAAccess{
 		TimePoint Expiration;
 		SessionPK SessionId;
 		UserPK UserPK;
+		TimePoint LastRenewal{};//Throttles the renewal, so a session the authority says is genuinely gone costs one round trip per interval, not one per node access.
 	};
 
 	α Init( UAConfig& config )ε->void;

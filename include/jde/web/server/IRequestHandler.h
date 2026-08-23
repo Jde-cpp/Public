@@ -22,8 +22,9 @@ namespace Jde::Web::Server{
 		α NextRequestId()ι->uint32{ return _requestId.fetch_add(1, std::memory_order_relaxed); }
 		α SessionInfoAwait( SessionPK sessionPK, SL sl )ι->up<TAwait<Web::FromServer::SessionInfo>>{ return _appServer->SessionInfoAwait( sessionPK, sl ); }
 		α Start()ι->void;
+		α FailStart( string&& why )ι->void;
 		α Stop( bool terminate, SL sl )ι->void;
-		α BlockTillStarted()ι->void;
+		α BlockTillStarted()ε->void;
 		α UserName( UserPK userPK )ι->string;
 
 		struct WebServerSettings{
@@ -42,6 +43,8 @@ namespace Jde::Web::Server{
 		ssl::context _ctx;
 		atomic<uint32> _requestId;
 		WebServerSettings _settings;
-		atomic_flag _started{};
+		enum class EStartState : uint8{ None, Started, Failed };//a flag could not say "failed", which is why BlockTillStarted had no way out.
+		atomic<EStartState> _started{ EStartState::None };
+		string _startError;//written before the Failed store, read after the matching load - the atomic's release/acquire is what publishes it.
 	};
 }

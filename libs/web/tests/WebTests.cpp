@@ -1,4 +1,5 @@
 ﻿#include <execution>
+#include <jde/web/client/client.h>//L5: Client::MaxLogLength
 #include <jde/web/client/http/ClientHttpAwait.h>
 #include <jde/web/client/http/ClientHttpResException.h>
 #include <jde/web/Jwt.h>
@@ -31,7 +32,15 @@ namespace Jde::Web{
 		sp<Server::IRequestHandler> _requestHandler;
 	};
 	constexpr sv ContentType{ "application/x-www-form-urlencoded" };
-	up<Exception> _pException;
+	static mutex _exceptionMutex;
+	static up<Exception> _exception;
+	Ω setException( Exception&& e )ι->void{
+		lg _{ _exceptionMutex };
+		if( !_exception )//keep the first: it carries the original context, and what follows is usually its fallout.
+			_exception = e.Move();
+	}
+	Ω hasException()ι->bool{ lg _{ _exceptionMutex }; return _exception!=nullptr; }
+	Ω takeException()ι->up<Exception>{ lg _{ _exceptionMutex }; return move(_exception); }
 
 	α WebTests::SetUpTestCase()->void{
 		Stopwatch _{ "WebTests::SetUpTestCase", _tags };
@@ -84,12 +93,12 @@ namespace Jde::Web{
 		array<uint,count> indexes;
 		for( uint i=0; i<count; ++i )
 			indexes[i] = i;
-		array<SessionPK,count> sessionIds{};
+		array<atomic<SessionPK>,count> sessionIds{};
 		try{
 			atomic<uint> connections = 0;
 			std::for_each( indexes.begin(), indexes.end(), [&sessionIds,&connections]( uint index )mutable{
 				[]( auto index, auto& sessionIds, auto& connections )->ClientHttpAwait::Task {
-					if( _pException )
+					if( hasException() )
 						co_return;
 					auto pSessionIds = &sessionIds;
 					const uint idx = index;
@@ -105,20 +114,20 @@ namespace Jde::Web{
 					}
 					catch( Exception& e ){
 						DBG( "connections={}", connections.load() );
-						_pException = e.Move();
+						setException( move(e) );
 					}
 				}( index, sessionIds, connections );
 			});
-			while( std::ranges::contains(sessionIds, 0) && !_pException )
+			while( find_if(sessionIds, [](auto& s){return s.load()==0;})!=sessionIds.end() && !hasException() )
 				std::this_thread::yield();
-			if( _pException )
-				_pException->Throw();
+			if( auto e = takeException(); e )
+				e->Throw();
 			//std::for_each( std::execution::par_unseq, indexes.begin(), indexes.end(), [&sessionIds]( auto index )mutable{
 			for_each( indexes, [&sessionIds]( auto index )mutable{
 				[&sessionIds,index]()->ClientHttpAwait::Task{
 					auto pSessionIds=&sessionIds;
 					uint idx = index;
-					let sessionId = (*pSessionIds)[idx];
+					let sessionId = (*pSessionIds)[idx].load();
 					ClientHttpRes res = co_await ClientHttpAwait{ Host, "/Authorization", Port, {.Authorization=Ƒ("{:x}", sessionId)} };
 					if( sessionId!=*Str::TryTo<uint>(res[http::field::authorization], nullptr, 16) )
 						THROW( "sessionId={} authorization={}", sessionId, res[http::field::authorization] );
@@ -131,7 +140,7 @@ namespace Jde::Web{
 			e.Log();
 			ASSERT_FALSE( true );
 		}
-		while( find_if(sessionIds, [](auto s){return s!=0;})!=sessionIds.end() )
+		while( find_if(sessionIds, [](auto& s){return s.load()!=0;})!=sessionIds.end() )
 			std::this_thread::yield();
 	}
 	TEST_F( WebTests, BadSessionId ){
@@ -270,6 +279,33 @@ namespace Jde::Web{
 		req.LogRead( "unresolved session" );
 	}
 
+	//web-review3 L5: the lookup read "http/maxLogLength" with no leading slash, so Settings never matched it and the 255 default
+	//always won - the setting was inert on the client side while the server read the same key correctly.
+	TEST( ClientSettingsTests, MaxLogLengthReadsTheSetting ){
+		let configured = Settings::FindNumber<uint16>( "/http/maxLogLength" );
+		ASSERT_TRUE( configured ) << "Web.Tests.jsonnet sets /http/maxLogLength; without it this proves nothing";
+		EXPECT_EQ( *configured, Client::MaxLogLength() ) << "the client must read the same key the server does";
+	}
+
+	//web-review3 L2: ParseUri split each param on *every* '=' and only took the value when it got exactly two pieces, so any value
+	//containing one - base64 padding, a nested query, a jwt - was silently replaced by the empty string.  RFC 3986 gives '=' no
+	//meaning inside a value: the first one separates, the rest are data.
+	TEST( HttpRequestTests, ParamValueMayContainEquals ){
+		Server::TRequestType raw;
+		//Literal '=' in the values, not %3D: ParseUri splits before decoding, so a percent-encoded one never reached the bug.
+		//Unencoded is legal (RFC 3986 sub-delims) and is how base64 padding usually arrives.
+		raw.target( "/graphql?a=1&b64=YWJjZA==&nested=x=y&enc=p%3Dq&empty=&bare&last=end" );
+		Server::HttpRequest req{ move(raw), tcp::endpoint{}, false, 0 };
+		let& params = req.Params();
+		EXPECT_EQ( "1", params.at("a") );
+		EXPECT_EQ( "YWJjZA==", params.at("b64") ) << "base64 padding is the common case that vanished";
+		EXPECT_EQ( "x=y", params.at("nested") ) << "only the first '=' separates; the rest are data";
+		EXPECT_EQ( "p=q", params.at("enc") ) << "and a percent-encoded one still decodes";
+		EXPECT_EQ( "", params.at("empty") ) << "an explicit empty value stays empty";
+		EXPECT_EQ( "", params.at("bare") ) << "a valueless param is still the empty string";
+		EXPECT_EQ( "end", params.at("last") ) << "parsing continues past the awkward ones";
+	}
+
 	//C1: the client verifies peers now.  The mock's self-signed cert is a trust anchor (Web::Server::Start self-registers it) and names
 	//DNS:localhost,IP:127.0.0.1 - trusting it must not make it acceptable for any other host we happen to dial.
 	TEST_F( WebTests, TlsVerifiesHostName ){
@@ -289,6 +325,26 @@ namespace Jde::Web{
 		//AllowRedirects=false hands the 3xx back instead of following it - there used to be no way to ask for that.
 		let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( ClientHttpAwait{Host, "/redirectLoop", Port, {.AllowRedirects=false}} );
 		EXPECT_EQ( http::status::found, res.Status() );
+	}
+
+	//web-review3 L3: OnRead is a coroutine whose Task nobody holds, so anything that escapes it lands in unhandled_exception on a
+	//discarded task and the caller is never resumed - the request hangs instead of failing.  Two ways in: the ClientHttpRes ctor
+	//inflates a gzip body outside the try, and RedirectVariables' std::stoul throws std::out_of_range - a logic_error, which the
+	//catch( runtime_error& ) missed (the same gap #3 closed on the server side).
+	TEST_F( WebTests, MalformedRedirectFailsRatherThanHangs ){
+		EXPECT_ANY_THROW( (BlockAwait<ClientHttpAwait,ClientHttpRes>( ClientHttpAwait{Host, "/redirectBadPort", Port} )) );
+	}
+
+	//web-review3 L4: IsSsl was fixed when the session was constructed and a redirect copied the original args, so an http->https
+	//Location (or the reverse) was followed on the original transport - sessions are keyed on (host, port, IsSsl), so the hop
+	//reached the right host and port over the wrong scheme.  The mock answers both schemes on one port, so the Location here
+	//changes nothing but the scheme.  The Server response header is what names the transport that actually served it.
+	TEST_F( WebTests, RedirectFollowsLocationScheme ){
+		let direct = BlockAwait<ClientHttpAwait,ClientHttpRes>( ClientHttpAwait{Host, "/authHeader", Port} );
+		ASSERT_TRUE( direct[http::field::server].contains("SSL") ) << "the control: reached directly, this request is served over SSL";
+
+		let redirected = BlockAwait<ClientHttpAwait,ClientHttpRes>( ClientHttpAwait{Host, "/redirectPlain", Port} );
+		EXPECT_FALSE( redirected[http::field::server].contains("SSL") ) << "an http:// Location must be followed over http, not the original scheme";
 	}
 
 	TEST_F( WebTests, RedirectDropsAuthorizationCrossHost ){
@@ -317,6 +373,20 @@ namespace Jde::Web{
 		EXPECT_NO_THROW( (BlockAwait<ClientHttpAwait,ClientHttpRes>( post(limit/2) )) );
 		//past the cap beast fails the read and drops the connection instead of answering, so the client sees a throw, not a 413.
 		EXPECT_ANY_THROW( (BlockAwait<ClientHttpAwait,ClientHttpRes>( post(limit+1024) )) );
+	}
+
+	//web-review3 O3: #14's remnant.  SendOptions answered a hardcoded `Access-Control-Allow-Headers: *` while every config in the
+	//tree declared /http/accessControl/allowHeaders and allowMethods - written, and read by nobody.  `*` is not honoured as a
+	//wildcard by browsers once a request carries credentials, which an authorized request here does, so it was both lax and
+	//ineffective.
+	TEST_F( WebTests, CorsPreflightUsesConfiguredHeaders ){
+		let headers = Settings::FindString( "/http/accessControl/allowHeaders" );
+		let methods = Settings::FindString( "/http/accessControl/allowMethods" );
+		ASSERT_TRUE( headers && methods ) << "Web.Tests.jsonnet declares both; without them this proves nothing";
+		let res = BlockAwait<ClientHttpAwait,ClientHttpRes>( ClientHttpAwait{Host, "/echo?cors", Port, {.Verb=http::verb::options}} );
+		EXPECT_EQ( *headers, res[http::field::access_control_allow_headers] ) << "the preflight must answer what the deployment configured";
+		EXPECT_NE( "*", res[http::field::access_control_allow_headers] ) << "and never the wide-open value #14 set out to close";
+		EXPECT_EQ( *methods, res[http::field::access_control_allow_methods] );
 	}
 
 	//#14: Access-Control-Allow-Origin was a flat "*".  it carries one value, so "same host, any port" can only be done by
@@ -357,6 +427,19 @@ namespace Jde::Web{
 		//an exp is authoritative on its own; the iat window must not touch these or google login and socket re-auth break.
 		EXPECT_NO_THROW( parseJwt({{"iat", now-stale}, {"exp", now+3600}}) );
 		EXPECT_THROW( parseJwt({{"iat", now}, {"exp", now-1}}), Exception );
+	}
+
+	//web-review3 O4: the parse gate above bounds when a token may be *presented*; Expires() is what bounds the session a consumer
+	//mints from it, and for an exp-less token it answered TimePoint::max().  UAAccess::ActivateSession feeds it straight into
+	//SessionContext::Expiration, so a certificate-login token good for ten minutes bought an OPC session good forever.
+	TEST( JwtExpirationTests, ExpLessTokenReportsTheIatBound ){
+		let now = time( nullptr );
+		let expLess = parseJwt( {{"iat", now}} );
+		EXPECT_NE( TimePoint::max(), expLess.Expires() ) << "an exp-less token must not report an unbounded lifetime";
+		EXPECT_EQ( Clock::from_time_t(now+Jwt::MaxAgeWithoutExpiration), expLess.Expires() ) << "it is bounded by the same iat window Jwt::Jwt enforces";
+
+		let expiring = parseJwt( {{"iat", now}, {"exp", now+3600}} );
+		EXPECT_EQ( Clock::from_time_t(now+3600), expiring.Expires() ) << "an explicit exp is still authoritative";
 	}
 
 	//#15: the response body picks up the wrapped exception's ClientDetail, so every funnel surfaces a proc-raised

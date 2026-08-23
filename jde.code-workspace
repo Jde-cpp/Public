@@ -16,8 +16,7 @@
 		},
 		"files.exclude": {
 			"**/my-workspace*/**": true,
-			"**/out/**": true,
-			"**/build/**": true
+			"**/out/**": true
 		},
 		"search.exclude": {
 			"**/my-workspace*/**": true,
