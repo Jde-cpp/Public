@@ -16,7 +16,6 @@ namespace Jde::App::Client{
 		using base = LogSettingsMAwait;
 		LogSettingsClientMAwait( QL::MutationQL&& m, sp<App::IApp> appClient, UserPK executer, SRCE )ι:base{move(m), move(appClient), executer, sl}{}
 		α Suspend()ι->void override;
-		α UpdateApp( QL::MutationQL&& m )ι->TAwait<jvalue>::Task;
 		Ω IsApplicable( const QL::MutationQL& m )ι->bool{ return m.CommandName=="updateLogSettings"; }
 	};
 }

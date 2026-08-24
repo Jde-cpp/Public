@@ -6,6 +6,8 @@
 
 namespace Jde::App{
 	struct IApp;
+	α ValidateTagKeys( const jobject& args )ε->void;
+
 	struct LogSettingsAwait : TAwait<jvalue>{
 		using base = TAwait<jvalue>;
 		LogSettingsAwait( QL::TableQL&& ql, SRCE )ι:base{sl}, _ql{move(ql)}{}
@@ -43,6 +45,7 @@ namespace Jde::App{
 	}
 
 	Ŧ LogSettingsMAwait::UpdateRuntime( const jobject& args, str type )ε{
+		ValidateTagKeys( args );
 		auto logger = Logging::FindLogger<T>();
 		if( !logger )
 			return;

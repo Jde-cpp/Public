@@ -1,11 +1,6 @@
 #include <jde/app/proto/app.FromServer.h>
 #include <jde/fwk/io/protobuf.h>
-#include <jde/db/DBException.h>
-#include <jde/db/Row.h>
-#include <jde/db/meta/Table.h>
-#include <jde/db/meta/Column.h>
 #include <jde/ql/types/Subscription.h>
-#include <jde/ql/types/TableQL.h>
 #include <jde/web/Jwt.h>
 #include <jde/web/server/Web.FromServer.h>
 
@@ -188,40 +183,5 @@ namespace Jde::App{
 		return setMessage( requestId, [&](auto& m){
 			*m.mutable_session_info() = Web::Server::ToProto( session );
 		});
-	}
-	α FromServer::ToTrace( DB::Row&& row, const vector<QL::ColumnQL>& columns )ι->Proto::FromServer::Trace{
-		Proto::FromServer::Trace t;
-		uint i=0;
-		for( auto&& c : columns ){
-			if( !c.DBColumn )
-				continue;
-
-			str name = c.DBColumn->Name;
-			if( name=="id" )
-				t.set_id( row.GetUInt32(i) );
-			else if( name=="instance_id" )
-				t.set_instance_id( row.GetUInt32(i) );
-			else if( name=="file_id" )
-				t.set_file_id( Protobuf::ToBytes(row.GetGuid(i)) );
-			else if( name=="function_id" )
-				t.set_function_id( Protobuf::ToBytes(row.GetGuid(i)) );
-			else if( name=="line_number" )
-				t.set_line( row.GetUInt32(i) );
-			else if( name=="message_id" )
-				t.set_message_id( Protobuf::ToBytes(row.GetGuid(i)) );
-			else if( name=="level" )
-				t.set_level( (Log::Proto::ELogLevel)row.GetUInt16(i) );
-			else if( name=="thread_id" )
-				t.set_thread_id( row.GetUInt32(i) );
-			else if( name=="time" )
-				*t.mutable_time() = Protobuf::ToTimestamp( row.GetTimePoint(i) );
-			else if( name=="user_pk" )
-				t.set_user_pk( row.GetUInt32(i) );
-			else{
-				BREAK;
-			}
-			++i;
-		}
-		return t;
 	}
 }

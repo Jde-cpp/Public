@@ -59,6 +59,15 @@ namespace Jde::App::Tests{
 		return BlockAwait<LogSettingsMAwait,jvalue>( LogSettingsMAwait{move(m), app, UserPK{}} );
 	}
 
+	//T8: the per-tag overrides, which are as process-wide as the default level and were not being put back - `ql` at Critical
+	//outlived UpdateSetsATagLevel and every later suite ran under it.  Snapshotted rather than remembered by name: any test
+	//here can set any tag, and one that is added later would otherwise leak silently.
+	Ω tagLevels( const LogTags& logger )ι->flat_map<ELogTags,ELogLevel>{
+		flat_map<ELogTags,ELogLevel> y;
+		logger.ConfiguredTags().cvisit_all( [&](let& kv){ y.emplace(kv.first, kv.second); } );
+		return y;
+	}
+
 	struct LogSettingsTests : ::testing::Test{
 	protected:
 		α SetUp()->void override{
@@ -68,15 +77,30 @@ namespace Jde::App::Tests{
 			ASSERT_TRUE( _binary ); //config/App.Tests.jsonnet configures /logging/proto - without it the binary half is vacuous.
 			_textDefault = _text->DefaultLevel();
 			_binaryDefault = _binary->DefaultLevel();
+			_textTags = tagLevels( *_text );
+			_binaryTags = tagLevels( *_binary );
 		}
 		α TearDown()->void override{ //process-wide loggers - put back what the other suites' log output depends on.
 			_text->SetDefaultLevel( _textDefault );
 			_binary->SetDefaultLevel( _binaryDefault );
+			restore( *_text, _textTags );
+			restore( *_binary, _binaryTags );
+			Logging::UpdateCumulative( Logging::Loggers() );//half of T8: SetDefaultLevel restores the logger, but the cumulative filter is computed across all of them and nothing else recomputes it, so later suites ran under whatever the last mutation left.
+		}
+		//Both directions: a tag the test added has to go, and one it overwrote has to go back to what it was.
+		Ω restore( LogTags& logger, const flat_map<ELogTags,ELogLevel>& original )ι->void{
+			for( let& [tag, _] : tagLevels(logger) ){
+				if( !original.contains(tag) )
+					logger.ClearLevel( tag );
+			}
+			for( let& [tag, level] : original )
+				logger.SetLevel( tag, level );
 		}
 		Logging::SpdLog* _text{};
 		App::ProtoLog* _binary{};
 		ELogLevel _textDefault{};
 		ELogLevel _binaryDefault{};
+		flat_map<ELogTags,ELogLevel> _textTags, _binaryTags;
 	};
 
 	TEST_F( LogSettingsTests, QueryReturnsEachRequestedLogger ){
@@ -124,17 +148,30 @@ namespace Jde::App::Tests{
 			EXPECT_EQ( underlying(ToLogTags(sv{name})), id.to_number<uint>() ) << "every catalogue name round-trips: " << name;
 	}
 
-	//The ported round trip:  flip the default, read it back through the query, for each logger in turn.
+	//The ported round trip:  flip the default, read it back through the query, for each logger in turn - and then the gate, not just
+	//the stored field (T1).  MinLevel memoizes per tag into ExtrapolatedTags and consults _defaultLevel only on a miss, so reading
+	//the value back says nothing about whether any entry is admitted differently:  that is exactly how #6 stayed green while the Log
+	//Settings page's default control was inert for every tag already logged.  Sql is configured on neither logger
+	//([`App.Tests.jsonnet`] sets app/exception/test/settings/externalLogger), so it always falls through to the default.
 	TEST_F( LogSettingsTests, UpdateDefault ){
 		auto app = ms<AppStub>();
 		app->SetAppPKs( 42, 1 );
-		let testUpdate = [&]( sv logger, ELogLevel current ){
-			let updated = current==ELogLevel::Information ? ELogLevel::Warning : ELogLevel::Information;
-			updateLogSettings( Ƒ("{{{}: {{default: $default}}}}", logger), jobject{{"default", ToString(updated)}}, app );
-			EXPECT_EQ( defaultLevel(logger), updated );
+		let setDefault = [&]( sv logger, ELogLevel level ){
+			updateLogSettings( Ƒ("{{{}: {{default: $default}}}}", logger), jobject{{"default", ToString(level)}}, app );
 		};
-		testUpdate( "text", _text->DefaultLevel() );
-		testUpdate( "binary", _binary->DefaultLevel() );
+		let testUpdate = [&]( sv name, LogTags& logger, ELogLevel current ){
+			let updated = current==ELogLevel::Information ? ELogLevel::Warning : ELogLevel::Information;
+			setDefault( name, updated );
+			EXPECT_EQ( defaultLevel(name), updated ) << name;
+			//Fill the memo at a level the tag passes, then drop the default below it.  Pre-fix the second ShouldLog answered from
+			//the stale entry and stayed true - any unrelated per-tag edit in the same session masked it, which is why nobody saw it.
+			setDefault( name, ELogLevel::Information );
+			ASSERT_TRUE( logger.ShouldLog(ELogLevel::Information, ELogTags::Sql) ) << name;
+			setDefault( name, ELogLevel::Critical );
+			EXPECT_FALSE( logger.ShouldLog(ELogLevel::Information, ELogTags::Sql) ) << name << ": the default level is stored but the gate still answers from the per-tag memo";
+		};
+		testUpdate( "text", *_text, _text->DefaultLevel() );
+		testUpdate( "binary", *_binary, _binary->DefaultLevel() );
 	}
 
 	TEST_F( LogSettingsTests, UpdateSetsATagLevel ){
@@ -166,6 +203,42 @@ namespace Jde::App::Tests{
 		EXPECT_EQ( defaultLevel("text"), ELogLevel::Critical );
 	}
 
+	//L9: an unknown name was not rejected, it was dropped - ToLogTags warns and returns what it recognised, ELogTags::None here.
+	//SetLevel wrote a None row that MinLevel can never match, ToJson reported it back as a "none" tag, and the typo was forwarded
+	//to updateInstanceTagLevel to be persisted as tag 0 - the row "default" writes.  A typo is a request the caller has to hear about.
+	TEST_F( LogSettingsTests, UpdateRejectsAnUnknownTag ){
+		auto app = ms<AppStub>();
+		app->SetAppPKs( 42, 1 );
+		EXPECT_THROW( updateLogSettings(R"({text: {sqll: "Critical"}})", {}, app), Exception );
+		EXPECT_EQ( app->Queries, 0u ) << "the unknown tag was forwarded to the app server to be persisted";
+		EXPECT_FALSE( logSettings({"text"}).at("text").as_object().contains("none") ) << "an unmatchable None override was written, and is reported back as a tag";
+	}
+
+	//A combined key has to be checked a part at a time:  ToLogTags splits on TagSeparator and ORs what it knows, so an unknown
+	//part is dropped and the rest still applies - "socket.bogus" set a plain socket override, wider than what was asked for.
+	TEST_F( LogSettingsTests, UpdateRejectsAnUnknownTagInACombinedKey ){
+		auto app = ms<AppStub>();
+		app->SetAppPKs( 42, 1 );
+		EXPECT_THROW( updateLogSettings(R"({text: {"socket.bogus": "Critical"}})", {}, app), Exception );
+		EXPECT_FALSE( logSettings({"text"}).at("text").as_object().contains("socket") ) << "the recognised half of the key was applied on its own";
+		//…and the composite spellings the catalogue does offer still go through - by ToString, which is the spelling it offers.
+		let composite = Jde::ToString( ELogTags::SocketClientRead, false );
+		updateLogSettings( Ƒ(R"({{text: {{"{}": "Critical"}}}})", composite), {}, app );
+		EXPECT_EQ( logSettings({"text"}).at("text").as_object().at(composite).as_string(), "Critical" );
+	}
+
+	//The mutation is one unit:  a bad key anywhere in it must not leave an earlier group applied.
+	TEST_F( LogSettingsTests, UpdateAppliesNothingWhenAnyGroupHasAnUnknownTag ){
+		auto app = ms<AppStub>();
+		app->SetAppPKs( 42, 1 );
+		EXPECT_THROW( updateLogSettings(R"({text: {ql: "Trace"}, binary: {sqll: "Critical"}})", {}, app), Exception );
+		//if_contains, not at: with T8's restore in place `ql` is configured on neither logger, and reading it as a key that
+		//has to exist was this test borrowing the override UpdateSetsATagLevel used to leak into it.
+		let text = logSettings( {"text"} ).at( "text" ).as_object();//held: if_contains returns a pointer into it, and the query result is a temporary.
+		let ql = text.if_contains( "ql" );
+		EXPECT_TRUE( !ql || ql->as_string()!="Trace" ) << "the good group was applied before the bad one was read";
+	}
+
 	TEST_F( LogSettingsTests, IsApplicable ){
 		static const vector<sp<DB::AppSchema>> noSchemas;
 		let mutation = []( sv command )ε{ return QL::MutationQL{ string{command}, jobject{}, ms<jobject>(), optional<QL::TableQL>{}, true, noSchemas, true }; };
@@ -173,5 +246,16 @@ namespace Jde::App::Tests{
 		EXPECT_TRUE( LogSettingsMAwait::IsApplicable(mutation("updateLogSettings")) );
 		EXPECT_FALSE( LogSettingsMAwait::IsApplicable(mutation("updateLogLevel")) );
 		EXPECT_FALSE( LogSettingsMAwait::IsApplicable(mutation("updateUser")) );
+	}
+
+	//T8: declared last, so what it reads is whatever the tests above it left on the process-wide logger.  Overrides are as
+	//shared as the default level was, and were not being put back: `ql` at Critical outlived UpdateSetsATagLevel and every
+	//suite after this one ran under it - and `Critical` on a tag is close enough to silence to hide a diagnostic.
+	TEST_F( LogSettingsTests, TearDownRestoresTagLevels ){
+		let text = logSettings( {"text"} ).at( "text" ).as_object();
+		EXPECT_FALSE( text.contains("ql") ) << "UpdateSetsATagLevel's override outlived its test";
+		EXPECT_FALSE( text.contains(Jde::ToString(ELogTags::SocketClientRead, false)) ) << "UpdateRejectsAnUnknownTagInACombinedKey's override outlived its test";
+		EXPECT_EQ( text.at("app").as_string(), "Trace" ) << "…and what the settings did configure is still configured";
+		EXPECT_EQ( text.at("settings").as_string(), "Debug" );
 	}
 }

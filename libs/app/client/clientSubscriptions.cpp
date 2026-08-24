@@ -5,23 +5,20 @@
 #define let const auto
 namespace Jde::App::Client{
 	static constexpr ELogTags _subTags{ ELogTags::QL | ELogTags::Client };
-	flat_map<QL::SubscriptionId,flat_set<sp<QL::IListener>>> _subs; std::shared_mutex _mutex;
-	//Separate from _subs and deliberately not cleared with it: _subs is what this socket is carrying, _requests is what
-	//the process asked for.  Only the first dies with the socket.
-	vector<Subscriptions::Request> _requests; std::mutex _requestMutex;
-	α Subscriptions::Clear()ι->void{
-		ul _{ _mutex };
-		_subs.clear();
+	static vector<Subscriptions::Request> _requests; static std::mutex _requestMutex;
+	constexpr uint _maxReplayFailures{ 3 };
+	Ω findRequest( vector<Subscriptions::Request>& requests, const sp<QL::IListener>& listener, str query, const jobject& variables )ι->vector<Subscriptions::Request>::iterator{
+		return find_if( requests, [&](let& r){ return r.Listener==listener && r.Query==query && r.Variables==variables; } );
 	}
 	α Subscriptions::Remember( string query, jobject variables, sp<QL::IListener> listener, const flat_set<QL::SubscriptionId>& ids )ι->void{
 		lg _{ _requestMutex };
-		//Matched on what was asked for, not on the ids it produced: a replay re-issues the same query and gets new ids, and
-		//must update the existing entry rather than add a second one that would then be replayed twice.
-		auto p = find_if( _requests, [&](let& r){ return r.Listener==listener && r.Query==query && r.Variables==variables; } );
+		auto p = findRequest( _requests, listener, query, variables );
 		if( p==_requests.end() )
 			_requests.push_back( Request{move(query), move(variables), move(listener), ids} );
-		else
+		else{
 			p->Ids = ids;
+			p->Failures = 0;//L5: this only runs on an ack, so reaching here is the server accepting the request - the count starts over.
+		}
 	}
 	α Subscriptions::Forget( const sp<QL::IListener>& listener, const flat_set<QL::SubscriptionId>& ids )ι->void{
 		lg _{ _requestMutex };
@@ -33,6 +30,16 @@ namespace Jde::App::Client{
 			std::erase_if( r.Ids, [&](let id){ return ids.contains(id); } );
 			return r.Ids.empty();//a request only goes when nothing it produced is still subscribed.
 		});
+	}
+	α Subscriptions::NoteReplayFailure( const Request& request )ι->bool{
+		lg _{ _requestMutex };
+		auto p = findRequest( _requests, request.Listener, request.Query, request.Variables );
+		if( p==_requests.end() )
+			return false;//forgotten while the replay was in flight - an Unsubscribe, or a listener that went away.
+		if( ++p->Failures<_maxReplayFailures )
+			return false;
+		_requests.erase( p );
+		return true;
 	}
 	α Subscriptions::Remembered()ι->vector<Request>{
 		lg _{ _requestMutex };
@@ -49,7 +56,9 @@ namespace Jde::App::Client{
 				++done;
 			}
 			catch( runtime_error& e ){
-				WARNT( _subTags, "Could not replay subscription '{}': {}", r.Query, e.what() );
+				//One LOG rather than an if/else: the level macros expand to an `if`, so a bare `else` after one binds to theirs.
+				let dropped = Subscriptions::NoteReplayFailure( r );
+				LOG( dropped ? ELogLevel::Error : ELogLevel::Warning, _subTags, "Could not replay subscription '{}'{}: {}", r.Query, dropped ? Ƒ(" - dropped, refused on {} consecutive replays", _maxReplayFailures) : string{}, e.what() );
 			}
 		}
 		INFOT( _subTags, "Replayed {} of {} subscription request(s) on the new session.", done, requests.size() );
@@ -60,68 +69,5 @@ namespace Jde::App::Client{
 		if( count )
 			replay( move(client), move(requests) );
 		return count;
-	}
-	α Subscriptions::StopListenRemote( sp<QL::IListener> listener, vector<QL::SubscriptionId> ids )ι->flat_set<QL::SubscriptionId>{//returns ids removed - caller unsubscribes server side, e.g. IQL::Unsubscribe.
-		flat_set<QL::SubscriptionId> y;
-		ul _{ _mutex };
-		if( ids.empty() ){//all of listener's subscriptions.
-			for( auto idListeners = _subs.begin(); idListeners!=_subs.end(); ){
-				if( idListeners->second.erase(listener) )
-					y.emplace( idListeners->first );
-				idListeners = idListeners->second.empty() ? _subs.erase( idListeners ) : next(idListeners);
-			}
-		}
-		else{
-			for( let id : ids ){
-				auto kv = _subs.find( id );
-				if( kv==_subs.end() || !kv->second.erase(listener) )
-					continue;
-				y.emplace( id );
-				if( kv->second.empty() )
-					_subs.erase( kv );
-			}
-		}
-		return y;
-	}
-	α Subscriptions::ListenRemote( sp<QL::IListener> listener, QL::Subscription&& sub )ι->void{
-		ul _{ _mutex };
-		_subs.try_emplace( sub.Id ).first->second.emplace( listener );
-	}
-	//The listeners for an id, copied out from under the lock.  Callbacks must not run while _mutex is held: a listener that
-	//subscribes or unsubscribes in response to an event re-enters ListenRemote/StopListenRemote/Clear, all of which take
-	//the same mutex exclusively - and a shared_mutex is not recursive, so that is a hang (formally, UB).  Copying the
-	//shared_ptrs also keeps every listener alive across its own callback, which holding the lock only did by accident.
-	//The trade is that a listener can be dropped between the snapshot and the call, so it may see one event after
-	//unsubscribing - which is the ordinary cost of not holding a lock across a callback, and cheaper than the alternative.
-	Ω listenersFor( QL::SubscriptionId id )ι->flat_set<sp<QL::IListener>>{
-		sl l{ _mutex };
-		let kv = _subs.find( id );
-		return kv==_subs.end() ? flat_set<sp<QL::IListener>>{} : kv->second;//_subs never holds an empty set - StopListenRemote erases the key when the last listener goes - so empty means absent.
-	}
-	α Subscriptions::OnTraces( App::Proto::FromServer::Traces&& traces, QL::SubscriptionId requestId )ι->void{
-		auto listeners = listenersFor( requestId );
-		if( listeners.empty() ){
-			WARNT( ELogTags::QL, "[{}]Could not find trace subscription.", requestId );
-			return;
-		}
-		for( auto listener = listeners.begin(); listener!=listeners.end(); ){
-			let& p = *listener;
-			let isLast = ++listener==listeners.end();
-			p->OnTraces( isLast ? move(traces) : App::Proto::FromServer::Traces{traces} );//the last one gets the original; the rest a copy.
-		}
-	}
-	α Subscriptions::OnWebsocketReceive( const jobject& m, QL::SubscriptionId clientId )ι->void{
-		let listeners = listenersFor( clientId );
-		if( listeners.empty() ){
-			WARNT( ELogTags::QL, "[{}]Could not find subscription.", clientId );
-			return;
-		}
-		for( let& listener : listeners ){
-			try{
-				listener->OnChange( m, clientId );
-			}
-			catch( runtime_error& )
-			{}
-		}
 	}
 }

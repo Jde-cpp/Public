@@ -18,6 +18,7 @@ namespace Jde::Web::Client{
 		α MutateIfNotFound( string /*query*/, UserPK /*executer*/ )ε->jarray{ throw Exception("Not implemented."); }
 		α Schemas()Ι->const vector<sp<DB::AppSchema>>& override{ return _schemas;}
 		α Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, UserPK executer, SRCE )ε->up<TAwait<vector<QL::SubscriptionId>>> override;
+		α Unsubscribe( sp<QL::IListener> listener, flat_set<QL::SubscriptionId> ids, SL sl )ι->void override;
 		α Upsert( string /*query*/, jobject /*variables*/, UserPK /*executer*/ )ε->jarray override{ throw Exception{"Not implemented."}; }
 	private:
 		const vector<sp<DB::AppSchema>> _schemas; //empty

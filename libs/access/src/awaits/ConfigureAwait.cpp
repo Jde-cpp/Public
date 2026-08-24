@@ -41,7 +41,10 @@ namespace Jde::Access{
 			await.Authorizer->Acl = move( acl );
 			await.Authorizer->SetUserPermissions( {}, l );
 			l.unlock();//as LoadUsers does:  Subscribe touches none of this, and holding the authorizer's mutex across it deadlocks anything downstream that authorizes.
-			Subscribe( await );
+			if( await.Reload )
+				await.Resume();//the subscriptions are still live (Replay re-issued them) - this was only ever about the snapshot.
+			else
+				Subscribe( await );
 		}
 		catch( runtime_error& e ){
 			await.ResumeExp( move(e) );
@@ -65,6 +68,8 @@ namespace Jde::Access{
 		try{
 			auto loaded = co_await ResourceLoadAwait{ await.QlServer, await.Schemas, await.OpcServerInstance, await.Executer };
 			ul l{ await.Authorizer->Mutex };
+			await.Authorizer->SchemaResources.clear();
+			await.Authorizer->Resources.clear();
 			for( let& [pk, resource] : loaded.Resources ){
 				if( !resource.IsDeleted ){
 					auto& targetResources = await.Authorizer->SchemaResources.try_emplace( resource.Schema ).first->second;

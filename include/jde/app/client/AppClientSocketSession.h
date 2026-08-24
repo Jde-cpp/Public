@@ -24,7 +24,6 @@ namespace Jde::App::Client{
 		SessionPK _sessionId;
 		sp<Client::AppClientSocketSession> _session;
 	};
-	α CloseSocketSession( SRCE )ι->VoidTask;
 
 	struct AppClientSocketSession final : Web::Client::TClientSocketSession<Jde::App::Proto::FromClient::Transmission,Jde::App::Proto::FromServer::Transmission>{
 		Τ using await = Web::Client::ClientSocketAwait<T>;
@@ -34,13 +33,21 @@ namespace Jde::App::Client{
 		α SessionInfo( SessionPK creds, SRCE )ι->await<Web::FromServer::SessionInfo>;
 		α Query( string&& q, jobject variables, bool returnRaw, SRCE )ι->await<jvalue> override;
 		α Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, SRCE )ε->await<jarray> override;
+		α Unsubscribe( vector<QL::SubscriptionId>&& ids, SRCE )ι->void override;
 		α QLServer()ι{ return _qlServer; }
+
+		α ListenRemote( sp<QL::IListener> listener, QL::Subscription&& sub )ι->void;
+		α StopListenRemote( sp<QL::IListener> listener, vector<QL::SubscriptionId> ids )ι->flat_set<QL::SubscriptionId>;//returns the ids removed - the caller unsubscribes server side, e.g. IQL::Unsubscribe.
+		α ClearSubscriptions()ι->void;//what the close does: the ids died with the socket.  Remembered requests are untouched - that is what a reconnect replays.
+		α OnSubscription( const jobject& m, QL::SubscriptionId clientId )ι->void;
+		α OnTraces( App::Proto::FromServer::Traces&& traces, QL::SubscriptionId requestId )ι->void;
 	private:
-		α ClientQuery( Proto::FromServer::ClientQuery proto, RequestId requestId )ι->TAwait<jvalue>::Task;
-		α Execute( string&& bytes, optional<Jde::UserPK> userPK, RequestId clientRequestId )ι->void;
+		α ListenersFor( QL::SubscriptionId id )Ι->flat_set<sp<QL::IListener>>;
+		α ClientQuery( Proto::FromServer::ClientQuery proto, Jde::UserPK executer, RequestId requestId )ι->TAwait<jvalue>::Task;
+		α Execute( string&& bytes, optional<Jde::UserPK> userPK, RequestId clientRequestId, uint8 depth )ι->void;
 		α WriteException( runtime_error&&, RequestId requestId )ι->void;
 		α WriteException( string&& e, RequestId requestId )ι->void;
-		α ProcessTransmission( Proto::FromServer::Transmission&& t, optional<Jde::UserPK> userPK, optional<RequestId> clientRequestId )ι->void;
+		α ProcessTransmission( Proto::FromServer::Transmission&& t, optional<Jde::UserPK> userPK, optional<RequestId> clientRequestId, uint8 depth )ι->void;
 		α HandleException( std::any&& h, Exception&& what, RequestId requestId )ι->void;
 		α OnRead( Proto::FromServer::Transmission&& transmission )ι->void override;
 		α OnClose( beast::error_code ec )ι->void override;
@@ -53,6 +60,12 @@ namespace Jde::App::Client{
 		//than what was merely attempted - a request the server rejects must not be replayed on every reconnect forever.
 		struct SubscriptionRequest final{ sp<QL::IListener> Listener; vector<QL::Subscription> Subscriptions; string Query; jobject Variables; };
 		concurrent_flat_map<RequestId, SubscriptionRequest> _subscriptionRequests;
+		flat_map<QL::SubscriptionId,flat_set<sp<QL::IListener>>> _subs;
+		mutable std::shared_mutex _subsMutex;
+#ifdef TESTS
+	public:
+		α ProcessTransmissionTest( Proto::FromServer::Transmission&& t, optional<Jde::UserPK> userPK, optional<RequestId> clientRequestId, uint8 depth )ι->void{ ProcessTransmission( move(t), userPK, clientRequestId, depth ); }
+#endif
 	};
 }
 #undef Φ

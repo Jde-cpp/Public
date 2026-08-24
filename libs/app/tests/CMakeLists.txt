@@ -18,8 +18,12 @@ endif()
 
 add_executable( ${targetName} )
 compileOptions( ${targetName} )
-file( GLOB sources *.cpp )
-file( GLOB headers *.h )
+#CONFIGURE_DEPENDS, as libs/access/tests does and for the reason functions.cmake's header note gives: repo-wide the globs
+#omit it on purpose, because a source missing from a stale glob is a link error and that is the check - but a gtest
+#executable is the documented exception.  A new self-contained *Tests.cpp is referenced by no other translation unit, so
+#a stale glob drops it with no link error, no warning and a green run (app-review3 T9, access-review3 #30).
+file( GLOB sources CONFIGURE_DEPENDS *.cpp )
+file( GLOB headers CONFIGURE_DEPENDS *.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 target_compile_definitions( ${targetName} PRIVATE TESTS )
 target_link_libraries( ${targetName} GTest::gtest Threads::Threads )

@@ -6,11 +6,11 @@
 namespace Jde::Access{
 	struct AccessListener;
 	struct ConfigureAwait : VoidAwait{
-		ConfigureAwait( sp<QL::IQL> qlServer, vector<sp<DB::AppSchema>> schemas, sp<Authorize> authorizer, UserPK executer, sp<AccessListener> listener, string opcServerInstance, SRCE )ι:
-			VoidAwait{sl}, Authorizer{authorizer}, Executer{executer}, Listener{listener}, OpcServerInstance{move(opcServerInstance)}, QlServer{qlServer}, Schemas{schemas}{
+		ConfigureAwait( sp<QL::IQL> qlServer, vector<sp<DB::AppSchema>> schemas, sp<Authorize> authorizer, UserPK executer, sp<AccessListener> listener, string opcServerInstance, bool reload=false, SRCE )ι:
+			VoidAwait{sl}, Authorizer{authorizer}, Executer{executer}, Listener{listener}, OpcServerInstance{move(opcServerInstance)}, QlServer{qlServer}, Schemas{schemas}, Reload{reload}{
 				ASSERT( listener );
 			};
-		α Suspend()ι->void override{ SyncResources(); }
+		α Suspend()ι->void override{ if( Reload ) LoadUsers(); else SyncResources(); }
 		α SyncResources()ι->VoidTask;
 		α LoadUsers()ι->TAwait<Identities>::Task;
 
@@ -20,5 +20,6 @@ namespace Jde::Access{
 		string OpcServerInstance;
 		sp<QL::IQL> QlServer;
 		vector<sp<DB::AppSchema>> Schemas;
+		bool Reload;
 	};
 }

@@ -8,6 +8,7 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <jde/fwk/chrono.h>
 #include <jde/fwk/io/FileAwait.h>
+#include <jde/fwk/co/LockKey.h>
 #include <jde/fwk/io/protobuf.h>
 #include <jde/fwk/str.h>
 #include <jde/ql/ql.h>
@@ -51,13 +52,32 @@ namespace Jde::App::Tests{
 			}
 			return e.Id();
 		}
-		α SetUp()->void override{ ASSERT_NO_THROW( Log() ); } //config/App.Tests.jsonnet configures /logging/proto.
+		//T4: the day CorruptArchiveFailsTheQueryNotTheProcess plants an unparseable archive in.  Swept here, not only by that
+		//test's stack destructor: the failure it pins is std::terminate, and neither that nor any other crash runs a
+		//destructor - after which every later run of anything that walks the archives (DailyFileStringFilter has no time
+		//bound, so it walks all of them) fails on the file left behind, until someone deletes the directory by hand.  The
+		//tree outlives the run and nothing else ever cleans it (C8), so one poisoned day is permanent.
+		α CorruptDir()ι->fs::path{ return Log().Root()/"2025"/"1"/"20"; }
+		α SetUp()->void override{
+			ASSERT_NO_THROW( Log() ); //config/App.Tests.jsonnet configures /logging/proto.
+			std::error_code ec;
+			fs::remove_all( CorruptDir(), ec );
+		}
 	};
 
+	//T5: was `ASSERT_TRUE( entries.size() )`, which held before this test wrote anything - the merged view carries a string
+	//record per template, plus everything the earlier tests of this run and every earlier run left in the daily file.  It
+	//could not fail, whatever DailyLoadAwait returned.  What it means to assert is that the entry just written is in there.
 	TEST_F( LogTests, Exists ){
-		Log().Write( {SRCE_CUR, ELogLevel::Information, ELogTags::Test, "DailyLoadAwait test message"} );
-		auto entries = BlockAwait<TAwait<vector<App::Log::Proto::FileEntry>>,vector<App::Log::Proto::FileEntry>>( App::DailyLoadAwait(Log().DailyFile()) );
-		ASSERT_TRUE( entries.size() ); //Query mode merges the unflushed buffer with the file, so this holds before any flush.
+		//unique per run: the daily file outlives the suite, so a fixed message would be answered for by an earlier run's entry.
+		Logging::Entry e{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, Ƒ("DailyLoadAwait test message {}", ToIsoString(Clock::now())) };
+		Log().Write( e );
+		using enum Log::Proto::FileEntry::ValueCase;
+		bool found{};
+		//Query mode merges the unflushed buffer with the file, so this holds whether or not the write above happened to flush.
+		for( let& fe : BlockAwait<TAwait<vector<Log::Proto::FileEntry>>,vector<Log::Proto::FileEntry>>(App::DailyLoadAwait(Log().DailyFile())) )
+			found = found || (fe.value_case()==kEntry && Protobuf::ToGuid(fe.entry().template_id())==e.Id());
+		EXPECT_TRUE( found ) << "the entry just written is not in the merged buffer+file view";
 	}
 
 	TEST_F( LogTests, Archive ){
@@ -237,6 +257,89 @@ namespace Jde::App::Tests{
 		EXPECT_EQ( log->Today(), Chrono::LocalYMD(Clock::now(), log->TimeZone()) );
 	}
 
+	//M5: with the daily file unwritable the flush fails and the whole batch is prepended, and nothing bounded what that grew to -
+	//an O(n) memmove per prepend, for as long as the disk stayed unwritable, with a fresh Save (coroutine, LockKeyAwait, failing
+	//IO::WriteAwait) started by *every* subsequent log line.
+	TEST_F( DailyFileDayTests, AnUnwritableDailyFileTrimsToTheNewest ){
+		fs::create_directories( _root/"log.binpb" );//a directory where the file belongs - every append fails, whatever the uid.
+		//Destroyed normally since M9 gave ProtoLog a destructor - which this exercises as much as anything: the failure path arms a
+		//timer, so tearing one down here is exactly the use-after-free M9 was about.
+		let log = mu<App::ProtoLog>( jobject{{"path", _root.string()}, {"delay", "PT24H"}, {"timeZone", "America/New_York"}, {"maxBuffer", 40'000}} );
+
+		constexpr uint count{ 2'000 };
+		let text = []( uint i ){ return Ƒ("M5 cap probe {} - unique text, so each entry emits a string record of its own", i); };
+		for( uint i=0; i<count; ++i )
+			log->Write( {SRCE_CUR, ELogLevel::Information, ELogTags::Test, text(i)} );
+
+		EXPECT_LE( log->BufferSize(), 45'000u ) << "the buffer grew past its cap while the daily file was unwritable";
+		ASSERT_GT( log->BufferSize(), 0u ) << "entries stopped being buffered at all";
+
+		//The trim has to land on record boundaries: the buffer is a [length][body] stream, and a cut inside one leaves exactly the
+		//file #2 is about - read as garbage, silently stopping at the tear.  Entries() is DeserializeVector, so this is that check.
+		vector<App::Log::Proto::FileEntry> buffered;
+		ASSERT_NO_THROW( buffered = log->Entries() );
+		flat_set<uuid> templates;
+		for( let& fe : buffered ){
+			if( fe.value_case()==App::Log::Proto::FileEntry::kEntry )
+				templates.emplace( Protobuf::ToGuid(fe.entry().template_id()) );
+		}
+		EXPECT_TRUE( templates.contains(Logging::Entry::GenerateId(text(count-1))) ) << "the newest entry was not among the ones kept";
+		EXPECT_FALSE( templates.contains(Logging::Entry::GenerateId(text(0))) ) << "the oldest entry survived - the trim kept the wrong end";
+	}
+
+	//L2: the string cache was a deque scanned linearly for every string of every line, and a hit did not reorder - the standing
+	//`//TODO update position`.  So the hottest strings drifted to the back and Trim evicted precisely the ones about to be used
+	//again, which then had to be re-emitted into the daily file.  Touch reports whether the record still has to be written, so it
+	//is the whole observable: true means "emit it again".
+	TEST( ProtoLogCacheTests, TrimKeepsTheMostRecentlyUsed ){
+		App::ProtoLogCache cache;
+		let hot = Logging::Entry::GenerateId( "hot" );
+		ASSERT_TRUE( cache.Touch(cache.Strings, hot) ) << "a first use is not cached, so its record is emitted";
+		for( uint i=0; i<1'500; ++i )
+			cache.Touch( cache.Strings, Logging::Entry::GenerateId(Ƒ("cold {}", i)) );
+		ASSERT_FALSE( cache.Touch(cache.Strings, hot) ) << "cached, and this use makes it the most recent";
+
+		cache.Trim();
+		EXPECT_LE( cache.Strings.size(), 1'000u ) << "Trim did not bound the cache";
+		EXPECT_FALSE( cache.Touch(cache.Strings, hot) ) << "Trim evicted the hottest string - it survived 1,500 colder ones only if a hit reorders";
+	}
+
+	//L1(a): Save moved the batch out of _toSave before it enqueued on the daily file's key, so for as long as another holder kept
+	//that key - a round, another query - the batch was in neither the buffer nor the file, and a query that snapshotted the buffer
+	//and then read the file found it in neither.  The window is the whole time the key is held, not a few instructions, so holding
+	//it here is the finding rather than a contrivance.
+	TEST_F( DailyFileDayTests, AFlushWaitingOnTheDailyFileKeyIsStillVisible ){
+		let log = mu<App::ProtoLog>( jobject{{"path", _root.string()}, {"delay", "PT24H"}, {"timeZone", "America/New_York"}} );
+		Logging::Entry marker{ SRCE_CUR, ELogLevel::Information, ELogTags::Test, string{"L1 in-flight probe"} };
+		{
+			auto key = TryLockKey( log->DailyFile().string() );//held for this scope: the flush below parks on LockKeyAwait.
+			ASSERT_TRUE( key );
+			log->Write( marker );
+			//Past _delaySize, so the write triggers Save() - which runs inline to its first suspend, so by the time this loop ends
+			//the batch has left _toSave and is parked on the key.
+			for( uint i=0; i<400 && log->BufferSize(); ++i )
+				log->Write( {SRCE_CUR, ELogLevel::Information, ELogTags::Test, Ƒ("L1 filler {}", i)} );
+			ASSERT_EQ( log->BufferSize(), 0u ) << "no flush was triggered, so there is nothing in flight to see";
+
+			bool found{};
+			for( let& fe : log->Entries() )
+				found = found || (fe.value_case()==Log::Proto::FileEntry::kEntry && Protobuf::ToGuid(fe.entry().template_id())==marker.Id());
+			EXPECT_TRUE( found ) << "a batch waiting on the daily file's key was in neither the buffer nor the file";
+		}
+	}
+
+	//M9: ProtoLog had no destructor, so tearing one down with its flush timer armed left StartTimer's continuation pointing at
+	//freed memory - the cancelled wait completes on the io thread and resumes into it.  ASan reported it as a heap-use-after-free
+	//in DurationTimer::await_resume about `delay` after the write.  A short delay so the timer is genuinely in flight, and a loop
+	//so the destructor is exercised against a live one repeatedly rather than once.
+	TEST_F( DailyFileDayTests, DestructorOutlastsTheFlushTimer ){
+		for( uint i=0; i<20; ++i ){
+			let log = mu<App::ProtoLog>( jobject{{"path", (_root/std::to_string(i)).string()}, {"delay", "PT0.2S"}, {"timeZone", "America/New_York"}} );
+			log->Write( {SRCE_CUR, ELogLevel::Information, ELogTags::Test, Ƒ("M9 destructor probe {}", i)} );//arms the timer.
+		}
+		SUCCEED() << "20 build/write/tear-down cycles with a timer armed, clean under ASan";
+	}
+
 	//#7: _dailyFileStart is what LogAwait::ShouldReadLocal (`!_endTime || *_endTime > _dailyFileStart`) consults to decide
 	//whether today's log can hold anything in range.  It has to be a *lower* bound on everything reachable locally - the
 	//daily file and the unflushed buffer both - because reading a file with nothing in range costs one read, while skipping
@@ -276,7 +379,17 @@ namespace Jde::App::Tests{
 					std::this_thread::sleep_for( 50ms );
 			}
 			ASSERT_TRUE( flushed ) << "no flush landed - the filler did not exceed _delaySize";
-			held = Log().DailyFileStart()!=TimePoint::max() && Log().DailyFileStart()<=when;
+			//T7: sampled across a window once the flush has landed, not once at the instant it does.  The bug parks the bound
+			//on the executor thread in the statement after the write that grows the file, so a single sample taken the moment
+			//the size changes can be read *before* the park and see the bound the fix would have left - a green that says
+			//nothing about which version is running.  One sample catching it released is the failure, and nothing lowers it
+			//again once this attempt's filler is written, so a window can only add detections, never take one away.
+			held = true;
+			for( uint i=0; i<25 && held; ++i ){
+				let start = Log().DailyFileStart();//one read: two calls could straddle a flush and compare different values.
+				held = start!=TimePoint::max() && start<=when;
+				std::this_thread::sleep_for( 10ms );
+			}
 		}
 		EXPECT_TRUE( held ) << "a flush released the bound - it moves entries from the buffer into the daily file, and both are local, so every time-bounded logs() query would now skip the daily file";
 	}
@@ -317,16 +430,29 @@ namespace Jde::App::Tests{
 	//ArchiveFile::Append, both ε.  One corrupt or truncated archive.binpb - a torn write, a file left half-written by a
 	//killed process - took the whole process down with std::terminate instead of failing the query that read it.
 	TEST_F( LogTests, CorruptArchiveFailsTheQueryNotTheProcess ){
-		let dir = Log().Root()/"2025"/"1"/"20";//a day of its own; ArchiveFiles() skips directories that are not a valid date.
+		let dir = CorruptDir();//a day of its own; ArchiveFiles() skips directories that are not a valid date.
 		fs::create_directories( dir );
 		{
 			std::ofstream os{ dir/"archive.binpb", std::ios::binary };
 			os << "not a protobuf";
 		}
 		//removed however this exits - every other test in the suite reads the archives too, and the tree outlives the run.
+		//SetUp sweeps it too, for the exits that run no destructor at all - which is the very failure this pins.
 		struct Cleanup final{ fs::path Dir; ~Cleanup(){ std::error_code ec; fs::remove_all( Dir, ec ); } } cleanup{ dir };
-		//no limit, so IsComplete() is false and ArchiveLoadAwait walks every archive file, this one included.
-		EXPECT_ANY_THROW( BlockTAwait<jvalue>(App::LogQLAwait{move(QL::Parse(string{"logs{ entries{templateId time} }"}, {}, {}).Queries()[0])}) );
+		//T4: the exception, not EXPECT_ANY_THROW.  A QL parse error, a renamed view, a read that fails for any other reason
+		//- all of them are throws, and under any of them this reports green while the terminate it exists for goes unguarded.
+		//What it has to be is the deserialize of that file failing, and Deserialize names itself when it does.
+		try{
+			//no limit, so IsComplete() is false and ArchiveLoadAwait walks every archive file, this one included.
+			BlockTAwait<jvalue>( App::LogQLAwait{move(QL::Parse(string{"logs{ entries{templateId time} }"}, {}, {}).Queries()[0])} );
+			ADD_FAILURE() << "the corrupt archive was read without complaint";
+		}
+		catch( const Jde::Exception& e ){
+			EXPECT_NE( string{e.what()}.find("MergePartialFromCodedStream"), string::npos ) << "it threw, but not on the corrupt archive: " << e.what();
+		}
+		catch( const std::exception& e ){
+			ADD_FAILURE() << "expected a Jde::Exception from the archive read, got: " << e.what();
+		}
 	}
 
 	TEST_F( LogTests, GraphQL ){

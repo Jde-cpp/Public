@@ -26,7 +26,7 @@ namespace Jde::App::Client{
 		uint _dropped{};
 		mutex _mutex;
 		bool _running{};
-		static constexpr ELogTags _tags{ ELogTags::ExternalLogger | ELogTags::App };
+		static constexpr ELogTags _tags{ ELogTags::ExternalLogger };
 		up<DurationTimer> _timer;
 		vector<Logging::Entry> _entries;
 	};

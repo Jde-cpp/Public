@@ -98,12 +98,14 @@ namespace Jde::App::Tests{
 
 	TEST( LogProtoTests, DebugStringOfAnEntry ){
 		Log::Proto::FileEntry fe;
-		*fe.mutable_entry() = LogProto::LogEntryFile( entry(tp(0), ELogLevel::Error, 7, "boom", {"9"}) );
+		*fe.mutable_entry() = LogProto::LogEntryFile( entry(tp(0), ELogLevel::Error, 7, "boom", {"9"}, "src/x.cpp", "Fn", ELogTags::Test, UserPK{4242}) );
 		let s = LogProto::DebugString( fe );
 		EXPECT_NE( s.find("Error"), string::npos );
 		EXPECT_NE( s.find("test"), string::npos ); //ELogTags::Test
 		let argId = Jde::ToString( Logging::Entry::GenerateId("9") );
 		EXPECT_NE( s.find(argId.substr(argId.size()-4)), string::npos );
+		//L8: the format had four placeholders and was handed five arguments, which fmt permits - so the user was dropped in silence.
+		EXPECT_NE( s.find("4242"), string::npos ) << "the entry's user is missing from its debug string: " << s;
 	}
 
 	TEST( LogProtoTests, DebugStringOfTheOtherFileEntries ){

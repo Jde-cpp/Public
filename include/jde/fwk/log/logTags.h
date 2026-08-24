@@ -60,7 +60,7 @@ namespace Jde{
 		α SetLevels( const jobject& tagLevels )ι->void;
 		β Name()Ι->sv{ return "Cumulative"; }
 		α DefaultLevel()Ι->ELogLevel{ return _defaultLevel; }
-		α SetDefaultLevel( ELogLevel level )ι->void{ _defaultLevel = level; }
+		α SetDefaultLevel( ELogLevel level )ι->void{ _defaultLevel = level; ExtrapolatedTags = _configuredTags; }
 		β MinLevel()Ι->ELogLevel{ return _minLevel; }
 		β MinLevel( ELogTags tags )Ι->ELogLevel;
 		β SetMinLevel( ELogLevel level )ι->void{ _minLevel = level; }

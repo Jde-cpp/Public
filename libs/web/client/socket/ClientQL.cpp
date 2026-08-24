@@ -32,6 +32,11 @@ namespace Jde::Web::Client{
 		return mu<SubscribeQueryAwait>( move(await), sl );
 	}
 
+	α ClientQL::Unsubscribe( sp<QL::IListener> /*listener*/, flat_set<QL::SubscriptionId> ids, SL sl )ι->void{
+		if( auto session = _session.lock(); session )
+			session->Unsubscribe( vector<QL::SubscriptionId>{ids.begin(), ids.end()}, sl );
+	}
+
 	Τ struct QueryAwait final : TAwaitEx<T,ClientSocketAwait<jvalue>::Task>{
 		using Await = ClientSocketAwait<jvalue>;
 		using base=TAwaitEx<T,Await::Task>;

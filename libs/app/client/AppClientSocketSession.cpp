@@ -20,12 +20,22 @@ namespace Jde::App{
 	constexpr ELogTags _tags{ ELogTags::SocketClientRead };
 
 namespace Client{
+	constexpr uint8 _maxExecuteDepth{ 4 };
+
 	StartSocketAwait::StartSocketAwait( SessionPK sessionId, sp<Access::Authorize> authorize, sp<IAppClient> appClient, SL sl )ι:
 		base{ sl },
 		_appClient{ appClient },
 		_sessionId{ sessionId },
 		_session{ ms<Client::AppClientSocketSession>(Executor(), IsSsl() ? Web::Client::Ssl::MakeContext() : optional<ssl::context>{}, move(authorize), move(appClient)) }
 	{}
+
+	Ω closeSession( sp<AppClientSocketSession> session, SL sl )ι->VoidTask{
+		try{
+			co_await session->Close( false, sl );
+		}
+		catch( Exception& e ){
+		}
+	}
 
 	α StartSocketAwait::Suspend()ι->void{
 		RunSession();
@@ -37,6 +47,7 @@ namespace Client{
 			SendSessionId();
 		}
 		catch( runtime_error& e ){
+			closeSession( _session, _sl );
 			ResumeExp( move(e) );
 		}
 	}
@@ -52,6 +63,8 @@ namespace Client{
 			Resume( move(info) );
 		}
 		catch( runtime_error& e ){
+			if( _session )
+				closeSession( _session, _sl );
 			ResumeExp( move(e) );
 		}
 	}
@@ -67,8 +80,11 @@ namespace Client{
 		auto instanceName = Settings::FindString( "/instanceName" ).value_or( "" );
 		if( instanceName.empty() )
 			instanceName = _debug ? "Debug" : "Release";
-		LOGSL( ELogLevel::Information, sl, ELogTags::SocketClientWrite, "[{}]Connect: '{}'.", hex(requestId), instanceName );
-		return ClientSocketAwait<Proto::FromServer::ConnectionInfo>{ ToString(FromClient::Instance(Process::AppName(), instanceName, sessionId, requestId)), requestId, shared_from_this(), sl };
+		LOGSL( ELogLevel::Information, sl, ELogTags::SocketClientWrite, "[{}]Connect: '{}', authResource: '{}'.", hex(requestId), instanceName, _appClient->ResourceSchema );
+		//M10: ResourceSchema is what OpcServer sets to its `opc.*` schema (opcServerStartup, before this connect); the gateway leaves
+		//it empty and asks to authorize nothing.  Until this was passed, the AppServer's `if( instance.auth_resource().size() )` arm
+		//never ran and every delegated admin check fell back to the AppServer's own Authorize.
+		return ClientSocketAwait<Proto::FromServer::ConnectionInfo>{ ToString(FromClient::Instance(Process::AppName(), instanceName, sessionId, requestId, _appClient->ResourceSchema)), requestId, shared_from_this(), sl };
 	}
 
 	α AppClientSocketSession::CloseTasks( beast::error_code ec )ι->void{
@@ -77,20 +93,88 @@ namespace Client{
 		};
 		base::CloseTasks( f );
 		_subscriptionRequests.clear();
-		Subscriptions::Clear();//server-side subscriptions died with the socket; reconnect re-subscribes.
+		ClearSubscriptions();//server-side subscriptions died with the socket; reconnect re-subscribes.
+	}
+	α AppClientSocketSession::ClearSubscriptions()ι->void{
+		ul _{ _subsMutex };
+		_subs.clear();
+	}
+	α AppClientSocketSession::ListenRemote( sp<QL::IListener> listener, QL::Subscription&& sub )ι->void{
+		ul _{ _subsMutex };
+		_subs.try_emplace( sub.Id ).first->second.emplace( move(listener) );
+	}
+	α AppClientSocketSession::StopListenRemote( sp<QL::IListener> listener, vector<QL::SubscriptionId> ids )ι->flat_set<QL::SubscriptionId>{
+		flat_set<QL::SubscriptionId> y;
+		ul _{ _subsMutex };
+		if( ids.empty() ){//all of listener's subscriptions.
+			for( auto idListeners = _subs.begin(); idListeners!=_subs.end(); ){
+				if( idListeners->second.erase(listener) )
+					y.emplace( idListeners->first );
+				idListeners = idListeners->second.empty() ? _subs.erase( idListeners ) : next(idListeners);
+			}
+		}
+		else{
+			for( let id : ids ){
+				auto kv = _subs.find( id );
+				if( kv==_subs.end() || !kv->second.erase(listener) )
+					continue;
+				y.emplace( id );
+				if( kv->second.empty() )
+					_subs.erase( kv );
+			}
+		}
+		return y;
+	}
+	//The listeners for an id, copied out from under the lock.  Callbacks must not run while _subsMutex is held: a listener that
+	//subscribes or unsubscribes in response to an event re-enters ListenRemote/StopListenRemote/ClearSubscriptions, all of which
+	//take the same mutex exclusively - and a shared_mutex is not recursive, so that is a hang (formally, UB).  Copying the
+	//shared_ptrs also keeps every listener alive across its own callback, which holding the lock only did by accident.
+	//The trade is that a listener can be dropped between the snapshot and the call, so it may see one event after
+	//unsubscribing - which is the ordinary cost of not holding a lock across a callback, and cheaper than the alternative.
+	α AppClientSocketSession::ListenersFor( QL::SubscriptionId id )Ι->flat_set<sp<QL::IListener>>{
+		sl _{ _subsMutex };
+		let kv = _subs.find( id );
+		return kv==_subs.end() ? flat_set<sp<QL::IListener>>{} : kv->second;//_subs never holds an empty set - StopListenRemote erases the key when the last listener goes - so empty means absent.
+	}
+	α AppClientSocketSession::OnTraces( App::Proto::FromServer::Traces&& traces, QL::SubscriptionId requestId )ι->void{
+		auto listeners = ListenersFor( requestId );
+		if( listeners.empty() ){
+			WARNT( ELogTags::QL, "[{}]Could not find trace subscription.", requestId );
+			return;
+		}
+		for( auto listener = listeners.begin(); listener!=listeners.end(); ){
+			let& p = *listener;
+			let isLast = ++listener==listeners.end();
+			p->OnTraces( isLast ? move(traces) : App::Proto::FromServer::Traces{traces} );//the last one gets the original; the rest a copy.
+		}
+	}
+	α AppClientSocketSession::OnSubscription( const jobject& m, QL::SubscriptionId clientId )ι->void{
+		let listeners = ListenersFor( clientId );
+		if( listeners.empty() ){
+			WARNT( ELogTags::QL, "[{}]Could not find subscription.", clientId );
+			return;
+		}
+		for( let& listener : listeners ){
+			try{
+				listener->OnChange( m, clientId );
+			}
+			catch( runtime_error& )
+			{}
+		}
 	}
 	α AppClientSocketSession::OnClose( beast::error_code ec )ι->void{
+		let _ = shared_from_this();//SetSession below drops a strong reference, and everything after it runs on this.
+		let isLive = _appClient->LoadSession().get()==this;//a secondary session (tests create their own) - clearing the live session for one of those would make IAppClient::Shutdown skip closing it, and reconnecting would be spurious.
+		if( isLive )
+			_appClient->SetSession( nullptr );
 		base::OnClose( ec );
-		if( _appClient->LoadSession().get() != this )
-			return;//a secondary session (tests create their own) - clearing the live session here would make IAppClient::Shutdown skip closing it, and reconnecting would be spurious.
-		_appClient->SetSession( nullptr );
-		if( !Process::ShuttingDown() )
+		if( isLive && !Process::ShuttingDown() )
 			App::Client::Connect( _appClient );
 	}
 	α AppClientSocketSession::OnMessage( string&& j, RequestId requestId )ι->void{
 		DBG( "[{}]OnMessage: {}", hex(requestId), j.substr(0, Web::Client::MaxLogLength()) );
 		try{
-			Subscriptions::OnWebsocketReceive( Json::Parse(j), requestId );
+			OnSubscription( Json::Parse(j), requestId );
 		}
 		catch( Exception& e ){
 			e.SetLevel( ELogLevel::Error );
@@ -100,11 +184,11 @@ namespace Client{
 		let requestId = NextRequestId();
 		return ClientSocketAwait<Web::FromServer::SessionInfo>{ FromClient::Session(sessionId, requestId), requestId, shared_from_this(), sl };
 	}
-	α AppClientSocketSession::ClientQuery( Proto::FromServer::ClientQuery proto, RequestId requestId )ι->TAwait<jvalue>::Task{
-		DBG( "[{}.{}]ClientQuery: size='{}'.", hex(Id()), hex(requestId), proto.query().substr(0, Web::Client::MaxLogLength()) );
+	α AppClientSocketSession::ClientQuery( Proto::FromServer::ClientQuery proto, Jde::UserPK executer, RequestId requestId )ι->TAwait<jvalue>::Task{
+		DBG( "[{}.{}]ClientQuery: executer='{}', size='{}'.", hex(Id()), hex(requestId), executer.Value, proto.query().substr(0, Web::Client::MaxLogLength()) );
 		try{
 			auto vars = proto.variables().empty() ? jobject{} : parse( proto.variables() ).as_object();
-			auto result = co_await *_appClient->ClientQuery( QL::Parse(move(*proto.mutable_query()), move(vars), {}, proto.raw()), {proto.executer_pk()} );
+			auto result = co_await *_appClient->ClientQuery( QL::Parse(move(*proto.mutable_query()), move(vars), {}, proto.raw()), executer );
 			Write( FromClient::QueryResult(serialize(result), requestId) );
 		}
 		catch( runtime_error& e ){
@@ -123,6 +207,14 @@ namespace Client{
 		auto subscriptions = QL::ParseSubscriptions( q, vars, _appClient->SubscriptionSchemas, sl );
 		_subscriptionRequests.emplace( requestId, SubscriptionRequest{listener, move(subscriptions), q, vars} );
 		return ClientSocketAwait<jarray>{ FromClient::Subscription(move(q), move(vars), requestId), requestId, shared_from_this(), sl };
+	}
+
+	α AppClientSocketSession::Unsubscribe( vector<QL::SubscriptionId>&& ids, SL sl )ι->void{
+		if( ids.empty() )
+			return;
+		let requestId = NextRequestId();
+		LOGSL( ELogLevel::Debug, sl, ELogTags::SocketClientWriteSub, "[{}]Unsubscribe: {}.", hex(requestId), ids.size() );
+		Write( FromClient::Unsubscription(ids, requestId) );
 	}
 
 	template<class T,class... Args> Ω resume( std::any&& hAny, T&& v/*, fmt::format_string<Args const&...>&& m="", const Args&... args*/ )ι->void{
@@ -153,10 +245,11 @@ namespace Client{
 		resume( move(h), move(v) );
 	}
 
-	α AppClientSocketSession::Execute( string&& bytes, optional<Jde::UserPK> userPK, RequestId clientRequestId )ι->void{
+	α AppClientSocketSession::Execute( string&& bytes, optional<Jde::UserPK> userPK, RequestId clientRequestId, uint8 depth )ι->void{
 		try{
+			THROW_IF( depth>_maxExecuteDepth, "Execute nesting depth {} exceeds the maximum of {}.", uint32(depth), uint32(_maxExecuteDepth) );//uint32: fmt renders a uint8 as the character it numbers, which is blank here.
 			auto t = Protobuf::Deserialize<Proto::FromServer::Transmission>( move(bytes) );
-			ProcessTransmission( move(t), userPK, clientRequestId );
+			ProcessTransmission( move(t), userPK, clientRequestId, depth );
 		}
 		catch( runtime_error& e ){
 			WriteException( move(e), clientRequestId );
@@ -164,10 +257,10 @@ namespace Client{
 	}
 
 	α AppClientSocketSession::OnRead( Proto::FromServer::Transmission&& t )ι->void{
-		ProcessTransmission( move(t), UserPK(), nullopt );
+		ProcessTransmission( move(t), nullopt, nullopt, 0 );//depth 0:  the AppServer is speaking on its own socket, so it may name the user it is acting for.
 	}
 
-	α AppClientSocketSession::ProcessTransmission( Proto::FromServer::Transmission&& t, optional<Jde::UserPK> /*userPK*/, optional<RequestId> clientRequestId )ι->void{
+	α AppClientSocketSession::ProcessTransmission( Proto::FromServer::Transmission&& t, optional<Jde::UserPK> userPK, optional<RequestId> clientRequestId, uint8 depth )ι->void{
 		for( auto i=0; i<t.messages_size(); ++i ){
 			auto m = t.mutable_messages( i );
 			using enum Proto::FromServer::Message::ValueCase;
@@ -182,9 +275,16 @@ namespace Client{
 					_qlServer = ms<Web::Client::ClientQL>( shared_from_this(), move(_authorize) );
 				INFO( "[{}]AppClientSocketSession created: {}://{}.", hex(Id()), IsSsl() ? "https" : "http", Host() );
 				break;
-			case kClientQuery:
-				ClientQuery( move(*m->mutable_client_query()), requestId );
-				break;
+			case kClientQuery:{
+				auto& q = *m->mutable_client_query();
+				let claimed = Jde::UserPK{ q.executer_pk() };
+				if( !depth )
+					ClientQuery( move(q), claimed, requestId );
+				else if( claimed && claimed!=userPK.value_or(Jde::UserPK{0}) )
+					WriteException( Exception{SRCE_CUR, {ELogLevel::Critical, ELogTags::Access}, "[{}]A forwarded ClientQuery may not name executer '{}'.", hex(Id()), claimed.Value}, requestId );
+				else
+					ClientQuery( move(q), userPK.value_or(Jde::UserPK{0}), requestId );
+				break;}
 			case kConnectionInfo:
 				DBG( "[{}]ConnectionInfo: connection: '{}'.", hex(Id()), hex(m->connection_info().connection_pk()) );
 				resume( move(hAny), move(*m->mutable_connection_info()) );
@@ -223,7 +323,7 @@ namespace Client{
 						if( sub.Id == 0 )
 							sub.Id = requestId;
 						ids.emplace( sub.Id );
-						Subscriptions::ListenRemote( request.Listener, move(sub) );
+						ListenRemote( request.Listener, move(sub) );
 					}
 					//Remembered on the ack, not on the request: this is the point at which the subscription is known to
 					//exist, and it is what a reconnect re-issues.  Clear() drops the ids above; this outlives them.
@@ -251,9 +351,9 @@ namespace Client{
 			case kExecuteAnonymous:{
 				bool isAnonymous = m->value_case()==kExecuteAnonymous;
 				auto bytes = isAnonymous ? move( *m->mutable_execute_anonymous() ) : move( *m->mutable_execute()->mutable_transmission() );
-				optional<Jde::UserPK> runAsPK = m->value_case()==kExecuteAnonymous ? nullopt : optional<Jde::UserPK>( {m->execute().user_pk()} );
+				optional<Jde::UserPK> runAsPK = isAnonymous ? nullopt : depth ? userPK : optional<Jde::UserPK>( {m->execute().user_pk()} );
 				LogRead( "Execute{} size: {:10L}", isAnonymous ? "Anonymous" : "", bytes.size()  );
-				Execute( move(bytes), runAsPK, requestId );
+				Execute( move(bytes), runAsPK, requestId, uint8(depth+1) );
 				break;}
 			case kExecuteResponse://wait for use case.
 			case kStringPks://strings already saved in db, no need to send.  not being requested by client yet.
@@ -262,7 +362,7 @@ namespace Client{
 			[[likely]]case kTraces:{
 				auto& traces = *m->mutable_traces();
 				DBG( "[{}]Traces: count='{}'.", hex(Id()), traces.values_size() );
-				App::Client::Subscriptions::OnTraces( move(traces), requestId );
+				OnTraces( move(traces), requestId );
 				break;}
 			//[[unlikely]]
 			// case kStatus:

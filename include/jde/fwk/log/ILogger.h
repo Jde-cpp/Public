@@ -11,6 +11,7 @@ namespace Jde::Logging{
 	Ŧ GetLogger()ε->T&;
 	Ŧ FindLogger()ι->T*;
 	Φ AddLogger( up<ILogger>&& logger )ι->ILogger*;
+	Φ LogAddFailure( sv configName, const runtime_error& e )ι->void;
 	Φ Init()ι->void;
 
 	struct Entry;
@@ -28,8 +29,12 @@ namespace Jde::Logging{
 			try{
 				y = (T*)AddLogger( mu<T>(*settings, FWD(args)...) );
 			}
-			catch( runtime_error& )
-			{}
+			catch( runtime_error& e ){
+				//L6: was an empty catch, so a logger configured but unable to construct - a ProtoLog whose `path` cannot be created,
+				//most plainly - was silently not added: no binary log, no logs() answers, and nothing saying why.  The exception
+				//self-logs on destruction, but at Debug and without naming which logger is missing.
+				LogAddFailure( configName, e );
+			}
 		}
 		return y;
 	}

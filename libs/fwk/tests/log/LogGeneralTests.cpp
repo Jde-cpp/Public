@@ -21,6 +21,26 @@ namespace Jde::Tests{
 		}
 	};
 
+	//app-review3 L6: Logging::Add swallowed the logger constructor's exception in an empty catch, so a logger the settings ask for
+	//and that cannot be built - an App::ProtoLog whose `path` cannot be created, most plainly - was simply not there: no output from
+	//it, no answers from it, and nothing saying why.  The exception self-logs on destruction, but at Debug and without naming which
+	//logger is missing, which is the half that made it hard to find.
+	struct UnbuildableLogger final : Logging::ILogger{
+		UnbuildableLogger( const jobject& o )ε:ILogger{o}{ throw Exception{"this logger cannot be created"}; }
+		α Write( const Logging::Entry& )ι->void override{}
+		α Write( const Logging::Entry&, uint32, uint32 )ι->void override{}
+		α Shutdown( bool, SL )ι->void override{}
+		α Name()Ι->sv override{ return "Unbuildable"; }
+	};
+
+	TEST_F( LogGeneralTests, AConfiguredLoggerThatCannotBeCreatedSaysSo ){
+		Settings::Set( "/logging/l6-probe", jobject{} );//a section, so Add gets as far as constructing.
+		Logging::ClearMemory();
+		EXPECT_EQ( Logging::Add<UnbuildableLogger>("l6-probe"), nullptr );
+		let reported = Logging::Find( [](const Logging::Entry& e){ return e.Level>=ELogLevel::Error && e.Text.contains("could not be created"); } );
+		EXPECT_FALSE( reported.empty() ) << "a configured logger that did not start said nothing at Error";
+	}
+
 	//ELogTags is a 64-bit space that libraries extend above fwk's own 27 bits - Jde::Opc registers 32-45 through
 	//AddTagParser - so All has to span the whole underlying type.  Spelled ~0ul it stopped at bit 31 under the windows
 	//ABI, where unsigned long is 32-bit, and silently dropped every extension tag from an All-based subscription.

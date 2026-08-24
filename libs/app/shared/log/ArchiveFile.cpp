@@ -50,6 +50,8 @@ namespace Jde::App{
 		valid = valid && filter.Test( "level", (uint8)entry.level() );
 		valid = valid && filter.TestOr( "tags", entry.tags() );
 		valid = valid && filter.Test( "line", entry.line() );
+		valid = valid && filter.Test( "appId", entry.app_pk() );//L3: filterable as well as readable - one app's lines out of the AppServer's merged history.
+		valid = valid && filter.Test( "appInstanceId", entry.app_instance_pk() );
 		valid = valid && filter.TestF<uuid>( "templateId", [&](){return ToGuid(entry.template_id());} );
 		valid = valid && filter.TestF<string>( "message", [&](){return Message(entry);} );
 		if( valid && filter.ColumnFilters.contains("args") ){
@@ -234,6 +236,11 @@ namespace Jde::App{
 				o[name] = ToIsoString( Protobuf::ToTimePoint(entry.time()) );//ToIsoString already ends in 'Z'.
 			else if( name=="userId" )
 				o[name] = entry.user_pk();
+			//L3: 0 for an entry the logging process wrote itself - only a forwarded one carries another app's pks.
+			else if( name=="appId" )
+				o[name] = entry.app_pk();
+			else if( name=="appInstanceId" )
+				o[name] = entry.app_instance_pk();
 			else if( name=="fileId" ){
 				let id = ToGuid( entry.file_id() );
 				o[name] = to_string( id );
@@ -249,7 +256,7 @@ namespace Jde::App{
 		}
 		return o;
 	}
-	//logs( limit: $limit, offset: $offset, orderBy: $orderBy ){ entries{templateId argIds level tags line time userId fileId functionId} strings{id value} }
+	//logs( limit: $limit, offset: $offset, orderBy: $orderBy ){ entries{templateId argIds level tags line time userId appId appInstanceId fileId functionId} strings{id value} }
 	α ArchiveFile::ToJson( const QL::TableQL& ql )Ι->jobject{
 		let entries = Sort( ql.OrderByJson() );
 		jobject o;

@@ -44,6 +44,8 @@ message LogEntryFile{
 	uint32 user_pk=7;
 	bytes file_id=8;
 	bytes function_id=9;
+	int32 app_pk=10;
+	int32 app_instance_pk=11;
 }
 
 message LogEntryFileExternal{

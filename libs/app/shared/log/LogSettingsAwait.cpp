@@ -2,10 +2,36 @@
 #include <jde/app/IApp.h>
 #include <jde/app/log/ProtoLog.h>
 #include <jde/app/client/RemoteLog.h>
+#include <jde/fwk/str.h>
 
 #define let const auto
 
 namespace Jde::App{
+	//L9: an unrecognised name was not rejected, it was dropped - ToLogTags warns and returns whatever it did recognise, which for a
+	//name it recognises nothing of is ELogTags::None.  SetLevel then wrote a None row into _configuredTags that MinLevel can never
+	//match, ToJson reported it back to the ui as a "none" tag, and the typo went on to updateInstanceTagLevel to be persisted as tag
+	//0 - the row "default" uses.  Component-wise, because ToLogTags splits on TagSeparator and ORs the parts it knows: "socket.bogus"
+	//resolved to a plain socket override, wider than what was asked for, with nothing to say so.
+	α ValidateTagKeys( const jobject& args )ε->void{
+		let catalogue = Logging::Tags( true );//the catalogue the logSetting query answers with - a name the ui was offered must not then be refused.
+		for( let type : {"text", "binary", "appServer"} ){
+			let group = args.if_contains( type );
+			if( !group || !group->is_object() )
+				continue;
+			for( let& [key, _] : group->get_object() ){
+				if( key==Logging::BreakTag || key=="default" )//neither is an ELogTags; UpdateRuntime handles both ahead of ToLogTags.
+					continue;
+				let name = string{ key };
+				let parts = Str::Split( sv{name}, TagSeparator );
+				THROW_IF( parts.empty(), "'{}' is not a log tag.", name );
+				for( let& part : parts ){
+					if( catalogue.contains(string{part}) )
+						continue;
+					THROW( "'{}' is not a log tag{}.", part, part==name ? string{} : Ƒ(" - in '{}'", name) );
+				}
+			}
+		}
+	}
 	α LogSettingsAwait::CalcResult()ι->jobject{
 		jobject y;
 		if( auto text = _ql.FindColumn("text"); text )

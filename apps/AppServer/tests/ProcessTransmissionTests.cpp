@@ -175,4 +175,17 @@ namespace Jde::App::Server::Tests{
 		EXPECT_EQ( _session->CloseCount(), 0u );
 		AssertAlive();
 	}
+
+	//app-review3 M10: FromClient::Instance never set auth_resource, so this arm - the registration IAdminAcl and the field exist
+	//for - was dead, and every delegated admin check for an opc.* schema fell back to the AppServer's own Authorize, which returns
+	//without throwing for a resource it does not hold.  auth_result comes back only when the arm ran.
+	TEST_F( ProcessTransmissionTests, AnInstanceRegistersAsAdminAuthorizerForItsResource ){
+		let registered = RegisterInstance( *_session, "Tests.AuthResource", "authorizer", "auth-host", 0, 1234, "opc.m10-probe" );
+		EXPECT_TRUE( registered.AuthResult ) << "the instance asked to authorize a schema and the server did not register it";
+
+		auto other = Connect();
+		let none = RegisterInstance( *other, "Tests.AuthResource", "plain", "auth-host", 0, 1234 );
+		EXPECT_FALSE( none.AuthResult ) << "an instance that asked to authorize nothing must not be registered";
+		BlockVoidAwait( other->Close(true, SRCE_CUR) );
+	}
 }

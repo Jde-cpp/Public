@@ -1,10 +1,11 @@
 cmake_path( SET jdeRoot NORMALIZE ${CMAKE_CURRENT_LIST_DIR}/.. )
 #Note: file(GLOB) calls repo-wide deliberately omit CONFIGURE_DEPENDS - adding a new source file requires a manual reconfigure.
 #Two exceptions.  sqliteProcModule (below): its targets are MODULEs, where a source missing from a stale glob still links -
-#undefined symbols are legal - and only fails at dlopen.  And a gtest executable (libs/access/tests): a new self-contained
-#*Tests.cpp is referenced by no other translation unit, so a stale glob drops it with no link error, no warning and a green
-#ctest run - the suite's own invariant is the opposite of "a missed source is a link error" (access-review3 #30).  Everywhere
-#else a missed source is a link error, which is the check.
+#undefined symbols are legal - and only fails at dlopen.  And gtest executables (libs/access/tests, libs/app/tests): a new
+#self-contained *Tests.cpp is referenced by no other translation unit, so a stale glob drops it with no link error, no
+#warning and a green ctest run - the suite's own invariant is the opposite of "a missed source is a link error"
+#(access-review3 #30, app-review3 T9).  The other test targets have the same exposure and have not been converted.
+#Everywhere else a missed source is a link error, which is the check.
 
 if( CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR )
 	message( FATAL_ERROR "In-source builds are not allowed. Configure from an out-of-source build directory, e.g.:\n  cd $JDE_BUILD_DIR/$JDE_COMPILER/<repo-name> && cmake ${CMAKE_SOURCE_DIR} --preset <preset>" )
@@ -155,14 +156,23 @@ endfunction()
 #`-include=args/sqlite -arg path=:memory:` is the default so every ctest run is self-contained (in-memory sqlite, no
 #db server): the db-backed suites need it as a pair, and fwk/web/sqlite-driver import no args dir and don't read
 #`path`, so it is inert for them.  Extra args in ARGN follow it.
+#app-review3 T9: seconds before ctest kills a test.  Nothing in the suites has a deadline of its own - BlockAwait waits
+#forever - so a lost LockKey or a timer that never fires wedges the run, and CI invokes plain `ctest` (linux-ci.yml),
+#where the only backstop is ctest's own 1500s default: 25 minutes of a hung job per suite.  300s is over twenty times
+#the slowest suite on record (Jde.Opc.Tests, ~14s in Testing/Temporary/CTestCostData.txt) and matches the `--timeout`
+#the run-services skill passes.  Raise it for a slow machine with -DJDE_TEST_TIMEOUT=<seconds>.  Note the property wins
+#over `ctest --timeout`, so that flag can no longer lower the bound for these targets - the cache variable is the knob.
+set( JDE_TEST_TIMEOUT 300 CACHE STRING "Seconds before ctest kills one of this repo's test targets" )
+
 function( addJdeTest targetName settingsFile )
 	add_test(
 		NAME ${targetName}
 		COMMAND $<TARGET_FILE:${targetName}> -ctest -settings=${settingsFile} -include=args/sqlite -arg path=:memory: ${ARGN}
 		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/Testing
 	)
-	set_tests_properties( ${targetName} PROPERTIES ENVIRONMENT
-		"REPO_SOURCE_DIR=${CMAKE_SOURCE_DIR};REPO_BUILD_DIR=${CMAKE_BINARY_DIR}/.."
+	set_tests_properties( ${targetName} PROPERTIES
+		ENVIRONMENT "REPO_SOURCE_DIR=${CMAKE_SOURCE_DIR};REPO_BUILD_DIR=${CMAKE_BINARY_DIR}/.."
+		TIMEOUT ${JDE_TEST_TIMEOUT}
 	)
 endfunction()
 
