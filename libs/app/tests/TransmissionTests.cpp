@@ -40,6 +40,20 @@ namespace Jde::App::Tests{
 		EXPECT_EQ( m.subscription().variables(), serialize(variables) );
 	}
 
+	//M2's missing half.  The ids are the client's own request ids - the same ones the ack Remembered and StopListenRemote returns -
+	//because IWebsocketSession::AddSubscription stores each subscription under the requestId it arrived on.  Nothing built this
+	//message before, so IQL::Unsubscribe edited an in-process registry and the server went on pushing the cancelled id.
+	TEST( FromClientTests, Unsubscription ){
+		let t = FromClient::Unsubscription( vector<QL::SubscriptionId>{7,9}, 15 );
+		ASSERT_EQ( t.messages_size(), 1 );
+		let& m = t.messages( 0 );
+		EXPECT_EQ( m.request_id(), 15u );//its own id, not a subscription's - a failure comes back as a kException on it.
+		ASSERT_EQ( m.value_case(), CMessage::kUnsubscription );
+		ASSERT_EQ( m.unsubscription().request_ids_size(), 2 );
+		EXPECT_EQ( m.unsubscription().request_ids(0), 7u );
+		EXPECT_EQ( m.unsubscription().request_ids(1), 9u );
+	}
+
 	TEST( FromClientTests, AddSession ){
 		let t = fromClient( FromClient::AddSession("jde.com", "bob", 3, "127.0.0.1", true, 11) );
 		ASSERT_EQ( t.messages_size(), 1 );
@@ -66,7 +80,7 @@ namespace Jde::App::Tests{
 	}
 
 	TEST( FromClientTests, Instance ){
-		let t = FromClient::Instance( "Jde.App.Tests", "instance", 12, 5 );
+		let t = FromClient::Instance( "Jde.App.Tests", "instance", 12, 5, "opc.plant" );
 		ASSERT_EQ( t.messages_size(), 1 );
 		EXPECT_EQ( t.messages(0).request_id(), 5u );
 		let& i = t.messages( 0 ).instance();
@@ -77,6 +91,15 @@ namespace Jde::App::Tests{
 		EXPECT_EQ( i.pid(), (uint32_t)Process::ProcessId() );
 		EXPECT_EQ( i.web_port(), 5010u ); ///http/port from the test settings.
 		EXPECT_EQ( Protobuf::ToTimePoint(i.start_time()), Process::StartTime() );
+		//M10: field 10 was never set, so the AppServer's `if( instance.auth_resource().size() )` arm - the whole delegated-admin
+		//registration IAdminAcl exists for - could not run, and every check fell back to the AppServer's own Authorize.
+		EXPECT_EQ( i.auth_resource(), "opc.plant" );
+	}
+
+	//An app that authorizes nothing - the gateway - leaves ResourceSchema empty, and the AppServer's arm stays skipped for it.
+	TEST( FromClientTests, InstanceWithoutAnAuthResource ){
+		let t = FromClient::Instance( "Jde.App.Tests", "instance", 12, 5, "" );
+		EXPECT_TRUE( t.messages(0).instance().auth_resource().empty() );
 	}
 
 	TEST( FromClientTests, Exception ){

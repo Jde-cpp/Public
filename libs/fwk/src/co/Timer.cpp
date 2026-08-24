@@ -36,6 +36,8 @@ namespace Jde{
 			_timer.async_wait( boost::asio::bind_executor(*_executor, move(handler)) );
 		else
 			_timer.async_wait( move(handler) );
+		if( _cancelled )
+			_timer.cancel();
 	}
 	α DurationTimer::Suspend()ι->void{
 		Start();

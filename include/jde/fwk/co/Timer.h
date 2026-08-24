@@ -15,13 +15,17 @@ namespace Jde{
 			return _h ? TimerAwait::await_resume() : std::expected<void, boost::system::error_code>{};
 		}
 		α Suspend()ι->void override;
-		α Cancel()ι->uint{ lg _{_mutex}; return _timer.cancel(); }//asio timers aren't safe for concurrent cancel vs Start's async_wait.
+		α Cancel()ι->uint{ lg _{_mutex}; _cancelled = true; return _timer.cancel(); }//asio timers aren't safe for concurrent cancel vs Start's async_wait.
 	private:
 		α Start()ι->void;
 		sp<boost::asio::io_context> _ctx;
 		steady_clock::duration _duration;
 		optional<boost::asio::any_io_executor> _executor;//when set, completion handlers are bound to it.
 		mutex _mutex;
+		//a Cancel that arrives before Start cancels nothing - `steady_timer::cancel()` with no pending wait has
+		//nothing to cancel and returns 0 - and the wait then runs its full duration.  Remembered here so Start can
+		//re-issue it.  Guarded by _mutex, like every other access to _timer.
+		bool _cancelled{};
 		boost::asio::steady_timer _timer;
 	};
 }

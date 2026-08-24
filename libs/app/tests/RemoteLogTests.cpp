@@ -132,14 +132,20 @@ namespace Jde::App::Tests{
 	}
 
 	//Write is the process's log path: an entry tagged with RemoteLog's own tags must not come back round through it.
+	//T2/M8: the App entry is the half that was missing.  The guard used to be ExternalLogger|App, and App is the framework's
+	//DefaultTag - so it silently dropped the startup lines, every INFOT(ELogTags::App,...) and every AppQL 401, which is most of
+	//what a remote log is for.  Asserting only that ExternalLogger is dropped left the suite green whether the guard was narrowed
+	//or widened; naming what must get *through* is what pins it.
 	TEST_F( RemoteLogTests, OwnTagsAreNotForwarded ){
 		auto log = Make();
 		_client->SetConnected( true );
 		Logging::Entry recursive{ SRCE_CUR, ELogLevel::Information, ELogTags::ExternalLogger, string{"recursive"} };
 		log->Write( recursive );
+		Logging::Entry standard{ SRCE_CUR, ELogLevel::Information, DefaultTag, string{"default tag"} };
+		log->Write( standard );
 		log->Write( Entry("ordinary") );
 		Flush( *log );
-		EXPECT_EQ( _client->Count(), 1u ) << "the recursion guard let RemoteLog's own logging back in";
+		EXPECT_EQ( _client->Texts(), (vector<string>{"default tag", "ordinary"}) ) << "the guard dropped a DefaultTag entry, or let RemoteLog's own logging back in";
 	}
 
 	//A smoke test, and labelled as one because it was measured rather than assumed: it does NOT reproduce #12.  Reverting

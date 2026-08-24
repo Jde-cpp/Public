@@ -23,6 +23,7 @@ namespace Jde::Web::Mock{
 	private:
 		α Query( string&&, jobject, bool, SL )ι->ClientSocketAwait<jvalue> override{ ASSERT(false); return { {}, {}, {} }; }
 		α Subscribe( string&&, jobject, sp<QL::IListener>, SL )ε->ClientSocketAwait<jarray> override{ ASSERT(false); return { {}, {}, {} }; }
+		α Unsubscribe( vector<QL::SubscriptionId>&&, SL )ι->void override{ ASSERT(false); }
 
 		α HandleException( RequestId requestId, std::any&& h, string&& what )ι;
 		α OnRead( Proto::FromServerTransmission&& transmission )ι->void override;

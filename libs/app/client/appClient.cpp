@@ -2,7 +2,7 @@
 #include <jde/fwk/process/execution.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/access/Authorize.h>
-#include <jde/access/awaits/EventsSubscribeAwait.h>
+#include <jde/access/client/accessClient.h>
 #include <jde/web/client/socket/ClientQL.h>
 #include <jde/app/client/usings.h>
 #include <jde/app/client/AppClientSocketSession.h>
@@ -10,7 +10,6 @@
 #include <jde/app/client/clientSubscriptions.h>
 
 #define let const auto
-
 
 namespace Jde::App::Client{
 	static sp<Access::Authorize> _authorize;
@@ -31,13 +30,18 @@ namespace Jde::App{
 		_authorize = move(acl);
 	}
 
-	Ω accessSubscribe( sp<Client::IAppClient>&& appClient )ι->Access::EventsSubscribeAwait::Task{
+	Ω reloadAccess( sp<Client::IAppClient> appClient )ι->VoidTask{
 		try{
-			co_await Access::EventsSubscribeAwait( appClient->QLServer(), {appClient->ResourceSchema}, appClient->UserPK(), appClient->Listener() );
+			co_await Access::Client::Reload( appClient->QLServer() );//the new session's ClientQL - the one Configure was handed died with the old session.
+			INFOT( ELogTags::App|ELogTags::Access, "Reloaded the access snapshot on the new session." );
 		}
-		catch( runtime_error& )
-		{}
+		catch( runtime_error& e ){
+			//Not fatal, and not silent: authorization keeps answering from the snapshot it has, which is what it did before this ran
+			//at all - but it is stale, and only a restart or the next reconnect will refresh it.
+			WARNT( ELogTags::App|ELogTags::Access, "Could not reload the access snapshot on the new session: {}", e.what() );
+		}
 	}
+
 	α Client::Connect( sp<IAppClient> appClient )ι->ConnectAwait::Task{
 		try{
 			if( Process::ShuttingDown() ){
@@ -45,12 +49,8 @@ namespace Jde::App{
 				co_return;
 			}
 			co_await ConnectAwait{ appClient, true };
-			//Server-side subscriptions die with the socket, so everything the process asked for has to be re-issued, not
-			//just the one call that used to be hard-coded here.  Replaying covers accessSubscribe's own request too, so it
-			//only runs when there is nothing to replay - a first connect.  Running both would subscribe twice and deliver
-			//every event twice: ListenRemote keys on the new id, so the duplicate is invisible to the dedup in _subs.
-			if( !Client::Subscriptions::Replay(appClient) )
-				accessSubscribe( move(appClient) );
+			if( Client::Subscriptions::Replay(appClient) && Access::Client::IsConfigured() )
+				reloadAccess( move(appClient) );//a replay means this is a reconnect, so the snapshot has a gap in it the deltas never filled.
 		}
 		catch( runtime_error& )
 		{}

@@ -43,11 +43,23 @@ namespace Jde::App::Tests{
 		EXPECT_EQ( af.Entries.begin()->second.front().line(), 1u );
 	}
 
+	//T10: the filter is `filterBits & entryBits`, non-zero ([`FilterQL.cpp:263-266`]).  Two single-bit tags against a
+	//single-bit filter says nothing about that - an equality test passes every one of those cases identically.  What
+	//separates them is an entry whose tags are a *superset* of the filter, which bitwise keeps and equality drops.
+	Ω tagged( uint32_t line, ELogTags tags )ι->Logging::Entry{ return entry( tp(line), ELogLevel::Information, line, Ƒ("tagged {}", line), {}, "src/x.cpp", "Fn", tags ); }
+
 	TEST( ArchiveFileTests, TagFilterIsBitwise ){
 		auto ql = table( "logs", Ƒ("{{tags: {}}}", (uint)ELogTags::Test) );
-		let af = load( {entry(tp(0), ELogLevel::Information, 1, "tagged", {}, "src/x.cpp", "Fn", ELogTags::Test), entry(tp(1), ELogLevel::Information, 2, "other", {}, "src/x.cpp", "Fn", ELogTags::Sql)}, ql );
-		ASSERT_EQ( af.EntrySize(), 1u );
-		EXPECT_EQ( af.Entries.begin()->second.front().line(), 1u );
+		let af = load( {tagged(1, ELogTags::Test|ELogTags::Sql), tagged(2, ELogTags::Test), tagged(3, ELogTags::Sql)}, ql );
+		EXPECT_EQ( lines(af.Sort({})), (vector<uint32_t>{1,2}) ) << "an entry is kept when it carries the filter's bit, not when its tags equal it";
+	}
+
+	//...and the same test read the other way: a filter of several bits keeps an entry carrying any one of them, which is
+	//what a UI tag selection is - `tags: Test|Sql` means either, not both.
+	TEST( ArchiveFileTests, TagFilterMatchesAnyBitOfTheFilter ){
+		auto ql = table( "logs", Ƒ("{{tags: {}}}", (uint)(ELogTags::Test|ELogTags::Sql)) );
+		let af = load( {tagged(1, ELogTags::Test), tagged(2, ELogTags::Sql), tagged(3, ELogTags::Threads)}, ql );
+		EXPECT_EQ( lines(af.Sort({})), (vector<uint32_t>{1,2}) ) << "one bit in common is a match; none is not";
 	}
 
 	//The archived-file path loads the whole string table before it filters, so a dropped entry's strings stay behind.
@@ -142,6 +154,22 @@ namespace Jde::App::Tests{
 		EXPECT_TRUE( af.IsComplete(table("logs", R"({limit: 2, orderBy: "time"})")) );
 		EXPECT_TRUE( af.IsComplete(table("logs", R"({limit: 3, orderBy: "time"})")) );
 		EXPECT_FALSE( af.IsComplete(table("logs", R"({limit: 3, offset: 1, orderBy: "time"})")) ); //offset counts against the limit.
+	}
+
+	//T10: descending time was never asserted, and it is the order the page actually asks for (web log-entry.ts) - the one
+	//IsComplete has to answer for, since LoadArchives' *reverse* walk is the branch every non-ascending order takes and
+	//the early stop is the only thing that keeps a limited page off the whole history.  Direction is not read at all: the
+	//check is on the first key's name, which is right for both walks - a day's entries never outrank another day's on
+	//time, so once a page is full nothing further back can displace it either way round.
+	TEST( ArchiveFileTests, IsCompleteForDescendingTime ){
+		let af = load( {entry(tp(0), ELogLevel::Information, 1, "a"), entry(tp(1), ELogLevel::Information, 2, "b"), entry(tp(2), ELogLevel::Information, 3, "c")} );
+		EXPECT_TRUE( af.IsComplete(table("logs", R"({limit: 2, orderBy: {time: "desc"}})")) );
+		EXPECT_TRUE( af.IsComplete(table("logs", R"({limit: 2, orderBy: {time: "asc"}})")) ) << "the explicit spelling of the bare string above";
+		EXPECT_FALSE( af.IsComplete(table("logs", R"({orderBy: {time: "desc"}})")) ) << "no limit - read it all, whichever way round";
+		EXPECT_FALSE( af.IsComplete(table("logs", R"({limit: 4, orderBy: {time: "desc"}})")) ) << "the page is not full yet";
+		EXPECT_FALSE( af.IsComplete(table("logs", R"({limit: 2, orderBy: {level: "desc"}})")) ) << "a non-time first key needs every entry before the first can be named";
+		//A secondary key only breaks ties within one timestamp, and two days cannot share one, so time-first still stops.
+		EXPECT_TRUE( af.IsComplete(table("logs", R"({limit: 2, orderBy: [{time: "desc"}, {level: "asc"}]})")) );
 	}
 
 	TEST( ArchiveFileTests, SortDefaultsToTimeAscending ){
@@ -249,6 +277,39 @@ namespace Jde::App::Tests{
 		auto byUser = table( "logs" );
 		addTable( byUser, "user", {"id"}, "{id: 8}" );
 		EXPECT_EQ( lines(load(entries, byUser).Sort({})), (vector<uint32_t>{3}) );
+	}
+
+	//L3: ToEntry folds an external entry into LogEntryFile for everything downstream and used to drop app_pk/app_instance_pk there,
+	//so the attribution the pipeline stores so carefully (review 1 #2, review 2 #9) could not be read back through logs() - the
+	//AppServer's history view was an unattributed merge of every app's lines.
+	TEST( ArchiveFileTests, ExternalEntriesKeepTheirAttribution ){
+		let mine = entry( tp(0), ELogLevel::Information, 1, "mine" );
+		let theirs = entry( tp(1), ELogLevel::Information, 2, "theirs" );
+		Log::Proto::ArchiveFile proto;
+		*proto.add_entries() = LogProto::LogEntryFile( mine );
+		*proto.add_externalentries() = LogProto::LogEntryFile( theirs, 42, 84 );
+		addStrings( proto, mine );
+		addStrings( proto, theirs );
+
+		auto ql = table( "logs" );
+		addTable( ql, "entries", {"line","appId","appInstanceId"} );
+		ArchiveFile af;
+		af.Append( ql, Log::Proto::ArchiveFile{proto} );
+		let jentries = af.ToJson( ql ).at( "entries" ).as_array();
+		ASSERT_EQ( jentries.size(), 2u );
+		for( let& je : jentries ){
+			let& o = je.as_object();
+			let external = o.at("line").to_number<uint32>()==2u;
+			EXPECT_EQ( o.at("appId").to_number<uint32>(), external ? 42u : 0u ) << "line " << o.at("line");
+			EXPECT_EQ( o.at("appInstanceId").to_number<uint32>(), external ? 84u : 0u ) << "line " << o.at("line");
+		}
+
+		//...and filterable, which is what makes one app's lines findable in that merge.
+		auto byApp = table( "logs", "{appId: 42}" );
+		addTable( byApp, "entries", {"line"} );
+		ArchiveFile filtered;
+		filtered.Append( byApp, move(proto) );
+		EXPECT_EQ( lines(filtered.Sort({})), (vector<uint32_t>{2}) ) << "appId did not select the forwarded entry";
 	}
 
 	TEST( ArchiveFileTests, ToJsonEntryColumns ){

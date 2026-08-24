@@ -80,6 +80,7 @@ namespace Jde::App::Server{
 		sv functionSuffix = anonymous ? "Anonymous" : "";
 		LogRead( Ƒ("ForwardExecution{} appPK: {}, appInstancePK: {:x}, size: {:10L}", functionSuffix, m.app_pk(), m.app_instance_pk(), m.execution_transmission().size()), requestId );
 		try{
+			THROW_IF( !SessionId(), "A forwarded execution requires an authenticated session." );
 			//Anonymous means "forward with no creds" - pass UserPK{0} so ExecuteRequest emits kExecuteAnonymous; otherwise the target runs under the caller's identity.  Mirrors the kExecuteAnonymous path.
 			string result = co_await ForwardExecutionAwait{ anonymous ? Jde::UserPK{0} : _userPK.value_or(Jde::UserPK{0}), move(m), SharedFromThis(), sl };
 			LogWrite( Ƒ("ForwardExecution{} size: {:10L}", functionSuffix, result.size()), requestId );

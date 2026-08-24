@@ -22,8 +22,11 @@ local logsDir = std.extVar("logsDir");
 				file:{ path: logsDir, md: false }
 			}
 		},
-		//The `binary` logger of the logSetting query/mutation.  delay/size are never reached in a sub-second run, so it
-		//buffers and Shutdown flushes once - no timer round, no archive round.
+		//The `binary` logger of the logSetting query/mutation.  T9: `delay` is a minute so no timer round fires of its own
+		//accord, but the size does get reached - LogTests writes filler until it crosses ProtoLog's 8096-byte _delaySize,
+		//because the flushes and the archive rounds that follow them are what those tests are about.  Nothing here may
+		//assume a sub-second run: the archive tree the rounds leave behind grows with every run into the same directory,
+		//which is what WaitForFile's comment in LogTests is about.
 		proto:{
 			path: logsDir + "/app-tests",
 			timeZone: "America/New_York", //explicit: LogTests asserts the <root>/2025/1/<day> archive folders, which are local dates.

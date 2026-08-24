@@ -49,6 +49,7 @@ namespace Jde::App::Server::Tests{
 	private:
 		α Query( string&&, jobject, bool, SL )ι->Web::Client::ClientSocketAwait<jvalue> override{ ASSERT(false); return { {}, {}, {} }; }
 		α Subscribe( string&&, jobject, sp<QL::IListener>, SL )ε->Web::Client::ClientSocketAwait<jarray> override{ ASSERT(false); return { {}, {}, {} }; }
+		α Unsubscribe( vector<QL::SubscriptionId>&&, SL )ι->void override{ ASSERT(false); }
 		α CloseTasks( beast::error_code )ι->void override{}
 		α OnRead( FromServerTrans&& t )ι->void override{
 			{
@@ -83,9 +84,11 @@ namespace Jde::App::Server::Tests{
 		return Web::Server::Sessions::Add( userPK, string{Host}, true )->SessionId;
 	}
 
-	struct RegisteredInstance{ App::ProgramPK Program{}; ProgInstPK Instance{}; App::ConnectionPK Connection{}; };
+	struct RegisteredInstance{ App::ProgramPK Program{}; ProgInstPK Instance{}; App::ConnectionPK Connection{}; bool AuthResult{}; };
 	//registers session as an application instance (kInstance) and returns the pks the server minted for it.
-	Ξ RegisterInstance( RawClientSession& session, str application, str instanceName, str host, PortType webPort, uint32 pid=1234 )ε->RegisteredInstance{
+	//authResource: the schema the instance asks to be the admin authorizer for (M10).  Empty for an app that authorizes nothing,
+	//which is every caller here bar the one testing that arm.
+	Ξ RegisterInstance( RawClientSession& session, str application, str instanceName, str host, PortType webPort, uint32 pid=1234, str authResource="" )ε->RegisteredInstance{
 		FromClientTrans t;
 		auto& m = *t.add_messages();
 		const auto requestId = session.NextRequestId();
@@ -97,10 +100,11 @@ namespace Jde::App::Server::Tests{
 		instance.set_web_port( webPort );
 		instance.set_pid( pid );
 		instance.set_session_id( MintSession() );
+		instance.set_auth_resource( authResource );
 		session.Write( move(t) );
 		auto reply = session.WaitFor( [requestId](const FromServerMessage& m){ return m.request_id()==requestId && m.value_case()==FromServerMessage::kConnectionInfo; } );
 		THROW_IF( !reply, "No ConnectionInfo reply for instance '{}'.", instanceName );
 		const auto& info = reply->connection_info();
-		return { info.app_pk(), info.instance_pk(), info.connection_pk() };
+		return { info.app_pk(), info.instance_pk(), info.connection_pk(), info.auth_result() };
 	}
 }

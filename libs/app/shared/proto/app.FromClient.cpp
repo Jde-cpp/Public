@@ -55,7 +55,7 @@ namespace Jde::App{
 		} );
 	}
 
-	α FromClient::Instance( str application, str instanceName, SessionPK sessionId, RequestId requestId )ι->PFromClient::Transmission{
+	α FromClient::Instance( str application, str instanceName, SessionPK sessionId, RequestId requestId, str authResource )ι->PFromClient::Transmission{
 		PFromClient::Transmission t;
 		auto& m = *t.add_messages();
 		m.set_request_id( requestId );
@@ -67,6 +67,7 @@ namespace Jde::App{
 		i.set_pid( Process::ProcessId() );
 		*i.mutable_start_time() = Jde::Protobuf::ToTimestamp( Process::StartTime() );
 		i.set_web_port( Settings::FindNumber<PortType>("/http/port").value_or(0) );
+		i.set_auth_resource( authResource );//M10: field 10, never set until now, so the AppServer's delegated-admin registration never ran.
 
 		return t;
 	}
@@ -123,6 +124,13 @@ namespace Jde::App{
 			auto& sub = *m.mutable_subscription();
 			sub.set_text( move(query) );
 			*sub.mutable_variables() = serialize( move(variables) );
+		});
+	}
+	α FromClient::Unsubscription( const vector<QL::SubscriptionId>& ids, RequestId requestId )ι->PFromClient::Transmission{
+		return setMessage( requestId, [&](auto& m){
+			auto& u = *m.mutable_unsubscription();
+			for( const auto id : ids )
+				u.add_request_ids( id );
 		});
 	}
 	α FromClient::LogEntries( vector<Logging::Entry>&& entries )ι->PFromClient::Transmission{

@@ -33,6 +33,8 @@ namespace Jde::App{
 		y.set_user_pk( x.user_pk() );
 		y.set_file_id( move(*x.mutable_file_id()) );
 		y.set_function_id( move(*x.mutable_function_id()) );
+		y.set_app_pk( x.app_pk() );//L3: carried, not dropped - this is the only place a forwarded entry's attribution could survive.
+		y.set_app_instance_pk( x.app_instance_pk() );
 		return y;
 	}
 
@@ -94,7 +96,7 @@ namespace Jde::App{
 
 	using namespace Log::Proto;
 	Ŧ debugStringLogEntry( const T& f )ι->string{
-		string result = Ƒ( "[{}.{}.{}] {} {{",
+		string result = Ƒ( "[{}.{}.{}] {} user_pk: {} {{",
 			guidToString( f.template_id() ),
 			ToString( (Jde::ELogLevel)f.level() ),
 			ToString( (ELogTags)f.tags() ),

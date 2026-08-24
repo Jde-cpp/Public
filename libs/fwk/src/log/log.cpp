@@ -23,6 +23,9 @@ namespace Jde{
 	vector<up<Logging::ILogger>> _loggers = initLoggers();
 	α Logging::Loggers()->const vector<up<ILogger>>&{ return _loggers; }
 	α Logging::AddLogger( up<ILogger>&& logger )ι->ILogger*{ ASSERT(logger); _loggers.push_back(move(logger)); return _loggers.back().get(); }
+	α Logging::LogAddFailure( sv configName, const runtime_error& e )ι->void{
+		ERRT( ELogTags::Settings, "The '{}' logger is configured but could not be created, so it is not running: {}", configName, e.what() );
+	}
 	inline constexpr std::array<sv,7> ELogLevelStrings = { "Trace", "Debug", "Information", "Warning", "Error", "Critical", "None" };
 }
 

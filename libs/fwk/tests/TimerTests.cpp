@@ -99,7 +99,7 @@ namespace Jde::Tests{
 		for( uint i=0; i<testCount; ++i ){
 			auto done = ms<std::binary_semaphore>( 0 );
 			test( done, i, outcomes );
-			//deadline, not an untimed wait: a throw inside the coroutine never signals, and addJdeTest sets no ctest TIMEOUT - that has to fail the run, not hang it.
+			//deadline, not an untimed wait: a throw inside the coroutine never signals, and that has to fail the run rather than hang it - addJdeTest's ctest TIMEOUT would kill the whole suite with nothing said about which timer.
 			ASSERT_TRUE( done->try_acquire_for(10s) ) << "timer " << i << " never completed";
 		}
 		TRACE( "success: {}, canceled: {}", outcomes->Success.load(), outcomes->Canceled.load() );
@@ -108,6 +108,25 @@ namespace Jde::Tests{
 		EXPECT_GT( outcomes->Success.load(), 0u ) << "every timer was canceled - the fired path never ran";
 		EXPECT_GT( outcomes->Canceled.load(), 0u ) << "no timer was ever canceled - the unexpected path never ran";
 		ASSERT_EQ( outcomes->Success+outcomes->Canceled, testCount );
+	}
+
+	//C10: Cancel() before anything awaits the timer found no pending async_wait, so it cancelled nothing and the wait
+	//then ran its full duration.  The live case is RemoteLog's destructor, which cancels in the window between
+	//RemoteLog::Run assigning _timer and the co_await reaching Suspend->Start - it then blocked for one _delay, and
+	//under a stopped io_context for the watchdog instead.  Cancel is remembered now and Start re-issues it.
+	Ω cancelBeforeStartTest( sp<std::binary_semaphore> done, sp<DurationTimer> timer, sp<std::atomic<bool>> aborted )ι->TimerAwait::Task{
+		let result = co_await *timer;
+		*aborted = !result.has_value() && result.error()==boost::asio::error::operation_aborted;//tallied, not EXPECTed: this is an executor thread.
+		done->release();
+	}
+	TEST_F( TimerTests, CancelBeforeStart ){
+		auto timer = ms<DurationTimer>( std::chrono::seconds(10) );//far longer than the deadline below, so only the cancel can meet it.
+		timer->Cancel();//no async_wait exists yet - this is the whole point.
+		auto done = ms<std::binary_semaphore>( 0 );
+		auto aborted = ms<std::atomic<bool>>();
+		cancelBeforeStartTest( done, timer, aborted );
+		ASSERT_TRUE( done->try_acquire_for(5s) ) << "a cancel that arrived before the wait was started was lost - the timer is running out its full duration";
+		EXPECT_TRUE( aborted->load() ) << "it completed, but not with operation_aborted";
 	}
 
 	// The second ctor binds the completion handler to a caller-supplied executor.  Its only caller repo-wide is

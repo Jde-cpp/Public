@@ -5,8 +5,7 @@
 
 
 namespace Jde::Crypto{ struct PublicKey; }
-namespace Jde::DB{ struct Row; }
-namespace Jde::QL{ struct ColumnQL; struct Subscription; }
+namespace Jde::QL{ struct Subscription; }
 namespace Jde::Web{ struct Jwt; namespace Server{struct SessionInfo;} }
 namespace Jde::App::Proto::FromClient { class Status; }
 namespace Jde::App::FromServer{
@@ -28,5 +27,4 @@ namespace Jde::App::FromServer{
 	α Session( const Web::Server::SessionInfo& session, RequestId requestId )->Proto::FromServer::Transmission;
 	α SubscriptionAck( flat_set<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->Proto::FromServer::Transmission;
 	α Subscription( string&& s, RequestId requestId )ι->Proto::FromServer::Transmission;
-	α ToTrace( DB::Row&& row, const vector<QL::ColumnQL>& columns )ι->Proto::FromServer::Trace;
 }

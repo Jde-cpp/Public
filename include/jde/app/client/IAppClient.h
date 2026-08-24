@@ -28,7 +28,6 @@ namespace Jde::App::Client{
 		α PublicKey()Ι->const Crypto::PublicKey& override{ return ServerPublicKey; }
 
 		α SessionInfoAwait( SessionPK sessionPK, SRCE )ι->up<TAwait<Web::FromServer::SessionInfo>> override;
-		α SessionInfoAwait( Web::Jwt&& jwt, SRCE )ι->Client::SessionInfoAwait;
 		α AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, SRCE )ε->await<Web::FromServer::SessionInfo>;
 		α Jwt( SRCE )ε->await<Web::Jwt>;
 		α Login( Web::Jwt&& jwt, SRCE )ε->await<Web::FromServer::SessionInfo> override;
