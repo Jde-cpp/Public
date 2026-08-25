@@ -8,7 +8,8 @@
 				}
 				@else {
 					<mat-form-field subscriptSizing="dynamic">
-						<mat-select (selectionChange)="onAddFilter($event.value)">
+						<!--panelWidth null lets the option list grow past the 180px Name column; the default 'auto' matches the trigger and wrapped longer column names ("Distinguished") onto two lines-->
+						<mat-select [panelWidth]="null" (selectionChange)="onAddFilter($event.value)">
 							@for( column of unFilteredColumns | keyvalue; track column.key) {
 								<mat-option [value]=column.key>{{column.value}}</mat-option>
 							}

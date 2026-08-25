@@ -123,9 +123,14 @@ export class OpcStore{
 			childStore.node = child;
 		}
 	}
+
+	cnnctnName( gateway:GatewayTarget, cnnctn:CnnctnTarget ):string{
+		return this.#connections.get( gateway )?.get( cnnctn )?.connection.name ?? cnnctn;
+	}
 	setRoute(route: NodeRoute, defaultBrowseNs:Ns|undefined ):void{
+		const cnnctnName = this.cnnctnName( route.gatewayTarget, route.cnnctnTarget );
 		if( route.node.equals(OpcObject.rootNode) ){
-			route.siblings = [new RouteItem({title: route.cnnctnTarget, path: route.cnnctnTarget})]; //TODO add all connections.
+			route.siblings = [new RouteItem({title: cnnctnName, path: route.cnnctnTarget})]; //TODO add all connections.
 			return;
 		}
 		let findStore = (node:NodeId|undefined):StoreNode|undefined => {
@@ -140,7 +145,8 @@ export class OpcStore{
 		if( !parent )
 			throw new EvalError( `Parent not found for ${store?.node.browse}`, {cause:"Internal Error"} );
 
-		route.parent = new RouteItem( {path: `${route.cnnctnTarget}/${parentPaths.reverse().join('/')}`, title: parent.node.name ?? route.cnnctnTarget} );
+		const parentTitle = parent.node.equals( OpcObject.rootNode ) ? cnnctnName : (parent.node.name ?? cnnctnName);
+		route.parent = new RouteItem( {path: `${route.cnnctnTarget}/${parentPaths.reverse().join('/')}`, title: parentTitle} );
 		route.siblings = [];
 		for( const sibling of parent.children ){
 			const siblingStore = sibling.key == route.nodeId.key ? store : findStore( sibling.nodeId );

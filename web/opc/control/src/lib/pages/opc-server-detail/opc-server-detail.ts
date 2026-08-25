@@ -2,7 +2,7 @@ import { Component, OnDestroy, OnInit, inject, model, signal } from '@angular/co
 import { MatTabsModule } from '@angular/material/tabs';
 import { ActivatedRoute } from '@angular/router';
 import { AppService, LogDetail, LogSettingsPanel } from 'jde-framework';
-import { ProfileStore, RouteItem, RouteStore } from 'jde-spa';
+import { ComponentPageTitle, ProfileStore, RouteItem, RouteStore } from 'jde-spa';
 import { OpcServer, OpcServerService } from '../../services/opc-server-service';
 
 @Component( {
@@ -14,13 +14,14 @@ import { OpcServer, OpcServerService } from '../../services/opc-server-service';
 		imports: [MatTabsModule, LogDetail, LogSettingsPanel]
 })
 export class OpcServerDetail implements OnInit, OnDestroy{
-	constructor( private route: ActivatedRoute )
+	constructor( private route: ActivatedRoute, private componentPageTitle:ComponentPageTitle )
 	{}
 
 	ngOnInit(): void {
 		//the ':instance' param sits on the parent route; this component is its path:'' child, which inherits it.
 		this.route.params.subscribe( async (params)=>{
 			const instanceName = params["instance"];
+			this.componentPageTitle.title = `${instanceName} - OpcServer`;//the route carries no title, so nothing else sets the document title for this page
 			this.sideNav.set( this.routeItem(instanceName) );
 			try{
 				this.server.set( await this.opcServerService.server(instanceName) );

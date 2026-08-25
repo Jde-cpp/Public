@@ -11,13 +11,18 @@ export class User extends TargetRow<User>{
 		super("User", obj);
 		let roles = obj.roles ?? obj.childRoles;
 
+		this.distinguished = obj.distinguished;
+		this.email = obj.email;
+		this.expiration = obj.expiration;
 		this.exponent = obj.exponent;
 		this.groups = cloneClassArray( obj.groups, Group );
+		this.issuer = obj.issuer;
 		this.loginName = obj.loginName;
 		this.modulus = obj.modulus;
 		this.password = obj.password;
 		this.permissions = cloneClassArray( obj.permissionRights ?? obj.permissions, Permission ) ?? [];
 		this.provider = obj.provider;
+		this.subjectAlt = obj.subjectAlt;
 		//"acl":[{"role":{"id":33,"name":"Opc Gateway Permissions","deleted":null},"identity":{"id":1}}]}
 		if( obj.acl ){
 			this.roles = [];
@@ -48,8 +53,12 @@ export class User extends TargetRow<User>{
 		const roleMutations = Acl.roleMutations( this.id, original.roles ?? [], this.roles );
 		return [...propertyMutation, ...permissionMutations, ...groupMutations, ...roleMutations];
 	}
+	distinguished:string;
+	email:string;
+	expiration:string;
 	exponent:number;
 	groups: Group[];
+	issuer:string;
 	loginName: string;
 	modulus:number;
 	password: string;
@@ -57,5 +66,6 @@ export class User extends TargetRow<User>{
 	get properties():Partial<User>{ let properties:Partial<User> = new User(this); properties.roles=undefined; properties.permissions=undefined; properties.groups=undefined; return properties; }
 	provider: string;
 	roles: Role[];
+	subjectAlt:string;
 	override get collectionName():string{ return "users"; }
 }

@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, Inject, ViewChild, input, signal, model, computed, Injectable, inject } from '@angular/core';
 import { MatTabsModule } from '@angular/material/tabs';
 import { ActivatedRoute } from '@angular/router';
-import {  ProfileStore } from 'jde-spa';
+import { ComponentPageTitle, ProfileStore } from 'jde-spa';
 import { AppService, LogDetail, LogSettingsPanel, QLList, QLListData, TableSettings } from 'jde-framework';
 import { RouteItem } from 'jde-spa';
 import { GatewayService } from '../../services/gateway-service';
@@ -14,7 +14,7 @@ import { Gateway } from '../../services/gateway-service';
 		imports: [MatTabsModule, QLList, LogDetail, LogSettingsPanel]
 })
 export class GatewayDetail implements OnInit, OnDestroy{
-	constructor( private route: ActivatedRoute )
+	constructor( private route: ActivatedRoute, private componentPageTitle:ComponentPageTitle )
 	{}
 
 	ngOnInit(): void {
@@ -22,6 +22,7 @@ export class GatewayDetail implements OnInit, OnDestroy{
 			this.pageData = <QLListData>routeData["data"];
 			this.sideNav.set( this.pageData.routing );
 			const instanceName = this.pageData.routing.path.split('/').slice(-1)[0];
+			this.componentPageTitle.title = `${instanceName} - Gateway`;
 			this.gateway = await this.gatewayService.gateway( instanceName );
 			this.isLoading.set( false );
 			this.instanceId.set( await this.appService.instancePK(instanceName, "OpcGateway") );

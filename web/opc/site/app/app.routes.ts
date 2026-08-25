@@ -92,7 +92,7 @@ export const routes: Routes = [
 		data: { summary: "Running Services", icon: "apps" },
 	},
 	{
-		path: 'apps/gateways/:instance', title: ":instance", loadComponent: sidenav, canActivate: [AuthGuard],
+		path: 'apps/gateways/:instance', loadComponent: sidenav, canActivate: [AuthGuard],
 		children :[
 			{
 				path: '',
@@ -114,7 +114,7 @@ export const routes: Routes = [
 	},
 	{
 		//AppResolver builds this url from the program name (Jde.AppServer -> appServers), so the segment must match it.
-		path: 'apps/appServers/:instance', title: ":instance", loadComponent: sidenav, canActivate: [AuthGuard],
+		path: 'apps/appServers/:instance', loadComponent: sidenav, canActivate: [AuthGuard],
 		children :[
 			{
 				path: '',
@@ -126,7 +126,7 @@ export const routes: Routes = [
 	},
 	{
 		//AppResolver builds this url from the program name (Jde.OpcServer -> opcServers), so the segment must match it.
-		path: 'apps/opcServers/:instance', title: ":instance", loadComponent: sidenav, canActivate: [AuthGuard],
+		path: 'apps/opcServers/:instance', loadComponent: sidenav, canActivate: [AuthGuard],
 		children :[
 			{
 				path: '',

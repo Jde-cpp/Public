@@ -27,6 +27,16 @@ export type DetailResolverData<T>={
 	routing:DetailRoute;
 };
 
+//A target the server does not have, told apart from a query that failed.  Both used to arrive here as the same throw - the
+//server answers {"data":{"role":null}} for a missing row and the null then TypeError'd on obj["id"] in the subQueries loop -
+//so a malformed query (an unknown column, a 500) was reported as "Target not found" and the real error never left the log.
+export class TargetNotFoundError extends Error{
+	constructor( readonly target:string ){
+		super( `Target not found:  '${target}'` );
+		this.name = "TargetNotFoundError";
+	}
+}
+
 @Injectable()
 export class DetailResolver<T> implements Resolve<DetailResolverData<T>> {
 	constructor( private router:Router,
@@ -40,14 +50,22 @@ export class DetailResolver<T> implements Resolve<DetailResolverData<T>> {
 		return this.loadProfile( route, collectionDisplay, target, state.url );
 	}
 	private async loadProfile( route: ActivatedRouteSnapshot, collectionDisplay:string, target:string, url:string ):Promise<DetailResolverData<T>>{
-		let siblings = this.routeStore.getChildren( collectionDisplay );
-		const routing = new DetailRoute( target, siblings.find(s=>s.path.endsWith('/'+target))?.title, siblings,
-			ListRoute.find(collectionDisplay, route.parent!.routeConfig!.children!.find(x=>x.path==":collectionDisplay")!.data!["collections"]) );
+		//ComponentNav renders each sibling as parent.path + '/' + sibling.path, so the parent must be the absolute list url
+		//('/access/users') and the siblings bare targets — the relative ListRoute path resolved against the sidenav route
+		//('/access/users/users/<target>'), breaking sibling navigation and the routerLinkActive highlight.
+		let siblings = this.routeStore.getChildren( collectionDisplay ).map( s=>new RouteItem(
+			{path: s.path.startsWith(collectionDisplay+'/') ? s.path.substring(collectionDisplay.length+1) : s.path, title: s.title}) );//pre-fix localStorage entries are collection-prefixed
+		const parent = ListRoute.find( collectionDisplay, route.parent!.routeConfig!.children!.find(x=>x.path==":collectionDisplay")!.data!["collections"] );
+		parent.path = `/${[...route.parent!.url.map(s=>s.path), collectionDisplay].join('/')}`;
+		const routing = new DetailRoute( target, siblings.find(s=>s.path==target)?.title, siblings, parent );
 		try{
 			return await DetailResolver.load<T>( this.ql, this.ql.toCollectionName(collectionDisplay), target, routing );//await inside try — without it, async failures skip the catch entirely
 		}
 		catch( e ){
-			this.snackbar.error( `Target not found:  '${target}'` );
+			if( e instanceof TargetNotFoundError )
+				this.snackbar.error( e.message );
+			else
+				this.snackbar.exception( `Could not load '${target}'`, e );//whatever actually failed - a 500 from a malformed query used to be indistinguishable from a missing row
 			this.router.navigateByUrl( createUrlTreeFromSnapshot(route, ['..']) );//an injected ActivatedRoute is the ROOT route inside a resolver, so relativeTo sent this to '/';  the snapshot is this route.
 			return null as unknown as DetailResolverData<T>;
 		}
@@ -58,6 +76,8 @@ export class DetailResolver<T> implements Resolve<DetailResolverData<T>> {
 		let obj:any = {};
 		if( target!="$new" ){
 			obj = await ql.querySingle( ql.targetQuery(schema, target, ProfileStore.showDeleted(collectionName), routing.tableSettings.excludedColumns), {}, (m)=>console.log(m) );
+			if( obj==null )//{"data":{"<singular>":null}} - the row is not there.  Checked before the subQueries loop, whose obj["id"] would otherwise TypeError and hide every other failure behind the same message.
+				throw new TargetNotFoundError( target );
 			for( let query of ql.subQueries(schema.type, obj["id"]) ){
 				const subRows = await ql.query<any>( query, {}, (m)=>console.log(m) );
 				//"acl":[{"role":{"id":33,"name":"Opc Gateway Permissions","deleted":null},"identity":{"id":1}}]}

@@ -1,5 +1,5 @@
 import {inject, Inject, Injectable} from '@angular/core';
-import {ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnapshot} from '@angular/router';
+import {ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnapshot, UrlSegment} from '@angular/router';
 import { AppInstanceRoute, SnackbarService, PageProfile, PageSettings, QLListResolver, TableSchema, View } from 'jde-framework';
 import { Gateway, GatewayService } from '../gateway-service';
 import { RouteItem, ProfileStore, RouteStore } from 'jde-spa';
@@ -22,10 +22,10 @@ export class GatewayResolver implements Resolve<GatewayData> {
 		const routing = new AppInstanceRoute( "gateways", route.params["instance"], route.data["tableSettings"] );
 		routing.siblings = this.routeStore.getChildren( route.parent!.url.slice(0, -1) );
 		routing.parent = new RouteItem( { path: "/apps", title:"Applications" } );
-		return this.load( route.params["instance"], routing );
+		return this.load( route.params["instance"], routing, route.parent!.url );
 	}
 
-	private async load( instanceName:string, routing:AppInstanceRoute ):Promise<GatewayData>{
+	private async load( instanceName:string, routing:AppInstanceRoute, url:UrlSegment[] ):Promise<GatewayData>{
 		const gateway = await this.gatewayService.gateway( instanceName );
 		const pageSettings = new PageSettings( routing.tableSettings );
 		const schema = await gateway.schemaWithEnums( "ServerConnection", (m)=>console.log(m) );
@@ -36,12 +36,12 @@ export class GatewayResolver implements Resolve<GatewayData> {
 		profile.currentViewIndex = ProfileStore.viewIndex( schema.collectionName );
 		profile.showDeleted = ProfileStore.showDeleted( schema.collectionName );
 
-		return GatewayResolver.load( gateway, {columns: QLListResolver.columns(schema, [], []), pageSettings, profile, schema, results: undefined, routing}, this.routeStore );
+		return GatewayResolver.load( gateway, {columns: QLListResolver.columns(schema, [], []), pageSettings, profile, schema, results: undefined, routing}, this.routeStore, url );
 	}
-	static async load( gateway:Gateway, data:GatewayData, routeStore:RouteStore ):Promise<GatewayData>{
+	static async load( gateway:Gateway, data:GatewayData, routeStore:RouteStore, childrenKey:string|UrlSegment[] ):Promise<GatewayData>{
 		const query = data.profile.view.query( data.profile.showDeleted, 0 );//the toggle persists under the collection name (serverConnections), not "gateways"
 		const results = await gateway.query<any>( query.text, query.vars, (m)=>console.log(m) );
-		routeStore.setChildren( data.routing.path, results[data.schema.collectionName].map( (r:any)=>{return {title:r.name, path: r.target};}) );
+		routeStore.setChildren( childrenKey, results[data.schema.collectionName].map( (r:any)=>{return {title:r.name, path: r.target};}) );
 		return {
 			columns: data.columns,
 			pageSettings: data.pageSettings,

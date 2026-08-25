@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit, inject, model, signal } from '@angular/core';
 import { MatTabsModule } from '@angular/material/tabs';
 import { ActivatedRoute } from '@angular/router';
-import { ProfileStore, RouteItem, RouteStore } from 'jde-spa';
+import { ComponentPageTitle, ProfileStore, RouteItem, RouteStore } from 'jde-spa';
 import { AppService } from '../../../services/app/app-service';
 import { LogDetail } from '../../logs/detail/log-detail';
 import { LogSettingsPanel } from '../../logs/settings/log-settings-panel';
@@ -19,13 +19,14 @@ import { LogSettingsPanel } from '../../logs/settings/log-settings-panel';
 		imports: [MatTabsModule, LogDetail, LogSettingsPanel]
 })
 export class AppServerDetail implements OnInit, OnDestroy{
-	constructor( private route: ActivatedRoute )
+	constructor( private route: ActivatedRoute, private componentPageTitle:ComponentPageTitle )
 	{}
 
 	ngOnInit(): void {
 		//the ':instance' param sits on the parent route; this component is its path:'' child, which inherits it.
 		this.route.params.subscribe( async (params)=>{
 			const instanceName = params["instance"];
+			this.componentPageTitle.title = `${instanceName} - AppServer`;
 			this.sideNav.set( this.routeItem(instanceName) );
 			try{
 				const id = await this.appService.instancePK( instanceName, "AppServer" );

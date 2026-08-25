@@ -45,13 +45,15 @@ export class QLList implements OnInit, OnDestroy{
 
 	ngOnDestroy(){
 		//this.profileStore.save(this.collectionName(), this.profile);
-		ProfileStore.setShowDeleted( this.collectionName(), this.showDeleted() );
+		if( !this.selector() )//the selector forces showDeleted off and hides the toggle - saving that would reset the collection's own list page
+			ProfileStore.setShowDeleted( this.collectionName(), this.showDeleted() );
 	}
 
 	async ngOnInit(){
-		this.route.data.subscribe( (data)=>{
-			this.init( data );
-    });
+		if( this.listData() )//embedded (QLSelector):  the host resolved the data itself, there is no route resolver to subscribe to
+			this.init( {data: this.listData()} );
+		else
+			this.route.data.subscribe( (data)=>{ this.init( data ); } );
 	}
 	async init( resolvedValue:any ){
 		let data = resolvedValue["data"] as QLListData;
@@ -64,7 +66,7 @@ export class QLList implements OnInit, OnDestroy{
 			//this.profile = await this.profileStore.load(collectionName, QLList.defaultProfile );
 
 		const rows = data.results[collectionName];
-		const multiple = data.profile.view.showSelector;
+		const multiple = this.selector() || data.profile.view.showSelector;
 		let selected = rows.filter( (r:any)=>priorIds.includes(r.id) );
 		if( !multiple )
 			selected = selected.slice( 0, 1 );//SelectionModel throws on multiple values in single-select mode
@@ -74,7 +76,8 @@ export class QLList implements OnInit, OnDestroy{
 		let paths = [];
 		for( let x = this.route; x.routeConfig?.data && x.routeConfig?.data["name"]; x = x.parent! )
 			paths.push( x.routeConfig.data['name'] );
-		this.componentPageTitle.title = paths[0];//.join( " | " ); 	//this.componentPageTitle.title ? `${this.componentPageTitle.title} | ${title}` : title;
+		if( paths.length )//guard:  QLList also renders inside a tab (GatewayDetail), where the route has no 'name' - the unguarded assignment wrote undefined over the host page's title
+			this.componentPageTitle.title = paths[0];//.join( " | " ); 	//this.componentPageTitle.title ? `${this.componentPageTitle.title} | ${title}` : title;
 
 /*		const order = ["name", "created", "updated", "deleted", "target", "description"];
 		this.displayedFields = Field.filterSort( this.schema().fields, order, [...this.excludedColumns(), "description"], this.showDeleted() );
@@ -95,6 +98,8 @@ export class QLList implements OnInit, OnDestroy{
 	}
 
 	onRowActivate( row:any ){
+		if( this.selector() )//ql-table already toggled the row; a selector has nowhere to navigate to
+			return;
 		try{
 			this.router.navigate([row.target], {relativeTo: this.route} );
 		}catch( e ){
@@ -180,7 +185,7 @@ export class QLList implements OnInit, OnDestroy{
 	async reload(){
 		this.isRefreshing.set( true );
 		try{
-			const reload = await QLListResolver.load( this.ql, this.resolvedData(), this.routeStore );
+			const reload = await QLListResolver.load( this.ql, this.resolvedData(), this.selector() ? null : this.routeStore );
 			this.init( {data:reload} );
 		}
 		finally{
@@ -230,13 +235,15 @@ export class QLList implements OnInit, OnDestroy{
 		this.isSettings.set( false );
 	}
 
-	sideNav = model.required<RouteItem>();
+	sideNav = model<RouteItem>();//optional:  embedded in a detail page's tab the host owns the sidenav
 	collectionDisplay = input.required<string>();
+	listData = input<QLListData>();//pre-resolved by the host instead of the route (QLSelector); `data` is the rows
+	selector = input<boolean>( false );//pick-rows mode:  always multi-select, no Add/show-deleted, a row click selects instead of navigating
 
 	isLoading = signal<boolean>( true );
 	isRefreshing = signal<boolean>( false );
 	isSettings = signal<boolean>( false );
-	selections = signal<SelectionModel<any>>(null as any);
+	selections = model<SelectionModel<any>>( null as any );//rows, not ids - QLSelector maps them to its callers' id selection
 
 	displayedFields = computed<ViewField[]>( ()=>{
 		return this.view().fields.filter( v=>v.displayed );
@@ -253,7 +260,7 @@ export class QLList implements OnInit, OnDestroy{
 	get routeConfig():Route{ return this.route.routeConfig!; }
 	routeStore = inject( RouteStore );
 	schema = computed<TableSchema>( ()=>this.resolvedData().schema );
-	get sort():Sort{ return this.view().sort.length ? this.view().sort[0] : {active: "name", direction: "asc"}; }
+	get sort():Sort{ return this.view().sort?.length ? this.view().sort[0] : {active: "name", direction: "asc"}; }
 	showDeleted = computed<boolean>( ()=>this.resolvedData().profile.showDeleted );
 	canAdd = computed<boolean>( ()=>this.tableSettings().canAdd ?? true );//off the tableSettings, like canPurge - a route that set it anywhere else was silently ignored
 	tableSettings = computed<TableSettings>( ()=>this.resolvedData().routing.tableSettings );

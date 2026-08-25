@@ -5,7 +5,12 @@
 		<mat-tab>
 			<ng-template mat-tab-label>Properties</ng-template>
 			<ng-template matTabContent>
-				<properties [ctor]=ctor [(record)]=properties type=user [schema]=schema [excludedColumns]=userTableSettings.excludedColumns></properties>
+				@if( isKeyProvider() ){
+					<key-properties [(record)]=properties [schema]=schema></key-properties>
+				}
+				@else{
+					<properties [ctor]=ctor [(record)]=properties type=user [schema]=schema [excludedColumns]=excludedColumns></properties>
+				}
 			</ng-template>
 		</mat-tab>
 		@if( user.id ){

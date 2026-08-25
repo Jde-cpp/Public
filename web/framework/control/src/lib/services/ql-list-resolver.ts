@@ -8,7 +8,7 @@ import { StringUtils } from '../utils/string-utils';
 import { MetaObject } from '../model/ql/schema/meta-object';
 import { Field } from '../model/ql/schema/field';
 import { RouteItem, ProfileStore, RouteStore } from 'jde-spa';
-import { View, ViewFieldSettings } from '../model/ql/view';
+import { FieldFilter, View, ViewFieldSettings } from '../model/ql/view';
 import { Sort } from '@angular/material/sort';
 
 export type TableSettings = {canPurge?:boolean,canAdd?:boolean, excludedColumns?:string[], columns?:(string|ViewFieldSettings)[], sort?:Sort[]|string};
@@ -26,8 +26,8 @@ export class ListRoute extends RouteItem{
 		this.title = collection.title ?? StringUtils.capitalize( this.path );
 	}
 	static find( target:string, collections:CollectionItem[] ):ListRoute{
-		let collection:CollectionItem = collections.find( (c:any)=>((typeof c =="string") && c==target) || c["path"]==target )!;
-		return new ListRoute( collection );
+		const collection = collections.find( (c:any)=>((typeof c =="string") && c==target) || c["path"]==target );
+		return new ListRoute( collection ?? target );//unlisted collection - the defaults (QLSelector embeds collections its host's route never declares)
 	}
 	tableSettings:TableSettings;
 	collectionName: string;
@@ -35,6 +35,7 @@ export class ListRoute extends RouteItem{
 
 export type QLListData = {
 	columns: Record<string,string>;
+	fixedFilters?: FieldFilter[];//applied on top of whichever view is current and never shown or saved - QLSelector's excludedIds
 	pageSettings:PageSettings;
 	profile: PageProfile;
 	results: any; //{users:ITargetRow[]};
@@ -48,7 +49,6 @@ export class QLListResolver implements Resolve<QLListData> {
 
 	resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<QLListData>{
 		const collectionDisplay = route.paramMap.get( "collectionDisplay" );
-		//let parent = { path: route.parent.url.map(seg=>seg.path).join("/"), title: route.parent.title ?? StringUtils.capitalize(route.parent.url[route.parent.url.length-1].path) };
 		let routing:ListRoute|undefined;
 		const siblings:ListRoute[] = [];
 		for( let collection of route.data["collections"] ){
@@ -60,21 +60,39 @@ export class QLListResolver implements Resolve<QLListData> {
 		if( !routing )
 			routing = siblings[0];
 		routing.siblings = siblings;
-		//routing.parent = parent;
+		routing.parent = QLListResolver.parentRoute( route );
+		if( routing.parent )
+			this.routeStore.setChildren( routing.parent.path, siblings );//the breadcrumb resolves a ':collectionDisplay' segment through RouteStore;  unregistered, it fell back to the raw url segment ('users' instead of 'Users')
 		return this.load( routing );
 	}
 
+	//the sidenav header link back to the collection's landing page ('/access' for access/users).  ComponentNav renders the
+	//siblings as parent.path + '/' + sibling.path, so the path must be absolute or every sibling resolves relative to the
+	//current url instead.
+	private static parentRoute( route:ActivatedRouteSnapshot ):RouteItem|undefined{
+		const segments = route.parent?.url.map( seg=>seg.path ) ?? [];
+		if( !segments.length )
+			return undefined;
+		const title = route.parent!.title ?? StringUtils.capitalize( segments[segments.length-1] );
+		return new RouteItem( {path: `/${segments.join('/')}`, title} );
+	}
+
 	private async load( routing:ListRoute ):Promise<QLListData>{
+		return QLListResolver.load( this.ql, await QLListResolver.data(this.ql, routing, this.profileStore), this.routeStore );
+	}
+	//everything but the rows:  the schema, the default view plus the user's saved ones, and the column display names.
+	//QLSelector builds a collection's list the same way, so it lives here rather than in resolve().
+	static async data( ql:IGraphQL, routing:ListRoute, profileStore:ProfileStore ):Promise<QLListData>{
 		let pageSettings = new PageSettings( routing.tableSettings );
 		const collectionName = routing.collectionName;
-		const schema = await this.ql.schemaWithEnums( MetaObject.toTypeFromCollection(collectionName), (m)=>console.log(m) );
+		const schema = await ql.schemaWithEnums( MetaObject.toTypeFromCollection(collectionName), (m)=>console.log(m) );
 		let defaultView = await QLListResolver.defaultView( schema, pageSettings.configColumns );
 		var profile = new PageProfile();
 		profile.views.push( defaultView );
-		await profile.loadViews( collectionName, this.profileStore, schema );
+		await profile.loadViews( collectionName, profileStore, schema );
 		profile.currentViewIndex = ProfileStore.viewIndex( collectionName );
 		profile.showDeleted = ProfileStore.showDeleted( collectionName );
-		return QLListResolver.load( this.ql, {pageSettings, profile, schema, results: null, routing, columns: QLListResolver.columns(schema, routing.tableSettings.columns!, routing.tableSettings.excludedColumns)}, this.routeStore );
+		return {pageSettings, profile, schema, results: null, routing, columns: QLListResolver.columns(schema, routing.tableSettings.columns!, routing.tableSettings.excludedColumns)};
 	}
 	private static async defaultView( schema:TableSchema, configColumns:(string|ViewFieldSettings)[] ):Promise<View>{
 		let defaultView = new View( {configColumns: configColumns, sort: [{active: "name", direction: "asc"}]}, schema );
@@ -88,13 +106,22 @@ export class QLListResolver implements Resolve<QLListData> {
 		}
 		return columns;
 	}
-	static async load( ql:IGraphQL, data:QLListData, routeStore:RouteStore ):Promise<QLListData>{
-		const q = data.profile.view.query( data.profile.showDeleted, 0 );
+	//routeStore null:  the rows are a pick list (QLSelector - filtered, and never the page's own collection), not the collection's sidenav children
+	static async load( ql:IGraphQL, data:QLListData, routeStore:RouteStore|null ):Promise<QLListData>{
+		let view = data.profile.view;
+		if( data.fixedFilters?.length ){//on a copy:  the profile's view is what the settings panel edits and what a Save persists
+			view = new View( view );
+			view.fieldFilters = [...view.fieldFilters, ...data.fixedFilters];
+		}
+		const q = view.query( data.profile.showDeleted, 0 );
 		data.results = await ql.query<any>( q.text, q.vars, (m)=>console.log(m) );
-		const children = data.results[data.schema.collectionName].map( (r:any)=>({title:r.name, path:`${data.routing.path}/${r.target}`}) );
-		routeStore.setChildren( data.routing.path, children );
+		if( routeStore ){
+			const children = data.results[data.schema.collectionName].map( (r:any)=>({title:r.name, path:`${r.target}`}) );//bare targets, like GatewayResolver — DetailResolver renders them under the absolute list url
+			routeStore.setChildren( data.routing.path, children );
+		}
 		return {
 			columns: data.columns,
+			fixedFilters: data.fixedFilters,
 			pageSettings: data.pageSettings,
 			results: data.results,
 			routing: data.routing,

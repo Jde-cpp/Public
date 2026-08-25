@@ -1,0 +1,91 @@
+.section {
+	padding: 4px 0 12px;
+}
+
+.section-title {
+	margin: 12px 0 8px;
+	font: var(--mat-sys-title-small);
+	letter-spacing: .08em;
+	text-transform: uppercase;
+	color: var(--mat-sys-on-surface-variant);
+}
+
+// the form fields take the same inset as the fact rows, so a heading sits alone at the margin and owns everything beneath it
+.section > mat-form-field {
+	width: calc(100% - 32px);
+	margin: 0 16px;
+}
+
+// label/value pairs in a column, same shape as the application cards
+.facts {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: 6px 20px;
+	align-items: baseline;
+	margin: 0;
+	padding: 0 16px;
+
+	dt {
+		color: var(--mat-sys-on-surface-variant);
+		opacity: 0.75;
+		white-space: nowrap;
+	}
+	dd {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 4px 8px;
+		min-width: 0;
+		margin: 0;
+	}
+}
+
+.mono {
+	font-family: monospace;
+}
+
+// a 2048-bit modulus is 512 hex chars with no break opportunities - wrap it anywhere rather than scroll the page
+.modulus {
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+// the copy/show buttons sit inline with a text value, so the 40px default button would double the row height
+.fact-button {
+	--mdc-icon-button-state-layer-size: 28px;
+	width: 28px;
+	height: 28px;
+	padding: 2px;
+
+	mat-icon {
+		font-size: 18px;
+		width: 18px;
+		height: 18px;
+	}
+}
+
+.status-chip {
+	--mat-chip-container-height: 22px;
+	--mat-chip-label-text-size: 11px;
+	--mat-chip-label-text-line-height: 22px;
+}
+
+// the colour has to go through the chip's tokens - MatChip paints its label from --mat-chip-label-text-color
+.expiry-valid {
+	--mat-chip-label-text-color: green;
+	--mat-chip-outline-color: green;
+}
+.expiry-expiring {
+	--mat-chip-label-text-color: orange;
+	--mat-chip-outline-color: orange;
+}
+.expiry-expired {
+	--mat-chip-label-text-color: var(--mat-sys-error);
+	--mat-chip-outline-color: var(--mat-sys-error);
+}
+
+.empty {
+	margin: 0;
+	padding: 0 16px;
+	color: var(--mat-sys-on-surface-variant);
+}

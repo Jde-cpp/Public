@@ -1,0 +1,93 @@
+<section class="section">
+	<h3 class="section-title">Identity</h3>
+	<mat-form-field appearance="fill">
+		<mat-label>Id</mat-label>
+		<input matInput type="text" cdkFocusInitial [value]="record().target ?? ''" (input)="update( 'target', $any($event.target).value )">
+	</mat-form-field>
+	<mat-form-field appearance="fill">
+		<mat-label>Name</mat-label>
+		<input matInput type="text" [value]="record().name ?? ''" (input)="update( 'name', $any($event.target).value )">
+	</mat-form-field>
+	<mat-form-field appearance="fill">
+		<mat-label>Description</mat-label>
+		<textarea matInput [value]="record().description ?? ''" (input)="update( 'description', $any($event.target).value )"></textarea>
+	</mat-form-field>
+	<mat-form-field appearance="fill">
+		<mat-label>Provider</mat-label>
+		<mat-select [value]="providerId()" (selectionChange)="update( 'provider', $event.value )">
+			@for( option of providers(); track option.id ){
+				<mat-option [value]="option.id">{{option.name}}</mat-option>
+			}
+		</mat-select>
+	</mat-form-field>
+	<mat-form-field appearance="fill">
+		<mat-label>Email</mat-label>
+		<input matInput type="email" [value]="record().email ?? ''" (input)="update( 'email', $any($event.target).value )">
+	</mat-form-field>
+</section>
+
+<section class="section">
+	<h3 class="section-title">Public key</h3>
+	<dl class="facts">
+		<dt>Key size</dt>
+		<dd>{{ modulus() ? keyBits()+'-bit RSA' : '—' }}</dd>
+		<dt>Modulus</dt>
+		<dd>
+			@if( modulus() ){
+				<code class="mono modulus">{{modulusDisplay()}}</code>
+				<button mat-icon-button type="button" class="fact-button" [attr.aria-label]="showModulus() ? 'Hide full modulus' : 'Show full modulus'" (click)="showModulus.set( !showModulus() )">
+					<mat-icon>{{showModulus() ? 'visibility_off' : 'visibility'}}</mat-icon>
+				</button>
+				<button mat-icon-button type="button" class="fact-button" aria-label="Copy modulus" (click)="copy( modulus(), 'Modulus' )"><mat-icon>content_copy</mat-icon></button>
+			}
+			@else { — }
+		</dd>
+		<dt>Exponent</dt>
+		<dd>{{ record().exponent ?? '—' }}</dd>
+	</dl>
+</section>
+
+<section class="section">
+	<h3 class="section-title">Certificate</h3>
+	@if( hasCert() ){
+		<dl class="facts">
+			<dt>Subject</dt>
+			<dd>
+				<span class="mono">{{ record().distinguished ?? '—' }}</span>
+				@if( record().distinguished ){
+					<button mat-icon-button type="button" class="fact-button" aria-label="Copy subject" (click)="copy( record().distinguished!, 'Subject' )"><mat-icon>content_copy</mat-icon></button>
+				}
+				@if( selfSigned() ){ <mat-chip class="status-chip">Self-signed</mat-chip> }
+			</dd>
+			@if( !selfSigned() ){
+				<dt>Issuer</dt>
+				<dd>
+					<span class="mono">{{ record().issuer ?? '—' }}</span>
+					@if( record().issuer ){
+						<button mat-icon-button type="button" class="fact-button" aria-label="Copy issuer" (click)="copy( record().issuer!, 'Issuer' )"><mat-icon>content_copy</mat-icon></button>
+					}
+				</dd>
+			}
+			<dt>Subject Alt Names</dt>
+			<dd>
+				@if( subjectAltNames().length ){
+					<mat-chip-set aria-label="Subject alternative names">
+						@for( san of subjectAltNames(); track san ){ <mat-chip class="mono">{{san}}</mat-chip> }
+					</mat-chip-set>
+				}
+				@else { — }
+			</dd>
+			<dt>Expires</dt>
+			<dd>
+				@if( expiry(); as expiry ){
+					<span [title]="expiry.date | date:'medium'">{{ expiry.date | date:'mediumDate' }}</span>
+					<mat-chip class="status-chip" [class]="'expiry-'+expiry.status">{{expiry.relative}}</mat-chip>
+				}
+				@else { — }
+			</dd>
+		</dl>
+	}
+	@else {
+		<p class="empty">No certificate enrolled.</p>
+	}
+</section>

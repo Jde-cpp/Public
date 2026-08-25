@@ -27,17 +27,6 @@ export class Properties implements OnInit{
 	}
 
 	async ngOnInit(){
-		const order = ["target", "name"];
-		const sort = ( x:PropertyField,y:PropertyField )=>{
-			const yIndex = order.indexOf( y.name )+1;
-			const xIndex = order.indexOf( x.name )+1;
-			if( xIndex || yIndex )
-				return ( xIndex || order.length )-( yIndex || order.length );
-			else
-				return x.name.localeCompare( y.name );
-		}
-		this.fields().sort( sort );
-
 		this.isLoading.set( false );
 	}
 
@@ -61,15 +50,24 @@ export class Properties implements OnInit{
 			let values = field.isEnum ? this.schema().enums.get(field.type.name) : undefined;
 			y.push( new PropertyField(field, values) );
 		}
-		return y;
+		const order = ["target", "name"];
+		const sort = ( a:PropertyField,b:PropertyField )=>{
+			const bIndex = order.indexOf( b.name )+1;
+			const aIndex = order.indexOf( a.name )+1;
+			if( aIndex || bIndex )
+				return ( aIndex || order.length )-( bIndex || order.length );
+			else
+				return a.name.localeCompare( b.name );
+		}
+		return y.sort( sort );
 	});
 	boolFields = computed<PropertyField[]>( ()=>{
 		return [];
 		//return this.fields().filter( (x)=>x.type==InputTypes.Bool );
 	});
 	getEnumId( field:PropertyField ):number{
-		let stringValue = this.record()[field.name];
-		return stringValue ? field.options!.find( (x)=>x.name==stringValue )!.id! : 0;
+		const value = this.record()[field.name];
+		return value==undefined ? 0 : typeof value=="number" ? value : field.options!.find( (x)=>x.name==value )?.id ?? 0;
 	}
 
 	ctor = input.required<new (item: any) => any>();

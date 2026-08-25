@@ -1,4 +1,4 @@
-import { Component, effect, OnInit, OnDestroy, signal, inject, model } from '@angular/core';
+import { Component, computed, effect, OnInit, OnDestroy, signal, inject, model } from '@angular/core';
 import { SelectionModel } from '@angular/cdk/collections';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -15,12 +15,13 @@ import { Permission } from '../../model/permission';
 import { AccessService } from '../../services/access-service';
 import { GroupPK } from '../../model/group';
 import { User } from '../../model/user';
+import { KeyProperties } from './key-properties/key-properties';
 
 @Component( {
     templateUrl: './user-detail.html',
 		styleUrls: ['./user-detail.scss'],
 		host: {class:'main-content mat-drawer-container my-content'},
-    imports: [CommonModule, MatButtonModule, MatIcon, MatTabsModule, Properties, PermissionTable, QLSelector]
+    imports: [CommonModule, MatButtonModule, MatIcon, MatTabsModule, Properties, KeyProperties, PermissionTable, QLSelector]
 })
 export class UserDetail implements OnDestroy, OnInit{
 	constructor( private route: ActivatedRoute, private router:Router, private componentPageTitle:ComponentPageTitle, private snackbar: SnackbarService ){
@@ -98,8 +99,18 @@ export class UserDetail implements OnDestroy, OnInit{
 	get schema(){ return this.pageData.schema; }
 	tabIndex = signal<number>( ProfileStore.tabIndex('userDetail') );
 	userTableSettings = userTableSettings;
+	providerName = computed<string>( ()=>{
+		const value = this.properties()?.provider as string|number|undefined;
+		return typeof value=="number"
+			? this.schema.enums.get( "Provider" )?.find( (o)=>o.id==value )?.name ?? ""
+			: value ?? "";
+	});
+	isKeyProvider = computed<boolean>( ()=>this.providerName().toLowerCase()=="key" );
+	excludedColumns = [...userTableSettings.excludedColumns!, ...keyFields];
 	ql:IGraphQL = inject( AccessService );
 }
+
+const keyFields = ["modulus", "exponent", "issuer", "subjectAlt", "distinguished", "expiration"];
 
 export const userTableSettings:TableSettings = {
 	excludedColumns: ["isGroup"],
@@ -113,7 +124,7 @@ export const userTableSettings:TableSettings = {
 	canAdd: false,
 	canPurge: false,
 	columns: [
-		{ name:"target" },
-		{ name:"deleted" },
+		{ name:"name", style: new Style(300) },
+		"description"
 	]
  }

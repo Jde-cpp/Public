@@ -50,7 +50,6 @@ export class ComponentNav {
   isRoot( url:string ){
     return url==`/${this.parentUrl}` || url.substr( this.parentUrl.length+2 ).indexOf('/')!=-1;
   }
-  currentItemId: string | undefined;
 	item = input.required<RouteItem>();
 	parentUrl!: string;
 	isLoading = signal( true );
