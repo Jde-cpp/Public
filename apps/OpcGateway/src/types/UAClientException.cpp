@@ -24,6 +24,8 @@ namespace Jde::Opc::Gateway{
 
 	UAClientException::UAClientException( StatusCode sc, Handle uaHandle, string description, SL sl )ι:
 		UAException{ sc, description, {.HttpStatus=httpStatus(sc)}, sl },
+		_handle{ uaHandle },
+		_requestId{ 0 },
 		_userMessage{ move(description) }
 	{}
 

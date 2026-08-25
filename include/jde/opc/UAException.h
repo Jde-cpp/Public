@@ -1,7 +1,5 @@
 ﻿#pragma once
 #include "jde/fwk/log/logTags.h"
-#ifndef OPC_UAEXCEPTION_H
-#define OPC_UAEXCEPTION_H
 #include "usings.h"
 #include <jde/fwk/exceptions/ExternalException.h>
 #include "uatypes/Logger.h"
@@ -30,4 +28,3 @@ namespace Jde::Opc{
 		α ClientDetail()Ι->string override{ return format( "({:x}){}", Code(), Message((StatusCode)Code()) ); }
 	};
 }
-#endif

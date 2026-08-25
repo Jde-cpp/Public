@@ -49,9 +49,12 @@ namespace Jde::Opc::Server {
 			for( auto&& row : variantRows ){
 				let variantPK = row.GetUInt32(0);
 				let& dt = DT( row.GetUInt(1) );
-				let isArray = !row.IsNull( 2 );//stored arrayDimensions: the shape a one-element array cannot state by its count.
+				//Stored arrayDimensions: the shape a one-element array cannot state by its count.  Empty *or* null is a
+				//scalar - `!IsNull` alone was true for every row the old ArrayDimString binding wrote, and it is still
+				//true for every such row already in the db.  VariableAwait derives it from the same emptiness test.
+				let isArray = !row.GetString( 2 ).empty();
 				auto dims = isArray ? Variant::ToArrayDims( row.GetString(2) ) : make_tuple( (UA_UInt32*)nullptr, uint{0} );
-				variants.try_emplace( variants.end(), variantPK, Variant{variantPK, Variant::ToUAValues(dt, move(values.at(variantPK)), isArray), move(dims), dt} );
+				variants.try_emplace( variants.end(), variantPK, Variant{variantPK, Variant::ToUAValues(dt, Members(values, variantPK), isArray), move(dims), dt} );
 			};
 			Resume( move(variants) );
 		}
@@ -64,7 +67,7 @@ namespace Jde::Opc::Server {
 		try{
 			let variantPK = co_await DS().InsertSeq<VariantPK>(DB::InsertClause{
 				GetView("variants").InsertProcName(),
-				{DB::Value{_variant.type->typeId.identifier.numeric}, {_variant.ArrayDimString()}}
+				{DB::Value{_variant.type->typeId.identifier.numeric}, _variant.ArrayDimValue()}//ArrayDimValue, not ArrayDimString: a scalar has to bind NULL, or the read below calls it an array.
 			});
 
 			let array = _variant.ToUAJson();

@@ -52,10 +52,9 @@ namespace Jde::Opc::Gateway{
 	}
 
 
-	α HttpRequestAwait::CoHandleRequest( ServerCnnctnNK&& opcId )ι->void{
+	α HttpRequestAwait::CoHandleRequest( [[maybe_unused]] ServerCnnctnNK&& opcId )ι->void{
 		let& target = _request.Target();
 		try{
-			//_client = co_await ConnectAwait( move(opcId), _request.SessionId(), _request.UserPK(), SRCE_CUR );
 			if( _request.IsGet() ){
 				throw RestException{ EHttpStatus::NotFound, SRCE_CUR, move(_request), "Unknown get target '{}'", target };
 			}

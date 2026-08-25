@@ -3,6 +3,7 @@ import { Duration, Guid, ProtoUtils, Timestamp  } from "jde-framework";
 import { NodeId } from "./node-id";
 import { ExNodeId } from "./ex-node-id";
 import {OpcError} from "./opc-error";
+import { StatusCode } from "./types";
 
 export type Value = boolean | Duration | OpcError | ExNodeId | Guid | Long | NodeId | number | string | Timestamp | Uint8Array | Value[];
 
@@ -46,19 +47,28 @@ export function valueString( value: Value|undefined ):string{
 		return value.id.toString();
 	else if( value instanceof OpcError )
 		return value.toString();
-	// else if( Array.isArray(value) )
-	// 	return value.map( x=>this.toString(x) ).join( "," );
+	else if( Array.isArray(value) )
+		return value.map( x=>valueString(x) ).join( ", " );//`this.` was stale — these are free functions now
 	else
 		return `unknown type ${typeof value}`;
 }
 
 export function toValue( json:any ):Value{
 	let value = json;
-	if( value?.hasOwnProperty('v') )//{v,sc} — a reading with quality attached.  Before the 'sc' test on purpose: sc-first turned it into an OpcError and discarded the reading.  Recurse for a Long payload.
+	if( Array.isArray(value) )//per element: ToJson emits one entry per array element, and a Long, a {v,sc} or a NodeId
+		value = value.map( x=>toValue(x) );//element needs the same unwrapping a scalar does — they arrived as raw objects.
+	else if( value?.hasOwnProperty('v') )//{v,sc} — a reading with quality attached.  Before the 'sc' test on purpose: sc-first turned it into an OpcError and discarded the reading.  Recurse for a Long payload.
 		value = toValue( json.v );
 	else if( value?.hasOwnProperty('sc') )
 		value = new OpcError( json.sc, "OpcError", "", undefined );//was `new Error(sc)` — a plain Error isn't `instanceof OpcError`, so valueString rendered it as "unknown type object"
 	else if( value?.hasOwnProperty('unsigned') )
 		value = new Long( json.low, json.high, json.unsigned );
 	return value;
+}
+
+//The quality beside the reading.  toValue() returns the reading alone, so an Uncertain {v,sc} lost its sc over REST
+//while the socket carried it in SubscriptionResult.sc.  undefined/0 = Good; a Bad reading carries no `v` and toValue
+//already turns it into an OpcError, which holds the same code.
+export function valueSc( json:any ):StatusCode|undefined{
+	return json?.hasOwnProperty('sc') ? <StatusCode>json.sc : undefined;
 }

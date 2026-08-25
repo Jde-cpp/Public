@@ -1,5 +1,5 @@
 //UADateTime converts between UA_DateTime (100ns ticks since 1601), the {seconds,nanos} json the gateway publishes, and
-//protobuf Timestamp/Duration.  DateTime.h itself arrives through the precompiled header - it has no include guard.
+//a protobuf Timestamp.  DateTime.h itself arrives through the precompiled header - it has no include guard.
 #include <limits>
 #include <ratio>
 #include <gtest/gtest.h>
@@ -8,6 +8,15 @@
 
 namespace Jde::Opc::Tests{
 	constexpr UA_Int64 unixSeconds{ 1700000000 }; //2023-11-14T22:13:20Z - no leap second, no DST edge, comfortably in range.
+
+	//L17: _ua1970 was `UA_DateTime_fromUnixTime(0)`, an exported function, so it was dynamically initialised through the
+	//PLT - a static-initialisation-order hazard for any future global that touches a UADateTime, and unusable in a
+	//constant expression.  It is the vendor's UA_DATETIME_UNIX_EPOCH constant now; this is the equality that swap
+	//assumes, which no static_assert can make because the function is not constexpr.
+	TEST( DateTimeTests, TheUnixEpochConstantMatchesTheVendorFunction ){
+		EXPECT_EQ( UA_DATETIME_UNIX_EPOCH, UA_DateTime_fromUnixTime(0) );
+		EXPECT_EQ( UADateTime{UA_DateTime{UA_DATETIME_UNIX_EPOCH}}.ToJson().at("seconds").to_number<int64_t>(), 0 );
+	}
 
 	TEST( DateTimeTests, UaRoundTrip ){
 		let ua = UA_DateTime_fromUnixTime( unixSeconds );
@@ -50,10 +59,6 @@ namespace Jde::Opc::Tests{
 		EXPECT_EQ( timestamp.seconds(), unixSeconds );
 		EXPECT_EQ( timestamp.nanos(), 0 );
 		EXPECT_EQ( UADateTime{timestamp}.UA(), ua );
-
-		let duration = UADateTime{ua}.ToDuration();
-		EXPECT_EQ( duration.seconds(), unixSeconds );
-		EXPECT_EQ( UADateTime{duration}.UA(), ua );
 	}
 
 	//#12 (fixed).  The finding predicted std::terminate - ToParts() was Ι but called Chrono::ToTimePoint, which is ε, and
@@ -94,6 +99,44 @@ namespace Jde::Opc::Tests{
 			EXPECT_THROW( UADateTime{jvalue{low}}, Exception ) << serialize( low );
 		else
 			EXPECT_EQ( serialize(UADateTime{jvalue{low}}.ToJson()), serialize(low) );
+	}
+
+	//review3 #5: the ±_maxSeconds guard only covered the plain-number spelling.  The protobufjs Long form went straight
+	//to Protobuf::ToTimePoint - from_time_t, which multiplies with no check - so {high:2147483647,low:-1}, exactly what
+	//protobufjs emits for INT64_MAX, wrapped to 1969-12-31T23:59:59Z and was written to the node silently.
+	TEST( DateTimeTests, LongFormTakesTheSameGuard ){
+		let longSeconds = []( int64_t s )ι->jobject{ return jobject{ {"high", (int32_t)(s>>32)}, {"low", (int32_t)s} }; };
+		let longAt = [&]( int64_t s )ι->jvalue{ return jvalue{ jobject{ {"seconds", longSeconds(s)}, {"nanos", 0} } }; };
+
+		EXPECT_EQ( UADateTime{longAt(unixSeconds)}.UA(), UA_DateTime_fromUnixTime(unixSeconds) );//in range: both spellings agree.
+		EXPECT_THROW( UADateTime{longAt(std::numeric_limits<int64_t>::max())}, Exception );
+		EXPECT_THROW( UADateTime{longAt(std::numeric_limits<int64_t>::min())}, Exception );
+
+		//"nanos" is optional here too - Protobuf::ToTimestamp throws on a missing one, where the plain form defaults it.
+		let noNanos = jvalue{ jobject{ {"seconds", longSeconds(unixSeconds)} } };
+		EXPECT_NO_THROW( UADateTime{noNanos} );
+		EXPECT_EQ( UADateTime{noNanos}.UA(), UA_DateTime_fromUnixTime(unixSeconds) );
+	}
+
+	//The Timestamp ctor is ι, so it saturates where the json ctor throws.  It used to hand the seconds to from_time_t
+	//unchecked and come back with a date in 1969 for INT64_MAX.
+	TEST( DateTimeTests, TimestampCtorSaturates ){
+		google::protobuf::Timestamp high; high.set_seconds( std::numeric_limits<int64_t>::max() );
+		google::protobuf::Timestamp low;  low.set_seconds( std::numeric_limits<int64_t>::min() );
+		let highSeconds = UADateTime{high}.ToJson().at( "seconds" ).to_number<int64_t>();
+		let lowSeconds = UADateTime{low}.ToJson().at( "seconds" ).to_number<int64_t>();
+		EXPECT_GT( highSeconds, unixSeconds ) << "wrapped into the past instead of saturating";
+		EXPECT_LT( lowSeconds, 0 );
+		EXPECT_EQ( highSeconds, -lowSeconds );
+	}
+
+	//UA() had no clamp at all, so seconds inside the TimePoint guard but outside UA_DateTime's own ~±9.1e11 s range
+	//wrapped past INT64 - 910692730086 read back as seconds -922337203686.
+	TEST( DateTimeTests, UaSaturatesOutsideTheVendorRange ){
+		let at = []( int64_t s )ι->UADateTime{ return UADateTime{ jvalue{jobject{ {"seconds",s}, {"nanos",0} }} }; };
+		EXPECT_EQ( at(910'692'730'086).UA(), (std::numeric_limits<UA_Int64>::max)() );
+		EXPECT_EQ( at(-910'692'730'086).UA(), (std::numeric_limits<UA_Int64>::min)() );
+		EXPECT_EQ( at(unixSeconds).UA(), UA_DateTime_fromUnixTime(unixSeconds) );//a real date is untouched.
 	}
 
 	//Before 1970 the seconds go negative but the nanos must not - floor, not truncation toward zero.

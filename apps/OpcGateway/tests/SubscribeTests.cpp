@@ -19,9 +19,14 @@ namespace Jde::Opc::Gateway::Tests{
 				TRACE( "OnData: opcId: '{}', nodeId: {}, valueCount: {}. 0={}", opcId, nodeId.ToString(), values.size(), values.size() ? std::to_string(values[0].of_case()) : "n/a" );
 				ASSERT( values.size()==1 );
 				if( values.size()==1 ){
-					auto v = FromServer::ToValue( values[0] );
-					_tests->_value = v.AsNumber<uint>();
-					TRACE( "Value updated to {}.", _tests->_value.load() );
+					try{//ι: AsNumber throws for a non-finite or out-of-range reading (review3 #13), and this override may not let one out.
+						auto v = FromServer::ToValue( values[0] );
+						_tests->_value = v.AsNumber<uint>();
+						TRACE( "Value updated to {}.", _tests->_value.load() );
+					}
+					catch( const std::exception& e ){
+						WARN( "OnData: could not convert value for {}: {}", nodeId.ToString(), e.what() );
+					}
 				}
 			}
 		private:

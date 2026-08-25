@@ -1,6 +1,5 @@
 ﻿#pragma once
-#ifndef IOT_UA_HELPERS_H
-#define IOT_UA_HELPERS_H
+#include <span>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <google/protobuf/duration.pb.h>
@@ -15,6 +14,7 @@ namespace Jde::Opc{
 	struct NodeId;
 	α FindDataType( const NodeId& nodeId )ι->UA_DataType*;
 	constexpr α operator ""_uv( const char* x, uint len )ι->UA_String{ return UA_String{ len, static_cast<UA_Byte*>((void*)x) }; } //(UA_Byte*) gcc error
+	Ξ IsKind( const UA_DataType* type, uint16 uaTypeIndex )ι->bool{ return type && type->typeKind==UA_TYPES[uaTypeIndex].typeKind; }
 	Ξ ToJson( UA_UInt64 v )ι->jobject{ return jobject{ {"high", v>>32}, {"low", v&0xFFFFFFFF}, {"unsigned",true} }; };
 	Ξ ToJson( UA_Int64 v )ι->jobject{ return jobject{ {"high", v>>32}, {"low", v&0xFFFFFFFF}, {"unsigned",false} }; };
 	Ξ ToGuid( const UA_Guid& ua )ι->uuid{ //data1/2/3 are native-endian in UA_Guid, big-endian (RFC 4122) in uuid.
@@ -62,16 +62,6 @@ namespace Jde::Opc{
 		return y;
 	};
 
-	Τ struct Iterable final : noncopyable{
-		Iterable( T* begin, uint size )ι:_begin{begin}, _size{size}{}
-	  α begin()Ι->T*{ return _size ? _begin : end(); }
-		α cbegin()Ι->const T*{ return begin(); }
-	  α end()Ι->T*{ return _begin+_size; }
-		α cend()Ι->const T*{ return end(); }
-	private:
-		T* _begin;
-		const uint _size;
-	};
+	Τ using Iterable = std::span<T>;
 }
 #undef let
-#endif

@@ -5,9 +5,6 @@
 
 #define let const auto
 
-namespace Jde::Opc{
-	α Format( const char* format, va_list args )->string;//Logger.cpp's own, not declared in a header - the UA callback is its only other caller.
-}
 namespace Jde::Opc::Tests{
 	Ω format( const char* fmt, ... )->string{
 		va_list args; va_start( args, fmt );

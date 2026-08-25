@@ -5,6 +5,12 @@
 
 namespace Jde::Opc::Server{
 	using VariantMembers = flat_map<VariantPK, flat_map<uint,string>>;
+	//Moves out one variant's member rows, or an empty set when the row has none - an empty value writes no members, and
+	//`values.at(pk)` threw out_of_range there, taking the whole config load down rather than loading that one as null.
+	Ξ Members( VariantMembers& values, VariantPK pk )ι->VariantMembers::mapped_type{
+		auto p = values.find( pk );
+		return p==values.end() ? VariantMembers::mapped_type{} : move( p->second );
+	}
 	struct VariantMembersAwait final : TAwaitEx<VariantMembers,DB::SelectAwait::Task>{
 		using base=TAwaitEx<VariantMembers,DB::SelectAwait::Task>;
 		VariantMembersAwait( vector<DB::Value> pks, SRCE )ι: base{ sl }, _pks{ move(pks) }{}

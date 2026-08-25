@@ -27,11 +27,7 @@ namespace Jde{
 		exitCode = CheckTestsRan( RUN_ALL_TESTS() );
 	}
 	catch( runtime_error& e ){
-		if( auto p = dynamic_cast<Exception*>(&e); p ){
-			p->Log();
-			exitCode = p->HasCode() ? (int)p->Code() : EXIT_FAILURE;
-		}
-		std::cerr << e.what() << std::endl;
+		exitCode = StartupFailed( e );//never the exception's code:  main's status keeps only its low 8 bits.
 	}
 	Process::Shutdown( exitCode );
 	return exitCode;

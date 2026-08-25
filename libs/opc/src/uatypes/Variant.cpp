@@ -1,4 +1,5 @@
 #include <jde/opc/uatypes/Variant.h>
+#include <jde/db/Value.h>
 #include <jde/opc/UAException.h>
 #include <jde/opc/uatypes/BrowseName.h>
 #include <jde/opc/uatypes/DateTime.h>
@@ -20,10 +21,29 @@ namespace Jde::Opc{
 		UA_Variant_init( &converted.value );//we own it now.
 	}
 
+	//A null data pointer is ToUAValues saying "this one could not be decoded".  Stamping the type and the caller's
+	//arrayDimensions onto it anyway produced a *typed* variant with data==NULL: UA_Variant_isEmpty looks at `type` only,
+	//so IsNull() was false, ToJson() gave [], and with stored dims the binary encoder rejects it outright
+	//(totalRequiredSize != arrayLength -> BadEncodingError, and the server closes the channel on every Read that touches
+	//the node).  Build the genuinely empty variant instead - the shape a node that never had a value has, which
+	//UA_Server_writeValue accepts as a value-less write rather than type-checking.
 	Variant::Variant( uint32 pk, tuple<uint,void*> data, tuple<UA_UInt32*, uint> dims, const UA_DataType& dataType )ι:
-		UA_Variant{ &dataType, UA_VARIANT_DATA, get<0>(data), get<1>(data), get<1>(dims), get<0>(dims) },
-		VariantPK{pk}
-	{}
+		UA_Variant{},
+		VariantPK{pk}{
+		let [length, values] = data;
+		let [dimensions, dimensionsSize] = dims;
+		if( !values ){
+			if( dimensions )//the caller allocated them for us; nothing else will free them.
+				UA_Array_delete( dimensions, dimensionsSize, &UA_TYPES[UA_TYPES_UINT32] );
+			return;
+		}
+		type = &dataType;
+		storageType = UA_VARIANT_DATA;
+		arrayLength = length;
+		this->data = values;
+		arrayDimensions = dimensions;
+		arrayDimensionsSize = dimensionsSize;
+	}
 
 	Variant::Variant( Variant&& v )ι:
 		UA_Variant{ move(v) },
@@ -92,11 +112,25 @@ namespace Jde::Opc{
 		return csv;
 	}
 
+	//The column has to answer "scalar or array?" for all three shapes, since the element count alone cannot: declared
+	//dimensions persist as their csv; an array without any - what UA_Variant_setArrayCopy leaves - persists its own
+	//length, which is its one-dimensional shape; only a scalar persists NULL.  Binding ArrayDimString() made a scalar a
+	//non-null '' and every stored scalar reloaded as a one-element array (review3 #3); binding NULL for both of the
+	//first two would put review2 #10's residual back, a one-element array reloading as a scalar.
+	α Variant::ArrayDimValue()ι->DB::Value{
+		if( arrayDimensionsSize )
+			return DB::Value{ ArrayDimString() };
+		return arrayLength ? DB::Value{ std::to_string(arrayLength) } : DB::Value{};
+	}
+
+	Ω uaEncode( const void* v, const UA_DataType& type, UAString& out )ε->void{
+		UA_EncodeJsonOptions options{};
+		if( let sc=UA_encodeJson(v, &type, &out, &options); sc )
+			throw UAException{ sc };
+	}
 	Ω uaJsonString( const void* v, const UA_DataType& type )ε->string{
 		UAString j;
-		UA_EncodeJsonOptions options{};
-		if( let sc=UA_encodeJson(v, &type, &j, &options); sc )
-			throw UAException{ sc };
+		uaEncode( v, type, j );
 		return j.ToString();
 	}
 	α Variant::ToUAJson()ε->vector<string>{
@@ -112,16 +146,22 @@ namespace Jde::Opc{
 		return y;
 	}
 	α Variant::ElementToJson( const void* element, const UA_DataType& type, bool trimNames )ε->jvalue{
-		if( &type==&UA_TYPES[UA_TYPES_LOCALIZEDTEXT] && trimNames )
+		if( IsKind(&type, UA_TYPES_LOCALIZEDTEXT) && trimNames )
 			return jstring{ ToString( ((const UA_LocalizedText*)element)->text ) };
-		else if( &type==&UA_TYPES[UA_TYPES_DATETIME] )
+		else if( IsKind(&type, UA_TYPES_DATETIME) )
 			return UADateTime{ *(const UA_DateTime*)element }.ToJson();
+		else if( IsKind(&type, UA_TYPES_NODEID) )
+			return Opc::ToJson( *(const UA_NodeId*)element );
+		else if( IsKind(&type, UA_TYPES_QUALIFIEDNAME) )
+			return BrowseName::ToJson( *(const UA_QualifiedName*)element );
 		else{
-			auto uaJson = uaJsonString( element, type );
+			UAString ua;
+			uaEncode( element, type, ua );
 			try{
-				return parse( uaJson );
+				return parse( ToSV(ua) );//off the encoder's buffer: the std::string was only ever an intermediate here.
 			}
 			catch( runtime_error& e ){
+				let uaJson = ua.ToString();//only the failure path needs it as a string.
 				ERRT( ELogTags::Parsing, "Error parsing {} - {}", uaJson, e.what() );
 				return {uaJson};
 			}
@@ -131,14 +171,8 @@ namespace Jde::Opc{
 		jvalue y;
 		if( IsNull() )
 			return y;
-		if( IsScalar() ){
-			if( type==&UA_TYPES[UA_TYPES_NODEID] )
-			  y = Opc::ToJson( *(UA_NodeId*)data );
-			else if( type==&UA_TYPES[UA_TYPES_QUALIFIEDNAME] )
-			  y = BrowseName::ToJson( *(UA_QualifiedName*)data );
-			else
-				y = ElementToJson( data, *type, trimNames );
-		}
+		if( IsScalar() )
+			y = ElementToJson( data, *type, trimNames );//the scalar arms moved into ElementToJson, where the array uses them too.
 		else{
 			jarray arr;
 			for( uint i=0; i<arrayLength; ++i )

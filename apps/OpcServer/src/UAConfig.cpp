@@ -34,12 +34,10 @@ namespace Jde::Opc::Server{
 	}
 
 	α UAConfig::SetupSecurityPolicies( const Crypto::CryptoSettings& settings, SL sl )ε->void{
-		Crypto::EnsureKeyCertificate( settings );
-
-		auto certificate = ToUAByteString( Crypto::ReadCertificate(settings.Certificate.Path) );
+		Crypto::EnsureKeyCertificate( settings, sl );
+		auto certificate = ToUAByteString( Crypto::ReadCertificate(settings.Certificate.Path, sl) );
 		auto privateKey = ToUAByteString( Crypto::ReadPrivateKey(settings.PrivateKey) );
 		SetConfig( Settings::FindNumber<PortType>("/opcServer/port").value_or(4840), move(certificate), move(privateKey) );
-//		UA_ServerConfig_setDefaultWithSecurityPolicies( &config, Settings::FindNumber<PortType>("/tcp/port").value_or(4840), certificate.get(), privateKey.get(), &trustList, 0, &issuerList, 0, &revocationList, 0 );
 		UA_String_clear( &applicationDescription.applicationUri );
 		let uri = settings.Certificate.SanUri();
 		if( uri.empty() )//clients compare their configured applicationUri against ours; an empty one rejects every endpoint.

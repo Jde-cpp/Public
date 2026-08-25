@@ -46,8 +46,8 @@ namespace Jde::Opc::Tests{
 		EXPECT_EQ( stringId.NsIndex(), 4 );
 	}
 
-	//The rest/query-string spelling: flat lowercase keys rather than json.  This is the only ctor that reads nsu and
-	//serverindex today.
+	//The rest/query-string spelling: flat lowercase keys rather than json.  Both ctors read nsu and serverindex since
+	//review2 #17 - see exFromParams above, which is why this is the independent path rather than the only one.
 	TEST( ExNodeIdTests, FromRestParams ){
 		flat_map<string,string> params;
 		params.emplace( "ns", "2" );
@@ -141,8 +141,8 @@ namespace Jde::Opc::Tests{
 		EXPECT_TRUE( exFromParams("i", "5", "", 1) == exFromParams("i", "5", "", 1) );
 	}
 
-	//NodeIdHash folds namespaceUri, serverIndex and the identifier - but not nodeId.namespaceIndex, so ids that differ
-	//only by namespace collide.  Legal for a hash, worth knowing before it becomes a bucket key.
+	//NodeIdHash folds namespaceUri, serverIndex, the namespace index and the identifier.  The namespace index was missing
+	//(C4), so ids differing only by namespace collided while operator< - what equality is built on - separated them.
 	TEST( ExNodeIdTests, HashAgreesWithEquality ){
 		NodeIdHash hash;
 		EXPECT_EQ( hash(exFromJson(R"({"ns":2,"s":"tag"})")), hash(exFromJson(R"({"ns":2,"s":"tag"})")) );
@@ -150,6 +150,8 @@ namespace Jde::Opc::Tests{
 		EXPECT_NE( hash(exFromJson(R"({"s":"tag"})")), hash(exFromJson(R"({"s":"other"})")) );
 		EXPECT_NE( hash(exFromJson(R"({"i":5})")), hash(exFromParams("i", "5", "", 1)) );
 		EXPECT_NE( hash(exFromJson(R"({"i":5})")), hash(exFromParams("i", "5", "urn:test", 0)) );
+		EXPECT_NE( hash(exFromJson(R"({"ns":2,"i":5})")), hash(exFromJson(R"({"ns":3,"i":5})")) );//the namespace index
+		EXPECT_NE( hash(exFromJson(R"({"ns":2,"s":"tag"})")), hash(exFromJson(R"({"s":"tag"})")) );//...including against ns 0.
 	}
 
 	TEST( ExNodeIdTests, InsertParams ){
@@ -173,7 +175,18 @@ namespace Jde::Opc::Tests{
 		EXPECT_TRUE( noUri[5].is_null() ); //an empty namespaceUri is null, not "".
 	}
 
-	// ---- open findings.  See main.cpp for why these are disabled. ---------------------------------------------------
+	//L16, the ExNodeId half: its own UA_String_fromChars( ….c_str() ) sites are the flat_map ctor's identifier and the
+	//namespaceUri, which is the one field NodeId has no twin for.
+	TEST( ExNodeIdTests, EmbeddedNulSurvivesTheIdentifierAndUri ){
+		const string identifier{ "a\0b", 3 };
+		const string uri{ "urn:\0test", 9 };
+		let x = exFromParams( "s", identifier, uri, 3 );
+		ASSERT_TRUE( x.String() );
+		EXPECT_EQ( *x.String(), identifier );
+		EXPECT_EQ( ToString(x.namespaceUri), uri );
+		EXPECT_EQ( x.namespaceUri.length, 9u );
+	}
+
 
 	TEST( ExNodeIdTests, ConstructFromNodeId ){
 		let n = NodeId{ parse(R"({"ns":2,"s":"tag"})") };

@@ -39,7 +39,7 @@ namespace Jde::Opc::Server {
 				Variable node{
 					row,
 					GetUAServer().GetTypeDef( row.GetUInt32(12), _sl ),
-					variantPK && dtPK ? Variant{ *variantPK, Variant::ToUAValues(DT(*dtPK), move(values.at(*variantPK)), isArray), Variant::ToArrayDims(variantDims), DT(*dtPK) }.Move() : UA_Variant{},
+					variantPK && dtPK ? Variant{ *variantPK, Variant::ToUAValues(DT(*dtPK), Members(values, *variantPK), isArray), Variant::ToArrayDims(variantDims), DT(*dtPK) }.Move() : UA_Variant{},
 					DT( variableDTPK.value_or(UA_NS0ID_BASEDATATYPE) ),
 					Variant::ToArrayDims( row.GetString(24) )
 				};

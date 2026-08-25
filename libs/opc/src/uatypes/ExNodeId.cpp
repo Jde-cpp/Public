@@ -27,7 +27,7 @@ namespace Jde::Opc{
 			nodeId.namespaceIndex = Str::TryTo<UA_UInt16>( p->second ).value_or( 0 );
 		if( auto p = x.find("s"); p!=x.end() ){
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_STRING;
-			nodeId.identifier.string = UA_String_fromChars( p->second.c_str() );
+			nodeId.identifier.string = AllocUAString( p->second );
 		}
 		else if( auto p = x.find("i"); p!=x.end() ){
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_NUMERIC;
@@ -46,9 +46,9 @@ namespace Jde::Opc{
 			ToGuid( p->second, nodeId.identifier.guid );
 		}
 		else
-			DBGT( ELogTags::App, "No identifier in nodeId" );
+			DBGT( ELogTags::Parsing, "No identifier in nodeId" );
 		if( auto p = x.find("nsu"); p!=x.end() ) //allocated last: a throw above must not follow an allocation or the dtor never runs to free it.
-			namespaceUri = UA_String_fromChars( p->second.c_str() );
+			namespaceUri = AllocUAString( p->second );
 	}
 
 	//The jvalue overloads of Json::FindDefaultSV/FindNumber take a json *pointer path*, not a member name, so "nsu" never
@@ -86,7 +86,7 @@ namespace Jde::Opc{
 		}
 		else if( !r.IsNull(index+2) ){
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_STRING;
-			nodeId.identifier.string = UA_String_fromChars( r.GetString(index+2).c_str() );
+			nodeId.identifier.string = AllocUAString( r.GetString(index+2) );
 		}
 		else if( !r.IsNull(index+3) ){
 			nodeId.identifierType = UA_NodeIdType::UA_NODEIDTYPE_GUID;
@@ -98,7 +98,7 @@ namespace Jde::Opc{
 			UA_ByteString_allocBuffer( &nodeId.identifier.byteString, bytes.size() );
 			::memcpy( nodeId.identifier.byteString.data, bytes.data(), bytes.size() );
 		}
-		namespaceUri = extended ? UA_String_fromChars( uri.c_str() ) : UA_STRING_NULL;
+		namespaceUri = extended ? AllocUAString( uri ) : UA_STRING_NULL;
 		serverIndex = server;
 	}
 
@@ -117,14 +117,6 @@ namespace Jde::Opc{
 		return params;
 	}
 
-	α ExNodeId::SetNodeId( UA_NodeId&& x )ι->void{
-		UA_NodeId_clear( &nodeId );
-		nodeId = x;
-		UA_NodeId_init( &x );
-		UA_String_clear( &namespaceUri );
-		serverIndex = 0;
-	}
-
 	α ExNodeId::operator=( ExNodeId&& x )ι->ExNodeId&{
 		if( this!=&x ){
 			Clear();
@@ -137,12 +129,7 @@ namespace Jde::Opc{
 	}
 
 	α ExNodeId::Clear()ι->void{
-		if( namespaceUri.length )
-			UA_String_clear( &namespaceUri );
-		if( nodeId.identifierType==UA_NodeIdType::UA_NODEIDTYPE_STRING && nodeId.identifier.string.length )
-			UA_String_clear( &nodeId.identifier.string );
-		else if( nodeId.identifierType==UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING  && nodeId.identifier.byteString.length )
-			UA_ByteString_clear( &nodeId.identifier.byteString );
+		UA_ExpandedNodeId_clear( static_cast<UA_ExpandedNodeId*>(this) );
 	}
 
 	α ExNodeId::operator=( const ExNodeId& x )ι->ExNodeId&{
@@ -205,6 +192,8 @@ namespace Jde::Opc{
 		boost::hash_combine( seed, ToSV(n.namespaceUri) );
 		boost::hash_combine( seed, n.serverIndex );
 		let& nodeId = n.nodeId;
+		boost::hash_combine( seed, nodeId.namespaceIndex );//folded in: without it ns=2;i=5 and ns=3;i=5 collided, and
+		//operator< - which is what equality is built on - separates them, so the hash disagreed with equality.
 		if( nodeId.identifierType==UA_NodeIdType::UA_NODEIDTYPE_NUMERIC )
 			boost::hash_combine( seed, nodeId.identifier.numeric );
 		else if( nodeId.identifierType==UA_NodeIdType::UA_NODEIDTYPE_STRING )
@@ -213,28 +202,14 @@ namespace Jde::Opc{
 			boost::hash_combine( seed, ToBinaryString(nodeId.identifier.guid) );
 		else if( nodeId.identifierType==UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING )
 			boost::hash_combine( seed, ToSV(nodeId.identifier.byteString) );
-		return seed;//4452845294327023648
-	}
-	Ω toJson( jobject& j, const UA_NodeId& nodeId )ι->jobject{
-		if( nodeId.namespaceIndex )
-			j["ns"] = nodeId.namespaceIndex;
-		const UA_NodeIdType type = nodeId.identifierType;
-		if( type==UA_NodeIdType::UA_NODEIDTYPE_NUMERIC )
-			j["i"] = nodeId.identifier.numeric;
-		else if( type==UA_NodeIdType::UA_NODEIDTYPE_STRING )
-			j["s"] = ToSV( nodeId.identifier.string );
-		else if( type==UA_NodeIdType::UA_NODEIDTYPE_GUID )
-			j["g"] = ToJson( nodeId.identifier.guid );
-		else if( type==UA_NodeIdType::UA_NODEIDTYPE_BYTESTRING )
-			j["b"] = ByteStringToBase64( nodeId.identifier.byteString );
-		return j;
+		return seed;
 	}
 	α ExNodeId::Add( jobject& j )Ι->void{
 		if( namespaceUri.length )
 			j["nsu"] = ToSV(namespaceUri);
 		if( serverIndex )
 			j["serverindex"] = serverIndex;
-		toJson( j, nodeId );
+		AddNodeId( j, nodeId, true );//true: an ExpandedNodeId omits ns 0, the way it omits an empty nsu and server 0.
 	}
 }
 namespace Jde{
@@ -244,7 +219,7 @@ namespace Jde{
 			j["nsu"] = ToSV(x.namespaceUri);
 		if( x.serverIndex )
 			j["serverindex"] = x.serverIndex;
-		toJson( j, x.nodeId );
+		AddNodeId( j, x.nodeId, true );
 		return j;
 	}
 }

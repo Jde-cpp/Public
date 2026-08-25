@@ -1,5 +1,7 @@
 //Value is the read path (UA_DataValue -> json for the gateway's clients) and the write path (json -> UA_DataValue).
 //Whatever ToJson emits for a type, Set has to accept back.
+#include <cmath>
+#include <limits>
 #include <gtest/gtest.h>
 #include <jde/opc/uatypes/NodeId.h>
 #include <jde/opc/uatypes/Value.h>
@@ -106,6 +108,142 @@ namespace Jde::Opc::Tests{
 		EXPECT_EQ( Value( jvalue{"abc"}, &UA_TYPES[UA_TYPES_STRING] ).ToJson().as_string(), "abc" );
 	}
 
+	//review3 #6: ToJson emits a 64-bit integer as the protobufjs Long {high,low,unsigned} so the SPA can build a Long,
+	//but Set routed INT64/UINT64 to AsNumber, whose try_to_number returns not_number for an object - so the library
+	//rejected its own output with "Could not convert to number.".  Any read-modify-write client trips it, and so does a
+	//`GatewayService.write( …, Long )`: long.js 5.3.2 has no toJSON, so JSON.stringify sends {low,high,unsigned}.
+	TEST( ValueTests, SetAcceptsTheLongFormItEmits ){
+		for( let v : { (UA_Int64)0, (UA_Int64)42, (UA_Int64)-42, (UA_Int64)0x0000000100000002ll,
+				(std::numeric_limits<UA_Int64>::max)(), (std::numeric_limits<UA_Int64>::min)() } ){
+			let j = dataValue( &v, UA_TYPES[UA_TYPES_INT64] ).ToJson();
+			ASSERT_TRUE( j.is_object() ) << v;
+			let round = Value{ j, &UA_TYPES[UA_TYPES_INT64] };
+			EXPECT_EQ( round.Get<UA_Int64>(0), v ) << serialize( j );
+			EXPECT_EQ( serialize(round.ToJson()), serialize(j) ) << v;//and it re-emits the same shape.
+		}
+		for( let v : { (UA_UInt64)0, (UA_UInt64)5, (std::numeric_limits<UA_UInt64>::max)() } ){
+			let j = dataValue( &v, UA_TYPES[UA_TYPES_UINT64] ).ToJson();
+			EXPECT_EQ( Value( j, &UA_TYPES[UA_TYPES_UINT64] ).Get<UA_UInt64>(0), v ) << serialize( j );
+		}
+		//protobufjs's own spelling - a *signed* int32 low - reads the same, which is the point of masking each half.
+		EXPECT_EQ( Value( parse(R"({"high":0,"low":-1,"unsigned":true})"), &UA_TYPES[UA_TYPES_UINT64] ).Get<UA_UInt64>(0), 0xFFFFFFFFull );
+		//A typeless write takes its signedness from the flag, so the inference sees a number rather than an object.
+		EXPECT_TRUE( Value( parse(R"({"high":0,"low":5,"unsigned":true})"), nullptr ).ToJson().at("unsigned").as_bool() );
+		EXPECT_FALSE( Value( parse(R"({"high":0,"low":5,"unsigned":false})"), nullptr ).ToJson().at("unsigned").as_bool() );
+		//A half that is not a 32-bit half is malformed, not truncated.
+		EXPECT_THROW( Value( parse(R"({"high":4294967296,"low":0})"), &UA_TYPES[UA_TYPES_INT64] ), Exception );
+	}
+
+	//review3 #7: `IS(ua)` compared the descriptor *address*, so the NS0 alias descriptors FindDataType returns -
+	//IntegerId (i=288), Counter, LocaleId, Image*, AudioData … - matched no arm at all, although each carries the same
+	//typeKind as the type it aliases.  A write to such a node threw "has not been implemented", a read was "not a
+	//number", and OpcServer's {dataType:288,value:5} could not create the node.  Dispatch is on typeKind now.
+	TEST( ValueTests, Ns0AliasTypesTakeTheirBaseArm ){
+		auto integerId = Value{ jvalue{5}, &UA_TYPES[UA_TYPES_INTEGERID] };//UInt32 by kind.
+		EXPECT_EQ( integerId.ToJson().to_number<uint32_t>(), 5u );
+		EXPECT_EQ( integerId.AsNumber<int>(), 5 );
+
+		const UA_UInt32 counter{ 7 };
+		auto asCounter = dataValue( &counter, UA_TYPES[UA_TYPES_COUNTER] );
+		EXPECT_EQ( asCounter.ToJson().to_number<uint32_t>(), 7u );
+		EXPECT_EQ( asCounter.AsNumber<uint>(), 7u );
+
+		EXPECT_EQ( Value( jvalue{"tag"}, &UA_TYPES[UA_TYPES_LOCALEID] ).ToJson().as_string(), "tag" );//String by kind.
+		EXPECT_DOUBLE_EQ( Value( jvalue{1.5}, &UA_TYPES[UA_TYPES_DURATION] ).AsNumber<double>(), 1.5 );//Double by kind.
+		//UtcTime is a DateTime by kind, so it reads the same json a DateTime does.
+		EXPECT_EQ( Value( parse(R"({"seconds":1700000000,"nanos":0})"), &UA_TYPES[UA_TYPES_UTCTIME] ).ToJson().at("seconds").to_number<int64_t>(), 1700000000 );
+	}
+
+	//Same finding: Set had a BYTE arm but no SBYTE one, so every write to an SByte node - i=2, what a PLC server gives a
+	//`Char`, and what the SPA classes isInteger and sends as a plain number - threw "has not been implemented".
+	TEST( ValueTests, SetAcceptsAnSByte ){
+		EXPECT_EQ( Value( jvalue{-100}, &UA_TYPES[UA_TYPES_SBYTE] ).Get<UA_SByte>(0), -100 );
+		EXPECT_EQ( Value( jvalue{127}, &UA_TYPES[UA_TYPES_SBYTE] ).AsNumber<int>(), 127 );
+		EXPECT_THROW( Value( jvalue{128}, &UA_TYPES[UA_TYPES_SBYTE] ), Exception );//still range-checked.
+	}
+
+	//Same finding: Set had no array branch at all, so an Int32[3] write-back failed with the misleading
+	//"'[1,2,3]', Could not convert to number.".  The contract in this file's header is what is pinned - whatever ToJson
+	//emits for a type, Set has to accept back - now for the array shape as well as the scalar one.
+	TEST( ValueTests, ArrayRoundTrip ){
+		const UA_Int32 i32[]{ 1, -2, 3 };
+		let ints = arrayDataValue( i32, 3u, UA_TYPES[UA_TYPES_INT32] );
+		let j = ints.ToJson();
+		ASSERT_TRUE( j.is_array() );
+		let round = Value{ j, &UA_TYPES[UA_TYPES_INT32] };
+		EXPECT_FALSE( round.IsScalar() );
+		ASSERT_EQ( round.value.arrayLength, 3u );
+		EXPECT_EQ( round.Get<UA_Int32>(2), 3 );
+		EXPECT_EQ( serialize(round.ToJson()), serialize(j) );
+
+		//The elements go through Set, so the array shape inherits every scalar arm - including #6's Long form...
+		const UA_Int64 i64[]{ 42, -42 };
+		let longs = arrayDataValue( i64, 2u, UA_TYPES[UA_TYPES_INT64] );
+		let longsRound = Value{ longs.ToJson(), &UA_TYPES[UA_TYPES_INT64] };
+		EXPECT_EQ( longsRound.Get<UA_Int64>(1), -42 );
+		//...and the heap types, whose elements the array now owns.
+		let strings = { ToUV("a"), ToUV("bc") };
+		let text = arrayDataValue( std::data(strings), 2u, UA_TYPES[UA_TYPES_STRING] );
+		let textRound = Value{ text.ToJson(), &UA_TYPES[UA_TYPES_STRING] };
+		ASSERT_EQ( textRound.value.arrayLength, 2u );
+		EXPECT_EQ( ToString(textRound.Get<UA_String>(1)), "bc" );
+
+		EXPECT_EQ( Value( parse("[]"), &UA_TYPES[UA_TYPES_INT32] ).value.arrayLength, 0u );//an empty array is still an array.
+		EXPECT_THROW( Value( parse("[[1,2]]"), &UA_TYPES[UA_TYPES_INT32] ), Exception );   //a UA array is flat.
+		EXPECT_THROW( Value( parse(R"([1,"x"])"), &UA_TYPES[UA_TYPES_INT32] ), Exception );//one bad element fails the write.
+	}
+
+	//review3 #10: a NaN reading serialized as `null` - Boost.JSON's default serialize_options - which is the same text a
+	//value-less reading produces, so a failed sensor reached the SPA as a blank tag, while the same node over the socket
+	//showed NaN.  The alternative the finding offered, allow_infinity_and_nan, writes the bare tokens NaN/Infinity, which
+	//are not json: JSON.parse throws on the whole response.  OPC-UA Part 6 spells them as strings, which is what
+	//UA_encodeJson writes and therefore what Variant::ToJson has always emitted - so Value now agrees with Variant.
+	TEST( ValueTests, NonFiniteReadingsKeepTheirUaSpelling ){
+		let nan = std::numeric_limits<UA_Double>::quiet_NaN();
+		let inf = std::numeric_limits<UA_Double>::infinity();
+		let negInf = -inf;
+		EXPECT_EQ( serialize(dataValue(&nan, UA_TYPES[UA_TYPES_DOUBLE]).ToJson()), R"("NaN")" );
+		EXPECT_EQ( serialize(dataValue(&inf, UA_TYPES[UA_TYPES_DOUBLE]).ToJson()), R"("Infinity")" );
+		EXPECT_EQ( serialize(dataValue(&negInf, UA_TYPES[UA_TYPES_DOUBLE]).ToJson()), R"("-Infinity")" );
+		let nanF = std::numeric_limits<UA_Float>::quiet_NaN();
+		EXPECT_EQ( serialize(dataValue(&nanF, UA_TYPES[UA_TYPES_FLOAT]).ToJson()), R"("NaN")" );
+
+		//The point of the finding: it is no longer the same text as a reading that never happened.
+		EXPECT_NE( serialize(dataValue(&nan, UA_TYPES[UA_TYPES_DOUBLE]).ToJson()), serialize(Value(UA_DataValue{}).ToJson()) );
+		//...and a finite reading is untouched.
+		const UA_Double finite{ 42.7 };
+		EXPECT_DOUBLE_EQ( dataValue(&finite, UA_TYPES[UA_TYPES_DOUBLE]).ToJson().to_number<double>(), 42.7 );
+
+		//Arrays carry it per element, mixed with finite ones.
+		const UA_Double mixed[]{ 1.5, nan };
+		let arrayJson = arrayDataValue( mixed, 2u, UA_TYPES[UA_TYPES_DOUBLE] ).ToJson();
+		ASSERT_TRUE( arrayJson.is_array() );
+		EXPECT_EQ( arrayJson.as_array()[1].as_string(), "NaN" );
+
+		//And Set reads every one of them back - the contract in this file's header.
+		EXPECT_TRUE( std::isnan(Value( jvalue{"NaN"}, &UA_TYPES[UA_TYPES_DOUBLE] ).Get<UA_Double>(0)) );
+		EXPECT_EQ( Value( jvalue{"Infinity"}, &UA_TYPES[UA_TYPES_DOUBLE] ).Get<UA_Double>(0), inf );
+		EXPECT_EQ( Value( jvalue{"-Infinity"}, &UA_TYPES[UA_TYPES_DOUBLE] ).Get<UA_Double>(0), negInf );
+		EXPECT_TRUE( std::isnan(Value( jvalue{"NaN"}, &UA_TYPES[UA_TYPES_FLOAT] ).Get<UA_Float>(0)) );
+		EXPECT_TRUE( std::isnan(Value( arrayJson, &UA_TYPES[UA_TYPES_DOUBLE] ).Get<UA_Double>(1)) );
+		//Any other string is still an error rather than a silent NaN.
+		EXPECT_THROW( Value( jvalue{"nan"}, &UA_TYPES[UA_TYPES_DOUBLE] ), Exception );
+		EXPECT_THROW( Value( jvalue{"abc"}, &UA_TYPES[UA_TYPES_FLOAT] ), Exception );
+	}
+
+	//L19: the json constructor never set hasValue.  Harmless while WriteAwait passes only `&_value.value` and the vendor
+	//sets the flag itself, but a caller handing over the whole UA_DataValue - which is what the type is - would have sent
+	//a value-less write, and the server would have taken it as "no value supplied".
+	TEST( ValueTests, TheJsonCtorSaysItHasAValue ){
+		let scalar = Value{ jvalue{42}, &UA_TYPES[UA_TYPES_INT32] };
+		EXPECT_TRUE( scalar.hasValue );
+		EXPECT_FALSE( scalar.IsEmpty() );
+		EXPECT_TRUE( Value( parse("[1,2]"), &UA_TYPES[UA_TYPES_INT32] ).hasValue );//the array branch too.
+		EXPECT_TRUE( Value( jvalue{5}, nullptr ).hasValue );                       //and the typeless inference.
+		//A status-only Value still has none - there is nothing to write.
+		EXPECT_FALSE( Value( (StatusCode)UA_STATUSCODE_BADNODEIDUNKNOWN ).hasValue );
+	}
+
 	TEST( ValueTests, SetRejectsTheWrongJsonKind ){
 		EXPECT_THROW( Value( jvalue{42}, &UA_TYPES[UA_TYPES_BOOLEAN] ), Exception );
 		EXPECT_THROW( Value( jvalue{42}, &UA_TYPES[UA_TYPES_STRING] ), Exception );
@@ -131,7 +269,6 @@ namespace Jde::Opc::Tests{
 		EXPECT_THROW( arrayDataValue(values, 2u, UA_TYPES[UA_TYPES_INT32]).AsNumber<int32_t>(), Exception );
 	}
 
-	// ---- the review's open findings.  See main.cpp for why these are disabled. -------------------------------------
 
 	//#3 (fixed): the ToJson fallback sat *inside* the per-element loop and re-encoded the whole variant each time, and the
 	//IS() chain had no LOCALIZEDTEXT/QUALIFIEDNAME arm - a LocalizedText[3] serialized as [[a,b,c],[a,b,c],[a,b,c]].
@@ -229,6 +366,37 @@ namespace Jde::Opc::Tests{
 	}
 
 	//The json path rejected a value too wide for T; a direct read must not quietly truncate instead.
+	//review3 #13: AsNumber<Integral> on a Float/Double node was `(T)Get<UA_Double>(0)` with no check at all.  [conv.fpint]
+	//is undefined for a NaN, an infinity, or a value whose truncation does not fit, and x86-64's cvttsd2si answers
+	//INT64_MIN quietly - a failed sensor came back as 9223372036854775808 instead of failing - while clang's
+	//-fsanitize=undefined group does not include float-cast-overflow, so the debug build never trapped it either.
+	TEST( ValueTests, AsNumberBoundsAFloatSource ){
+		let nan = std::numeric_limits<UA_Double>::quiet_NaN();
+		let inf = std::numeric_limits<UA_Double>::infinity();
+		EXPECT_THROW( dataValue(&nan, UA_TYPES[UA_TYPES_DOUBLE]).AsNumber<uint>(), Exception );
+		EXPECT_THROW( dataValue(&inf, UA_TYPES[UA_TYPES_DOUBLE]).AsNumber<int>(), Exception );
+		const UA_Double big{ 1e12 };
+		EXPECT_THROW( dataValue(&big, UA_TYPES[UA_TYPES_DOUBLE]).AsNumber<int32_t>(), Exception );
+		const UA_Double negative{ -1.5 };
+		EXPECT_THROW( dataValue(&negative, UA_TYPES[UA_TYPES_DOUBLE]).AsNumber<uint>(), Exception );//the soak runner's case.
+
+		//The top of the range is where a `(U)numeric_limits<T>::max()` bound would round up and let one value through.
+		const UA_Double past{ 9223372036854775808.0 };//2^63
+		EXPECT_THROW( dataValue(&past, UA_TYPES[UA_TYPES_DOUBLE]).AsNumber<int64_t>(), Exception );
+		const UA_Double top{ 9223372036854774784.0 };//the largest double below 2^63
+		EXPECT_EQ( dataValue(&top, UA_TYPES[UA_TYPES_DOUBLE]).AsNumber<int64_t>(), 9223372036854774784LL );
+
+		//In range it still truncates rather than demanding exactness - the live callers read a Float sensor and want its
+		//integral part, which is where this differs from the json path the old comment claimed parity with.
+		const UA_Double fraction{ 42.7 };
+		EXPECT_EQ( dataValue(&fraction, UA_TYPES[UA_TYPES_DOUBLE]).AsNumber<uint>(), 42u );
+		const UA_Float f{ 42.7f };
+		EXPECT_EQ( dataValue(&f, UA_TYPES[UA_TYPES_FLOAT]).AsNumber<uint>(), 42u );
+		//A floating target is unaffected either way.
+		EXPECT_DOUBLE_EQ( dataValue(&fraction, UA_TYPES[UA_TYPES_DOUBLE]).AsNumber<double>(), 42.7 );
+		EXPECT_TRUE( std::isnan(dataValue(&nan, UA_TYPES[UA_TYPES_DOUBLE]).AsNumber<double>()) );
+	}
+
 	TEST( ValueTests, AsNumberRejectsAValueTooWideForTheTarget ){
 		const UA_Int64 big{ 1'000'000 };
 		EXPECT_THROW( dataValue(&big, UA_TYPES[UA_TYPES_INT64]).AsNumber<int16_t>(), Exception );
@@ -290,6 +458,22 @@ namespace Jde::Opc::Tests{
 		ASSERT_TRUE( ja.at("v").is_array() );
 		EXPECT_EQ( ja.at("v").as_array().size(), 2u );
 		EXPECT_EQ( ja.at("v").as_array()[1].to_number<int>(), 2 );
+	}
+
+	//The other shape ToJson emits that Set could not read back: a reading carrying a status, {v,sc} - review2 #15.
+	TEST( ValueTests, SetUnwrapsTheStatusWrapper ){
+		const UA_Double d{ 42.7 };
+		let j = statusValue( UA_STATUSCODE_UNCERTAINLASTUSABLEVALUE, &d ).ToJson();
+		ASSERT_TRUE( j.as_object().contains("sc") );
+		EXPECT_DOUBLE_EQ( Value( j, &UA_TYPES[UA_TYPES_DOUBLE] ).Get<UA_Double>(0), 42.7 );
+
+		//Nested, since an Uncertain 64-bit reading is {v:{high,low,unsigned},sc}.
+		const UA_Int64 i{ -42 };
+		auto uncertain = dataValue( &i, UA_TYPES[UA_TYPES_INT64] );
+		uncertain.status = UA_STATUSCODE_UNCERTAIN; uncertain.hasStatus = true;
+		let nested = uncertain.ToJson();
+		ASSERT_TRUE( nested.at("v").is_object() );
+		EXPECT_EQ( Value( nested, &UA_TYPES[UA_TYPES_INT64] ).Get<UA_Int64>(0), -42 );
 	}
 
 	//With nothing to show, the status is still worth reporting - otherwise an Uncertain-but-empty value became a bare null.
