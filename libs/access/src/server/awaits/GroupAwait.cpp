@@ -35,6 +35,7 @@ namespace Jde::Access::Server{
 			optional<jarray> members;
 			bool haveId{};
 			_query.JsonName = _query.IsPlural() ? "identities" : "identity"; //from members, want distinct + nothing in members table except for members.
+			_query.SetDBTable( GetTablePtr("identities", _sl) );//the rename alone left _dbTable on access_groups - the member map, one row per member - so SelectStatement joined it to its identities base and fanned a group out into one row per member.
 			_query.AddFilter( "is_group", true );
 			_query.ReturnRaw = true;
 			let onlyHaveId = _query.Columns.size()==1 && _query.Columns[0].JsonName=="id";

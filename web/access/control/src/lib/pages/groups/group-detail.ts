@@ -7,7 +7,7 @@ import { MatIcon } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 
 import { ComponentPageTitle, RouteItem, ProfileStore } from 'jde-spa';
-import { arraysEqual, cloneClassArray, DetailResolverData, Properties, SnackbarService, IGraphQL, QLSelector, toIdArray, TargetRow} from 'jde-framework';
+import { arraysEqual, cloneClassArray, DetailResolverData, Properties, SnackbarService, IGraphQL, QLSelector, Style, toIdArray, TargetRow} from 'jde-framework';
 
 import { RolePK } from '../../model/role';
 import { PermissionTable } from '../../shared/permissions/permission-table';
@@ -99,10 +99,15 @@ export class GroupDetail implements OnDestroy, OnInit{
 	get schema(){ return this.pageData.schema; }
 	sideNav = model.required<RouteItem>();
 	tabIndex = signal<number>( ProfileStore.tabIndex('groupDetail') );
-	excludedColumns = groupTableSettings.excludedColumns;
+	excludedColumns = [...groupTableSettings.excludedColumns, "provider"];//a group has no login provider - the column exists only because groups share the identity view with users.
 	ql:IGraphQL = inject( AccessService );
 }
 export const groupTableSettings = {
 	excludedColumns: ["isGroup", "members"],
+	columns: [ //without this the list falls back to ListRoute's name/created/updated/deleted/target default.
+		{ name:"name", style: new Style(300) },
+		"target",
+		"description"
+	],
 	collectionName: "groups"
 }

@@ -154,4 +154,26 @@ namespace Jde::Access::Tests{
 	TEST_F( GroupTests, ScalarFilterArgIsRefusedNotFatal ){
 		EXPECT_THROW( QL().QuerySync<jarray>("groups( filter:\"x\" ){ id }", {}, GetRoot()), Exception );
 	}
+
+	//GroupAwait::Select redirects the list to identities, but the redirect used to rename only the json name and leave the
+	//query's table on access_groups - the member map, one row per member - so SelectStatement joined it back to its identities
+	//base and a two-member group came back as two identical rows on /access/groups.
+	TEST_F( GroupTests, MultiMemberGroupIsOneListRow ){
+		let root = GetRoot();
+		const GroupPK group{ GetId(GetGroup("list-fanout", root)) };
+		const UserPK first{ GetId(GetUser("list-fanout-a", root)) };
+		const UserPK second{ GetId(GetUser("list-fanout-b", root)) };
+		AddToGroup( group, {first, second}, root );
+
+		let rows = QL().QuerySync<jarray>( "groups( limit:100 ){ id name target }", {}, root );
+		uint count{};
+		for( let& row : rows )
+			count += GetId( AsObject(row) )==group.Value;
+		EXPECT_EQ( count, 1u ) << serialize( rows );
+
+		RemoveFromGroup( group, {first, second}, root );
+		PurgeGroup( group, root );
+		PurgeUser( first, root );
+		PurgeUser( second, root );
+	}
 }

@@ -54,25 +54,33 @@ export class SnackbarService{
 			throw "assert failed";
 		}
 	}
-	private processEvent( e:any, type:Type=Type.Error, info?:string ):void{
+	//What the thrown value itself says, in whatever shape it arrived.  undefined when it says nothing quotable (a function,
+	//an empty object) - the caller's context is then the whole message.
+	private static errorText( e:any ):string|undefined{
 		if( e instanceof HttpErrorResponse ){
-			if( e.error instanceof ProgressEvent )
-				this.show( `timeout`, type, e );
-			else if( e.error && e.error.message )
-				this.show( e.error.message, type, e );
-			else
-				this.show( `(${e.status})${e.error}`, type, e );
+			if( typeof ProgressEvent!="undefined" && e.error instanceof ProgressEvent )//the global is browser-only:  a bare `instanceof` is a ReferenceError wherever it is not defined, which would replace the error with one of its own
+				return "timeout";
+			return e.error && e.error.message ? e.error.message : `(${e.status})${e.error}`;
 		}
-		else if( typeof e=='object' && typeof e?.error?.message=="string" )//a ProtoService rejection - {error:IError}; was falling through to the JSON.stringify fallback
-			this.show( e.error.httpStatus ? `(${e.error.httpStatus})${e.error.message}` : e.error.message, type, e );
-		else if( typeof e=='object' && typeof e.message=="string" )
-			this.show( e.message, type, e );
-		else if( e instanceof Error )
-			this.show( `${e.cause}:  ${e.message}`, Type.Error, e );
-		else if( info )
-			this.show( `${info}  ${typeof e=='string' ? e : JSON.stringify(e)}`, Type.Error, e );
-		else
-			this.show( typeof e=='string' ? e : `Unknown error:  ${JSON.stringify(e)}`, type, e );//plain-string throws are common in this codebase — must reach the user
+		if( typeof e=='object' && e ){
+			if( typeof e.error?.message=="string" )//a ProtoService rejection - {error:IError}
+				return e.error.httpStatus ? `(${e.error.httpStatus})${e.error.message}` : e.error.message;
+			if( typeof e.message=="string" )//Error, and anything else carrying a message
+				return e.message;
+		}
+		if( typeof e=='string' )//plain-string throws are common in this codebase — must reach the user
+			return e;
+		let json:string|undefined;
+		try{ json = JSON.stringify( e ); }catch{ json = undefined; }//a cyclic throw must not replace the error with a TypeError of its own
+		return json && json!="{}" ? `Unknown error:  ${json}` : undefined;
+	}
+	//`info` is the caller's context ("Save failed.", "Could not load 'readers'").  It used to be dropped for every shape but
+	//the last two, which meant the two that actually reach production - HttpErrorResponse and a {error:IError} rejection -
+	//showed the bare server text with no clue which page or action produced it.  It prefixes the message now.
+	private processEvent( e:any, type:Type=Type.Error, info?:string ):void{
+		const text = SnackbarService.errorText( e );
+		const message = info && text && info!=text ? `${info}  ${text}` : info ?? text ?? "Unknown error";
+		this.show( message, type, e );
 	}
 
 	exception( message:string, e:any ){

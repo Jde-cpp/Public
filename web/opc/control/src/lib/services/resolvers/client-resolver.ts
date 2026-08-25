@@ -25,7 +25,12 @@ export class ClientResolver implements Resolve<DetailResolverData<ServerCnnctn>>
 		let gatewayTarget = parent.url[parent.url.length-1].path;
 		const ql = await this.gatewayService.gateway( gatewayTarget );
 		let siblings = this.routeStore.getChildren( parent.url ).map( s=>new RouteItem({path:`${s.path}`, title:s.title}) );
-		const routing = new DetailRoute( target, siblings.find(s=>s.path.endsWith('/'+target))?.title, siblings, new RouteItem({path:'.', title:parent.params["instance"]}) );
+		const routing = new DetailRoute(
+			target,
+			siblings.find(s=>s.path==target || s.path.endsWith('/'+target))?.title,
+			siblings,
+			new RouteItem({path:'.', title:parent.params["instance"]})
+		);
 		try{
 			return await ClientResolver.load( ql, this.opcStore, target, routing, this.snackbar );//await inside try — without it, async failures skip the catch entirely
 		}

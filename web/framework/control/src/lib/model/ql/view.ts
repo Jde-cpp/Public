@@ -304,7 +304,7 @@ export class View{
 				const op = View.comparisonOperator( filter.operator );
 				if( op=="nin" ){//NotIn takes the full value array (server nin now fixed)
 					args.push( `${name}:{nin:$${name}}` );
-					vars[name] = [...values];
+					vars[name] = values.map( v=>v=="<null>" ? null : v );
 				}
 				else if( op ){
 					args.push( `${name}:{${op}:$${name}}` );
@@ -312,7 +312,9 @@ export class View{
 				}
 				else{//In → bare-array form the server treats as `in`
 					args.push( `${name}:$${name}` );
-					vars[name] = [...values];
+					//colSuggestions() offers "<null>" for a nullable column, and it has to leave as a JSON null:  QL::ToWhereClause
+					//turns a null array element into `is null`, while the literal string went out as `in ('<null>')` and matched nothing.
+					vars[name] = values.map( v=>v=="<null>" ? null : v );
 				}
 			}
 		}

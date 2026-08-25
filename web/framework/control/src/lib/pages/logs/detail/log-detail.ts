@@ -8,7 +8,6 @@ import { LogDataSource } from '../log-data-source';
 import {AppStatus} from '../../../services/app/application';
 import {LogSettings} from '../log-settings';
 import { QLListSettings } from '../../ql/list/ql-list-settings/ql-list-settings';
-import { ComponentPageTitle } from 'jde-spa';
 import {SnackbarService} from '../../../shared/snackbar/snackbar-service';
 
 
@@ -43,11 +42,10 @@ import { Entry,LogEntries, LogEntriesRest, LogView } from '../log-entry';
 	imports: [CommonModule, MatButtonToggle, MatButtonToggleGroup, MatChip, MatFormFieldModule, MatIcon, MatIconButton, MatTableModule, MatToolbar, MatTooltip, MatSelectModule, MatSortModule, Paginator, QLListSettings]
 })
 export class LogDetail implements OnInit, OnDestroy{
-	constructor( public _componentPageTitle: ComponentPageTitle, private snackBar: SnackbarService ){
+	constructor( private snackBar: SnackbarService ){
 	}
 
 	async ngOnInit(){
-		this._componentPageTitle.title = "Logs";
 		this.data = new LogDataSource( this.view );
 		this.profile = await this.profileStore.load<LogSettings>( "logs", new LogSettings() );
 		this.data.filter.level = this.profile.level;//assigned straight in, so the level setter did not run

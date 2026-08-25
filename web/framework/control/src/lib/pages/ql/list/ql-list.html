@@ -5,7 +5,7 @@
 		<ng-container>
 			<mat-toolbar>
 				<div class="bar-left">
-					@if( canAdd() ){
+					@if( canAdd() && !selector() ){
 						<button [matButton]="isRefreshing() || data().length ? 'tonal' : 'filled'" (click)="onAdd()"><mat-icon>add</mat-icon>Add</button><!--filled only on a genuinely empty list, where Add is the one useful action; isRefreshing suppresses the flash while a reload has the rows cleared-->
 					}
 				</div>
@@ -24,7 +24,9 @@
 				</div>
 				<div class="bar-right">
 					<span class="row-count">{{ data().length }} {{ data().length==1 ? "row" : "rows" }}</span>
-					<mat-checkbox [checked]="showDeleted()" (change)="onToggleShowDeleted()">Show deleted</mat-checkbox>
+					@if( !selector() ){
+						<mat-checkbox [checked]="showDeleted()" (change)="onToggleShowDeleted()">Show deleted</mat-checkbox>
+					}
 				</div>
 			</mat-toolbar>
 			<mat-progress-bar class="refresh-bar" [mode]="isRefreshing() ? 'indeterminate' : 'determinate'" [value]="0"></mat-progress-bar>

@@ -61,7 +61,10 @@ export class GraphQLTable{
 	isAllSelected(){ return this.selections().selected.length==this.dataSource()().length; }
 	isSelected( row:any ){ return this.selections().isSelected(row); }
 	columnName( colName:string ){ return this.displayedFields().find(f=>f.name===colName)?.displayName ?? StringUtils.capitalize(colName); }
-	columnStyle( colName:string ){ return this.displayedFields().find(f=>f.name===colName)?.style || {}; }
+	columnStyle( colName:string ):Record<string,string>{
+		const style = this.displayedFields().find( f=>f.name===colName )?.style;
+		return style ? Object.fromEntries( Object.entries(style).filter(([,v])=>v!=null).map(([k,v])=>[k,`${v}`]) ) : {};
+	}
 	objectValue( obj: any ): string{
 		if( obj==null || typeof obj === 'string' )
 			return obj ?? '';

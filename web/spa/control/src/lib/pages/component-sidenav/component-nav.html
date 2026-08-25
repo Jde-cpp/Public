@@ -17,7 +17,7 @@
 							[activated]="link.isActive"
 							routerLinkActive="docs-component-viewer-sidenav-item-selected"
 							[routerLinkActiveOptions]="{ matrixParams:'ignored', queryParams: 'exact', paths: 'exact', fragment: 'ignored' }"
-							[attr.aria-current]="currentItemId === component.path ? 'page': 'false'">
+							[attr.aria-current]="link.isActive ? 'page': 'false'">
 						{{component.title}}
 					</a>
 				}

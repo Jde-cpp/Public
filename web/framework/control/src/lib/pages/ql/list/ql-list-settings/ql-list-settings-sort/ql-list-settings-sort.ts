@@ -21,7 +21,7 @@ import { View } from '../../../../../model/ql/view';
 })
 export class QLListSettingsSort implements OnInit{
 	ngOnInit(){
-		this.dataSource = [...this.view().sort.map( s=>({...s}) ), {...QLListSettingsSort.emptySort}];//spread each Sort, not just the array: onToggleDirection/updateSort mutate `col` in place, so the shallow copy let direction+active edits survive Cancel
+		this.dataSource = [...this.view().sort?.map( s=>({...s}) ) ?? [], {...QLListSettingsSort.emptySort}];//spread each Sort, not just the array: onToggleDirection/updateSort mutate `col` in place, so the shallow copy let direction+active edits survive Cancel
 	}
 	onToggleDirection( col:Sort ){
 		col.direction = col.direction === 'asc' ? 'desc' : 'asc';

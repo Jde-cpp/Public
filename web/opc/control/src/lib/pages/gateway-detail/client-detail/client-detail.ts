@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 
-import { ProfileStore } from 'jde-spa';
+import { ComponentPageTitle, ProfileStore } from 'jde-spa';
 import { DetailResolverData, SnackbarService, IGraphQL, Properties} from 'jde-framework';
 
 import { ServerProperties } from './server-properties/server-properties';
@@ -20,7 +20,7 @@ import { Server } from '../../../model/server';
 	imports: [CommonModule, MatButtonModule, MatIcon, MatTabsModule, Properties, ServerProperties],
 })
 export class ClientDetail implements OnDestroy, OnInit{
-	constructor( private route: ActivatedRoute, private router:Router, private snackbar: SnackbarService ){
+	constructor( private route: ActivatedRoute, private router:Router, private componentPageTitle:ComponentPageTitle, private snackbar: SnackbarService ){
 		effect(() => {
 			if( !this.properties() )
 				return;
@@ -35,6 +35,7 @@ export class ClientDetail implements OnDestroy, OnInit{
 			this.pageData.row = null;
 
 			this.properties.set( this.serverCnnctn.properties );
+			this.componentPageTitle.title = this.serverCnnctn.name ? `${this.serverCnnctn.name} - Connection` : "New Connection";
 		});
 	}
 	ngOnDestroy(){

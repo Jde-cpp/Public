@@ -30,14 +30,21 @@ export class AccessService extends AppService implements OnDestroy{
 		return resources.find( r=>r.target==target );
 	}
 
-	override targetQuery( schema: TableSchema, target: string, showDeleted:boolean ):string{
-		let fields = super.fieldColumns( schema, showDeleted, [] );
+	//excludedColumns is the collection's tableSettings list, forwarded by DetailResolver.  Hardcoding [] here dropped it:
+	//Role's introspected 'permissions' is the extends-base link (roles.role_id -> permissions.permission_id) and the
+	//permissions table has no name column, so the generated `permissions{id name}` failed the whole query with a 500.
+	override targetQuery( schema: TableSchema, target: string, showDeleted:boolean, excludedColumns:string[]=[] ):string{
+		let fields = super.fieldColumns( schema, showDeleted, excludedColumns );
 		switch( schema.collectionName ){
 			case "users":
 				fields.push( `groups{id}` );
 				break;
 			case "groups":
-				fields[fields.findIndex(f=>f.startsWith("members"))] = `groupMembers{id isGroup}`; //the server parses/returns groupMembers (group_members view); 'members' is only the introspection field name.
+				//the server parses/returns groupMembers (group_members view); 'members' is only the introspection field name.
+				//It is in groupTableSettings.excludedColumns, so fieldColumns may not have emitted it at all - drop whatever
+				//is there and append, rather than assigning over a findIndex of -1.
+				fields = fields.filter( f=>!f.startsWith("members") );
+				fields.push( `groupMembers{id isGroup}` );
 				fields.push( "id" ); //not in the introspected type (the map table has two surrogate keys, so no pk field) but the subQueries need it.
 				break;
 			case "roles":
