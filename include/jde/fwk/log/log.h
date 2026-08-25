@@ -53,8 +53,8 @@ namespace Jde::Logging{
 		if( !ShouldLog(level, tags) )
 			return;
 
-		if( let stacktrace = std::stacktrace::current(); stacktrace.size() )
-			Log( Entry{stacktrace[ std::min(stacktrace.size()-1,stackTraceIndex+1) ], level, tags, FWD(m), FWD(args)...} );
+		if( let stacktrace = std::stacktrace::current( stackTraceIndex+1, 1 ); stacktrace.size() )
+			Log( Entry{stacktrace[0], level, tags, FWD(m), FWD(args)...} );
 		else
 			Log( level, tags, SRCE_CUR, FWD(m), FWD(args)... );
 	}
@@ -62,8 +62,8 @@ namespace Jde::Logging{
 	ψ LogStack( ELogLevel level, ELogTags tags, boost::stacktrace::stacktrace::size_type stackTraceIndex, FormatString&& m, ARGS... args )ι->void{
 		if( !ShouldLog(level, tags) )
 			return;
-		if( let stacktrace = boost::stacktrace::stacktrace(); stacktrace.size() )
-			Log( Entry{stacktrace[ std::min(stacktrace.size()-1,stackTraceIndex+1) ], level, tags, FWD(m), FWD(args)...} );
+		if( let stacktrace = boost::stacktrace::stacktrace( stackTraceIndex+1, 1 ); stacktrace.size() )//see the std branch above
+			Log( Entry{stacktrace[0], level, tags, FWD(m), FWD(args)...} );
 		else
 			Log( level, tags, SRCE_CUR, FWD(m), FWD(args)... );
 	}

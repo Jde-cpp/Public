@@ -1,6 +1,7 @@
 #pragma once
 #include <jde/opc/usings.h>
 
+namespace Jde::DB{ struct Value; }
 namespace Jde::Opc{
 	struct Variant : UA_Variant{
 		//dataType null infers the UA type from the json kind; otherwise the json is decoded *toward* the declared type.
@@ -31,6 +32,7 @@ namespace Jde::Opc{
 		Ω ElementToJson( const void* element, const UA_DataType& type, bool trimNames )ε->jvalue;
 		α ToUAJson()ε->vector<string>;
 		α ArrayDimString()ι->string;
+		α ArrayDimValue()ι->DB::Value;
 
 		VariantPK VariantPK{};
 	private:

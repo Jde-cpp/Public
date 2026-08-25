@@ -25,7 +25,7 @@ namespace Jde::Opc::Server{
 	{}
 
 	Node::Node( const jobject& j, NodePK parentPK, Opc::BrowseName browse )ε:
-		NodeId{ j.contains("id") ? NodeId{ j.at("id") } : UA_NodeId{} },
+		NodeId{ j.contains("id") ? NodeId{ j.at("id") } : NodeId{} },//both arms the wrapper: a `UA_NodeId{}` arm makes the base the common type, slicing the temporary and stealing the identifier its ~NodeId then frees.
 		PK{ Json::FindNumber<Server::NodePK>(j, "id").value_or(0) },
 		IsGlobal{ Json::FindBool(j, "isGlobal").value_or(false) },
 		ParentNodePK{ parentPK },

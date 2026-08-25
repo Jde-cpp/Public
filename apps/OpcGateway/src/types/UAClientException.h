@@ -25,8 +25,8 @@ namespace Jde::Opc::Gateway{
 		α what()const noexcept->const char* override;
 		[[noreturn]] α ThrowRest( UAClientException&& e, Web::Server::HttpRequest&& request )ε->void;
 	private:
-		Handle _handle;
-		RequestId _requestId;
+		Handle _handle{};
+		RequestId _requestId{};
 		mutable string _userMessage;
 	};
 

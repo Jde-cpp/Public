@@ -1,9 +1,4 @@
 ﻿#include <jde/opc/uatypes/Logger.h>
-#ifdef __cpp_lib_stacktrace
-	#include <stacktrace>
-#else
-	#include <boost/stacktrace.hpp>
-#endif
 #include <open62541/types.h>
 
 #define let const auto
@@ -11,6 +6,8 @@ namespace Jde::Opc{
 	constexpr array<sv,14> EOpcLogTagstrings{ "opc",
 		"uaNet", "uaSecure", "uaSession", "uaServer", "uaClient", "uaUser", "uaSecurity", "uaEvent", "uaPubSub", "uaDiscovery",
 		"monitoring", "browse", "processingLoop" };
+	constexpr uint _uaLogCategoryCount{ (uint)UA_LOGCATEGORY_DISCOVERY+1 };
+	static_assert( EOpcLogTagstrings.size()==1+_uaLogCategoryCount+3, "EOpcLogTagstrings must name Opc, every UA_LogCategory, then our three - see EOpcLogTags in Logger.h" );
 
 	α Format( const char* format, va_list args )->string{
 		UA_String str{};

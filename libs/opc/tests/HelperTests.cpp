@@ -25,6 +25,15 @@ namespace Jde::Opc::Tests{
 		UA_String_clear( &alloc );
 
 		EXPECT_EQ( ToSV("abc"_uv), "abc" );
+
+		//The empty case is the vendor's "empty string", not "null string":  allocBuffer leaves UA_EMPTY_ARRAY_SENTINEL,
+		//which is what UA_String_fromChars gave and what UA_String_clear knows not to free.  The copy has to be skipped
+		//for it - memcpy through the sentinel, from a possibly-null sv, is UB even at zero length.
+		auto empty = AllocUAString( sv{} );
+		EXPECT_EQ( empty.length, 0u );
+		EXPECT_EQ( (const void*)empty.data, (const void*)UA_EMPTY_ARRAY_SENTINEL );
+		EXPECT_EQ( ToSV(empty), "" );
+		UA_String_clear( &empty );//must not free the sentinel.
 	}
 
 	TEST( OpcHelperTests, UAStringOwnsItsBuffer ){

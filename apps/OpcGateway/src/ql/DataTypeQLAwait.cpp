@@ -65,8 +65,11 @@ namespace Jde::Opc::Gateway{
 				jarray y;
 				let nodeIds = NodeId::ParseQL( _ql );
 				THROW_IF( nodeIds.empty(), "No nodeIds specified." );
+				vector<UA_NodeId> rawIds; rawIds.reserve( nodeIds.size() );
+				for( let& id : nodeIds )
+					rawIds.emplace_back( static_cast<const UA_NodeId&>(id) );
 				UA_DataTypeArray *customTypes;
-				if( auto sc = UA_Client_getRemoteDataTypes(*_client, nodeIds.size(), nodeIds.data(), &customTypes); sc )
+				if( auto sc = UA_Client_getRemoteDataTypes(*_client, rawIds.size(), rawIds.data(), &customTypes); sc )
 					throw UAClientException{ sc, _client->Handle(), Ƒ("Could not get data types: {}", NodeId::ToString(nodeIds)), _sl };
 				for( uint i=0; i<customTypes->typesSize; ++i )
 					y.push_back( toJson(customTypes->types[i], _ql) );

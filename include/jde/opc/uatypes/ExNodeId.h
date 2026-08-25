@@ -19,11 +19,10 @@ namespace Jde::Opc{
 		ExNodeId( ExNodeId&& x )ι;
 		ExNodeId( DB::Row& r, uint8 nsIndex, bool extended=false )ε;
 		α operator=( ExNodeId&& x )ι->ExNodeId&;
-		virtual ~ExNodeId(){ Clear(); }
+		~ExNodeId(){ Clear(); }
 		α operator<( const ExNodeId& x )Ι->bool;
 		α operator=( const ExNodeId& x )ι->ExNodeId&;
-		α SetNodeId( UA_NodeId&& x )ι->void;
-		β InsertParams( bool extended )Ι->vector<DB::Value>;
+		α InsertParams( bool extended )Ι->vector<DB::Value>;
 
 		α NsIndex()Ι->UA_UInt16{ return nodeId.namespaceIndex; }
 		α Numeric()Ι->optional<UA_UInt32>{ return nodeId.identifierType==UA_NODEIDTYPE_NUMERIC ? nodeId.identifier.numeric : optional<UA_UInt32>{}; }
@@ -43,6 +42,9 @@ namespace Jde::Opc{
 		α Add( jobject& j )Ι->void;
 		α to_string()Ι->string;
 	};
+	static_assert( !std::is_polymorphic_v<ExNodeId> && sizeof(ExNodeId)==sizeof(UA_ExpandedNodeId),
+		"ExNodeId must stay layout-compatible with UA_ExpandedNodeId - see reviews/opc-review3.md #2" );
+
 	Ξ operator==( const ExNodeId& x, const ExNodeId& y )ι->bool{ return !(x<y) && !(y<x); }
 	α ToJson( const UA_ExpandedNodeId& nodeId )ε->jobject;
 

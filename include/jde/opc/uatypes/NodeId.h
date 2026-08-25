@@ -48,5 +48,6 @@ namespace Jde::Opc{
 		Ω DecodeJson( const string& j )ε->NodeId;
 	};
 	α ToJson( const UA_NodeId& nodeId )ι->jobject;
+	α AddNodeId( jobject& j, const UA_NodeId& nodeId, bool omitDefaultNs )ι->jobject&;
 	Ξ operator==( const NodeId& x, const NodeId& y )ι->bool{ return !(x<y) && !(y<x); }
 }

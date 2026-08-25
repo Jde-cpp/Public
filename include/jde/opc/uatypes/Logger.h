@@ -1,7 +1,6 @@
 ﻿#pragma once
 #ifndef OPC_LOGGER_H
 #define OPC_LOGGER_H
-#pragma GCC diagnostic ignored "-Wunused-parameter"
 #include <open62541/server.h>
 
 namespace Jde::Opc{
@@ -28,12 +27,17 @@ namespace Jde::Opc{
 		Browse        = 1ull << (UaLogTagBase+11),
 		ProcessingLoop= 1ull << (UaLogTagBase+12)
 	};
+	static_assert( underlying(EOpcLogTags::Monitoring)==1ull<<(UaLogTagBase+(uint)UA_LOGCATEGORY_DISCOVERY+1),
+		"a UA_LogCategory was added - move Monitoring/Browse/ProcessingLoop up and add its name to EOpcLogTagstrings" );
+
 	constexpr ELogTags IotReadTag{ ELogTags::Read | (ELogTags)EOpcLogTags::Opc };
 	constexpr ELogTags MonitoringTag{ (ELogTags)EOpcLogTags::Monitoring };
 	constexpr ELogTags DataChangesTag{ MonitoringTag | ELogTags::Pedantic };
 	constexpr ELogTags BrowseTag{ (ELogTags)EOpcLogTags::Browse };
 	constexpr ELogTags BrowseTagPedantic{ (ELogTags)EOpcLogTags::Browse | ELogTags::Pedantic };
 	constexpr ELogTags ProcessingLoopTag{ (ELogTags)EOpcLogTags::ProcessingLoop };
+
+	α Format( const char* format, va_list args )->string;
 
 	struct UALogParser final : Logging::ITagParser{
 		α ToTag( str tagName )Ι->ELogTags override;

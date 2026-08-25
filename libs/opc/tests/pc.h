@@ -1,7 +1,7 @@
 #pragma once
-//open62541 first, deliberately:  <jde/opc/uatypes/UAString.h> (reached through opcHelpers.h) uses UA_STRING as its
-//include guard, which shadows the vendor's UA_STRING function and the UA_BYTESTRING macro that expands to it.  Vendor
-//headers have to be parsed before that happens.  reviews/opc-review2.md, "below the cut".
+//open62541 first, and still deliberately - but not for the reason review #2 recorded.  UAString.h no longer uses
+//UA_STRING as its include guard (it has #pragma once), so nothing shadows the vendor's macro any more.  The live reason
+//is plainer: usings.h, opcHelpers.h and UAString.h all name UA_* types without including the vendor themselves.
 #include <open62541/types.h>
 #include <open62541/types_generated.h>
 #include <open62541/statuscodes.h>
@@ -17,7 +17,7 @@
 #include <jde/opc/UAException.h>
 #include <jde/opc/uatypes/opcHelpers.h>
 
-//DateTime.h and LocalizedText.h have neither #pragma once nor an include guard, so they can only be included once per
-//TU:  here, through the precompiled header, and never from a test .cpp.  reviews/opc-review2.md, "below the cut".
+//Both have #pragma once now, so the "include exactly once, and only here" rule review #2 recorded is gone - a test .cpp
+//may include either directly.  They stay in the PCH because every suite uses them.
 #include <jde/opc/uatypes/DateTime.h>
 #include <jde/opc/uatypes/LocalizedText.h>

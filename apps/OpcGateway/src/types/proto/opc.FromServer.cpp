@@ -189,7 +189,7 @@ namespace Jde::Opc::Gateway{
 			break;}
 		case FromServer::Value::OfCase::kExpandedNode:{
 			let v = ProtoUtils::ToExNodeId( proto.expanded_node() );
-			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_EXPANDEDNODEID] );
+			UA_Variant_setScalarCopy( &y, static_cast<const UA_ExpandedNodeId*>(&v), &UA_TYPES[UA_TYPES_EXPANDEDNODEID] );//upcast, not &v: the wrapper is a `const void*` away from handing the vendor whatever sits at its offset 0.
 			break;}
 		case FromServer::Value::OfCase::kFloatValue:{
 			let v = UA_Float{ proto.float_value() };
@@ -214,7 +214,7 @@ namespace Jde::Opc::Gateway{
 			break;}
 		case FromServer::Value::OfCase::kNode:{
 			let v = ProtoUtils::ToNodeId( proto.node() );
-			UA_Variant_setScalarCopy( &y, &v, &UA_TYPES[UA_TYPES_NODEID] );
+			UA_Variant_setScalarCopy( &y, static_cast<const UA_NodeId*>(&v), &UA_TYPES[UA_TYPES_NODEID] );//upcast, not &v: NodeId is polymorphic, so &v is the vptr and the vendor would copy that as the node id.
 			break;}
 		case FromServer::Value::OfCase::kSbyte:{
 			let v = UA_SByte{ (UA_SByte)proto.sbyte() };

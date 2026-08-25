@@ -1,6 +1,6 @@
 import { NodeId, NodeIdJson } from "./node-id";
-import { ETypes, Browse, ILocalizedText, Ns, toLocalizedText, EAccess, EWriteAccess } from "./types";
-import { toValue, Value } from "./value";
+import { ETypes, Browse, ILocalizedText, Ns, toLocalizedText, EAccess, EWriteAccess, StatusCode } from "./types";
+import { toValue, valueSc, Value } from "./value";
 import { Enum } from "./enum";
 
 export enum ENodeClass{
@@ -72,6 +72,7 @@ export class Variable extends UaNode{
 		else
 			this.dataType = <ETypes>json.dataType?.i;
 		this.value = toValue( json.value );
+		this.sc = valueSc( json.value );//the reading's quality, which REST used to drop — the socket path carries it as SubscriptionResult.sc
 		this.valueRank = json.valueRank ?? -1;
 		this.accessLevel = json["accessLevel"];
 		this.userAccessLevel = json["userAccessLevel"];
@@ -89,5 +90,6 @@ export class Variable extends UaNode{
 	get isFloating():boolean{ return [ETypes.Float, ETypes.Double].includes(this.dataType!); }
 	get isUnsigned():boolean{ return [ETypes.Byte, ETypes.UInt16, ETypes.UInt32, ETypes.UInt64].includes(this.dataType!); }
 	value?:Value;
+	sc?:StatusCode;//0/undefined = Good.  Bad arrives as an OpcError in `value`; this mainly distinguishes Uncertain.
 	valueRank?:number; // -1 scalar, 1 one-dimensional array, etc.
 }

@@ -4,14 +4,15 @@
 #include <gtest/gtest.h>
 #include <jde/db/Value.h>
 #include <jde/opc/uatypes/NodeId.h>
+#include <jde/ql/types/TableQL.h>
 
 #define let const auto
 
 namespace Jde::Opc::Tests{
 	Ω numeric( UA_UInt16 ns, UA_UInt32 id )ι->NodeId{ return NodeId{ ns, id }; }
 	Ω fromJson( sv json )ε->NodeId{ return NodeId{ parse(json) }; }
-	//guidNode is now redundant with fromJson - #18 made the "g" form parseable - but it stays as the one path that does
-	//not depend on the string parse.  bytesNode has no json equivalent until #7 (see DISABLED_R2_7_ByteStringJsonRoundTrip).
+	//guidNode is now redundant with fromJson - review2 #18 made the "g" form parseable - but it stays as the one path that
+	//does not depend on the string parse.  bytesNode is the same for "b", which ByteStringJsonRoundTrip exercises.
 	Ω guidNode( UA_UInt16 ns, const UA_Guid& guid )ι->NodeId{
 		UA_NodeId ua{};
 		ua.namespaceIndex = ns;
@@ -134,6 +135,72 @@ namespace Jde::Opc::Tests{
 		}
 	}
 
+	//L16: AllocUAString and the UA_String_fromChars( ….c_str() ) sites measured the source with strlen, so an identifier
+	//holding an embedded NUL was truncated at it - while the socket path (opc.Common.cpp) copies by size, so the same
+	//node id addressed two different nodes depending on which door it came in, and InsertParams stored more bytes than
+	//the Row constructor read back.  Nothing mainstream emits such an id; this pins the asymmetry, not a live bug.
+	TEST( NodeIdTests, EmbeddedNulSurvivesAStringIdentifier ){
+		const string identifier{ "a\0b", 3 };
+		ASSERT_EQ( identifier.size(), 3u );
+
+		let fromObject = NodeId{ jvalue{jobject{ {"ns",2}, {"s",identifier} }} };
+		ASSERT_TRUE( fromObject.IsString() );
+		EXPECT_EQ( fromObject.identifier.string.length, 3u ) << "truncated at the NUL";
+		EXPECT_EQ( *fromObject.String(), identifier );
+
+		EXPECT_EQ( *NodeId{ jvalue{jstring{identifier}} }.String(), identifier );//the bare-string spelling too.
+
+		//What is persisted has to be what comes back: InsertParams binds String(), and the Row ctor reads that column.
+		let params = fromObject.InsertParams();
+		ASSERT_EQ( params.size(), 5u );
+		EXPECT_EQ( params[2].get_string(), identifier );
+
+		EXPECT_TRUE( NodeId{ jvalue{fromObject.ToJson()} }==fromObject );//and the json round trip.
+	}
+
+	//review3 #8: "ns" was applied only when it was already a number, so a string ns was *ignored* rather than rejected -
+	//{"ns":"2","i":85} addressed ns=0;i=85, which is UA_NS0ID_OBJECTSFOLDER - and an object carrying none of id/s/i/b/g
+	//fell through every branch and came back as the zero-initialised {ns,NUMERIC,0}.  Both were silent, and both produce
+	//a plausible-looking wrong node rather than an error.  This is the id OpcAuthorize compares ACL criteria against.
+	TEST( NodeIdTests, FromJsonRejectsAnUnaddressableObject ){
+		EXPECT_THROW( fromJson(R"({"ns":"2","i":85})"), Exception );  //a string ns...
+		EXPECT_THROW( fromJson(R"({"ns":null,"i":85})"), Exception );
+		EXPECT_THROW( fromJson(R"({"ns":2})"), Exception );           //...and no identifier at all...
+		EXPECT_THROW( fromJson(R"({"ns":2,"S":"Tag"})"), Exception ); //...including a wrong-case key.
+		EXPECT_THROW( fromJson(R"({})"), Exception );
+
+		EXPECT_EQ( fromJson(R"({"ns":2,"i":85})").namespaceIndex, 2 );//the spellings that do address a node still do.
+		EXPECT_EQ( fromJson(R"({"i":85})").namespaceIndex, 0 );
+		EXPECT_EQ( *fromJson(R"({"id":{"ns":4,"s":"tag"}})").String(), "tag" );
+	}
+
+	//L22: ParseQL required the id to be an object or an array of objects, so a bare `id:5002` - which NodeId( TableQL )
+	//accepts through the very same FromJson - produced an *empty* vector, and the client saw BadNothingToDo rather than
+	//anything about the id.  `id:[5002,5003]` was worse: it threw out of as_object().  system=true on the TableQL so it
+	//resolves no db view; ParseQL only reads Args.
+	TEST( NodeIdTests, ParseQlTakesEveryIdSpelling ){
+		let parseQl = []( sv args )ε->vector<NodeId>{
+			return NodeId::ParseQL( QL::TableQL{"nodes", parse(args).as_object(), nullptr, {}, true} );
+		};
+		ASSERT_EQ( parseQl(R"({"id":5002})").size(), 1u );
+		EXPECT_EQ( *parseQl(R"({"id":5002})")[0].Numeric(), 5002u );
+		EXPECT_EQ( *parseQl(R"({"id":"tag"})")[0].String(), "tag" );
+		EXPECT_EQ( parseQl(R"({"id":{"ns":2,"i":5002}})")[0].namespaceIndex, 2 );//the object spelling still works...
+
+		let many = parseQl( R"({"id":[5002,{"ns":2,"i":5003},"tag"]})" );//...and an array now takes all three.
+		ASSERT_EQ( many.size(), 3u );
+		EXPECT_EQ( *many[0].Numeric(), 5002u );
+		EXPECT_EQ( many[1].namespaceIndex, 2 );
+		EXPECT_EQ( *many[2].String(), "tag" );
+
+		EXPECT_TRUE( parseQl(R"({})").empty() );              //no id is still no nodes, not an error...
+		EXPECT_THROW( parseQl(R"({"id":true})"), Exception ); //...but an unreadable one is loud.
+
+		//The point of the finding: it agrees with NodeId( TableQL ), the other reader of the same field.
+		QL::TableQL bare{ "nodes", parse(R"({"id":5002})").as_object(), nullptr, {}, true };
+		EXPECT_TRUE( NodeId{bare}==parseQl(R"({"id":5002})")[0] );
+	}
+
 	//DecodeJson takes the QL arg spelling - `ns:4,i:5002`, with or without braces - through QL::Parser.
 	TEST( NodeIdTests, DecodeJsonQlForm ){
 		let n = NodeId::DecodeJson( "ns:2,i:5002" );
@@ -198,7 +265,6 @@ namespace Jde::Opc::Tests{
 		EXPECT_EQ( params[4].get_bytes(), bytes );
 	}
 
-	// ---- the review's open findings.  See main.cpp for why these are disabled. -------------------------------------
 
 	//#2 (fixed):  NodeId converts implicitly to its owning UA_NodeId base but had no way to hand ownership over, so every
 	//`raw = move(wrapper)` in the consumers compiled as a shallow copy through the sliced base and the wrapper still freed
@@ -231,13 +297,49 @@ namespace Jde::Opc::Tests{
 	//decoder wrote its 24-byte image over the vptr and the returned node carried a bogus identifier.  ToString and
 	//DecodeJson are each other's inverse and must round trip.
 	TEST( NodeIdTests, DecodeJsonRoundTripsToString ){
+		//review3 #4: the last two carry a ':' in the identifier - URN-style and Kepware/PLC-style - which the old
+		//`find(':')` dispatch sent to the QL parser.  `urn:plant:line1` threw there; `Tag:5` parsed as {"ns=2;s=Tag":5}
+		//and came back as ns=0;i=0, so the round trip silently landed on a different node.
 		for( let& n : { numeric(2, 5002), numeric(0, 85), fromJson(R"({"ns":2,"s":"tag.one"})"),
-				guidNode(2, nodeGuid), fromJson(R"({"ns":4,"s":"Examples/Stacklights"})") } )
+				guidNode(2, nodeGuid), fromJson(R"({"ns":4,"s":"Examples/Stacklights"})"),
+				fromJson(R"({"ns":2,"s":"urn:plant:line1"})"), fromJson(R"({"ns":2,"s":"Tag:5"})") } )
 			EXPECT_TRUE( NodeId::DecodeJson(n.ToString())==n ) << n.ToString();
 	}
 
-	//The form OpcAuthorize actually stores in an ACL resource.Criteria - bare, unquoted, no ':' - which is what selects
-	//this branch over the QL one.  Getting this wrong keyed authorization on the wrong node rather than failing.
+	//review3 #9: ToString obtained the `ns=2;s=…` form by json-encoding the node and stripping the outer quotes, which
+	//left the *encoder's* escaping of ", \, tab and newline in place; DecodeJson then quoted the text back into a json
+	//string, escaping it a second time.  `a"b` came out of ToString as `a\"b` and decoded to the four-character
+	//identifier `a\"b`, so the node was keyed on one id and looked up by another - GatewayQLAwait stores ToString() in
+	//q.Args["name"], and ACL criteria are keyed on it.  Both ends now use the vendor's own printer/parser, which have no
+	//escaping step at all.
+	TEST( NodeIdTests, ToStringRoundTripsAnEscapableIdentifier ){
+		for( let& identifier : { "a\"b"s, "a\\b"s, "a\tb"s, "a\nb"s, "a\rb"s, "a%b"s, "a b"s, "a;b"s } ){
+			let n = NodeId{ jvalue{jobject{ {"ns",2}, {"s",identifier} }} };
+			ASSERT_EQ( *n.String(), identifier );
+			let round = NodeId::DecodeJson( n.ToString() );
+			EXPECT_TRUE( round==n ) << "'" << identifier << "' -> '" << n.ToString() << "' -> '" << round.String().value_or("") << "'";
+			EXPECT_EQ( round.String().value_or(""), identifier ) << n.ToString();
+		}
+	}
+
+	//review3 #4, the consumer's half: an ACL criteria is stored in the UA spelling (the SPA's uaString()), and a ':' in
+	//the identifier must not change which parser reads it.  The two silent cases are the dangerous ones - `Tag:5` and
+	//friends parsed as json args and returned ns=0;i=0, attaching the permission to a node that does not exist.
+	TEST( NodeIdTests, DecodeJsonKeepsColonsInTheIdentifier ){
+		for( let& id : { "urn:plant:line1"sv, "Channel1.Device1:Tag"sv, "Tag:5"sv, "Tag:12.5"sv, "Tag:true"sv, "Tag:null"sv, "2026-08-24T10:00:00Z"sv } ){
+			let n = NodeId::DecodeJson( Ƒ("ns=2;s={}", id) );
+			EXPECT_EQ( n.namespaceIndex, 2 ) << id;
+			ASSERT_TRUE( n.String() ) << id;
+			EXPECT_EQ( *n.String(), id ) << id;
+		}
+		let noNamespace = NodeId::DecodeJson( "s=urn:plant:line1" );
+		ASSERT_TRUE( noNamespace.String() );
+		EXPECT_EQ( *noNamespace.String(), "urn:plant:line1" );
+		EXPECT_EQ( noNamespace.namespaceIndex, 0 );
+	}
+
+	//The form OpcAuthorize actually stores in an ACL resource.Criteria - bare and unquoted.  Getting this wrong keyed
+	//authorization on the wrong node rather than failing.
 	TEST( NodeIdTests, DecodeJsonReadsTheBareUaForm ){
 		let n = NodeId::DecodeJson( "ns=4;i=6020" );
 		EXPECT_EQ( n.namespaceIndex, 4 );
@@ -255,7 +357,7 @@ namespace Jde::Opc::Tests{
 		EXPECT_THROW( NodeId::DecodeJson("not a node id"), Exception ); //loudly, so OpcAuthorize logs and drops it.
 	}
 
-	//The QL arg spelling picks the other branch, on the ':'.  Both have to reach the same node.
+	//The QL arg spelling picks the other branch - it is not the UA spelling, and it has a ':'.  Both reach the same node.
 	TEST( NodeIdTests, DecodeJsonAgreesAcrossBothSpellings ){
 		EXPECT_TRUE( NodeId::DecodeJson("ns=4;i=6020")==NodeId::DecodeJson("ns:4,i:6020") );
 	}

@@ -2,10 +2,8 @@
 //ToString/DecodeJson - over every identifier kind and array shape.  Nothing here starts a server, opens a socket or
 //touches a data source; apps/OpcGateway/tests (confusingly, the target named Jde.Opc.Tests) is the integration suite.
 //
-//Convention:  a test named DISABLED_R2_<n>_* asserts the *correct* behaviour of finding #<n> in reviews/opc-review2.md.
-//They are disabled rather than absent so the suite stays green while the findings are open - drop the DISABLED_ prefix
-//as each one is fixed and the test becomes its acceptance check.  The two that remain carry no number because they
-//belong to that review's below-the-cut list instead:  the Duration asymmetry (L1) and the UA_STRING guard (L3).
+//Every test here is enabled:  the DISABLED_R2_<n>_* convention this comment used to describe is gone, along with the
+//findings it was waiting on.  A test that names a finding is its acceptance check, not a placeholder.
 #include "gtest/gtest.h"
 #include <jde/fwk/process/process.h>
 #include <jde/fwk/settings.h>
@@ -37,11 +35,7 @@ namespace Jde{
 		exitCode = CheckTestsRan( RUN_ALL_TESTS() );
 	}
 	catch( runtime_error& e ){
-		if( auto p = dynamic_cast<Exception*>(&e); p ){
-			p->Log();
-			exitCode = p->HasCode() ? (int)p->Code() : EXIT_FAILURE;
-		}
-		std::cerr << e.what() << std::endl;
+		exitCode = StartupFailed( e );//never the exception's code:  main's status keeps only its low 8 bits.
 	}
 	Process::Shutdown( exitCode );
 	return exitCode;
