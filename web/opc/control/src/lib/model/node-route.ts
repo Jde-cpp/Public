@@ -22,6 +22,9 @@ export class NodeRoute extends RouteItem{
 	}
 
 	route: ActivatedRouteSnapshot;
+	//the absolute url of the connection ('/gateways/Debug/local'):  everything ahead of this route's browse-path segments.
+	get cnnctnUrl():string{ return '/'+this.route.pathFromRoot.slice( 0, -1 ).flatMap( r=>r.url.map(s=>s.path) ).join('/'); }
+	get gatewayUrl():string{ const url = this.cnnctnUrl; return url.substring( 0, url.lastIndexOf('/') ); }
 	override get path(): string{
 		return this.route.url.map(seg=>seg.path).join("/");
 	}

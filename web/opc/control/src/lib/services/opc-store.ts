@@ -34,7 +34,8 @@ export class OpcStore{
 			connection: serverConnection( target: $opc ){ id name target url certificateUri defaultBrowseNs }
 			desc: serverDescription( opc: $opc ){ applicationUri productUri applicationName applicationType gatewayServerUri discoveryProfileUri discoveryUrls }
 			policy: securityPolicyUri( opc: $opc )
-			mode: securityMode( opc: $opc )`;
+			mode: securityMode( opc: $opc )
+			namespaces( opc: $opc ){ index uri }`;
 		let props = await gatewayService.query<ServerProps>(q, {opc:cnnctn}, (m)=>console.log(m));
 		let server = new Server( props );
 		gatewayConnections.set( cnnctn, server );
@@ -127,9 +128,14 @@ export class OpcStore{
 	cnnctnName( gateway:GatewayTarget, cnnctn:CnnctnTarget ):string{
 		return this.#connections.get( gateway )?.get( cnnctn )?.connection.name ?? cnnctn;
 	}
+	//ComponentNav renders each sibling as parent.path + '/' + sibling.path, so the parent must be the absolute url and the
+	//siblings bare browse names.  Both used to be full paths, so every link resolved relative to the sidenav route
+	//('/gateways/Debug/local/2~DeviceSet/local/2~DeviceSet/2~DeviceFeatures') - no sibling matched the current url and the
+	//routerLinkActive highlight never came on.
 	setRoute(route: NodeRoute, defaultBrowseNs:Ns|undefined ):void{
 		const cnnctnName = this.cnnctnName( route.gatewayTarget, route.cnnctnTarget );
 		if( route.node.equals(OpcObject.rootNode) ){
+			route.parent = new RouteItem( {path: route.gatewayUrl, title: route.gatewayTarget} );//set even here:  ComponentNav only recomputes parentUrl from the parent, so without one the connection page kept whatever the last node page left behind
 			route.siblings = [new RouteItem({title: cnnctnName, path: route.cnnctnTarget})]; //TODO add all connections.
 			return;
 		}
@@ -145,14 +151,15 @@ export class OpcStore{
 		if( !parent )
 			throw new EvalError( `Parent not found for ${store?.node.browse}`, {cause:"Internal Error"} );
 
+		//the root store node is named after the target, so the connection level takes the display name instead
 		const parentTitle = parent.node.equals( OpcObject.rootNode ) ? cnnctnName : (parent.node.name ?? cnnctnName);
-		route.parent = new RouteItem( {path: `${route.cnnctnTarget}/${parentPaths.reverse().join('/')}`, title: parentTitle} );
+		route.parent = new RouteItem( {path: [route.cnnctnUrl, ...parentPaths.reverse()].join('/'), title: parentTitle} );
 		route.siblings = [];
 		for( const sibling of parent.children ){
 			const siblingStore = sibling.key == route.nodeId.key ? store : findStore( sibling.nodeId );
 			const siblingRef = siblingStore?.node;
 			if( siblingRef?.isObject && siblingRef?.displayed )
-				route.siblings.push( new RouteItem({path: `${route.parent.path}/${siblingRef.browseFQ(defaultBrowseNs)}`, title: siblingRef.name}) );
+				route.siblings.push( new RouteItem({path: siblingRef.browseFQ(defaultBrowseNs), title: siblingRef.name}) );
 		}
 	}
 	findNodeId( gateway:string, cnnctnTarget:string, browsePath:string ):UaNode|undefined{

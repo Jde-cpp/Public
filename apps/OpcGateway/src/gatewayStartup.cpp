@@ -32,7 +32,7 @@ namespace Jde::Opc{
 		ConfigureQL( {schema}, authorize );
 		for( let& path : Settings::FindPathArray("/ql/introspection") )
 			QL::AddIntrospection( QL::Introspection{Json::ReadJsonNet(Settings::Directory()/path)} );
-		QL::SetSystemTables( {"dataType", "dataTypes", "discoveryUrls", "logSetting", "node", "nodes", "opcConnections", "opcSessions", "securityMode", "securityPolicyUri", "serverDescription", "variable", "variables"} );
+		QL::SetSystemTables( {"dataType", "dataTypes", "discoveryUrls", "logSetting", "namespaces", "node", "nodes", "opcConnections", "opcSessions", "securityMode", "securityPolicyUri", "serverDescription", "variable", "variables"} );
 		SetSchema( schema );
 		if( Settings::FindBool("/testing/recreateDB").value_or(false) )
 			DB::NonProd::Recreate( *schema, QLPtr() );

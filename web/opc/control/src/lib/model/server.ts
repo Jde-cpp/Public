@@ -22,21 +22,31 @@ export class ServerDesc{
 }
 export type ServerDescProps = Pick<ServerDesc, PropertyNames<ServerDesc>>;
 
+/** An entry of the server's namespace array;  `index` is the `ns` of every NodeId in it. */
+export type Namespace = {
+	index: number;
+	uri: string;
+};
+
 export class Server extends ServerDesc{
 	constructor( obj:ServerProps ){
 		super( obj.desc );
 		this.connection = new ServerCnnctn( obj.connection );
 		this.policy = obj.policy;
 		this.mode = obj.mode;
+		this.namespaces = obj.namespaces ?? [];
 	}
 	get opcTarget():string{ return this.connection.target; }
+	uri( ns:number ):string|undefined{ return this.namespaces.find( (x)=>x.index==ns )?.uri; }
 	connection: ServerCnnctn;
 	policy: string;
 	mode: string;
+	namespaces: Namespace[];
 }
 export type ServerProps = {
 	connection: ServerCnnctnProps;
 	desc: ServerDescProps;
 	policy: string;
 	mode: string;
+	namespaces: Namespace[];
 };

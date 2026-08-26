@@ -1,4 +1,6 @@
 #pragma once
+#include <jde/opc/uatypes/NodeId.h>
+#include <jde/opc/uatypes/Value.h>
 #include <jde/ql/types/RequestQL.h>
 #include <jde/web/server/IHttpRequestAwait.h>
 #include <jde/ql/IQLAwaitExe.h>
@@ -19,6 +21,7 @@ namespace Jde::Opc::Gateway{
 		α Query()ι->TAwait<jvalue>::Task override;
 		α ConnectionAttributes( QL::TableQL&& q, sp<UAClient> client )ι->jvalue;
 		α ServerDescription( QL::TableQL&& q, sp<UAClient> client )ε->jobject;
+		α Namespaces( QL::TableQL&& q, sp<UAClient> client, flat_map<NodeId, Value>&& values )ε->jvalue;
 		α SecurityPolicyUri( QL::TableQL&& q, sp<UAClient> client )ε->jvalue;
 		α SecurityMode( QL::TableQL&& q, sp<UAClient> client )ε->jvalue;
 	};
