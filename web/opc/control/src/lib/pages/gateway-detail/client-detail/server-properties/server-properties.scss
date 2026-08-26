@@ -1,0 +1,37 @@
+/* the read-only namespace table beneath the connection's form fields:  mat-sys tokens so it carries the same surface and
+type as the filled form-fields above it. */
+table.namespaces{
+	width: 100%;
+	border-collapse: collapse;
+	margin-block-start: .5rem;
+	color: var(--mat-sys-on-surface);
+	font: var(--mat-sys-body-medium);
+}
+
+table.namespaces caption{
+	text-align: left;
+	padding-block-end: .25rem;
+	color: var(--mat-sys-on-surface-variant);
+	font: var(--mat-sys-body-small);
+}
+
+table.namespaces td{
+	padding: .25rem .5rem;
+	border-block-end: 1px solid var(--mat-sys-outline-variant);
+}
+
+.ns-index{
+	width: 3rem;
+	text-align: right;
+	color: var(--mat-sys-on-surface-variant);
+	font-variant-numeric: tabular-nums;
+}
+
+.ns-uri{
+	overflow-wrap: anywhere;
+}
+
+.ns-empty{
+	color: var(--mat-sys-on-surface-variant);
+	font-style: italic;
+}

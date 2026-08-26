@@ -1,10 +1,12 @@
 #include "GatewayQLAwait.h"
+#include <jde/fwk/co/AnyAwait.h>
 #include <jde/ql/QLAwait.h>
 #include <jde/app/client/awaits/LogSettingsClientAwait.h>
 #include <jde/opc/uatypes/BrowseName.h>
 #include <jde/opc/uatypes/Variant.h>
 #include "../GatewayAppClient.h"
 #include "../async/CallAwait.h"
+#include "../async/ReadValueAwait.h"
 #include "../async/UAStrandAwait.h"
 #include "../types/UAClientException.h"
 #include "DataTypeQLAwait.h"
@@ -69,6 +71,10 @@ namespace Jde::Opc::Gateway{
 				y = co_await DataTypeQLAwait{ move(_query), move(_client), _sl };
 			else if( _query.JsonName=="serverDescription" )//connection attributes are sync UA services - run them on the client's strand.
 				y = co_await UAStrandAwait<jvalue>{ _client, [this]()->jvalue { return ServerDescription( move(_query), _client ); }, _sl };
+			else if( _query.JsonName=="namespaces" ){//an ordinary read of a standard node - see Namespaces below.
+				auto values = co_await Any( ReadValueAwait{{NodeId{(UA_UInt16)0, (UA_UInt32)UA_NS0ID_SERVER_NAMESPACEARRAY}}, _client, _sl} );
+				y = Namespaces( move(_query), _client, move(values) );
+			}
 			else if( _query.JsonName=="securityPolicyUri" )
 				y = co_await UAStrandAwait<jvalue>{ _client, [this]()->jvalue { return SecurityPolicyUri( move(_query), _client ); }, _sl };
 			else if( _query.JsonName=="securityMode" )
@@ -147,6 +153,29 @@ namespace Jde::Opc::Gateway{
 		}
 		UA_Variant_clear( &uaAttrib );
 		return q.TransformResult( move(j) );
+	}
+	//The server's own namespace array (the standard ns=0;i=2255 node), not UA_Client_getNamespaceUri:  open62541 fills its local
+	//copy from an async read fired after the session activates, so a query right behind the connect sees an empty list.  The two
+	//index the same anyway - the client appends the server's uris in order and the gateway predefines none of its own.
+	α GatewayQLAwait::Namespaces( QL::TableQL&& q, sp<UAClient> client, flat_map<NodeId, Value>&& values )ε->jvalue{
+		THROW_IF( values.empty(), "No result reading the namespace array." );
+		let& value = values.begin()->second;
+		if( value.hasStatus && value.status )
+			throw UAClientException{ (StatusCode)value.status, client->Handle(), "read(Server_NamespaceArray)" };
+		let& variant = value.value;
+		THROW_IF( variant.type!=&UA_TYPES[UA_TYPES_STRING] || UA_Variant_isScalar(&variant), "The namespace array is a '{}'{}, not a string array.", variant.type ? variant.type->typeName : "null", UA_Variant_isScalar(&variant) ? " scalar" : "" );
+		let wantIndex = q.FindColumn( "index" );
+		let wantUri = q.FindColumn( "uri" );
+		jarray y; y.reserve( variant.arrayLength );
+		for( uint i=0; i<variant.arrayLength; ++i ){
+			jobject o;
+			if( wantIndex )
+				o["index"] = i;
+			if( wantUri )
+				o["uri"] = ToString( ((UA_String*)variant.data)[i] );
+			y.emplace_back( move(o) );
+		}
+		return q.TransformResult( move(y) );
 	}
 	α GatewayQLAwait::SecurityPolicyUri( QL::TableQL&& q, sp<UAClient> client )ε->jvalue{
 		UA_Variant uaAttrib = connectionAttribute( client, "securityPolicyUri" );

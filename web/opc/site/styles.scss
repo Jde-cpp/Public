@@ -31,11 +31,14 @@ html {
 {
 	width: 100%;
 }
-a {
-	color: inherit;
-}
-a:visited {
-	color: magenta;
+/* A link should read as a link BEFORE it is clicked, and stop changing colour after.  `inherit` made every link
+identical to plain text - in the opc node table an object (navigable) was indistinguishable from a variable (a leaf) -
+and the magenta only arrived once visited, which is backwards;  it also forced cards.scss/apps.scss to paint `inherit`
+back onto their tile anchors to stop visited tiles going pink.  The underline stays:  --mat-sys-primary is under the
+3:1 against body text that WCAG G183 wants before colour alone may carry a link.  Anchors that are a tile or a Material
+control rather than a link paint themselves and are unaffected. */
+a, a:visited {
+	color: var(--mat-sys-primary);
 }
 .mat-column-select{
 	flex: 0 0 60px;

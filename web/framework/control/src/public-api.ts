@@ -15,6 +15,7 @@ export * from './lib/pages/graphql/table/graphql-table';
 export * from './lib/pages/home/home';
 export * from './lib/pages/cards/cards';
 export * from './lib/pages/ql/list/ql-list';
+export * from './lib/pages/ql/list/ql-list-settings/ql-list-settings';
 export * from './lib/pages/ql/list/ql-list-route-service';
 export * from './lib/pages/ql/selector/ql-selector';
 

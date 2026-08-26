@@ -2,6 +2,69 @@
 	width: 100%;
 }
 
+/* the toolbar mirrors ql-list's, so the node table presents the same control as a collection list:  refresh, the view
+group, then the view editor.  the zone rules are ql-list.scss's - kept in step by hand, as log-detail.scss does; the
+components share no stylesheet. */
+mat-toolbar{
+	position: relative;//containing block for the out-of-flow centre zone
+	display: flex;
+	justify-content: space-between;//only .bar-left and .bar-right are in flow
+	align-items: center;
+	gap: .5rem;
+	height: auto;
+	min-height: 56px;
+	padding-block: .25rem;
+	background: var(--mat-sys-surface-container);
+	color: var(--mat-sys-on-surface);
+}
+
+.bar-left, .bar-center, .bar-right{
+	display: flex;
+	align-items: center;
+	gap: .5rem;
+	min-width: 0;
+}
+
+//Centre the view group on the VIEWPORT (to line up with the navbar search) rather than on the
+//toolbar, whose left edge is inset by the shell's sidenav. Taken out of flow so its width cannot
+//push the left/right zones around. --jde-content-offset must match that inset; the shell should
+//set it if the sidenav is ever a width other than the 240px fallback.
+.bar-center{
+	position: absolute;
+	left: calc(50vw - var(--jde-content-offset, 240px));
+	top: 50%;
+	transform: translate(-50%, -50%);
+}
+
+@media (max-width: 1024px){//too narrow to centre against the viewport — fall back to a wrapping single row
+	mat-toolbar{
+		flex-wrap: wrap;
+		justify-content: flex-start;
+	}
+	.bar-center{
+		position: static;
+		transform: none;
+	}
+}
+
+.view-group{
+	max-width: 100%;
+}
+
+.adhoc{
+	color: var(--mat-sys-tertiary);
+}
+
+.row-count{
+	font: var(--mat-sys-label-large);
+	color: var(--mat-sys-on-surface-variant);
+	white-space: nowrap;
+}
+
+.refresh-bar{
+	flex: 0 0 100%;
+}
+
 input[type="number"] {
 	text-align: right;
 }
@@ -24,8 +87,26 @@ mat-header-cell{
 mat-cell.mat-column-id{
 	justify-content: right;
 }
+/* OPC browse names are long ("ExampleCalibrationTargets"), so the column takes some of the table's slack rather than
+chopping every name at a fixed 150px - and what still does not fit ends in an ellipsis instead of running into the Class
+cell.  A quarter of Description's grow factor (the ratio graphql-table.scss uses):  a name that fits needs no more room,
+while a description is prose and wraps to a second line - and with it, the whole row - as soon as it runs out. */
 .mat-column-name{
-	flex: 0 0 150px;
+	flex: .25 .25 200px;
+	min-width: 150px;
+	padding-left: 5px;
+	padding-right: 5px;
+}
+/* the ellipsis box is the CHILD (an <a> for an object, a <span> for a variable):  text-overflow does not apply to the
+anonymous text of a flex mat-cell, and min-width:0 is what lets that child shrink below its text. */
+mat-cell.mat-column-name > *{
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.mat-column-class, .mat-column-dataType{
+	flex: 0 0 110px;
 	padding-left: 5px;
 	padding-right: 5px;
 }
@@ -33,10 +114,26 @@ mat-cell.mat-column-id{
 	flex: 0 0 235px;
 	padding-left: 5px;
 	padding-right: 5px;
-//	justify-content: center;
 }
+/* the cell itself stays flex-start:  it holds whatever editor the value type needs (number, text, datepicker, select),
+and those keep their left edges lined up down the column.  A lone checkbox is the one that reads as adrift under the
+centred header - an auto inline margin centres just that flex item, the way .mat-column-select centres a checkbox-only
+cell.  (For the whole column, put `justify-content: center` on .mat-column-snapshot instead.) */
+mat-cell.mat-column-snapshot mat-checkbox{
+	margin-inline: auto;
+}
+.mat-column-access{
+	flex: 0 0 150px;
+	padding-left: 5px;
+	padding-right: 5px;
+}
+/* A FIXED basis, like every other column:  each mat-row is its own flex container, so an `auto` basis sizes this cell
+to its own text and leaves each row a different amount of free space for .mat-column-name to grow into - the columns
+after Name then landed at a different x in every row (and in the header).  min-width:0 for the same reason:  no row may
+be held wider by a long description. */
 .mat-column-description{
-	flex: 1 1 auto;
+	flex: 1 1 300px;
+	min-width: 0;
 	padding-left: 5px;
 	padding-right: 5px;
 }

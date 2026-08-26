@@ -34,3 +34,15 @@
 	<mat-label>Mode</mat-label>
 	<input matInput type=text [formField]="form.mode">
 </mat-form-field>
+<!--the server's namespace array, in its own order:  a row's index is the `ns` of every NodeId in that namespace.  Not a
+form-field per entry - a nodeset-loaded server reports a dozen, and none of them is editable.-->
+<table class="namespaces">
+	<caption>Namespaces</caption>
+	<tbody>
+		@for( ns of server().namespaces; track ns.index ){
+			<tr><td class="ns-index">{{ns.index}}</td><td class="ns-uri">{{ns.uri}}</td></tr>
+		} @empty {
+			<tr><td class="ns-empty" colspan="2">None reported.</td></tr>
+		}
+	</tbody>
+</table>

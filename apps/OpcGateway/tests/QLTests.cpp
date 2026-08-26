@@ -33,6 +33,19 @@ namespace Jde::Opc::Gateway::Tests{
 		ASSERT_TRUE( obj.contains("discoveryUrls") );
 	}
 
+	TEST_F( QLTests, namespaces ){
+		let q = "namespaces( opc: $opc ){ index uri }";
+		const jobject vars{ {"opc", OpcServerTarget} };
+		let value = BlockAwait<Web::Client::ClientSocketAwait<jvalue>,jvalue>( Socket().Query(q, vars, true) );
+		//[{"index":0,"uri":"http://opcfoundation.org/UA/"},{"index":1,"uri":"urn:open62541.server.application"},...].
+		TRACE( "namespaces: {}.", serialize(value) );
+		let& rows = value.as_array();
+		ASSERT_GE( rows.size(), 2u ) << serialize( value );//ns0 is the standard uri, ns1 the server's application uri.
+		EXPECT_EQ( Json::AsNumber<uint16>(rows[0].as_object(), "index"), 0 );
+		EXPECT_EQ( Json::AsSV(rows[0].as_object(), "uri"), "http://opcfoundation.org/UA/" );
+		EXPECT_TRUE( Json::AsSV(rows[1].as_object(), "uri").size() ) << "ns1 is the server's application uri.";
+	}
+
 	TEST_F( QLTests, securityPolicyUri ){
 		let q = "securityPolicyUri( opc: $opc )";
 		const jobject vars{ {"opc", OpcServerTarget} };
@@ -159,10 +172,13 @@ namespace Jde::Opc::Gateway::Tests{
 			"connection: serverConnection( target: $opc ){ id name target url certificateUri defaultBrowseNs }"
 			"server: serverDescription( opc: $opc ){ applicationUri productUri applicationName applicationType gatewayServerUri discoveryProfileUri discoveryUrls }"
 			"policy: securityPolicyUri( opc: $opc )"
-			"mode: securityMode( opc: $opc )";
+			"mode: securityMode( opc: $opc )"
+			"namespaces( opc: $opc ){ index uri }";//unaliased, as the ui sends it - the result is keyed by the query name.
 		const jobject vars{ {"opc", OpcServerTarget} };
 		let value = BlockAwait<Web::Client::ClientSocketAwait<jvalue>,jvalue>(	Socket().Query(q, vars, false) );
 		TRACE( "multipleQueries: {}.", serialize(value) );
 		ASSERT_TRUE( serialize(value).size() );
+		let& namespaces = Json::AsArray( value.as_object(), "namespaces" );//keyed by the query name, the alias the others carry.
+		EXPECT_GE( namespaces.size(), 2u ) << serialize( value );
 	}
 }
