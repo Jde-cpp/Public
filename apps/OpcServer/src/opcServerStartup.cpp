@@ -1,16 +1,12 @@
 #include "opcServerStartup.h"
 #include <jde/db/db.h>
-#include <jde/ql/QLHook.h>
+#include <jde/ql/ql.h>
 #include <jde/access/AccessListener.h>
 #include <jde/access/client/accessClient.h>
 #include <jde/app/client/appClient.h>
 #include "UAServer.h"
 #include "access/OpcAuthorize.h"
 #include "awaits/ServerConfigAwait.h"
-#include "ql/ConstructorHook.h"
-#include "ql/ObjectTypeHook.h"
-#include "ql/ObjectHook.h"
-#include "ql/OpcServerQL.h"
 #include "web/WebServer.h"
 
 #define let const auto
@@ -60,18 +56,15 @@ namespace Jde::Opc{
 
 		BlockVoidAwait( Access::Client::Configure(accessSchema, {uaSchema}, appClient->QLServer(), UserPK{UserPK::System}, remoteAcl, appClient->Listener(), resourceSchema) );
 		Process::AddShutdownFunction( [listener=appClient->Listener()](bool terminate, SL sl){ listener->Shutdown(terminate, sl); } ); //as the AppServer does - the subscriptions otherwise outlive everything they reference (access-review3 #25).
-		QL::Hook::Add( mu<ConstructorHook>() );
-		QL::Hook::Add( mu<ObjectHook>() );
-		QL::Hook::Add( mu<ObjectTypeHook>() );
 		Initialize( *serverId, uaSchema );
 		auto& ua = GetUAServer();
 		ua.Run();
 		if( Settings::FindBool("/opcServer/db").value_or(false) )
 			BlockVoidAwait( ServerConfigAwait{} ); //database
-		if( Settings::FindPath("/opcServer/mutationsDir") )
-			BlockVoidAwait( UpsertAwait{} ); //mutations
 		for( let& config : Settings::FindPathArray("/opcServer/configFiles") )
 			ua.Load( config );
+		if( let pubsub = Settings::FindObject("/opcServer/pubsub"); pubsub )//after the nodesets: the reader's targets are browse paths into them.
+			StartPubSub( *pubsub );
 
 		opcAuthorize->AssignRights( ua );
 		for( let& [idx, ns] : ua.Namespaces() )

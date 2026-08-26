@@ -26,8 +26,10 @@ local embeddedAppServer = true; //false = run against a live AppServer on localh
 		target: "TestServer",
 		resource: "test",
 		description: "Test OPC",
-		configDir: args.repoSourceDir + "/apps/OpcServer/config/mutations/pumps",
 		port: 4840,
+		configFiles: [ args.repoSourceDir + "/apps/OpcServer/config/nodesets/pumps.NodeSet2.xml" ],
+		//unicast on a test port: multicast needs a route the CI container lacks, and 4840/udp would collide with a live server.
+		pubsub: (import '../../config/pubsub/pumps.libsonnet') + { url: "opc.udp://127.0.0.1:4849/" },
 		ssl:{
 			certificate:{
 				subjectAltName: "URI:urn:open62541.server.application,DNS:localhost,IP:127.0.0.1",

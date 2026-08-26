@@ -77,7 +77,6 @@ function( sync=false )
 		target: "TestServer",
 		resource: args.buildTarget,
 		description: "Test OPC",
-		mutationsDir:: args.repoSourceDir + "/apps/OpcServer/config/mutations/pumps",
 		db: false,
 		ssl:{
 			certificate: {
@@ -95,38 +94,15 @@ function( sync=false )
 			},
 			dh:: "{ApplicationDataFolder}/ssl/dh.pem",
 		},
-		opcNodeSet:{
-			path: "$(UA_NODE_SETS)/Opc.Ua.PredefinedNodes.xml",
-			nodeIds: [23513]
-		},
-		machinery: [
-			//"$(JDE_DIR)/apps/OpcServer/config/nodesets/uaPredefinedNodes.xml",
-			//"/home/duffyj/Downloads/Opc.Ua.NodeSet2.xml",
-			"$(UA_NODE_SETS)/DI/Opc.Ua.Di.NodeSet2.xml",
-			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.xml",
-			"$(UA_NODE_SETS)/Machinery/Opc.Ua.Machinery.NodeSet2.xml",
-			"$(UA_NODE_SETS)/Machinery/Opc.Ua.Machinery.Examples.NodeSet2.xml",
-		],
-		additive: [
-//			"$(JDE_DIR)/apps/OpcServer/config/nodesets/uaPredefinedNodes.xml",
-			"$(UA_NODE_SETS)/DI/Opc.Ua.Di.NodeSet2.xml",
-			"$(UA_NODE_SETS)/Machinery/Opc.Ua.Machinery.NodeSet2.xml",
-			"$(UA_NODE_SETS)/ISA95-JOBCONTROL/opc.ua.isa95-jobcontrol.nodeset2.xml",
-			//"$(UA_NODE_SETS)/Machinery/ProcessValues/Opc.Ua.Machinery.ProcessValues.NodeSet2.xml",
-			"$(UA_NODE_SETS)/PADIM/Opc.Ua.IRDI.NodeSet2.xml",
-			"$(UA_NODE_SETS)/PADIM/Opc.Ua.PADIM.NodeSet2.xml",
-			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.xml",
-			"$(UA_NODE_SETS)/Machinery/Jobs/Opc.Ua.Machinery.Jobs.Nodeset2.xml",
-			"$(UA_NODE_SETS)/MachineTool/Opc.Ua.MachineTool.NodeSet2.xml",
-			"$(UA_NODE_SETS)/AdditiveManufacturing/Opc.Ua.AdditiveManufacturing.Nodeset2.xml",
-			"$(UA_NODE_SETS)/AdditiveManufacturing/AdditiveManufacturing-Example.xml",
-		],
 		configFiles: [
 			//"$(JDE_DIR)/apps/OpcServer/config/nodesets/uaPredefinedNodes.xml",
 			"$(UA_NODE_SETS)/DI/Opc.Ua.Di.NodeSet2.xml",
 			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.xml",
-			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.examples.xml"
+			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.examples.xml",
+			args.repoSourceDir + "/apps/OpcServer/config/nodesets/pumps.NodeSet2.xml" //the PLC emulator's tags - urn:jde:pumps
 		],
+		//Part 14 subscriber: the emulator publishes the pump process values into these nodes.  One contract for both ends.
+		pubsub: import 'pubsub/pumps.libsonnet',
 		port: 4840
 	},
 	//the UA server's trust list.  UAConfig reads /access/trustedCertDirs, not /opcServer/trustedCertDirs - anchoring it

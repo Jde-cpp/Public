@@ -27,14 +27,4 @@ namespace Jde::Opc::Server{
 		α SelectVariants( VariantMembers values )->DB::SelectAwait::Task;
 		vector<DB::Value> _pks;
 	};
-
-	#define ExecuteResult DB::ScalerAwait<VariantPK>::Task
-	struct VariantInsertAwait final : TAwaitEx<VariantPK,ExecuteResult>{
-		using base=TAwaitEx<VariantPK,ExecuteResult>;
-		VariantInsertAwait( Variant v, SRCE )ι: base{ sl }, _variant{ move(v) }{}
-	private:
-		α Execute()ι->ExecuteResult override;
-		Variant _variant;
-	};
-	#undef ExecuteResult
 }

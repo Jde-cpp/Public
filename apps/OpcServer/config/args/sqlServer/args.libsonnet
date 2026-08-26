@@ -6,7 +6,8 @@ common + {
 	access: {
 		trustedCertDirs: [
 			args.certsDir( "OpcGateway" ),
-			args.certsDir( "OpcTests" ) //sqlServer is the windows default args dir, so the windows ProductName (OpcTests.rc) - linux uses args/mysql.
+			args.certsDir( "OpcTests" ), //sqlServer is the windows default args dir, so the windows ProductName (OpcTests.rc) - linux uses args/mysql.
+			args.certsDir( "PlcEmulator" ) //apps/OpcServer/emulator - its UA client cert.
 		],
 	},
 	dbServers: {

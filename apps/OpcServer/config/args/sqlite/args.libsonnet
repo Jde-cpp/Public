@@ -6,7 +6,8 @@ common + {
 	access: {
 		trustedCertDirs: [
 			common.certsDir( "OpcGateway" ),
-			common.certsDir( common.opcTestsProduct )
+			common.certsDir( common.opcTestsProduct ),
+			common.certsDir( "PlcEmulator" ) //apps/OpcServer/emulator - its UA client cert.
 		]
 	},
 	dbServers: {

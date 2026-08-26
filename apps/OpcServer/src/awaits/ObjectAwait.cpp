@@ -27,25 +27,4 @@ namespace Jde::Opc::Server {
 			ResumeExp(move(e));
 		}
 	}
-	ObjectInsertAwait::ObjectInsertAwait( Object&& node, SL sl )ι:
-		base{ sl },
-		_node{ move(node) }
-	{}
-
-	α ObjectInsertAwait::Execute()ι->DB::ScalerAwait<NodePK>::Task{
-		try{
-			auto& ua = GetUAServer();
-			BrowseNameAwait::GetOrInsert( _node.Browse );
-			if( !_node.IsSystem() )
-				_node = ua.AddObject( _node, _sl );
-			_node.PK = co_await DS().InsertSeq<NodePK>( DB::InsertClause{
-				GetSchema().DBName( "object_insert" ),
-				_node.InsertParams()
-			} );
-			Resume( move(_node) );
-		}
-		catch( runtime_error& e ){
-			ResumeExp( move(e) );
-		}
-	}
 }

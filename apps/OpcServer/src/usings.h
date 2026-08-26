@@ -7,7 +7,6 @@ namespace Jde::Opc::Server{
 
 	using NodePK = uint;
 	using OAttrPK = uint32;
-	using OTypeAttrPK = uint32;
 	using VariablePK = uint32;
 	using ServerPK = uint32;
 	using NamespaceId = uint16;
