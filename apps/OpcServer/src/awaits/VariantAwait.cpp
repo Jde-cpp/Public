@@ -62,27 +62,4 @@ namespace Jde::Opc::Server {
 			ResumeExp( move(e) );
 		}
 	}
-
-	α VariantInsertAwait::Execute()ι->DB::ScalerAwait<VariantPK>::Task{
-		try{
-			let variantPK = co_await DS().InsertSeq<VariantPK>(DB::InsertClause{
-				GetView("variants").InsertProcName(),
-				{DB::Value{_variant.type->typeId.identifier.numeric}, _variant.ArrayDimValue()}//ArrayDimValue, not ArrayDimString: a scalar has to bind NULL, or the read below calls it an array.
-			});
-
-			let array = _variant.ToUAJson();
-			for( uint i=0; i<array.size(); ++i ){
-				co_await DS().Execute( DB::Sql{
-					Ƒ("INSERT INTO {}(variant_id, idx, value) VALUES (?,?,?)", GetSchema().DBName("variant_members")),
-					{ {variantPK},
-						{i},
-						{array[i]}
-					}} );
-			}
-			ResumeScaler( variantPK );
-		}
-		catch( runtime_error& e ){
-			ResumeExp( move(e) );
-		}
-	}
 }

@@ -74,7 +74,6 @@ local logsDir = args.logsDir;
 	opcServer:{
 		target: "TestServer",
 		description: "Test OPC",
-		mutationsDir:: args.repoSourceDir + "/apps/OpcServer/config/mutations/pumps",
 		configFiles: [
 			"$(UA_NODE_SETS)/DI/Opc.Ua.Di.NodeSet2.xml",
 			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.xml",

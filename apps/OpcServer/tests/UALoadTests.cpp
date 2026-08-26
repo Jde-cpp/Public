@@ -1,6 +1,8 @@
 #include <jde/fwk/settings.h>
 #include "../src/globals.h"
 #include "../src/UAServer.h"
+#include <jde/opc/uatypes/BrowsePath.h>
+#define let const auto
 
 namespace Jde::Opc::Server::Tests{
 	struct UALoadTests : ::testing::Test{
@@ -16,6 +18,32 @@ namespace Jde::Opc::Server::Tests{
 	TEST_F( UALoadTests, LoadMyKitchen ){
 		GetUAServer().Load( Path()/"CommercialKitchenEquipment/Opc.Ua.CommercialKitchenEquipment.NodeSet2.xml" );
 		GetUAServer().Load( fs::path{*Process::GetEnv("JDE_DIR")}/"apps/OpcServer/config/nodesets/kitchen.xml" );
+	}
+
+	//config/nodesets/pumps.NodeSet2.xml - the PLC emulator's tags.  Instances are explicit in NodeSet2 (no type
+	//instantiation), so every pump must carry its own status/motorRpm; the values are the file's <Value> elements.
+	TEST_F( UALoadTests, Pumps ){
+		auto& ua = GetUAServer();
+		ua.Load( fs::path{*Process::GetEnv("JDE_DIR")}/"apps/OpcServer/config/nodesets/pumps.NodeSet2.xml" );
+		let ns = NamespaceIndex( ua, "urn:jde:pumps" );
+		const flat_map<string,NsIndex> aliases{ {"pumps", ns} };
+		for( let& pump : {"pump1", "pump2", "pump3", "pump4", "pumpManual"} ){
+			let status = BrowsePath::Resolve( ua, Ƒ("pumps~{}/pumps~status", pump), 0, aliases );
+			EXPECT_EQ( status.namespaceIndex, ns ) << pump;
+			UA_Variant v; UA_Variant_init( &v );
+			ASSERT_EQ( UA_Server_readValue(ua.Ptr(), status, &v), UA_STATUSCODE_GOOD ) << pump;
+			ASSERT_TRUE( UA_Variant_hasScalarType(&v, &UA_TYPES[UA_TYPES_BOOLEAN]) ) << pump;
+			EXPECT_TRUE( *(UA_Boolean*)v.data ) << pump;
+			UA_Variant_clear( &v );
+			let rpm = BrowsePath::Resolve( ua, Ƒ("pumps~{}/pumps~motorRpm", pump), 0, aliases );
+			ASSERT_EQ( UA_Server_readValue(ua.Ptr(), rpm, &v), UA_STATUSCODE_GOOD ) << pump;
+			ASSERT_TRUE( UA_Variant_hasScalarType(&v, &UA_TYPES[UA_TYPES_DOUBLE]) ) << pump;
+			EXPECT_EQ( *(UA_Double*)v.data, 0.0 ) << pump;
+			UA_Variant_clear( &v );
+		}
+		EXPECT_EQ( *BrowsePath::Resolve(ua, "pumps~pump1/pumps~motorRpm", 0, aliases).Numeric(), 6012u );
+		EXPECT_THROW( BrowsePath::Resolve(ua, "pumps~pump1/pumps~nope", 0, aliases), Exception );
+		EXPECT_THROW( BrowsePath::Resolve(ua, "nope~pump1", 0, aliases), Exception );
 	}
 
 	// never ending loop

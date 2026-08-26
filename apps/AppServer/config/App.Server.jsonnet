@@ -45,7 +45,8 @@ function( sync=false )
 		//the test binaries anchor their own dirs in their own configs (Opc.Server.Tests.jsonnet, Opc.Tests.jsonnet).
 		trustedCertDirs: [
 			"$(ProgramData)/Jde-Cpp/OpcServer/ssl/certs",
-			"$(ProgramData)/Jde-Cpp/OpcGateway/ssl/certs"
+			"$(ProgramData)/Jde-Cpp/OpcGateway/ssl/certs",
+			"$(ProgramData)/Jde-Cpp/PlcEmulator/ssl/certs" //the PLC emulator (apps/OpcServer/emulator) logs in for a session that becomes its OPC UA issued token; like the gateway, a first-class app, not a test binary.
 		]
 	},
 	dbServers:{
