@@ -122,10 +122,27 @@ cell.  (For the whole column, put `justify-content: center` on .mat-column-snaps
 mat-cell.mat-column-snapshot mat-checkbox{
 	margin-inline: auto;
 }
+/* the flags are tags, not prose, so each gets a chip.  170px is what Read + Write need side by side at this size; the
+rarer history flags wrap to a second line rather than widen a column every row pays for. */
 .mat-column-access{
-	flex: 0 0 150px;
+	flex: 0 0 170px;
 	padding-left: 5px;
 	padding-right: 5px;
+}
+/* the chip reads its size and colour from tokens on an ancestor, so the set carries them for the chips inside it.  The
+container colour is one of them:  the theme leaves it unset, and an unfilled chip is indistinguishable from the plain
+text this replaced. */
+mat-cell.mat-column-access mat-chip-set{
+	--mat-chip-container-height: 20px;
+	--mat-chip-label-text-size: 11px;
+	--mat-chip-label-text-line-height: 20px;
+	--mat-chip-elevated-container-color: var(--mat-sys-surface-container-highest);
+	--mat-chip-label-text-color: var(--mat-sys-on-surface-variant);
+}
+//write access is the one worth spotting at a glance;  the read flags stay the neutral surface colour above
+.access-write{
+	--mat-chip-elevated-container-color: var(--mat-sys-tertiary-container);
+	--mat-chip-label-text-color: var(--mat-sys-on-tertiary-container);
 }
 /* A FIXED basis, like every other column:  each mat-row is its own flex container, so an `auto` basis sizes this cell
 to its own text and leaves each row a different amount of free space for .mat-column-name to grow into - the columns

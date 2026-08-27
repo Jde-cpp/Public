@@ -12,6 +12,7 @@
 #include "DataTypeQLAwait.h"
 #include "NodeQLAwait.h"
 #include "OpcSessionsQLAwait.h"
+#include "SearchQLAwait.h"
 #include "VariableQLAwait.h"
 #define let const auto
 
@@ -37,12 +38,14 @@ namespace Jde::Opc::Gateway{
 
 	Ω needsClient( const QL::Input& q )ι->bool{
 		let tableName = q.JTableName();
-		return !tableName.starts_with( "serverConnection" ) && tableName!="__type" && tableName!="status" && tableName!="opcSessions";
+		return !tableName.starts_with( "serverConnection" ) && tableName!="__type" && tableName!="status" && tableName!="opcSessions" && tableName!="search";//search must never ConnectAwait - it only reads clients already open.
 	}
 	α GatewayQLAwait::Test( QL::TableQL& q, QL::Creds executer, SL sl )->up<TAwait<jvalue>>{
 		up<TAwait<jvalue>> await;
 		if( q.JsonName=="opcSessions" )
 			await = mu<OpcSessionsQLAwait>( move(q), move(executer), sl );
+		else if( q.JsonName=="search" )
+			await = mu<SearchQLAwait>( move(q), move(executer), sl );
 		else if( ServerCnnctnSessionsQLAwait::IsApplicable(q) )
 			await = mu<ServerCnnctnSessionsQLAwait>( move(q), move(executer), sl );
 		else if( needsClient(q) )

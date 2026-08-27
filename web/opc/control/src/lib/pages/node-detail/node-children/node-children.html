@@ -110,7 +110,13 @@
 				</ng-container>
 				<ng-container matColumnDef="access">
 					<mat-header-cell mat-sort-header *matHeaderCellDef> Access </mat-header-cell>
-					<mat-cell mat-cell *matCellDef="let r">{{access(r)}}</mat-cell>
+					<mat-cell mat-cell *matCellDef="let r">
+						<mat-chip-set aria-label="Access">
+							@for( name of access(r); track name ){
+								<mat-chip class="access-chip" [class.access-write]="name.includes('Write')">{{name}}</mat-chip>
+							}
+						</mat-chip-set>
+					</mat-cell>
 				</ng-container>
 				<ng-container matColumnDef="description">
 					<mat-header-cell mat-sort-header *matHeaderCellDef> Description </mat-header-cell>

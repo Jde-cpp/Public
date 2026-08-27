@@ -7,7 +7,7 @@
 
 namespace Jde::Opc::Gateway{
 	flat_map<ServerCnnctnNK,flat_map<Credential,vector<ConnectAwait::Handle>>> _requests; mutex _requestMutex;
-	α credential( SessionPK sessionId, UserPK user, str opc )ι->optional<Credential>{
+	α SessionCredential( SessionPK sessionId, UserPK user, str opc )ι->optional<Credential>{
 		optional<Credential> cred;
 		if( sessionId ){
 			cred = GetCredential( sessionId, opc );
@@ -21,7 +21,7 @@ namespace Jde::Opc::Gateway{
 	ConnectAwait::ConnectAwait( ServerCnnctnNK opc, SessionPK sessionId, UserPK user, SL sl )ι:
 		base{sl},
 		_opcTarget{ move(opc) },
-		_cred{ credential(sessionId, user, _opcTarget).value_or(Credential{}) },
+		_cred{ SessionCredential(sessionId, user, _opcTarget).value_or(Credential{}) },
 		_sessionId{ sessionId }
 	{}
 	α ConnectAwait::await_resume()ε->sp<UAClient>{

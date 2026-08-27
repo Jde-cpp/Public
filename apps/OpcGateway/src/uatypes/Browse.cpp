@@ -177,6 +177,15 @@ namespace Browse{
 	Request::Request( NodeId&& id, const QL::TableQL& ql )ι:
 		Request( move(id), calcMask(ql) )
 	{}
+	α Request::Hierarchical( NodeId&& id, UA_BrowseResultMask mask )ι->Request{
+		Request y{ move(id), mask };
+		auto& d = y.nodesToBrowse[0];
+		d.browseDirection = UA_BROWSEDIRECTION_FORWARD;
+		d.referenceTypeId = UA_NODEID_NUMERIC( 0, UA_NS0ID_HIERARCHICALREFERENCES );
+		d.includeSubtypes = true;
+		d.nodeClassMask = UA_NODECLASS_OBJECT | UA_NODECLASS_VARIABLE | UA_NODECLASS_METHOD;
+		return y;
+	}
 
 	α Response::operator=( Response&& x )ι->Response&{
 		UA_BrowseResponse_clear( this );

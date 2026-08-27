@@ -3,10 +3,11 @@ import { ApplicationConfig } from '@angular/core';
 import { MAT_TABS_CONFIG } from '@angular/material/tabs';
 import { provideRouter } from '@angular/router';
 import { AppService, AuthStore, ProfileService } from 'jde-framework'
-import { GatewayService, OpcAuthService, OpcStore} from 'jde-opc';
+import { GatewayService, NodeSearchProvider, OpcAuthService, OpcStore} from 'jde-opc';
+import { RouteSearchProvider, SEARCH_PROVIDERS } from 'jde-spa';
 import {EnvironmentService} from './services/environment-service';
 import { routes } from './app.routes';
-import { AccessService } from "jde-access";
+import { AccessSearchProvider, AccessService } from "jde-access";
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -22,6 +23,10 @@ export const appConfig: ApplicationConfig = {
 		{provide: 'GatewayService', useExisting: GatewayService},//useExisting, not useClass:  useClass is a construction recipe, so each token would build its own GatewayService (and its own sockets/queries)
 		{provide: 'OpcStore', useExisting: OpcStore},//string-token writers (GatewayService, NodeResolver, NodeRoute) and class-token readers (ClientResolver) must share one store
 		{provide: 'IProfileService', useExisting: ProfileService},//ProfileStore (jde-spa) persists via this token; jde-spa can't import the framework implementation
+		//the navbar search (jde-spa) fans out through this multi token, same reason;  registration order is result precedence.
+		{provide: SEARCH_PROVIDERS, useExisting: RouteSearchProvider, multi: true},
+		{provide: SEARCH_PROVIDERS, useExisting: AccessSearchProvider, multi: true},
+		{provide: SEARCH_PROVIDERS, useExisting: NodeSearchProvider, multi: true},
 		//OpcNodeRouteService/AuthGuard need no string token - every consumer injects the class, which providedIn:'root' already supplies
 	]
 };

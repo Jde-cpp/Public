@@ -13,9 +13,30 @@ export class RouteStore{
 	setChildren( url:string | UrlSegment[], children:RouteItem[] ){
 		if( Array.isArray(url) )
 			url = url.map( x=>x.path ).join("/");
-		this.#children.set( url, children.map(s=>{return new RouteItem({title:s.title, path:s.path})}) );
+		this.#children.set( url, children.map(s=>{return new RouteItem({title:s.title, path:s.path, icon:s.icon})}) );
 		localStorage.setItem( url, JSON.stringify(this.#children.get(url)) );
+		this.#rememberKey( url );
 	}
+
+	//Every parent url with cached children - the navbar search enumerates them.  localStorage has no prefix to list by, so the
+	//keys are kept in their own entry and hydrated through loadChildren on first use.
+	entries():ReadonlyMap<string,RouteItem[]>{
+		for( const key of this.#keys() ){
+			if( !this.#children.has(key) )
+				this.loadChildren( key );
+		}
+		return this.#children;
+	}
+	#keys():string[]{
+		try{
+			const keys = JSON.parse( localStorage.getItem(RouteStore.keysKey) ?? '[]' );
+			return Array.isArray( keys ) ? keys.filter( (k:unknown)=>typeof k=='string' ) : [];
+		}
+		catch{
+			return [];
+		}
+	}
+	static readonly keysKey = 'routeStore.keys';
 
 	private loadChildren( key:string ):RouteItem[]{
 		let storage = localStorage.getItem( key );
@@ -23,8 +44,14 @@ export class RouteStore{
 		if( storage ){
 			children = JSON.parse(storage).map( (s:any)=>new RouteItem(s) );
 			this.#children.set( key, children );
+			this.#rememberKey( key );//written before the key list existed - entries() sees it from now on
 		}
 		return children;
+	}
+	#rememberKey( key:string ):void{
+		const keys = this.#keys();
+		if( !keys.includes(key) )
+			localStorage.setItem( RouteStore.keysKey, JSON.stringify([...keys, key]) );
 	}
 
 	#children:Map<string,RouteItem[]> = new Map<string,RouteItem[]>();//parent url, children relative to parent

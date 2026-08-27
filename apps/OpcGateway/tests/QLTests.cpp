@@ -1,5 +1,6 @@
 #include "utils/GatewayClientSocket.h"
 #include "utils/helpers.h"
+#include <jde/fwk/str.h>
 #include <jde/web/client/proto/Web.FromServer.pb.h>
 #include "../src/GatewayAppClient.h"
 #include "../src/auth/OpcServerSession.h"
@@ -137,6 +138,66 @@ namespace Jde::Opc::Gateway::Tests{
 		let& o = single.as_object();
 		EXPECT_FALSE( o.contains("target") ) << serialize( o );
 		EXPECT_GE( Json::FindNumberPath<uint32>(o, "opcSessions/count").value_or(0), 1u ) << serialize( o );
+	}
+
+	TEST_F( QLTests, search ){
+		const jobject vars{ {"opc", OpcServerTarget} };
+		Socket().QuerySync( "serverDescription( opc: $opc ){ applicationUri }", vars );//search never connects - give this socket's session a live client first.
+		constexpr sv lampPath{ "4~Examples/4~Stacklights/4~ExampleStacklight/4~Lamp1" };//BrowseTests.NodeId resolves the same path.
+		auto rows = [&]( string q ){
+			auto value = Socket().QuerySync( string{q}, vars );
+			TRACE( "{}: {}.", q, serialize(value) );
+			return value.as_array();
+		};
+		auto find = [&]( const jarray& rows, sv path ){ return find_if( rows, [&](let& r){ return Json::AsSV(r.as_object(), "path")==path; } ); };
+
+		let first = rows( "search( opc: $opc, text: \"lamp1\" ){ connection{ target name } id path name browse{ ns name } nodeClass depth }" );//the first search crawls.
+		auto lamp = find( first, lampPath );
+		ASSERT_NE( lamp, first.end() ) << serialize( first );
+		let& o = lamp->as_object();
+		EXPECT_EQ( Json::AsSV(o, "name"), "Lamp1" );
+		EXPECT_EQ( Json::AsSVPath(o, "connection/target"), OpcServerTarget );
+		EXPECT_EQ( Json::AsSVPath(o, "browse/name"), "Lamp1" );
+		EXPECT_EQ( Json::AsNumber<uint16>(o.at("browse").as_object(), "ns"), 4 );
+		EXPECT_EQ( Json::AsNumber<uint8>(o, "depth"), 4 );
+		EXPECT_TRUE( o.contains("ns") && o.contains("i") ) << "id is spelled the way node{id} spells it: " << serialize( o );
+		EXPECT_TRUE( o.contains("nodeClass") ) << serialize( o );
+		for( let& row : first )//substring, case-insensitive, on the display or browse name.
+			EXPECT_TRUE( Str::ToLower(Json::AsString(row.as_object(), "name")).contains("lamp1") || Str::ToLower(Json::AsSVPath(row.as_object(), "browse/name")).contains("lamp1") ) << serialize( row );
+
+		let again = rows( "search( opc: $opc, text: \"LAMP1\" ){ path }" );//served from the index, case-folded.
+		EXPECT_EQ( again.size(), first.size() );
+		ASSERT_NE( find(again, lampPath), again.end() ) << serialize( again );
+		EXPECT_EQ( again.front().as_object().size(), 1u ) << "projection: only the requested column";
+
+		let fanout = rows( "search( text: \"lamp1\" ){ connection{ target } path }" );//no opc: every client this session already holds.
+		ASSERT_NE( find(fanout, lampPath), fanout.end() ) << serialize( fanout );
+
+		let unknown = rows( "search( opc: \"noSuchConnection\", text: \"lamp1\" ){ path }" );//no live client ⇒ empty, and no ConnectAwait (which would throw 'not found').
+		EXPECT_TRUE( unknown.empty() ) << serialize( unknown );
+
+		let refreshed = rows( "search( opc: $opc, text: \"lamp1\", refresh: true ){ path }" );
+		ASSERT_NE( find(refreshed, lampPath), refreshed.end() ) << serialize( refreshed );
+
+		let limited = rows( "search( opc: $opc, text: \"a\", limit: 3 ){ path }" );
+		EXPECT_EQ( limited.size(), 3u ) << serialize( limited );
+
+		let blank = rows( "search( opc: $opc, text: \"  \" ){ path }" );
+		EXPECT_TRUE( blank.empty() ) << serialize( blank );
+	}
+
+	TEST_F( QLTests, searchIntrospection ){
+		constexpr sv fieldsQL{ "{ fields{ name type{ name kind ofType{ name kind } } } }" };
+		for( sv typeName : {"Search"sv, "search"sv} ){ //both spellings are declared in config/introspection/search.jsonnet.
+			let value = Socket().QuerySync( Ƒ("__type( name: \"{}\" ){}", typeName, fieldsQL), {} );
+			let& fields = Json::AsArray( value.as_object(), "fields" );
+			auto find = [&]( sv name ){ return find_if( fields, [&](let& f){ return Json::AsSV(f.as_object(), "name")==name; } ); };
+			for( sv name : {"connection"sv, "id"sv, "path"sv, "name"sv, "browse"sv, "nodeClass"sv, "depth"sv} )
+				EXPECT_NE( find(name), fields.end() ) << name << ": " << serialize( value );
+			auto connection = find( "connection" );
+			ASSERT_NE( connection, fields.end() );
+			EXPECT_EQ( Json::AsSVPath(connection->as_object(), "type/name"), "SearchConnection" );
+		}
 	}
 
 	TEST_F( QLTests, serverConnectionIntrospection ){
