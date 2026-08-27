@@ -3,6 +3,7 @@ import {ChangeDetectorRef, Component, computed, inject, Inject, model, OnDestroy
 import {MatButtonModule} from '@angular/material/button';
 import {MatButtonToggleModule} from '@angular/material/button-toggle';
 import {MatCheckboxChange, MatCheckboxModule} from '@angular/material/checkbox';
+import {MatChipsModule} from '@angular/material/chips';
 import {MatIconModule} from '@angular/material/icon';
 import {MatProgressBarModule} from '@angular/material/progress-bar';
 import {MatSelectChange, MatSelectModule} from '@angular/material/select';
@@ -34,7 +35,7 @@ import { NodeId } from '../../../model/node-id';
   templateUrl: './node-children.html',
   styleUrls: ['./node-children.scss'],
   providers: [provideNativeDateAdapter()],
-  imports: [RouterModule,MatButtonModule,MatButtonToggleModule,MatCheckboxModule,MatDatepickerModule,MatFormFieldModule,MatIconModule,MatInputModule,MatProgressBarModule,MatSortModule,MatTableModule,MatToolbarModule,MatTooltipModule,MatSelectModule,QLListSettings]
+  imports: [RouterModule,MatButtonModule,MatButtonToggleModule,MatCheckboxModule,MatChipsModule,MatDatepickerModule,MatFormFieldModule,MatIconModule,MatInputModule,MatProgressBarModule,MatSortModule,MatTableModule,MatToolbarModule,MatTooltipModule,MatSelectModule,QLListSettings]
 })
 export class NodeChildren implements OnInit, OnDestroy {
 	constructor(
@@ -193,7 +194,8 @@ export class NodeChildren implements OnInit, OnDestroy {
 	toObject( x:ENodeClass ):string{ return ENodeClass[x]; }
 	toString( value:Value|undefined ){ return valueString(value); }//Variable.value is optional, and retrieveSnapshot clears it while reading
 	dataType( n:UaNode ):string{ return NodeView.cellValue( n, "dataType" )?.toString() ?? ""; }
-	access( n:UaNode ):string{ return NodeView.cellValue( n, "access" )?.toString() ?? ""; }
+	//the Access cell is a chip per flag, so it takes the list the cell text is joined from rather than the text
+	access( n:UaNode ):string[]{ return NodeView.accessList( n.isVariable ? n as Variable : undefined ); }
   checkboxLabel(row?: UaNode): string {
 		return row
 			? `${this.selections.isSelected(row) ? 'deselect' : 'select'} ${row.name}`
@@ -348,9 +350,8 @@ export class NodeChildren implements OnInit, OnDestroy {
 	#routeService = inject( OpcNodeRouteService );
 	#profileStore = inject( ProfileStore );
 }
-//per node (keyed by profileKey):  the subscriptions and the tab.  The columns and sort used to live here too;  they are the view's now, shared by every node.
+//per node (keyed by profileKey):  the subscriptions.  The tab index used to live here too, but is written only by ProfileStore.setTabIndex (localStorage);  the columns and sort are the view's now, shared by every node.
 class UserSettings{
-	tabIndex:number = 0;
 	subscriptions:NodeId[] = [];
 //	access:NodeAccessProfile = new NodeAccessProfile();
 }

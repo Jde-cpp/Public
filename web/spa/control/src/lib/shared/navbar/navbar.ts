@@ -1,8 +1,8 @@
 //https://github.com/angular/components/blob/a55b19797f0bccf467d5602f526eef236737498b/docs/src/app/shared/navbar/navbar.ts
-import { AsyncPipe } from '@angular/common';
 import {Component, computed, ElementRef, inject, OnInit, signal, viewChild} from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import {FormControl, FormsModule, ReactiveFormsModule} from '@angular/forms';
-import {MatAutocompleteModule} from '@angular/material/autocomplete';
+import {MatAutocompleteModule, MatAutocompleteTrigger} from '@angular/material/autocomplete';
 import {MatButtonModule} from '@angular/material/button';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,7 +12,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import {ActivatedRoute, NavigationEnd, RouterLink, RouterLinkActive} from '@angular/router';
 import {Route, Router, Routes} from '@angular/router';
 import { Title } from '@angular/platform-browser';
-import { BehaviorSubject, filter, Observable } from 'rxjs';
+import { debounceTime, distinctUntilChanged, filter, map, of, switchMap } from 'rxjs';
 import {NavigationFocusService} from '../navigation-focus/navigation-focus-service';
 import {ThemePicker} from '../theme-picker/theme-picker';
 import { Authorization } from '../authorization/authorization';
@@ -21,7 +21,9 @@ import { Favorites } from './favorites/favorites-dialog';
 import { ProfileStore } from '../../services/profile/profile-store';
 import { RouteStore } from '../../services/route-store';
 import { RouteItem } from '../../pages/component-sidenav/route-item';
-import { MatAutocomplete } from "@angular/material/autocomplete";
+import { matchConfig } from '../../services/route-utils';
+import { SearchService } from '../../services/search/search-service';
+import { SearchResult } from '../../services/search/search-provider';
 
 export type Favorite={
 	folderName?:string;
@@ -38,7 +40,6 @@ export type Folder = { folderName:string, items:Favorite[] };
     '(document:keydown)': 'onKeydown($event)',
   },
   imports: [
-		AsyncPipe,
     Authorization,
 		Breadcrumbs,
     Favorites,
@@ -105,7 +106,7 @@ export class NavBar implements OnInit {
 	onToggleBreadcrumbs(){
 		const show = !this.showBreadcrumbs();
 		this.showBreadcrumbs.set( show );
-		this.#profileStore.save( "showBreadcrumbs", show );
+		this.#profileStore.set( "showBreadcrumbs", show );
 	}
 	#buildCrumbs( path:string ):RouteItem[]{
 		const segments = path.split('/').filter( s=>s.length );
@@ -129,21 +130,7 @@ export class NavBar implements OnInit {
 		}
 		return undefined;
 	}
-	static matchConfig( routes:Routes, segments:string[] ):Route|undefined{//first match wins ⇒ the duplicated 'access' path resolves like Angular's own matcher
-		for( const config of routes ){
-			if( config.path=='**' )
-				return config;//wildcard consumes any remainder ⇒ every prefix inside a node browse path is routable
-			const configSegments = config.path!.split('/').filter( s=>s.length );
-			if( configSegments.length>segments.length || !configSegments.every( (cs,j)=>cs.startsWith(':') || cs==segments[j] ) )
-				continue;
-			if( configSegments.length==segments.length )
-				return config;
-			const child = config.children ? NavBar.matchConfig( config.children, segments.slice(configSegments.length) ) : undefined;
-			if( child )
-				return child;
-		}
-		return undefined;
-	}
+	static matchConfig( routes:Routes, segments:string[] ):Route|undefined{ return matchConfig( routes, segments ); }//lives in services/route-utils now - RouteSearchProvider needs it without importing a component.
 
 	onKeydown( event:KeyboardEvent ){//'/' jumps to search, unless the keystroke belongs to whatever the user is already typing in
 		if( event.key!='/' || event.ctrlKey || event.metaKey || event.altKey || this.#isTyping(event.target) )
@@ -155,16 +142,24 @@ export class NavBar implements OnInit {
 		const el = target as HTMLElement|null;
 		return !!el && (el.isContentEditable || ['INPUT','TEXTAREA','SELECT'].includes(el.tagName));
 	}
-	onSearch( event:any ){
-
+	//Enter with no highlighted option (the panel is closed, or nothing matched yet) goes to the first result;  with one, the
+	//autocomplete trigger already selected it and marked the event handled.
+	onSearch( event:Event ){
+		event.preventDefault();//never submit anything
+		if( event.defaultPrevented || (this.searchTrigger()?.panelOpen && this.searchTrigger()?.activeOption) )
+			return;
+		const first = this.searchResults()[0];
+		if( first )
+			this.onSearchSelected( first );
 	}
-	onSearchSelected( query:string ){
-		//return [];
+	onSearchSelected( result:SearchResult ){
+		this.router.navigate( Array.isArray(result.route) ? result.route : [result.route], {queryParams: result.queryParams} );
+		this.searchForm.setValue( '' );
+		this.searchTrigger()?.closePanel();
+		this.searchInput()?.nativeElement.blur();
 	}
-	searchValuesSubject = new BehaviorSubject<string[]>([]);
-	searchValues():Observable<string[]>{
-		return this.searchValuesSubject.asObservable();
-	}
+	displayWith = ( result:string|SearchResult|null ):string=>typeof result=='string' ? result : result ? (result.prefix ? result.prefix+':' : '')+result.title : '';
+	trackResult( result:SearchResult ):string{ return SearchService.key( result ); }
 	favoriteMenus = computed( ()=>{
 		let items:Array<Favorite|Folder> = [];
 		if( !this.favorites() )
@@ -193,6 +188,14 @@ export class NavBar implements OnInit {
 	route = signal<string>( null as any );
 	existing = computed<Favorite|undefined>( ()=>this.favorites()?.find( fav=>fav.route==this.route() ) );// the favorite corresponding to the current route, if any
 	router = inject(Router);
-	searchForm = new FormControl<string>('');
+	searchForm = new FormControl<string|SearchResult>( '', {nonNullable: true} );//the selected option lands here as the object;  displayWith renders it.
 	searchInput = viewChild<ElementRef<HTMLInputElement>>( 'searchInput' );
+	searchTrigger = viewChild( MatAutocompleteTrigger );
+	#searchService = inject( SearchService );
+	searchResults = toSignal( this.searchForm.valueChanges.pipe(
+		map( value=>typeof value=='string' ? value : '' ),
+		debounceTime( 150 ),
+		distinctUntilChanged(),
+		switchMap( text=>text.trim().length ? this.#searchService.search( text ) : of( [] as SearchResult[] ) )
+	), {initialValue: [] as SearchResult[]} );
 }

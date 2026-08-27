@@ -30,6 +30,10 @@ addHard app.config.ts $sitePath/app;
 addHard google-relogin.spec.ts $sitePath/app;
 addHard profile-store.spec.ts $sitePath/app;
 addHard profile-service.spec.ts $sitePath/app;
+#lib specs live here too: under this workspace the unit-test builder realpaths a lib's own specs through the symlink and rejects them.
+addHard search-service.spec.ts $sitePath/app;
+addHard route-search-provider.spec.ts $sitePath/app;
+addHard node-search-provider.spec.ts $sitePath/app;
 moveToDir services;
 addHard environment-service.ts $sitePath/app/services;
 cd ../..;

@@ -11,7 +11,7 @@ local logsDir = args.logsDir;
 	},
 	opc: args.opc,
 	ql:{
-		introspection: [ "../../config/introspection/serverConnection.jsonnet" ] //relative to this file, as in Opc.Gateway.jsonnet: the ServerConnection extension QLTests asserts on.
+		introspection: [ "../../config/introspection/serverConnection.jsonnet", "../../config/introspection/search.jsonnet" ] //relative to this file, as in Opc.Gateway.jsonnet: the extensions QLTests asserts on.
 	},
 	access:{
 		trustedCertDirs: [
@@ -70,6 +70,7 @@ local logsDir = args.logsDir;
 	},
 	gateway:{
 		issuedCerts: instance.http.gateway.ssl,
+		search:{ maxDepth: 12, maxNodes: 25000, limit: 20, includeServer: false }
 	},
 	opcServer:{
 		target: "TestServer",
