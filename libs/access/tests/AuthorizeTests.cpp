@@ -24,6 +24,7 @@ namespace Jde::Access::Tests{
 		using Authorize::RestoreGroup;
 		using Authorize::Roles;
 		using Authorize::UpdatePermission;
+		using Authorize::UpdateResourceDeleted;
 	};
 	constexpr ResourcePK _resourcePK{ 1 };
 	const UserPK _user{ 100 };
@@ -264,11 +265,11 @@ namespace Jde::Access::Tests{
 		EXPECT_THROW( auth->TestAdmin(_target, unknown), Exception );
 	}
 
-	//todo.md §12: the IAdminAcl overload returns a pre-completed awaitable any coroutine can co_await - the
-	//denial arrives at the co_await, not at the call. VoidTask return: the awaitable dictates no task type.
+	//todo.md §12: with no remote registered for the schema, the schema overload returns a pre-completed awaitable any coroutine
+	//can co_await - the denial arrives at the co_await, not at the call. VoidTask return: the awaitable dictates no task type.
 	Ω testAdminAwait( TestAuthorize& auth, UserPK user, bool& threw, bool& completed )->VoidTask{
 		try{
-			auto check = auth.TestAdmin( _target, "", user );
+			auto check = auth.TestAdmin( _schema, _target, "", user );
 			co_await *check;
 			threw = false;
 		}
@@ -285,6 +286,74 @@ namespace Jde::Access::Tests{
 		testAdminAwait( *auth, UserPK{999}, threw, completed );
 		ASSERT_TRUE( completed );
 		EXPECT_TRUE( threw ) << "an unknown user must fail the admin check through the awaitable";
+	}
+
+	//appserver-review3 #13:  the flat rule behind the admin check when no OpcServer answers for the schema - the (schema,target,
+	//criteria) row when it is active, else the target's root, which an unmapped criteria inherits as an unmapped node does in
+	//OpcAuthorize::UserRights;  neither active is "not enabled", a pass.
+	TEST( AuthorizeTests, TestAdminLocalBySchemaTargetCriteria ){
+		auto auth = createAuthorizer();
+		constexpr ResourcePK criteriaPK{ 2 };
+		const string criteria{ "ns=4;i=1" };
+		auth->CreateResource( Resource{criteriaPK, jobject{{"schemaName",_schema},{"target",_target},{"criteria",criteria}}} );
+		auth->AddResource( criteriaPK, _schema, _target, criteria );
+		auth->AddAcl( _user.Value, PermissionPK{10}, Administer, None, _resourcePK );//admin of the root only.
+
+		EXPECT_NO_THROW( auth->TestAdminLocal(_schema, _target, "", _user) );
+		EXPECT_NO_THROW( auth->TestAdminLocal(_schema, _target, "ns=4;i=2", _user) ) << "an unmapped criteria inherits the root";
+		EXPECT_THROW( auth->TestAdminLocal(_schema, _target, criteria, _user), Exception ) << "a mapped criteria is its own resource - root admin holds nothing over it";
+		EXPECT_NO_THROW( auth->TestAdminLocal(_schema, _target, criteria, UserPK{UserPK::System}) );
+		EXPECT_THROW( auth->TestAdminLocal(_schema, _target, "", UserPK{999}), Exception ) << "unknown user";
+		EXPECT_NO_THROW( auth->TestAdminLocal(_schema, "notEnabled", "x", UserPK{999}) ) << "no active root - not enabled, as Test";
+		EXPECT_NO_THROW( auth->TestAdminLocal("other", _target, "", UserPK{999}) ) << "the schema is part of the key";
+
+		auth->UpdateResourceDeleted( criteriaPK, _schema, jobject{{"id",criteriaPK}}, false );//SchemaResources keeps the entry - the row's own flag has to win.
+		EXPECT_NO_THROW( auth->TestAdminLocal(_schema, _target, criteria, _user) ) << "a deleted criteria row falls back to the root";
+	}
+
+	//appserver-review3 #4:  the gate on standing in for a schema (AddAdminAuthorizer) - Administer on every active root resource
+	//of the schema, and an unknown or fully disabled schema is a denial rather than the quiet pass the name-only lookup gave.
+	TEST( AuthorizeTests, TestSchemaAdmin ){
+		auto auth = createAuthorizer();
+		EXPECT_THROW( auth->TestSchemaAdmin("unknown", _user), Exception );
+		EXPECT_THROW( auth->TestSchemaAdmin(_schema, _user), Exception ) << "no rights yet";
+		auth->AddAcl( _user.Value, PermissionPK{10}, Administer, None, _resourcePK );
+		EXPECT_NO_THROW( auth->TestSchemaAdmin(_schema, _user) );
+		EXPECT_NO_THROW( auth->TestSchemaAdmin(_schema, UserPK{UserPK::System}) );
+		constexpr ResourcePK otherPK{ 3 };
+		auth->CreateResource( Resource{otherPK, jobject{{"schemaName",_schema},{"target","gadgets"}}} );
+		auth->AddResource( otherPK, _schema, "gadgets", {} );
+		EXPECT_THROW( auth->TestSchemaAdmin(_schema, _user), Exception ) << "every active root, not just one";
+		auth->UpdateResourceDeleted( otherPK, _schema, jobject{{"id",otherPK}}, false );
+		EXPECT_NO_THROW( auth->TestSchemaAdmin(_schema, _user) ) << "a disabled root is not enforced";
+		auth->UpdateResourceDeleted( _resourcePK, _schema, jobject{{"id",_resourcePK}}, false );
+		EXPECT_THROW( auth->TestSchemaAdmin(_schema, _user), Exception ) << "nothing active - nothing to delegate";
+	}
+
+	struct StubAdminAcl final : IAdminAcl{
+		α TestAdmin( str, str, UserPK, SL sl )ι->up<AnyVoidAwait> override{ ++Calls; return mu<AnyCompletedAwait>( up<Exception>{}, sl ); }
+		uint Calls{};
+	};
+	//and the routing:  a registered IAdminAcl answers while its registrant administers the schema;  stripped, the local rule does.
+	TEST( AuthorizeTests, TestAdminRoutesToTheRegistrantWhileItAdministersTheSchema ){
+		auto auth = createAuthorizer();
+		const UserPK registrant{ 101 };
+		auth->CreateUser( registrant );
+		auth->AddAcl( registrant.Value, PermissionPK{11}, Administer, None, _resourcePK );
+		auto stub = ms<StubAdminAcl>();
+		auth->AddAdminAuthorizer( _schema, stub, registrant );
+		bool threw{}, completed{};
+		testAdminAwait( *auth, UserPK{999}, threw, completed );//unknown to the local rule; the stub passes everyone.
+		ASSERT_TRUE( completed );
+		EXPECT_FALSE( threw ) << "the registered authorizer answers";
+		EXPECT_EQ( stub->Calls, 1u );
+		auth->RemoveAcl( registrant.Value, PermissionRole{std::in_place_index<0>, PermissionPK{11}} );
+		completed = false;
+		testAdminAwait( *auth, UserPK{999}, threw, completed );
+		ASSERT_TRUE( completed );
+		EXPECT_TRUE( threw ) << "a registrant without the schema's Administer is not consulted - the local rule denies the unknown user";
+		EXPECT_EQ( stub->Calls, 1u );
+		auth->RemoveAdminAuthorizer( stub );
 	}
 
 	//access-review3 #29:  the fallback called std::to_string( userPK ), which bound PK's then-implicit operator bool and printed "1"

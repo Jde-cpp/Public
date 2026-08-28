@@ -13,6 +13,7 @@ namespace Jde::Web::Mock{
 		α OnRead( Proto::FromClientTransmission&& transmission )ι->void override;
 		α SendAck( uint32 serverSocketId )ι->void override;
 		α LocalQL()Ι->sp<QL::IQL> override{ return nullptr; }
+		α UserPK()Ι->Jde::UserPK override{ return Session() ? Session()->UserPK : Jde::UserPK{}; }
 	private:
 		α WriteException( runtime_error&& e, RequestId requestId )ι->void override;
 		α WriteException( std::string&&, Jde::RequestId )ι->void override{ ASSERT(false); }

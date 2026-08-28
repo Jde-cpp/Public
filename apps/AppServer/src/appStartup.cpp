@@ -95,8 +95,8 @@ namespace Jde::App::Server{
 		auto appClient = AppClient();
 		auto sslSettings = Crypto::CryptoSettings{ Json::FindDefaultObject(webServerSettings, "ssl") };
 		StartWebServer( move(webServerSettings) );
-		appClient->SetPublicKey( sslSettings.PublicKey.Value(SRCE_CUR) );
 		appClient->LoadLogSettings();
+		appClient->SetPublicKey( sslSettings.PublicKey.Value(SRCE_CUR) );
 		QL::Hook::Add( mu<AppInstanceHook>(appClient) );
 		QL::Hook::Add( mu<Web::Server::SessionGraphQL>(appClient, Authorizer()) );
 		INFOT( ELogTags::App, "--AppServer Started.--" );

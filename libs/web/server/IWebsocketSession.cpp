@@ -151,7 +151,7 @@ namespace Jde::Web::Server{
 		let _ = shared_from_this();
 		try{
 			LogRead( Ƒ("GraphQL{}: {}", query.return_raw() ? "*" : "", query.text()), requestId );
-			auto j = co_await QL::QLAwait<jvalue>( move(*query.mutable_text()), parse(move(*query.mutable_variables())).as_object(), _userPK, LocalQL(), query.return_raw() );
+			auto j = co_await QL::QLAwait<jvalue>( move(*query.mutable_text()), parse(move(*query.mutable_variables())).as_object(), UserPK(), LocalQL(), query.return_raw() );
 			auto y = serialize( move(j) );
 			LogWrite( Ƒ("GraphQL: {}", y.substr(0,100)), requestId );
 			Write( toProtoQuery(move(y), requestId) );
@@ -188,7 +188,7 @@ namespace Jde::Web::Server{
 		}
 	}
 	α IWebsocketSession::QueryClient( QL::TableQL&& query, Jde::UserPK executer, QueryClientAwait::Handle h, SL sl )ι->void{
-		let requestId = ++_requestId;
+		let requestId = NextRequestId();
 		AddTimeout( requestId, h, 10s, sl );
 		QueryClient( move(query), executer, requestId );
 	}

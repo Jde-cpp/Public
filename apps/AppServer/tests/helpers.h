@@ -87,8 +87,8 @@ namespace Jde::App::Server::Tests{
 	struct RegisteredInstance{ App::ProgramPK Program{}; ProgInstPK Instance{}; App::ConnectionPK Connection{}; bool AuthResult{}; };
 	//registers session as an application instance (kInstance) and returns the pks the server minted for it.
 	//authResource: the schema the instance asks to be the admin authorizer for (M10).  Empty for an app that authorizes nothing,
-	//which is every caller here bar the one testing that arm.
-	Ξ RegisterInstance( RawClientSession& session, str application, str instanceName, str host, PortType webPort, uint32 pid=1234, str authResource="" )ε->RegisteredInstance{
+	//which is every caller here bar the ones testing that arm;  userPK is the session's user, the one the gate tests.
+	Ξ RegisterInstance( RawClientSession& session, str application, str instanceName, str host, PortType webPort, uint32 pid=1234, str authResource="", Jde::UserPK userPK={1} )ε->RegisteredInstance{
 		FromClientTrans t;
 		auto& m = *t.add_messages();
 		const auto requestId = session.NextRequestId();
@@ -99,7 +99,7 @@ namespace Jde::App::Server::Tests{
 		instance.set_host( host );
 		instance.set_web_port( webPort );
 		instance.set_pid( pid );
-		instance.set_session_id( MintSession() );
+		instance.set_session_id( MintSession(userPK) );
 		instance.set_auth_resource( authResource );
 		session.Write( move(t) );
 		auto reply = session.WaitFor( [requestId](const FromServerMessage& m){ return m.request_id()==requestId && m.value_case()==FromServerMessage::kConnectionInfo; } );

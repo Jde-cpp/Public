@@ -17,6 +17,7 @@ namespace Jde::App::Server{
 		α Instance()Ι->Proto::FromClient::Instance{ lg _{_instanceMutex}; return _instance; }//copy under the lock: _instance is written on this session's strand (AddInstance) while _sessions visitors read it from other threads.
 		α InstancePK()Ι->ProgInstPK{ return _instancePK; }
 		α ConnectionPK()Ι->ConnectionPK{ return _connectionPK; }
+		α UserPK()Ι->Jde::UserPK override{ return _userPK.value_or(Jde::UserPK{}); }
 	private:
 		α OnRead( Proto::FromClient::Transmission&& transmission )ι->void override;
 		α OnClose()ι->void override;//OnDisconnect is not overridden: the base now routes it here (#6), which is all this override did.

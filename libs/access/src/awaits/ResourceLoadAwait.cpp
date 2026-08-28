@@ -16,14 +16,10 @@ namespace Jde::Access{
 		ResourcePermissions y;
 		try{
 			jarray schemaNames;
-			bool loadAll{};
-			for( let& schema : _schemas ){
-				if( schema->Name=="app" )
-					loadAll = true;
+			for( let& schema : _schemas )
 				schemaNames.push_back( {getSchemaName(schema, _opcServerInstance)} );
-			}
-			auto vars = loadAll ? jobject{} : jobject{ {"schemaNames", move(schemaNames)} };
-			auto input = loadAll ? "" : "(schemaName:$schemaNames)";
+			auto vars = _allSchemas ? jobject{} : jobject{ {"schemaNames", move(schemaNames)} };//explicit now - "app" in the list used to mean this.
+			auto input = _allSchemas ? "" : "(schemaName:$schemaNames)";
 			let resources = co_await *_qlServer->QueryArray( Ƒ("resources{}{{ id schemaName target criteria deleted }}", input), vars, _executer );
 			for( auto&& value : resources ){
 				auto resource = Resource{ Json::AsObject(move(value)) };

@@ -1,5 +1,10 @@
 #include <jde/fwk/log/MemoryLog.h>
+#include <jde/access/usings.h>
+#include <jde/ql/ql.h>
+#include <jde/ql/QLAwait.h>
 #include "helpers.h"
+#include "../src/LocalClient.h"
+#include "../src/appStartup.h"
 #define let const auto
 
 //ServerSocketSession::ProcessTransmission hardening: hostile or malformed frames on an (unauthenticated) socket must
@@ -176,16 +181,41 @@ namespace Jde::App::Server::Tests{
 		AssertAlive();
 	}
 
-	//app-review3 M10: FromClient::Instance never set auth_resource, so this arm - the registration IAdminAcl and the field exist
-	//for - was dead, and every delegated admin check for an opc.* schema fell back to the AppServer's own Authorize, which returns
-	//without throwing for a resource it does not hold.  auth_result comes back only when the arm ran.
-	TEST_F( ProcessTransmissionTests, AnInstanceRegistersAsAdminAuthorizerForItsResource ){
+	//app-review3 M10 turned the auth_resource arm on;  appserver-review3 #4 gates it:  Authorize::TestSchemaAdmin - Administer on
+	//each of the schema's active root resources, and an unknown schema is a denial, where the name-only lookup it replaced passed
+	//anything dotted and let an anonymous socket install itself as a schema's authorizer.  auth_result comes back only when the arm ran.
+	TEST_F( ProcessTransmissionTests, AnUnknownSchemaIsNotDelegated ){
 		let registered = RegisterInstance( *_session, "Tests.AuthResource", "authorizer", "auth-host", 0, 1234, "opc.m10-probe" );
-		EXPECT_TRUE( registered.AuthResult ) << "the instance asked to authorize a schema and the server did not register it";
+		EXPECT_FALSE( registered.AuthResult ) << "nothing active in the schema - nothing to delegate";
 
 		auto other = Connect();
 		let none = RegisterInstance( *other, "Tests.AuthResource", "plain", "auth-host", 0, 1234 );
 		EXPECT_FALSE( none.AuthResult ) << "an instance that asked to authorize nothing must not be registered";
+		BlockVoidAwait( other->Close(true, SRCE_CUR) );
+	}
+	Ω systemQL( string query, jobject vars={} )->jvalue{
+		return BlockAwait<QL::QLAwait<jvalue>,jvalue>( QL::QLAwait<jvalue>{move(query), move(vars), Jde::UserPK{Jde::UserPK::System}, Server::QLPtr()} );
+	}
+	Ω probeUser( sv target )->Jde::UserPK{
+		auto existing = systemQL( Ƒ(R"(user( target:"{0}" ){{id}})", target) );
+		let found = existing.is_object() && existing.get_object().contains( "id" );
+		return Jde::UserPK{ QL::AsId<Jde::UserPK::Type>( found ? existing : systemQL(Ƒ(R"(mutation createUser( target:"{0}", name:"{0}" ){{id}})", target)) ) };
+	}
+	//The positive half:  the schema's root resource is active and the registrant administers it.  The rows are made on the
+	//server's own QL, so the registration also proves the AppServer's cache takes another schema's events (appserver-review3 #13:
+	//its subscriptions were filtered to access/app, and neither the resource nor the acl would have reached it).
+	TEST_F( ProcessTransmissionTests, ASchemaAdminIsDelegated ){
+		constexpr sv schema{ "opc.probe" };
+		let admin = probeUser( "probe-admin" ), nobody = probeUser( "probe-nobody" );
+		if( systemQL(Ƒ(R"(resources( schemaName:"{}", target:"nodeIds" ){{id}})", schema)).as_array().empty() )
+			systemQL( Ƒ(R"(mutation createResource( schemaName:"{}", name:"probe nodes", target:"nodeIds", allowed:255 ))", schema) );
+		systemQL( Ƒ(R"(mutation createAcl( identity:{{id:{}}}, permissionRight:{{ allowed:{}, denied:0, resource:{{schemaName:"{}", target:"nodeIds"}} }} ))", admin.Value, underlying(Access::ERights::Administer), schema) );
+
+		let registered = RegisterInstance( *_session, "Tests.AuthResource", "authorizer", "auth-host", 0, 1234, string{schema}, admin );
+		EXPECT_TRUE( registered.AuthResult ) << "the registrant administers the schema's root resource";
+		auto other = Connect();
+		let denied = RegisterInstance( *other, "Tests.AuthResource", "pretender", "auth-host", 0, 1235, string{schema}, nobody );
+		EXPECT_FALSE( denied.AuthResult ) << "a user without Administer on the root may not stand in for the schema";
 		BlockVoidAwait( other->Close(true, SRCE_CUR) );
 	}
 }

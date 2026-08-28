@@ -25,9 +25,9 @@ namespace Jde::App::Server{
 	α BroadcastLogEntry( LogPK id, ProgramPK logAppPK, ProgInstPK logInstancePK, const Logging::Entry& m, const vector<string>& args )ι->void;
 	α BroadcastAppStatus()ι->void;
 	α FindApplications( str name )ι->vector<Proto::FromClient::Instance>;
+	α FindApp( ProgramPK appPK, optional<ProgInstPK> instancePK )ε->sp<ServerSocketSession>;
 	α FindConnection( ConnectionPK connectionPK )ι->sp<ServerSocketSession>;
 	α FindInstance( ProgInstPK instancePK )ι->sp<ServerSocketSession>;
-	α NextRequestId()->RequestId;
 	α OnSessionDisconnect( sp<ServerSocketSession> session )ι->void;
 
 	α QuerySessions( QL::TableQL ql, UserPK executer, SRCE )ι->QuerySessionsAwait;
@@ -38,7 +38,7 @@ namespace Jde::App::Server{
 	struct RequestHandler final : IRequestHandler{
 		RequestHandler( jobject&& settings )ι;
 		α HandleRequest( HttpRequest&& req, SRCE )ι->up<IHttpRequestAwait> override{ return mu<HttpRequestAwait>( move(req), sl ); }
-		α Jwt( UserPK userPK, string&& name, string&& target, string&& endpoint, SessionPK sessionId, TimePoint expires, string&& description )ι->Web::Jwt;
+		α Jwt( UserPK userPK, string&& name, string&& target, string&& endpoint, SessionPK sessionId, TimePoint expires, string&& description )ε->Web::Jwt;
 		α Schemas()ι->const vector<sp<DB::AppSchema>>& override{ return Server::Schemas(); }
 		α WebsocketSession( sp<IRestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<IWebsocketSession> override;
 		α QLServer()ι->sp<QL::IQL> override;

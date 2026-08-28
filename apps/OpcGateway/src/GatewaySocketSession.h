@@ -16,6 +16,7 @@ namespace Jde::Opc::Gateway{
 		α OnRead( FromClient::Transmission&& transmission )ι->void override;
 		α SendDataChange( const ServerCnnctnNK& opcNK, const NodeId& node, const Value& value )ι->void override;
 		α to_string()Ι->string override{ return Ƒ( "{:x}", Id() ); }
+		α UserPK()Ι->Jde::UserPK override{ return Session() ? Session()->UserPK : Jde::UserPK{}; }
 		α WriteException( runtime_error&& e, Jde::RequestId requestId )ι->void override;
 	private:
 		α CreateSubscription( sp<UAClient> client, flat_set<NodeId> nodes, RequestId requestId )ι->VoidAwait::Task;

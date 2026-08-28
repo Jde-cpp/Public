@@ -19,7 +19,6 @@ namespace Jde::App{
 
 	ProgramPK _appId;
 	ProgInstPK _instancePK;
-	atomic<RequestId> _requestId{ 0 };
 	sp<Server::RequestHandler> _requestHandler;
 	α Server::GetRequestHandler()ι->sp<RequestHandler>{ return _requestHandler; }
 	α Server::Schemas()ι->const vector<sp<DB::AppSchema>>&{ return Server::QL().Schemas(); }
@@ -109,7 +108,6 @@ namespace Jde::App{
 		return y;
 	}
 
-	α Server::NextRequestId()->RequestId{ return ++_requestId; }
 	α Server::QuerySessions( QL::TableQL ql, UserPK executer, SL sl )ι->QuerySessionsAwait{
 		vector<sp<ServerSocketSession>> sessions;
 		_sessions.visit_all( [&](auto&& kv){
@@ -118,22 +116,25 @@ namespace Jde::App{
 		});
 		return QuerySessionsAwait{ move(ql), executer, move(sessions), sl };
 	}
-	//instancePK names an app instance (App.FromClient.proto app_instance_pk); nullopt = any instance of appPK.  Returns the
-	//connection actually delivered to, so a forward can bind its response to that one session (finding #5).
+	//instancePK names an app instance (App.FromClient.proto app_instance_pk); nullopt = any instance of appPK.  Split out of
+	//Write so a caller that must register state keyed to the target can learn the connection *before* the request goes on
+	//the wire - the reply can come back on another io thread the moment it does (finding #11).
+	α Server::FindApp( ProgramPK appPK, optional<ProgInstPK> instancePK )ε->sp<ServerSocketSession>{
+		sp<ServerSocketSession> y;
+		_sessions.cvisit_while( [&](let& kv){
+			let& session = kv.second;
+			if( appPK && session->ProgramPK()==appPK && (!instancePK || session->InstancePK()==*instancePK) )//appPK guard: an unregistered session's ProgramPK is 0, so appPK:0 must not match it.
+				y = session;
+			return !y;
+		});
+		THROW_IF( !y, "No session found for appPK:{}, instancePK:{}", appPK, instancePK ? *instancePK : 0 );
+		return y;
+	}
+	//Returns the connection actually delivered to, so a forward can bind its response to that one session (finding #5).
 	α Server::Write( ProgramPK appPK, optional<ProgInstPK> instancePK, Proto::FromServer::Transmission&& msg )ε->ConnectionPK{
-		ConnectionPK target{};
-		if( _sessions.visit_while([&](auto&& kv){ //visit_while returns true if no lambda returned false, i.e. no session matched.
-			auto& session = kv.second;
-			let found = appPK && session->ProgramPK()==appPK && (!instancePK || session->InstancePK()==*instancePK);//appPK guard: an unregistered session's ProgramPK is 0, so appPK:0 must not match it.
-			if( found ){
-				session->Write( move(msg) );
-				target = session->ConnectionPK();
-			}
-			return !found;
-		}) ){
-			THROW( "No session found for appPK:{}, instancePK:{}", appPK, instancePK ? *instancePK : 0 );
-		}
-		return target;
+		auto session = FindApp( appPK, instancePK );//throws when nothing matches - outside the visit so the write does not run under the map's bucket lock.
+		session->Write( move(msg) );
+		return session->ConnectionPK();
 	}
 }
 namespace Jde::App::Server{
@@ -141,10 +142,10 @@ namespace Jde::App::Server{
 		IRequestHandler{ move(settings), Server::AppClient() }
 	{}
 
-	α RequestHandler::Jwt( UserPK userPK, string&& name, string&& target, string&& endpoint, SessionPK sessionId, TimePoint expires, string&& description )ι->Web::Jwt{
-		auto publicKey = Crypto::ReadPublicKey( Settings().Crypto().PublicKey.Path );
-		return Web::Jwt{ move(publicKey), userPK, move(name), move(target), sessionId, move(endpoint), expires, move(description), Settings().Crypto().PrivateKey };
+	α RequestHandler::Jwt( UserPK userPK, string&& name, string&& target, string&& endpoint, SessionPK sessionId, TimePoint expires, string&& description )ε->Web::Jwt{
+		return Web::Jwt{ AppClient()->PublicKey(), userPK, move(name), move(target), sessionId, move(endpoint), expires, move(description), Settings().Crypto().PrivateKey };
 	}
+
 
 	α RequestHandler::WebsocketSession( sp<IRestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<IWebsocketSession>{
 		auto session = ms<ServerSocketSession>( move(stream), move(buffer), move(req), move(userEndpoint), connectionIndex );

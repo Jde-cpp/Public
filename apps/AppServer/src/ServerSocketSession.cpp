@@ -30,13 +30,13 @@ namespace Jde::App::Server{
 			auto& resource = *instance.mutable_auth_resource();
 			if( instance.auth_resource().size() ){
 				try{
-				 	Authorizer()->TestAdmin( resource, _userPK.value() );
+				 	Authorizer()->TestSchemaAdmin( resource, _userPK.value() );//Administer on each of the schema's active root resources, and an unknown schema is a denial (appserver-review3 #4) - the name-only TestAdmin this replaces skipped dotted schemas and returned quietly.
 					INFOT( ELogTags::Access, "[{}.{}]Instance '{}' authorizor with resource '{}'", hex(Id()), hex(requestId), instance.instance_name(), resource );
-					Authorizer()->AddAdminAuthorizer( resource, std::dynamic_pointer_cast<Access::IAdminAcl>(shared_from_this()) );
+					Authorizer()->AddAdminAuthorizer( resource, std::dynamic_pointer_cast<Access::IAdminAcl>(shared_from_this()), _userPK.value() );
 					authResult = true;
 				}
-				catch( runtime_error& ){
-					INFOT( ELogTags::Access, "[{}.{}]Instance '{}' denied authorizor with resource '{}'", hex(Id()), hex(requestId), instance.instance_name(), resource );
+				catch( runtime_error& e ){
+					INFOT( ELogTags::Access, "[{}.{}]Instance '{}' denied authorizor with resource '{}': {} - grant its user Administer on the schema's root resources and reconnect; until then the flat rule applies.", hex(Id()), hex(requestId), instance.instance_name(), resource, e.what() );
 					authResult = false;
 				}
 			}
@@ -151,6 +151,9 @@ namespace Jde::App::Server{
 	//QueryClientAwait's task type; the strand stays free to deliver the reply. The BlockTAwait this replaces
 	//deadlocked the self-registration case - the reply only arrives on the strand the block was holding
 	//(reviews/todo.md §12), recovered only by the QueryClient timeout as a wrongful denial.
+	//The answer comes from the OpcServer (OpcServerQL's adminCheck → OpcAuthorize::TestAdminNode) - it alone knows which
+	//resource governs a node.  Its exception, "not ready" during its startup included, resumes as a denial:  an admin check never
+	//guesses.  Two identities travel here:  _userPK is the user under test, the executer is the session's own (the OpcServer's).
 	struct TestAdminAwait final : AnyVoidAwait{
 		TestAdminAwait( sp<IWebsocketSession> session, string resource, string criteria, Jde::UserPK userPK, SL sl )ι:
 			AnyVoidAwait{sl}, _session{move(session)}, _resource{move(resource)}, _criteria{move(criteria)}, _userPK{userPK}{}
@@ -163,10 +166,10 @@ namespace Jde::App::Server{
 	};
 	α TestAdminAwait::Execute()ι->QueryClientAwait::Task{
 		try{
-			string q = "permissionRight( user:$user ){isAdmin resource( resource:$resource, criteria:$criteria )}";
+			string q = "adminCheck( user:$user ){isAdmin resource( resource:$resource, criteria:$criteria )}";//adminCheck, not permissionRight:  the client parses this schemaless, and only a registered system table - one no schema owns - passes QL::Parse.
 			auto ql = QL::ParseQuery( move(q), jobject{{"user", _userPK.Value}, {"resource", _resource}, {"criteria", _criteria}}, {}, true, Source() );
 			let result = co_await _session->QueryClient( move(ql), _session->UserPK(), Source() );
-			if( result.at("permissionRight").at("isAdmin").as_bool() )
+			if( result.at("adminCheck").at("isAdmin").as_bool() )
 				Resume();
 			else
 				ResumeExp( Exception{Source(), {}, "User {:x} is not admin for resource '{}' with criteria '{}'.", _userPK.Value, _resource, _criteria} );
@@ -234,8 +237,8 @@ namespace Jde::App::Server{
 				}else{
 					auto e = ProtoUtils::ToException( move(*m.mutable_exception()) );//keeps status/category - Exception{what} dropped them.
 					auto what = e->What();
-					//A failure reply to one of our QueryClient calls (TestAdmin/QuerySessions) echoes a per-session id; resolve it on
-					//this session's own map first so it can't fall through and clobber an unrelated forward that shares the id value.
+					//Both routers key on an id this session was given, and both draw from its NextRequestId counter, so an id can
+					//only be pending in one of them (finding #12).  QueryClient first: its map is this session's own.
 					if( !ResumeQueryException(requestId, move(*e)) && !ForwardExecutionAwait::ResumeExp(move(*e), requestId, ConnectionPK()) )
 						LogRead( Ƒ("Exception not handled - {}", what), requestId, ELogLevel::Critical );
 				}

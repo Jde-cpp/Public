@@ -26,11 +26,22 @@ namespace Jde::Access{
 		α GetSchema( str resourceTarget, SL sl )ε->string;
 
 		α TestAdmin( str resource, UserPK userPK, SRCE )ε->void;
-		α TestAdmin( str schema, str resource, str criteria, UserPK userPK, SRCE )ι->up<AnyVoidAwait>;//remote when schema has a registered authorizer, else the local pre-completed check.
-		α TestAdmin( str resource, str criteria, UserPK userPK, SRCE )ι->up<AnyVoidAwait> override;
+		//The gate on a role/acl grant for (schema, target, criteria).  Remote - the schema's registered IAdminAcl, the OpcServer,
+		//which alone knows which resource governs a node - when one is registered and its registrant still passes TestSchemaAdmin;
+		//else TestAdminLocal, pre-completed (appserver-review3 #13).
+		α TestAdmin( str schema, str resource, str criteria, UserPK userPK, SRCE )ι->up<AnyVoidAwait>;
+		//The flat rule, on this cache alone:  the active (schema,target,criteria) row when there is one - a mapped criteria is its
+		//own resource, root does not inherit down - else the target's criteria-less root row, which an unmapped criteria inherits
+		//as an unmapped node inherits it in OpcAuthorize::UserRights.  Neither active = not enabled, passes as Test does.
+		α TestAdminLocal( str schema, str resource, str criteria, UserPK userPK, SRCE )ε->void;
 		α TestAdmin( ResourcePK resourcePK, UserPK userPK, SRCE )ε->void;
 		α TestAdminPermission( PermissionPK permissionPK, UserPK userPK, SRCE )ε->void;
-		α AddAdminAuthorizer( str resourceName, sp<IAdminAcl> authorizer )ι->void;
+		//May userPK stand in for the schema and answer its admin checks (AddAdminAuthorizer)?  Administer on every active
+		//criteria-less resource of the schema, and there must be one:  an unknown or fully disabled schema is a denial, not a
+		//no-op (appserver-review3 #4).
+		α TestSchemaAdmin( str schema, UserPK userPK, SRCE )ε->void;
+		struct AdminAuthorizer{ sp<IAdminAcl> Acl; UserPK User; };//User: the registrant, re-tested with TestSchemaAdmin at each check so a registrant whose rights went falls back to the local rule.
+		α AddAdminAuthorizer( str schemaName, sp<IAdminAcl> authorizer, UserPK registrant )ι->void;
 		α RemoveAdminAuthorizer( const sp<IAdminAcl>& authorizer )ι->void;//deregister on disconnect - registrations are otherwise permanent and go stale.
 
 		α TestAddGroupMember( GroupPK groupPK, flat_set<IdentityPK::Type>&& memberPKs, SRCE )ε->void;
@@ -49,7 +60,7 @@ namespace Jde::Access{
 		α Recalc( const ul& l )ι->void;
 		α RecursiveUsers( GroupPK groupPK, const ul& l, bool clear=false )ι->flat_set<UserPK>;
 		α RecursiveUsers( GroupPK groupPK, const ul& l, bool clear, flat_set<GroupPK>& visited )ι->flat_set<UserPK>;
-		α FindAdminAuthorizer( str schemaName )ι->sp<IAdminAcl>;
+		α FindAdminAuthorizer( str schemaName )ι->optional<AdminAuthorizer>;
 
 		α AddAclEntry( IdentityPK identityPK, PermissionRole permissionRole, const ul& l )ι->void;
 		α PurgeIdentity( IdentityPK identityPK, const ul& l )ι->void;
@@ -93,7 +104,7 @@ namespace Jde::Access{
 		flat_map<RolePK,Role> Roles;
 		flat_multimap<IdentityPK,PermissionRole> Acl;
 	private:
-		concurrent_flat_map<string,sp<IAdminAcl>> _adminAuthorizers;
+		concurrent_flat_map<string,AdminAuthorizer> _adminAuthorizers;
 		friend struct AccessListener; friend struct Loader; friend struct ConfigureAwait; friend struct Server::AuthenticateAwait; friend struct Server::LoginAwait;
 	};
 
