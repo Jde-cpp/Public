@@ -9,6 +9,7 @@
 #include "uaTypes/ObjectType.h"
 #include "uaTypes/Reference.h"
 #include "uaTypes/Variable.h"
+#include <thread>
 
 namespace Jde::Opc::Server {
 	struct UAServer final{

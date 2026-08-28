@@ -8,6 +8,7 @@
 #include <jde/app/proto/app.FromClient.h>
 #include <jde/app/proto/LogProto.h>
 #include "ArchiveAwait.h"
+#include <thread>
 
 #define let const auto
 

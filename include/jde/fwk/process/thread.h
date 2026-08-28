@@ -1,6 +1,7 @@
 ﻿#pragma once
 #ifndef THREAD_H
 #define THREAD_H
+#include <thread>	//was reached through <spdlog/logger.h> until spdlog left <jde/fwk.h>'s closure.
 
 #define Φ Γ α
 namespace Jde::Thread{

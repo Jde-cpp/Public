@@ -90,11 +90,9 @@
 							<span>{{toString(r.value)}}</span>
 						}
 						@else if( r.dataType==ETypes.UtcDateTime && !r.isArray ){
-							<!-- <mat-form-field> -->
-								<input matInput [matDatepicker]="picker" [value]="toDate(r.value)" (dateInput)="dateInput(r, $event);" (change)="changeDate(r, $event);">
+								<input matInput [matDatepicker]="picker" [value]="dateValue(r)" (dateChange)="changeDate(r, $event);">
 								<mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
 								<mat-datepicker #picker></mat-datepicker>
-							<!-- </mat-form-field> -->
 						}
 						@else if( r.customDataType && !r.isArray ){
 							<mat-select [value]=r.value (selectionChange)="changeEnum(r, $event);" [disabled]="r.userAccessLevel < EAccess.Write">

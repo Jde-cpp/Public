@@ -23,7 +23,7 @@
 		</div>
 		<div class="search-wrapper"><!-- not a <form>: Enter must navigate, never submit -->
   		<mat-form-field class="rounded-input search" appearance="outline" subscriptSizing="dynamic">
-				<input #searchInput matInput type=text class=search aria-label="Search" aria-keyshortcuts="/" placeholder="Search pages, user:, role:, group:, resource:, nodes"
+				<input #searchInput matInput type=text class=search aria-label="Search" aria-keyshortcuts="/"
 					[formControl]=searchForm [matAutocomplete]=searchAC (keydown.enter)="onSearch($event)"/>
 				<mat-icon matPrefix>search</mat-icon>
 				<mat-autocomplete #searchAC=matAutocomplete class="search-panel" panelWidth="560px" [displayWith]="displayWith" autoActiveFirstOption (optionSelected)="onSearchSelected($event.option.value)">

@@ -19,7 +19,6 @@ import { Field } from '../../../../../model/ql/schema/field';
 import { TableSchema } from '../../../../../model/ql/schema/table-schema';
 import { BehaviorSubject, from, map, Observable, startWith, Subject } from 'rxjs';
 import { COMMA, ENTER } from '@angular/cdk/keycodes';
-import { provideNativeDateAdapter } from '@angular/material/core';
 
 type ColumnFilter = {field:Field, filter: Filter, displayName:string};
 @Component( {
@@ -27,8 +26,7 @@ type ColumnFilter = {field:Field, filter: Filter, displayName:string};
 		styleUrls: ['ql-list-settings-filter.scss'],
 		templateUrl: './ql-list-settings-filter.html',
 		host: {class:'main-content.mat-drawer-container.my-content'},
-	  providers: [provideNativeDateAdapter()],
-		imports: [CommonModule, FormsModule, MatAutocompleteModule, MatButtonModule, MatCheckboxModule, MatChipsModule, MatDatepickerModule, MatFormFieldModule, MatIconModule, MatSelectModule, MatTableModule, MatInputModule, ReactiveFormsModule],
+			imports: [CommonModule, FormsModule, MatAutocompleteModule, MatButtonModule, MatCheckboxModule, MatChipsModule, MatDatepickerModule, MatFormFieldModule, MatIconModule, MatSelectModule, MatTableModule, MatInputModule, ReactiveFormsModule],
 		//changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class QLListSettingsFilter implements OnInit{

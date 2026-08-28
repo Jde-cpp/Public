@@ -8,7 +8,8 @@
 #endif
 #include "../process/process.h"
 #include "break.h"
-#include "SpdLog.h"
+#include "ILogger.h"
+#include "Entry.h"
 
 #define FormatString const fmt::format_string<Args const&...>
 #define ARGS const Args&
@@ -86,9 +87,8 @@ namespace Jde{
 			if( !logger->ShouldLog(level, tags) )
 				continue;
 			try{
-				if( auto p = dynamic_cast<SpdLog*>(logger.get()); p )
-					p->Write( level, sl, FWD(m), FWD(args)... );
-				else
+				//SpdLog formats from these args directly; everything else needs an Entry built for it.
+				if( !logger->WriteFormatted(level, sl, fmt::string_view{m.get().data(), m.get().size()}, fmt::make_format_args(args...)) )
 					logger->Write( Entry{sl, level, tags, string{m.get().data(), m.get().size()}, FWD(args)...} );
 			}
 			catch( const fmt::format_error& e ){

@@ -1,6 +1,7 @@
 #pragma once
 #include "HttpRequestAwait.h"
 #include <jde/web/server/IRequestHandler.h>
+#include <thread>
 
 namespace Jde::Web::Server{ struct IWebsocketSession; }
 namespace Jde::Web::Mock{

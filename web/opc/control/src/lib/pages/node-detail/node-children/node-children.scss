@@ -65,8 +65,11 @@ mat-toolbar{
 	flex: 0 0 100%;
 }
 
-input[type="number"] {
-	text-align: right;
+/* the value editors that hold ordinal data line up on their right edge, as a numeric table column does - text (and the
+uris in it) stays left.  For a date it also closes the gap between the value and the calendar toggle it belongs to, which
+is what a box far wider than "8/27/2026" leaves.  `end`, not `right`, so both flip under dir="rtl". */
+input[type="number"], input.mat-datepicker-input {
+	text-align: end;
 }
 
 mat-header-cell{

@@ -21,6 +21,10 @@ namespace Jde::Logging{
 		α Shutdown( bool /*terminate*/, SL )ι->void override{ _logger.flush(); }
 		α Name()Ι->sv override{ return _logger.name(); }
 		α SetMinLevel( ELogLevel /*level*/ )ι->void override{}
+		α WriteFormatted( ELogLevel level, SL sl, fmt::string_view m, fmt::format_args args )ι->bool override{
+			_logger.log( ToSpdSL(sl), (spdlog::level::level_enum)level, fmt::vformat(m, args) );
+			return true;
+		}
 		α Write( const Entry& m )ι->void override{
 			_logger.log( m.SourceLocation(), (spdlog::level::level_enum)m.Level, m.Message() );
 		}

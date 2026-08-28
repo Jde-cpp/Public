@@ -26,7 +26,6 @@ import { NodeView } from '../../../model/node-view';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDatepickerInputEvent, MatDatepickerModule } from '@angular/material/datepicker';
 import { MatInputModule } from '@angular/material/input';
-import {provideNativeDateAdapter} from '@angular/material/core';
 import { Server } from '../../../model/server';
 import { NodeId } from '../../../model/node-id';
 
@@ -34,7 +33,6 @@ import { NodeId } from '../../../model/node-id';
   selector: 'node-children',
   templateUrl: './node-children.html',
   styleUrls: ['./node-children.scss'],
-  providers: [provideNativeDateAdapter()],
   imports: [RouterModule,MatButtonModule,MatButtonToggleModule,MatCheckboxModule,MatChipsModule,MatDatepickerModule,MatFormFieldModule,MatIconModule,MatInputModule,MatProgressBarModule,MatSortModule,MatTableModule,MatToolbarModule,MatTooltipModule,MatSelectModule,QLListSettings]
 })
 export class NodeChildren implements OnInit, OnDestroy {
@@ -190,6 +188,27 @@ export class NodeChildren implements OnInit, OnDestroy {
 		const date = value ? ProtoUtils.toDate( value ) : null;
 		return date ? DateUtils.asUtc( date ) : null;
 	}
+	//[value] on a MatDatepickerInput is dirty-checked by reference, and its setter reformats the input element - so binding a
+	//freshly-built Date ran that setter on EVERY change-detection pass and rewrote the box from the model.  Any pass during an
+	//edit (the click that closes the calendar, the keystrokes of a typed date) therefore wiped what was just entered and put
+	//the pre-write value back.  Hand out the same Date while the timestamp is unchanged so the binding goes quiet;  #repaint
+	//drops the entry where the box does have to be re-formatted from the model.
+	dateValue( n:Variable ):Date|null{
+		const date = this.toDate( <Timestamp|undefined>n.value );
+		const cached = this.#dates.get( n );
+		if( this.#dates.has(n) && (cached?.getTime() ?? null)==(date?.getTime() ?? null) )
+			return cached!;
+		this.#dates.set( n, date );
+		return date;
+	}
+	//the value cells bind to plain fields on the nodes, not signals, so an async write (or a subscription push) changes nothing
+	//Angular is watching:  zoneless runs no pass of its own, and the cell kept the old value until an unrelated event forced one.
+	#repaint( n?:Variable ){
+		if( n )
+			this.#dates.delete( n );//a new reference, so the datepicker re-formats the box:  a failed write leaves the model as it was, but not the text in the box
+		this.cdRef.markForCheck();
+	}
+	#dates = new WeakMap<Variable,Date|null>();
 
 	toObject( x:ENodeClass ):string{ return ENodeClass[x]; }
 	toString( value:Value|undefined ){ return valueString(value); }//Variable.value is optional, and retrieveSnapshot clears it while reading
@@ -215,6 +234,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 					this.subscription = this._iot.subscribe( this.cnnctnTarget, nodes, this.Key ).subscribe({
 						next:(value: SubscriptionResult) =>{
 							this.variables.find( (r)=>r.nodeId.equals(value.node) )!.value = value.value;
+							this.#repaint();
 						},
 						error:(e: Error) =>{
 							this.snackbar.exception( "Subscription error.", e );
@@ -273,6 +293,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 			x.value = await this._iot.read( this.cnnctnTarget, x.nodeId );
 			console.log(x.value);
 		}
+		this.#repaint();
 	}
 	async changeString( n:Variable, e:Event ){
 		try{
@@ -282,6 +303,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 			(e.target as any)["value"] = n.value;
 			this.snackbar.exception( "Could not change string value.", err );
 		}
+		this.#repaint();
 	}
 	async changeEnum( n:Variable, e:MatSelectChange<number> ){
 		try{
@@ -291,24 +313,18 @@ export class NodeChildren implements OnInit, OnDestroy {
 			e.source.value = <number>n.value;
 			this.snackbar.exception( "Could not change enum value.", err );
 		}
+		this.#repaint();
 	}
-	async dateInput( n:Variable, e:MatDatepickerInputEvent<Date, any> ){
-		try {
-			let date = DateUtils.beginningOfDay( e.value );
-			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, <Timestamp>ProtoUtils.fromDate(date), (x)=>console.log(x) );
-		}
-		catch (err) {
-			e.target["value"] = n.value;
-			this.snackbar.exception( "Could not change date input.", err );
-		}
-	}
-	async changeDate( n:Variable, e:Event ){
+	async changeDate( n:Variable, e:MatDatepickerInputEvent<Date, any> ){
+		if( !e.value )//unparseable text, or a cleared box:  beginningOfDay(null) is TODAY, and the old value would have been overwritten with it
+			return this.#repaint( n );
 		try{
-			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, <Timestamp>ProtoUtils.fromDate(<Date>(e.target as any)["value"]), (x)=>console.log(x) );
+			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, <Timestamp>ProtoUtils.fromDate(DateUtils.beginningOfDay(e.value)), (x)=>console.log(x) );
+			this.#repaint();
 		}
-		catch(err:any){
-			(e.target as any)["value"] = n.value;
+		catch( err ){
 			this.snackbar.exception( "Could not change date value.", err );
+			this.#repaint( n );
 		}
 	}
 

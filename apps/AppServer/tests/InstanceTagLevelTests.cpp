@@ -8,6 +8,7 @@
 #include "../src/LocalClient.h"
 #include "../src/appStartup.h"
 #include "../src/ql/AppServerQL.h"
+#include <jde/fwk/log/SpdLog.h>	//no longer reachable through <jde/fwk.h>
 #define let const auto
 
 //the per-instance log-level overrides: updateInstanceTagLevel mutations and the instanceTagLevels query, driven

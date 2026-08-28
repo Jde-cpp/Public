@@ -3,6 +3,7 @@
 #include <jde/fwk/settings.h>
 #include <jde/fwk/str.h>
 #include <jde/fwk/crypto/OpenSsl.h>
+#include <spdlog/common.h>	//Entry.h only forward-declares source_loc; SourceLocation() is defined here.
 
 namespace Jde::Logging{
 	Entry::Entry( SL sl, ELogLevel l, ELogTags tags, string&& m, vector<string> args )ι:

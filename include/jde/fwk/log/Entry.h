@@ -2,7 +2,6 @@
 #ifndef ENTRY_H
 #define ENTRY_H
 #include <fmt/args.h>
-#include <spdlog/common.h>
 #include <jde/fwk/log/logTags.h>
 #include <jde/fwk/utils/paramPack.h>
 
@@ -14,6 +13,11 @@
 // namespace Jde{
 // 	struct Exception;
 // }
+//SourceLocation() below is only declared here - a declaration may return an incomplete type - so this
+//header no longer drags <spdlog/common.h> into <jde/fwk.h> and from there into every TU in the repo.
+//Entry.cpp includes it for the definition; SpdLog.h has it for the call.
+namespace spdlog{ struct source_loc; }
+
 namespace Jde::Logging{
 	struct Γ Entry final{
 		template<class... Args> Entry( SL sl, ELogLevel l, ELogTags tags, string&& m, ARGS... args )ι;

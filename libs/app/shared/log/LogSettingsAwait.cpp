@@ -3,6 +3,7 @@
 #include <jde/app/log/ProtoLog.h>
 #include <jde/app/client/RemoteLog.h>
 #include <jde/fwk/str.h>
+#include <jde/fwk/log/SpdLog.h>	//no longer reachable through <jde/fwk.h>
 
 #define let const auto
 

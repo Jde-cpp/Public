@@ -2,6 +2,7 @@
 #include <jde/fwk/process/execution.h>
 #include <jde/web/client/http/ClientHttpSession.h>
 #include <jde/web/client/http/ClientHttpResException.h>
+#include <thread>
 
 #define let const auto
 
