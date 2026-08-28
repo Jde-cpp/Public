@@ -46,6 +46,31 @@ namespace Jde::Opc::Server::Tests{
 		EXPECT_THROW( BrowsePath::Resolve(ua, "nope~pump1", 0, aliases), Exception );
 	}
 
+	//A client can only ever put an Int32 on the wire for an enum, so the server has to widen it back to the node's
+	//DataType before the type check - and it can only do that when the enum has a UA_DataType registered where
+	//adjustValueType() looks (see UAServer::PublishDataTypes).  Without the publish this write is BadTypeMismatch, which
+	//is what the SPA hit changing ExampleStacklight's DeviceHealth.
+	TEST_F( UALoadTests, WriteNodesetEnum ){
+		auto& ua = GetUAServer();
+		ua.Load( Path()/"DI/Opc.Ua.Di.NodeSet2.xml" );
+		ua.Load( Path()/"IA/Opc.Ua.IA.NodeSet2.xml" );
+		ua.Load( Path()/"IA/Opc.Ua.IA.NodeSet2.examples.xml" );
+		ua.PublishDataTypes();
+		let ns = NamespaceIndex( ua, "http://opcfoundation.org/UA/IA/Examples/" );
+		let deviceHealth = NodeId{ ns, (uint32)6002 };//ExampleStacklight/DeviceHealth - DataType DeviceHealthEnumeration (DI).
+
+		UA_Int32 failure{ 1 };//DeviceHealthEnumeration::FAILURE
+		UA_Variant v; UA_Variant_init( &v );
+		UA_Variant_setScalar( &v, &failure, &UA_TYPES[UA_TYPES_INT32] );//no clear: setScalar does not copy, and writeValue does.
+		ASSERT_EQ( UA_Server_writeValue(ua.Ptr(), deviceHealth, v), UA_STATUSCODE_GOOD );
+
+		UA_Variant read; UA_Variant_init( &read );
+		ASSERT_EQ( UA_Server_readValue(ua.Ptr(), deviceHealth, &read), UA_STATUSCODE_GOOD );
+		ASSERT_TRUE( UA_Variant_isScalar(&read) );
+		EXPECT_EQ( *(UA_Int32*)read.data, failure );
+		UA_Variant_clear( &read );
+	}
+
 	// never ending loop
 	// TEST_F( UALoadTests, AdditiveManufacturing ){
 	// 	GetUAServer().Load( Path()/"AdditiveManufacturing/Opc.Ua.AdditiveManufacturing.Nodeset2.xml" );

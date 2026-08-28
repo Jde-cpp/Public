@@ -72,7 +72,7 @@ export class NodeView extends View{
 		if( !variable )
 			return undefined;
 		const custom = variable.customDataType;
-		return custom ? (custom instanceof NodeId ? custom : custom.id).uaString() : ETypes[variable.dataType!] ?? `${variable.dataType}`;
+		return custom ? (custom instanceof NodeId ? custom.uaString() : custom.name || custom.id.uaString()) : ETypes[variable.dataType!] ?? `${variable.dataType}`;//the enum's name once resolved; the raw id while (or if) the lookup failed.
 	}
 	static access( variable:Variable|undefined ):string|undefined{
 		return variable ? NodeView.accessList( variable ).join( ", " ) : undefined;

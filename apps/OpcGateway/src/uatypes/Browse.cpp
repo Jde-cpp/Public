@@ -186,6 +186,15 @@ namespace Browse{
 		d.nodeClassMask = UA_NODECLASS_OBJECT | UA_NODECLASS_VARIABLE | UA_NODECLASS_METHOD;
 		return y;
 	}
+	α Request::Properties( NodeId&& id )ι->Request{
+		Request y{ move(id), UA_BROWSERESULTMASK_BROWSENAME };
+		auto& d = y.nodesToBrowse[0];
+		d.browseDirection = UA_BROWSEDIRECTION_FORWARD;
+		d.referenceTypeId = UA_NODEID_NUMERIC( 0, UA_NS0ID_HASPROPERTY );
+		d.includeSubtypes = false;
+		d.nodeClassMask = UA_NODECLASS_VARIABLE;
+		return y;
+	}
 
 	α Response::operator=( Response&& x )ι->Response&{
 		UA_BrowseResponse_clear( this );

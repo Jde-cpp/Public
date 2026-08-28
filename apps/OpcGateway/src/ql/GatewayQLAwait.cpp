@@ -38,7 +38,9 @@ namespace Jde::Opc::Gateway{
 
 	Ω needsClient( const QL::Input& q )ι->bool{
 		let tableName = q.JTableName();
-		return !tableName.starts_with( "serverConnection" ) && tableName!="__type" && tableName!="status" && tableName!="opcSessions" && tableName!="search";//search must never ConnectAwait - it only reads clients already open.
+		if( tableName=="__type" )
+			return q.Args.contains( "opc" );//an OPC enum DataType - its definition lives on that server (EnumTypeCache);  __type(name:…) stays on the generic QueryType.
+		return !tableName.starts_with( "serverConnection" ) && tableName!="status" && tableName!="opcSessions" && tableName!="search";//search must never ConnectAwait - it only reads clients already open.
 	}
 	α GatewayQLAwait::Test( QL::TableQL& q, QL::Creds executer, SL sl )->up<TAwait<jvalue>>{
 		up<TAwait<jvalue>> await;
@@ -50,10 +52,6 @@ namespace Jde::Opc::Gateway{
 			await = mu<ServerCnnctnSessionsQLAwait>( move(q), move(executer), sl );
 		else if( needsClient(q) )
 			await = mu<GatewayQLAwait>( move(q), move(executer), sl );
-		else if( q.JsonName=="__type" && !q.Args.contains("name") ){ //why?
-			NodeId nodeId{ q.Args };
-			q.Args["name"] = nodeId.ToString();
-		}
 		return await;
 	}
 	α GatewayQLMAwait::Test( QL::MutationQL& m, QL::Creds executer, SL sl )->up<TAwait<jvalue>>{
@@ -77,6 +75,11 @@ namespace Jde::Opc::Gateway{
 			else if( _query.JsonName=="namespaces" ){//an ordinary read of a standard node - see Namespaces below.
 				auto values = co_await Any( ReadValueAwait{{NodeId{(UA_UInt16)0, (UA_UInt32)UA_NS0ID_SERVER_NAMESPACEARRAY}}, _client, _sl} );
 				y = Namespaces( move(_query), _client, move(values) );
+			}
+			else if( _query.JsonName=="__type" ){//an enumeration DataType's definition, read from the server on first use and cached with the client.
+				NodeId id{ _query.Args };//ns/i|s|g|b;  `opc` is ignored.
+				auto type = co_await _client->EnumTypes().Get( _client, move(id), _sl );//AnyAwait - legal from this TAwait<jvalue>::Task.
+				y = type->ToJson( _query );
 			}
 			else if( _query.JsonName=="securityPolicyUri" )
 				y = co_await UAStrandAwait<jvalue>{ _client, [this]()->jvalue { return SecurityPolicyUri( move(_query), _client ); }, _sl };

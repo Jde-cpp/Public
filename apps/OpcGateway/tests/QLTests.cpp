@@ -228,6 +228,37 @@ namespace Jde::Opc::Gateway::Tests{
 		}
 	}
 
+	TEST_F( QLTests, enumTypes ){//an enumeration DataType's definition comes from the server (src/EnumTypeCache), not a config table.
+		const jobject vars{ {"opc", OpcServerTarget} };
+		auto enumType = [&]( uint16 ns, uint32 i ){
+			auto value = Socket().QuerySync( Ƒ("__type( opc: $opc, ns:{}, i:{} ){{ name enumValues{{ id name description }} }}", ns, i), vars );
+			TRACE( "__type(ns={};i={}): {}.", ns, i, serialize(value) );
+			return value;
+		};
+		auto expectValues = [&]( const jvalue& v, sv typeName, const vector<sv>& names ){
+			let& o = v.as_object();
+			EXPECT_EQ( Json::AsSV(o, "name"), typeName ) << serialize( v );
+			let& rows = Json::AsArray( o, "enumValues" );
+			ASSERT_EQ( rows.size(), names.size() ) << serialize( v );
+			for( uint i=0; i<names.size(); ++i ){
+				let& r = rows[i].as_object();
+				EXPECT_EQ( Json::AsNumber<_int>(r, "id"), (_int)i ) << serialize( r );
+				EXPECT_EQ( Json::AsSV(r, "name"), names[i] ) << serialize( r );
+				EXPECT_TRUE( r.contains("description") ) << "requested, so present even when null: " << serialize( r );
+			}
+		};
+		const vector<sv> di{ "NORMAL", "FAILURE", "CHECK_FUNCTION", "OFF_SPEC", "MAINTENANCE_REQUIRED" };//DI DeviceHealthEnumeration - ns2 on the test server, which loads DI first.
+		const vector<sv> ia{ "Off", "Red", "Green", "Blue", "Yellow", "Purple", "Cyan", "White" };//IA SignalColor - ns3.
+		expectValues( enumType(2, 6244), "DeviceHealthEnumeration", di );
+		expectValues( enumType(3, 3004), "SignalColor", ia );
+		expectValues( enumType(2, 6244), "DeviceHealthEnumeration", di );//again - served from the client's cache, no second read.
+
+		EXPECT_ANY_THROW( Socket().QuerySync("__type( opc: $opc, ns:0, i:884 ){ enumValues{ id name } }", vars) );//i=884 is Range - a structure, not an enumeration.
+		EXPECT_ANY_THROW( Socket().QuerySync("__type( opc: $opc, ns:2, i:6244 ){ enumValues{ id name } }", jobject{{"opc", "no-such-connection"}}) );//the definition is per connection.
+		let logTags = Socket().QuerySync( "__type( name: \"logTags\" ){ enumValues{ id name } }", {} );//no opc:  still the generic QueryType path.
+		EXPECT_FALSE( Json::AsArray(logTags.as_object(), "enumValues").empty() ) << serialize( logTags );
+	}
+
 	TEST_F( QLTests, multipleQueries ){
 		let q =
 			"connection: serverConnection( target: $opc ){ id name target url certificateUri defaultBrowseNs }"

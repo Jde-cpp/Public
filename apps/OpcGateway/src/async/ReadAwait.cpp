@@ -110,9 +110,11 @@ namespace Jde::Opc::Gateway{
 		nodesToReadSize=_readIds.size();
 		nodesToRead=_readIds.data();
 	}
-	ReadRequest::ReadRequest( const NodeId& nodeId, UA_AttributeId attrib )ι:
+	ReadRequest::ReadRequest( const NodeId& nodeId, std::initializer_list<UA_AttributeId> attribs )ι:
 		UA_ReadRequest{}{
-		_readIds.push_back( UA_ReadValueId{nodeId, (UA_UInt32)attrib, UA_STRING_NULL, {0, UA_STRING_NULL}} );
+		_readIds.reserve( attribs.size() );
+		for( let attrib : attribs )
+			_readIds.push_back( UA_ReadValueId{nodeId, (UA_UInt32)attrib, UA_STRING_NULL, {0, UA_STRING_NULL}} );
 		nodesToReadSize=_readIds.size();
 		nodesToRead=_readIds.data();
 	}
