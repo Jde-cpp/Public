@@ -6,7 +6,8 @@ namespace Jde::Opc::Gateway{
 	namespace Browse{ struct Response; }
 	struct UAClient;
 	struct ReadRequest final : UA_ReadRequest{
-		ReadRequest( const NodeId& nodeId, UA_AttributeId attrib )ι;
+		ReadRequest( const NodeId& nodeId, UA_AttributeId attrib )ι:ReadRequest{nodeId, {attrib}}{}
+		ReadRequest( const NodeId& nodeId, std::initializer_list<UA_AttributeId> attribs )ι;//one UA_ReadValueId per attribute, in order - results[i] answers attribs[i].
 		ReadRequest( const vector<NodeId>& ids, const QL::TableQL& ql )ι;
 		ReadRequest( Browse::Response&& browse, QL::TableQL&& ql )ι;
 		α Add( const QL::TableQL& ql, const flat_map<NodeId, jobject>& nodes )ι->void;

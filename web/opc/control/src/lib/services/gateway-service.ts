@@ -292,7 +292,7 @@ export class Gateway extends ProtoService<FromClient.Transmission,FromServer.Mes
 					if( variable.customDataType )
 						try{
 							const nodeId = <NodeId>variable.customDataType
-							let x = await super.querySingle<Type>( `__type( opc: ${StringUtils.qlString(cnnctn)}, ${nodeId.qlArgs()}){ enumValues{id name description}}`, null, log );
+							let x = await super.querySingle<Type>( `__type( opc: ${StringUtils.qlString(cnnctn)}, ${nodeId.qlArgs()}){ name enumValues{id name description}}`, null, log );
 							variable.customDataType = new Enum(nodeId, x);
 						}
 						catch( e:any ){

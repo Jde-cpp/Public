@@ -21,6 +21,7 @@ namespace Jde::Opc::Server {
 		α ConstructorValues( const NodeId& nodeId )ε->const flat_map<BrowseNamePK, Variant>&;
 
 		α Load( fs::path configFile, SRCE )ε->void;
+		α PublishDataTypes()ι->void;
 		α GetBrowse( BrowseNamePK pk, SRCE )Ε->const BrowseName&;
 		α FindDataType( NodePK nodePK )Ι->const UA_DataType*;
 		α GetDataType( NodePK nodePK, SRCE )ε->const UA_DataType&;
@@ -39,6 +40,7 @@ namespace Jde::Opc::Server {
 		UAConfig _config;
 		UA_Server* _ua{};
 		optional<std::jthread> _thread;
+		vector<UA_DataTypeArray> _customTypes;//PublishDataTypes' mirror of the server-internal lists; entries point at open62541's arrays, so cleanup is false and this only has to outlive the server.
 
 		flat_map<BrowseNamePK, BrowseName> _browseNames;
 		flat_map<NodeId, flat_map<BrowseNamePK, Variant>> _constructors;
