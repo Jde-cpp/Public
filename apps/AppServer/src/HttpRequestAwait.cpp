@@ -1,6 +1,5 @@
 #include "HttpRequestAwait.h"
 #include <jde/fwk/process/execution.h>
-#include <jde/web/server/auth/JwtLoginAwait.h>
 #include "LocalClient.h"
 #include "WebServer.h"
 #include "ql/AppQLAwait.h"
@@ -14,20 +13,19 @@ namespace Jde::App::Server{
 
 	α ValueJson( string&& value )ι->jvalue{ return jobject{{"value", move(value)}}; }//build directly so quotes/backslashes are escaped (Ƒ+Parse threw on unescaped input).
 
-	Ω login( HttpRequest req, HttpRequestAwait::Handle h )ι->TAwait<UserPK>::Task{
+	Ω login( HttpRequest& req, HttpRequestAwait::Handle h )ι->void{
 		try{
 			req.LogRead();
 			let authorization = req.Header( "Authorization" );
 			THROW_IFX( authorization.empty() || !authorization.starts_with("Bearer "), RestException(EHttpStatus::Unauthorized,SRCE_CUR, move(req), "Missing or invalid Authorization header") );
-
-			req.SessionInfo->UserPK = co_await JwtLoginAwait( Web::Jwt{authorization.substr(7)}, req.UserEndpoint.address().to_string(), Server::AppClient() );
 			jobject j{ {"expiration", ToIsoString<seconds>(req.SessionInfo->Expiration)} };
 			req.SessionInfo->IsInitialRequest = true;  //expecting sessionId to be set.
-			h.promise().Resume( {move(j), move(req)}, h );
+			h.promise().SetValue( {move(j), move(req)} );
 		}
 		catch( runtime_error& e ){
-			h.promise().ResumeExp( move(e), h );
+			h.promise().SetExp( move(e) );
 		}
+		h.resume();
 	}
 
 	α Logout( HttpRequest&& req, HttpRequestAwait::Handle h )ι->void{
@@ -50,11 +48,11 @@ namespace Jde::App::Server{
 			}
 			else if( _request.Target()=="/opcGateways" || _request.Target()=="/opcServers" ){
 				_request.LogRead();
-				//TODO require authentication: these endpoints disclose connected-instance topology (app name, host, pid, port, start time) to anonymous callers. Gate on _request.UserPK().
 				let apps = Server::FindApplications( _request.Target()=="/opcServers" ? "Jde.OpcServer" : "Jde.OpcGateway" );
+				let identified = _request.UserPK()!=Jde::UserPK{};//every http caller is minted a session; only a logged-in one has a user.
 				jarray japps;
 				for( auto& app : apps )
-					japps.push_back( ToJson(app) );
+					japps.push_back( identified ? ToJson(app) : ToDiscoveryJson(app) );
 				_readyResult = mu<jvalue>( jobject{{"servers", japps}} );
 			}
 		}
@@ -64,7 +62,7 @@ namespace Jde::App::Server{
 		bool processed{ _request.Method() == http::verb::post };
 		if( _request.Method() == http::verb::post ){
 			if( _request.Target()=="/login" )
-				login( move(_request), _h );
+				login( _request, _h );
 			else if( _request.Target()=="/logout" )
 				Logout( move(_request), _h );
 			else
@@ -75,8 +73,8 @@ namespace Jde::App::Server{
 				Query( QLPtr() );
 			else{
 				_request.LogRead();
-				RestException e{ EHttpStatus::NotFound, SRCE_CUR, move(_request), "Unknown target '{}'", _request.Target() };
-				ResumeExp( move(e) );
+				auto target = _request.Target();
+				ResumeExp( RestException{EHttpStatus::NotFound, SRCE_CUR, move(_request), "Unknown target '{}'", move(target)} );
 			}
 		}
 	}
@@ -87,8 +85,7 @@ namespace Jde::App::Server{
 		if( auto e = Promise() ? Promise()->MoveExp() : nullptr; e ){
 			if( auto rest = dynamic_cast<RestException*>(e.get()); rest )
 				rest->Throw();
-			else
-				throw RestException(EHttpStatus::InternalServerError, move(*e), move(_request) );
+			throw RestException{ e->HttpStatus(), move(*e), move(_request) };
 		}
 		return _readyResult
 			? HttpTaskResult{ move(*_readyResult), move(_request) }

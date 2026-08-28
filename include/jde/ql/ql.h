@@ -8,7 +8,7 @@
 #include "types/Subscription.h"
 
 namespace Jde::Access{ struct Authorize; }
-namespace Jde::DB{ struct AppSchema; }
+namespace Jde::DB{ struct AppSchema; struct View; }
 namespace Jde::QL{
 	struct Introspection; struct Object; struct IQL; struct LocalQL;
 	α AddIntrospection( Introspection&& x )ι->void;
@@ -18,6 +18,12 @@ namespace Jde::QL{
 	α SetSystemTables( flat_set<string>&& jsonNames )ι->void;
 
 	α Configure( const vector<sp<DB::AppSchema>>& schemas )ε->void;
+	//Caches a lookup table's id->name map - what SelectAwait renders an enum/flags column from - with no expiry, so no
+	//request path takes SelectEnumSync's blocking miss.  On MySQL that miss parks the caller on the very executor pool that
+	//has to deliver its query (appserver-review2 r2.24).  Call from startup, off that pool, and after the schema exists;
+	//whoever writes a loaded table calls LoadEnum again - MutationAwait clears the entry, and a non-QL writer re-loads.
+	α LoadEnum( const DB::View& table, SRCE )ι->bool;
+	α LoadEnums( const vector<sp<DB::AppSchema>>& schemas, SRCE )ι->uint;//every IsEnum/IsFlags table in each schema; returns how many loaded.
 	α Parse( string query, jobject variables, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw=true, SRCE )ε->RequestQL;
 	α ParseM( string query, jobject variables, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw=true, SRCE )ε->MutationQL;
 	α ParseQuery( string query, jobject variables, const vector<sp<DB::AppSchema>>& schemas, bool returnRaw=true, SRCE )ε->TableQL;

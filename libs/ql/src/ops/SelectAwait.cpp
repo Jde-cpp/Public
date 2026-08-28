@@ -26,7 +26,7 @@ namespace Jde::QL{
 		return y;
 	}
 	α GetEnumValues( const DB::View& table, SRCE )ε->flat_map<uint,string>{
-		return table.Schema->DS()->SelectEnumSync<uint,string>( table, sl );
+		return table.Schema->DS()->SelectEnumSync<uint,string>( table, Cache::DefaultDuration(), sl );
 	}
 	α numberToJson( const DB::Value& dbValue, const DB::Column& c )ι->jvalue{
 		jvalue y;

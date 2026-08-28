@@ -5,11 +5,14 @@
 #include <jde/db/meta/Table.h>
 #include "helpers.h"
 #include "../src/appStartup.h"
+#include "../src/WebServer.h"
+#include <jde/fwk/io/Cache.h>
 #include <thread>
 #define let const auto
 
 //the connections bookkeeping in appStartup.cpp: AddConnection's proc-minted pks and EndConnection's deleted stamp.
 namespace Jde::App::Server::Tests{
+	using EnumMap = flat_map<uint,string>;//aliased: the comma in the template args would split the EXPECT_ macro's arguments.
 
 	struct LogDataTests : ::testing::Test{
 		Ω ConnectionsTable()->string{ return Server::AppSchema()->GetView("connections").DBName; }
@@ -18,6 +21,30 @@ namespace Jde::App::Server::Tests{
 			return rows.empty() ? 0u : (uint)rows[0].GetInt( 0 );
 		}
 	};
+
+	//appserver-review2 r2.24: every enum/flags lookup is loaded before the server starts, so no request path takes
+	//SelectEnumSync's blocking cache miss - on MySQL that miss parks the caller on the very pool that has to answer it.
+	TEST_F( LogDataTests, EnumsAreLoadedAtStartup ){
+		uint checked{};
+		for( let& schema : Server::Schemas() ){
+			for( let& [name, table] : schema->Tables ){
+				if( !table->IsEnum() && !table->IsFlags )
+					continue;
+				++checked;
+				EXPECT_TRUE( Cache::Get<EnumMap>(table->Name) ) << table->Name << " was not loaded - its next render blocks the caller";
+			}
+		}
+		EXPECT_GT( checked, 0u ) << "no lookup tables found - the walk no longer matches what SelectAwait renders from";
+	}
+
+	//`hosts` has the enum shape but grows, and loading it with no expiry means nothing else would ever refresh it.
+	TEST_F( LogDataTests, ANewHostReachesTheLoadedMap ){
+		let host = Ƒ( "load-host-{}", steady_clock::now().time_since_epoch().count() );
+		App::AddConnection( "Tests.LogData", "loads-host", host, 116 );
+		auto hosts = Cache::Get<EnumMap>( "hosts" );
+		ASSERT_TRUE( hosts );
+		EXPECT_TRUE( std::ranges::any_of(*hosts, [&](let& kv){ return kv.second==host; }) ) << "a host added after startup never reaches the map the renderer reads";
+	}
 
 	TEST_F( LogDataTests, AddConnectionMintsPks ){
 		let [program, instance, connection] = App::AddConnection( "Tests.LogData", "mints", "logdata-host", 111 );

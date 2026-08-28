@@ -1,5 +1,6 @@
 #include <jde/ql/ops/MutationAwait.h>
 #include <jde/ql/IQL.h>
+#include <jde/fwk/io/Cache.h>
 #include "AddRemoveAwait.h"
 #include "InsertAwait.h"
 #include "PurgeAwait.h"
@@ -30,6 +31,7 @@ namespace Jde::QL{
 				//no table, and Execute has its own message, so the guard can not go above the switch.  Mirrors UpdateAwait::await_ready.
 				if( let type=_mutation.Type; type!=Start && type!=Stop && type!=Execute )
 					THROW_IF( !table, "Table not found for mutation '{}'.", _mutation.ToString() );
+				let enumCache = table && (table->IsEnum() || table->IsFlags) ? table->Name : string{};
 				switch( _mutation.Type ){
 				case Update:
 				case Delete:
@@ -55,6 +57,8 @@ namespace Jde::QL{
 				case Execute:
 					throw Exception{ "Execute mutation not implemented.", {ELogTags::QL}, _sl };
 				}
+				if( enumCache.size() )
+					Cache::Clear( enumCache );
 			}
 			Resume( move(y) );
 		}

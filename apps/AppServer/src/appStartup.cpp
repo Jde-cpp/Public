@@ -41,6 +41,11 @@ namespace Jde::App{
 			appConnectionId = row.GetUInt32(2);
 		}
 
+		//`hosts` has the enum shape (id + name) and is loaded like one, but unlike the real enumerations it grows - the proc
+		//above adds a row the first time a host registers, outside QL entirely, and instances.hostId renders through it.
+		//Re-loaded rather than cleared: a cleared entry hands the next render the blocking miss this exists to remove, and
+		//the Select above already blocks this thread (see AddInstance's `TODO Don't block`).
+		QL::LoadEnum( _appSchema->GetTable("hosts") );
 		return make_tuple( appId, appInstanceId, appConnectionId );
 	}
 	α EndConnection( ConnectionPK connectionId, SL sl )ι->DB::ExecuteAwait::Task{
@@ -80,6 +85,7 @@ namespace Jde::App::Server{
 			DB::SyncSchema( *accessSchema, QLPtr() );
 			DB::SyncSchema( *_appSchema, QLPtr() );
 		}
+		QL::LoadEnums( {accessSchema, _appSchema} );
 		BlockVoidAwait( Access::Server::Configure({accessSchema, _appSchema}, QLPtr(), UserPK{UserPK::System}, authorizer, _listener) );//the access load is a coroutine chain; this is the sync api over it.
 		endAppInstances();
 	}

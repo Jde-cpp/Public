@@ -51,6 +51,17 @@ namespace Jde::App::Server::Tests{
 			}
 			return inner;
 		}
+		//a kForwardExecution addressed at a registered instance; the payload is never parsed by the target here.
+		Ω Forward( const RegisteredInstance& target, RequestId requestId )->FromClientTrans{
+			FromClientTrans t;
+			auto& m = *t.add_messages();
+			m.set_request_id( requestId );
+			auto& f = *m.mutable_forward_execution();
+			f.set_app_pk( target.Program );
+			f.set_app_instance_pk( target.Instance );
+			*f.mutable_execution_transmission() = string{"payload"};
+			return t;
+		}
 		sp<RawClientSession> _session;
 	};
 
@@ -164,6 +175,10 @@ namespace Jde::App::Server::Tests{
 			ASSERT_TRUE( _session->WaitForException(requestId) ) << "adoption " << i;
 		}
 		EXPECT_TRUE( _session->WaitForClose() ) << "5th failed adoption must close the socket";
+		//#17: and close it properly.  OnClose() only unregistered the session and nulled Stream, so the peer saw the transport
+		//vanish - no close frame - and the exception above raced the teardown.  websocket::error::closed is what a client's
+		//read reports when the server closed the handshake; a dropped transport gives end_of_stream/connection_reset instead.
+		EXPECT_EQ( _session->CloseCode(), boost::beast::websocket::error::closed ) << _session->CloseCode().message();
 	}
 
 	//an authenticated socket (kInstance sets _userPK) survives bad adoptions - only anonymous guessing accumulates.
@@ -218,5 +233,40 @@ namespace Jde::App::Server::Tests{
 		let denied = RegisterInstance( *other, "Tests.AuthResource", "pretender", "auth-host", 0, 1235, string{schema}, nobody );
 		EXPECT_FALSE( denied.AuthResult ) << "a user without Administer on the root may not stand in for the schema";
 		BlockVoidAwait( other->Close(true, SRCE_CUR) );
+	}
+
+	//#16:  kSessionId recorded the session *id* and nothing else, so a socket that had adopted a session went on acting as
+	//user 0 - it passed the forward guard (which tests the id) and the request went out as kExecuteAnonymous with the
+	//caller's identity silently dropped.  Identity now comes from the SessionInfo the adoption installs.
+	TEST_F( ProcessTransmissionTests, AnAdoptedSessionIsTheSocketsIdentity ){
+		constexpr Jde::UserPK user{ 7 };//no row needed - the adoption reads the minted session, and the forward only carries the pk.
+		auto target = Connect();
+		let app = RegisterInstance( *target, "Tests.Adopt", "adopt-target", "adopt-host", 0 );
+		{//with no session at all the forward is refused outright.
+			let requestId = _session->NextRequestId();
+			_session->Write( Forward(app, requestId) );
+			auto reply = _session->WaitForException( requestId );
+			ASSERT_TRUE( reply );
+			EXPECT_TRUE( reply->exception().what().contains("requires an authenticated session") ) << reply->exception().what();
+		}
+		{//adopt a session minted for `user`; the reply is a bare Complete.
+			let requestId = _session->NextRequestId();
+			FromClientTrans t;
+			auto& m = *t.add_messages();
+			m.set_request_id( requestId );
+			m.set_session_id( MintSession(user) );
+			_session->Write( move(t) );
+			auto reply = _session->WaitFor( [requestId](let& m){ return m.request_id()==requestId; } );
+			ASSERT_TRUE( reply );
+			ASSERT_NE( reply->value_case(), FromServerMessage::kException ) << reply->exception().what();
+		}
+		{//the forward now carries the adopted user.
+			_session->Write( Forward(app, _session->NextRequestId()) );
+			auto forwarded = target->WaitFor( [](let& m){ return m.value_case()==FromServerMessage::kExecute || m.value_case()==FromServerMessage::kExecuteAnonymous; } );
+			ASSERT_TRUE( forwarded );
+			ASSERT_EQ( forwarded->value_case(), FromServerMessage::kExecute ) << "sent anonymously - the adopted session's user never reached the socket";
+			EXPECT_EQ( forwarded->execute().user_pk(), user.Value );
+		}
+		BlockVoidAwait( target->Close(true, SRCE_CUR) );//the forward is never answered; closing cancels it.
 	}
 }

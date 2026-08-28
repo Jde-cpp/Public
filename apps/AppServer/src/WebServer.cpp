@@ -57,8 +57,9 @@ namespace Jde::App{
 	α Server::OnSessionDisconnect( sp<ServerSocketSession> session )ι->void{
 		_sessions.erase( session->Id() );
 		Authorizer()->RemoveAdminAuthorizer( std::dynamic_pointer_cast<Access::IAdminAcl>(session) );//else a restarted app's stale registration keeps answering admin checks on a dead stream.
-		ForwardExecutionAwait::OnCloseConnection( session->Id(), session->ConnectionPK() );
-		EndConnection( session->ConnectionPK() );
+		let connectionPK = session->ConnectionPK();
+		ForwardExecutionAwait::OnCloseConnection( session->Id(), connectionPK );
+		EndConnection( connectionPK );
 	}
 
 	α Server::GetJwt( UserPK userPK, string name, string target, string endpoint, SessionPK sessionId, TimePoint expires, string description )ε->Web::Jwt{
@@ -100,11 +101,13 @@ namespace Jde::App{
 
 	α Server::FindInstance( ProgInstPK instancePK )ι->sp<ServerSocketSession>{
 		sp<ServerSocketSession> y;
-		_sessions.cvisit_while( [&](let& kv){//_sessions is keyed by socket Id, not the instance pk; 0=session not yet registered, and every unregistered session shares it.
-			if( kv.second->InstancePK()==instancePK )
-				y = kv.second;
-			return !y;
-		});
+		if( instancePK ){ //as FindConnection above: _sessions is keyed by socket Id, not the instance pk, and 0 is what every not-yet-registered session reports.  Without this, instance 0 matched whichever socket was still connecting and pushRuntime handed it another instance's log levels (appserver-review3 #18).
+			_sessions.cvisit_while( [&](let& kv){
+				if( kv.second->InstancePK()==instancePK )
+					y = kv.second;
+				return !y;
+			});
+		}
 		return y;
 	}
 
@@ -123,7 +126,8 @@ namespace Jde::App{
 		sp<ServerSocketSession> y;
 		_sessions.cvisit_while( [&](let& kv){
 			let& session = kv.second;
-			if( appPK && session->ProgramPK()==appPK && (!instancePK || session->InstancePK()==*instancePK) )//appPK guard: an unregistered session's ProgramPK is 0, so appPK:0 must not match it.
+			let pks = session->Pks();//all three from one publish - matching on Program and then binding the forward to a separately-read Connection is #14's torn window.
+			if( appPK && pks.Program==appPK && pks.Connection && (!instancePK || pks.Instance==*instancePK) )//appPK guard: an unregistered session's ProgramPK is 0, so appPK:0 must not match it.  Connection guard: a forward is keyed by it and 0 is what every unregistered session shares, so a reply could never resolve one bound to it.
 				y = session;
 			return !y;
 		});
@@ -133,8 +137,9 @@ namespace Jde::App{
 	//Returns the connection actually delivered to, so a forward can bind its response to that one session (finding #5).
 	α Server::Write( ProgramPK appPK, optional<ProgInstPK> instancePK, Proto::FromServer::Transmission&& msg )ε->ConnectionPK{
 		auto session = FindApp( appPK, instancePK );//throws when nothing matches - outside the visit so the write does not run under the map's bucket lock.
+		let connectionPK = session->ConnectionPK();//a registration is published once and never cleared, so this is the non-zero pk FindApp matched.
 		session->Write( move(msg) );
-		return session->ConnectionPK();
+		return connectionPK;
 	}
 }
 namespace Jde::App::Server{

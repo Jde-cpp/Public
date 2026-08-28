@@ -46,6 +46,7 @@ namespace Jde::App::Server::Tests{
 			return _cv.wait_for( l, timeout, [&]{ return _closeCount>0; } );
 		}
 		α CloseCount()ι->uint{ std::unique_lock l{ _mtx }; return _closeCount; }
+		α CloseCode()ι->beast::error_code{ std::unique_lock l{ _mtx }; return _closeCode; }//why the socket ended: websocket::error::closed means the server sent a close frame, anything else that it dropped the transport.
 	private:
 		α Query( string&&, jobject, bool, SL )ι->Web::Client::ClientSocketAwait<jvalue> override{ ASSERT(false); return { {}, {}, {} }; }
 		α Subscribe( string&&, jobject, sp<QL::IListener>, SL )ε->Web::Client::ClientSocketAwait<jarray> override{ ASSERT(false); return { {}, {}, {} }; }
@@ -62,7 +63,8 @@ namespace Jde::App::Server::Tests{
 		α OnClose( beast::error_code ec )ι->void override{
 			{
 				std::unique_lock _{ _mtx };
-				++_closeCount;
+				if( ++_closeCount==1 )
+					_closeCode = ec;
 			}
 			_cv.notify_all();
 			base::OnClose( ec );
@@ -72,6 +74,7 @@ namespace Jde::App::Server::Tests{
 		std::condition_variable _cv;
 		std::vector<FromServerMessage> _messages;
 		uint _closeCount{};
+		beast::error_code _closeCode;
 	};
 
 	Ξ Connect()ε->sp<RawClientSession>{
