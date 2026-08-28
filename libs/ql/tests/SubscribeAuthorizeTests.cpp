@@ -22,7 +22,6 @@ namespace Jde::QL::Tests{
 		}
 		α Rights( str, str, UserPK )ι->Access::ERights override{ return Access::ERights::All; }
 		α UserName( UserPK )ι->string override{ return {}; }
-		α TestAdmin( str, str, UserPK, SL )ι->up<AnyVoidAwait> override{ return nullptr; }
 		vector<std::pair<string,Access::ERights>> Tested;
 	};
 	struct SilentListener final : IListener{

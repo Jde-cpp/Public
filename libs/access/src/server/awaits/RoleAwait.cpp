@@ -73,7 +73,7 @@ namespace Jde::Access::Server{
 			if( !schema )
 				schema = auth.GetSchema( resourceKey.NK(), _sl );
 
-			auto adminCheck = auth.TestAdmin( *schema, resourceKey.NK(), criteria.value_or(""), _userPK );
+			auto adminCheck = auth.TestAdmin( *schema, resourceKey.NK(), criteria.value_or(""), _userPK );//the schema's OpcServer answers when one is registered - it knows which resource governs the node; else the flat rule, where a criteria without a row falls back to the target's root (appserver-review3 #13).
 			co_await *adminCheck;
 			let& table = GetTable( "roles" );
 			DB::InsertClause insert{ DB::Names::ToSingular(table.DBName)+"_add" };

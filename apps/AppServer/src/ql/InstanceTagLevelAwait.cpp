@@ -91,6 +91,7 @@ namespace Jde::App::Server{
 		try{
 			auto vars = _mutation.ExtrapolateVariables();
 			let instanceId = vars.at("id").to_number<ProgInstPK>();
+			THROW_IF( !instanceId, "updateInstanceTagLevel needs an instance - 0 is what a session that has not registered reports, not one." );// the rows went in against instance 0, belonging to nothing, and the push then went looking for a session that matched.
 			auto schema = AppSchema();
 			let& table = schema->GetView( "instance_tag_levels" );
 			auto sql = [&,instanceId]( str type, sv tag, jvalue level )->DB::Sql {

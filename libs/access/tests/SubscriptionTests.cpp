@@ -9,6 +9,7 @@
 #include <jde/access/AccessListener.h>
 #include <jde/access/Authorize.h>
 #include <jde/access/awaits/EventsSubscribeAwait.h>
+#include <jde/access/server/awaits/RoleAwait.h>
 #include "../src/accessInternal.h"
 #include "globals.h"
 #include <jde/ql/IQL.h>
@@ -281,5 +282,51 @@ namespace Jde::Access::Tests{
 		for( let id : ids )
 			Purge( "resource", id, root );
 		PurgeUser( nobody, root );
+	}
+
+	//appserver-review3 #13:  the server's Configure subscribes with no schema predicate now - its Authorize gates and answers every
+	//schema's grants (TestSchemaAdmin, and the flat rule behind TestAdmin), so it has to see every schema's rows change.  This
+	//suite's schema is not "access":  before, the startup listener's resourcesCreated(schemaName:["access"]) dropped the event and
+	//the row never reached the cache, so a nobody passed TestAdmin on it.
+	TEST( SubscriptionTests, OtherSchemasResourcesReachTheStartupCache ){
+		let root = GetRoot();
+		constexpr sv target{ "subAllSchemas" };
+		for( let id : resourceIds(target) )//a previous run's row.
+			Purge( "resource", id, root );
+		createResource( target, ", allowed:255" );
+		let ids = resourceIds( target ); ASSERT_EQ( ids.size(), 1u );
+		const UserPK nobody{ GetId(GetUser("subAllSchemasNobody", root)) };
+		EXPECT_THROW( Authorizer()->TestAdmin((ResourcePK)ids[0], nobody), Exception ) << "created in the cache, so enforced";
+		deleteResource( target );
+		EXPECT_NO_THROW( Authorizer()->TestAdmin((ResourcePK)ids[0], nobody) ) << "deleted in the cache as well";
+		Purge( "resource", ids[0], root );
+		PurgeUser( nobody, root );
+	}
+
+	//...and role grants:  RoleMAwait::AddPermission delivers roleAdded only to subscribers whose resource(schemaName:…) names the
+	//permission's schema - the server's listener names none now - so a grant on another schema reaches the cache:  a holder of the
+	//role administers the resource, which it did not before the grant.  The row is created first (the previous pin) so the grant's
+	//admin check has something to enforce - System grants, as root holds nothing on a new row.
+	TEST( SubscriptionTests, OtherSchemasRoleGrantsReachTheStartupCache ){
+		let root = GetRoot();
+		constexpr sv target{ "subAllSchemasRole" };
+		for( let id : resourceIds(target) )//a previous run's row.
+			Purge( "resource", id, root );
+		createResource( target, ", allowed:255" );
+		let ids = resourceIds( target ); ASSERT_EQ( ids.size(), 1u );
+		let resourcePK = (ResourcePK)ids[0];
+		const RolePK rolePK{ (RolePK)GetId(Get("role", "subAllSchemasRole", root)) };
+		const UserPK holder{ GetId(GetUser("subAllSchemasHolder", root)) };
+		QL().QuerySync<jvalue>( Ƒ("mutation createAcl( identity:{{id:{}}}, role:{{id:{}}} )", holder.Value, rolePK), {}, root );
+		EXPECT_THROW( Authorizer()->TestAdmin(resourcePK, holder), Exception ) << "no grant yet";
+		let grant = Ƒ( R"(addRole( id:{}, permissionRight:{{ allowed:{}, denied:0, resource:{{ schemaName:"{}", target:"{}" }} }} ))", rolePK, underlying(ERights::Administer), Schema, target );
+		let added = BlockTAwait<jvalue>( Server::RoleMAwait{QL::ParseM(grant, {}, Schemas()), UserPK{UserPK::System}} ).as_object();
+		EXPECT_NO_THROW( Authorizer()->TestAdmin(resourcePK, holder) ) << "roleAdded did not reach the cache - the holder's role does not carry the grant";
+
+		BlockTAwait<jvalue>( Server::RoleMAwait{QL::ParseM(Ƒ("mutation removeRole( id:{}, permissionRight:{{id:{}}} )", rolePK, Json::AsNumber<PermissionPK>(added, "permissionRight/id")), {}, Schemas()), UserPK{UserPK::System}} );
+		QL().QuerySync<jvalue>( Ƒ("purgeAcl( identity:{{ id:{} }}, role:{{ id:{} }} )", holder.Value, rolePK), {}, root );
+		Purge( "role", rolePK, root );
+		Purge( "resource", resourcePK, root );
+		PurgeUser( holder, root );
 	}
 }

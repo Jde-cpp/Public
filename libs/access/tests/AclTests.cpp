@@ -360,7 +360,7 @@ namespace Jde::Access::Tests{
 	TEST_F( AclTests, RegrantOnCriteriaResourceUpserts ){
 		let root = GetRoot();
 		const UserPK system{ UserPK::System }; //grants on a resource root holds no rights over - System early-passes TestAdmin.
-		constexpr sv schema{ "access" }, target{ "aclUpsert" }, criteria{ "nodeId:{ eq: 12 }" }; //in `access`, or the resources subscription's schema filter keeps it out of the cache and TestAdmin fail-opens; criteria-scoped, so CheckDefaults' criteria:null count is untouched.
+		constexpr sv schema{ "access" }, target{ "aclUpsert" }, criteria{ "nodeId:{ eq: 12 }" }; //in `access` (the resources subscription used to be filtered to it - it takes every schema now); criteria-scoped, so CheckDefaults' criteria:null count is untouched.
 		let select = Ƒ( R"(resources( schemaName:"{}", target:"{}", criteria:"{}" ){{ id }})", schema, target, criteria );
 		auto resources = QL().QuerySync<jarray>( select, {}, root );
 		if( resources.empty() ){

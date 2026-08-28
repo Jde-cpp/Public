@@ -60,6 +60,7 @@ namespace Jde::Opc::Server{
 		}
 		if( baseResources.empty() ){
 			DBG( "No base resources found for OPC UA server authorization." );
+			_assigned = true;
 			return;
 		}
 		Access::ResourcePK rootResourcePK{};
@@ -73,6 +74,23 @@ namespace Jde::Opc::Server{
 		_rootResourcePK = rootResourcePK;
 		std::set<NodeId> visited{ root };
 		AssignRights( root, server, rootResourcePK, baseResources, visited );
+		_assigned = true;
+	}
+
+	α OpcAuthorize::TestAdminNode( str target, str criteria, UserPK user, SL sl )ε->void{
+		if( target!="nodeIds" )
+			return TestAdminLocal( _app, target, criteria, user, sl );
+		THROW_IFSL( !_assigned, "[{}]admin check before AssignRights - not ready.", _app );
+		Access::ResourcePK pk{};
+		{
+			Jde::sl _{ _nodeResourcesMutex };
+			if( !_enabled )
+				return;//no base resources: the server is unauthorized and every node open, as UserRights answers.
+			let node = criteria.empty() ? NodeId::ObjectsFolder() : NodeId::DecodeJson( criteria );//an undecodable criteria throws - a denial.
+			pk = Find( _nodeResources, node ).value_or( _rootResourcePK );//the governing resource - the nearest configured ancestor's, else root - exactly UserRights' resolution, so who may grant on a node is who administers what already protects it.
+		}
+		if( pk )//outside every configured branch - open, as UserRights leaves it.
+			TestAdmin( pk, user, sl );//no-op on a deleted row, as UserRights opens a deleted resource.
 	}
 
 	α OpcAuthorize::UserRights( NodeId nodeId, UserPK executer )ι->EAccess{

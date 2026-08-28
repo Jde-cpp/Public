@@ -36,10 +36,17 @@ namespace Jde::Opc::Server{
 		OpcAuthorize( string app )ι:Access::Authorize{move(app)}{}
 		α UserRights( NodeId nodeId, UserPK executer )ι->EAccess;
 		α AssignRights( UA_Server& server )ι->void;
+		//The AppServer's delegated admin check (ServerSocketSession::TestAdminAwait → OpcServerQL's adminCheck):  who may grant on a node is
+		//whoever administers the resource governing it - the nearest configured ancestor's, else root - the same resolution
+		//UserRights applies, which only this server can make.  Other targets take the generic flat rule.  Throws AccessException
+		//on denial;  a plain Exception before AssignRights has run, so a check that races startup (the socket registers before
+		//Configure and AssignRights) is a denial, never a guess.
+		α TestAdminNode( str target, str criteria, UserPK user, SRCE )ε->void;
 	private:
 		α AssignRights( const NodeId& nodeId, UA_Server& server, Access::ResourcePK resourcePK, const std::map<NodeId, Access::ResourcePK>& baseResources, std::set<NodeId>& visited )ι->void;
 		std::map<NodeId, Access::ResourcePK> _nodeResources; shared_mutex _nodeResourcesMutex;
 		bool _enabled{};//true once base resources are configured; when false the server is unauthorized and every node is fully accessible.
+		std::atomic<bool> _assigned{};//AssignRights has run (with or without base resources) - TestAdminNode denies until then.
 		Access::ResourcePK _rootResourcePK{};//resource covering the ObjectsFolder root; unmapped nodes inherit it rather than being granted all access.
 	};
 }

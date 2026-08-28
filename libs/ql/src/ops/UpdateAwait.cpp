@@ -146,7 +146,7 @@ namespace Jde::QL{
 				FlagTables( *_table, enumTables );
 				for( let& enumTable : enumTables ){
 					if( !_enums.contains(enumTable->Name) )
-						_enums.emplace( enumTable->Name, co_await enumTable->Schema->DS()->SelectEnum<uint,string>(*enumTable, _sl) );
+						_enums.emplace( enumTable->Name, co_await enumTable->Schema->DS()->SelectEnum<uint,string>(*enumTable, Cache::DefaultDuration(), _sl) );
 				}
 				CreateUpdate( *_table );
 				THROW_IF( _updates.empty(), "There is nothing to update." );

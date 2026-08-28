@@ -63,15 +63,17 @@ namespace Jde::DB{
 	};
 
 	Τ struct CacheAwait final: TSelectAwait<T>{
-		CacheAwait( sp<IDataSource> ds, Sql&& sql, CoRowΛ<T> fnctn, string cacheName, SL sl ):
+		CacheAwait( sp<IDataSource> ds, Sql&& sql, CoRowΛ<T> fnctn, string cacheName, optional<steady_clock::duration> duration, SL sl ):
 			TSelectAwait<T>{ ds, move(sql), fnctn, sl },
-			_cacheName{ move(cacheName) }
+			_cacheName{ move(cacheName) },
+			_duration{ duration }
 		{}
 		α await_ready()ι->bool override;
 		α await_resume()ε->T override;
 	private:
 		sp<const T> _cache;
 		string _cacheName;
+		optional<steady_clock::duration> _duration;
 	};
 
 	Ŧ CacheAwait<T>::await_ready()ι->bool{
@@ -84,7 +86,7 @@ namespace Jde::DB{
 			return *_cache;
 		auto y = TSelectAwait<T>::await_resume();
 		TRACET( ELogTags::Test, "Cache.sizeof: {}", sizeof(T) );
-		return *Cache::Set<T>( _cacheName, move(y) );//move into the cache, copy out once - `Set(name, y); return y;` copies twice.
+		return *Cache::Set<T>( _cacheName, move(y), _duration );//move into the cache, copy out once - `Set(name, y); return y;` copies twice.
 	}
 }
 #undef let

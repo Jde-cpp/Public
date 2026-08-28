@@ -40,12 +40,12 @@ namespace Jde::DB{
 		α Select( Sql&& s, RowΛ f, SRCE )ε->uint;
 		α SelectAsync( Sql&& sql, SRCE )ι->SelectAwait{ return SelectAwait{ shared_from_this(), move(sql), sl }; }
 		template<class K=uint,class V=string>
-		α SelectEnum( const View& table, SRCE )ε->CacheAwait<flat_map<K,V>>{ return SelectMap<K,V>( {Ƒ("select {}, name from {}", table.GetPK()->Name, table.SqlName())}, table.Name, sl ); }
-		ẗ SelectEnumSync( const View& table, SRCE )ε->flat_map<K,V>{
-			return BlockAwait<CacheAwait<flat_map<K,V>>,flat_map<K,V>>( SelectEnum<K,V>( table, sl) );
+		α SelectEnum( const View& table, optional<steady_clock::duration> duration=Cache::DefaultDuration(), SRCE )ε->CacheAwait<flat_map<K,V>>{ return SelectMap<K,V>( {Ƒ("select {}, name from {}", table.GetPK()->Name, table.SqlName())}, table.Name, duration, sl ); }
+		ẗ SelectEnumSync( const View& table, optional<steady_clock::duration> duration=Cache::DefaultDuration(), SRCE )ε->flat_map<K,V>{
+			return BlockAwait<CacheAwait<flat_map<K,V>>,flat_map<K,V>>( SelectEnum<K,V>(table, duration, sl) );
 		}
 
-		ẗ SelectMap( Sql&& sql, string cacheName, SRCE )ι->CacheAwait<flat_map<K,V>>;
+		ẗ SelectMap( Sql&& sql, string cacheName, optional<steady_clock::duration> duration=Cache::DefaultDuration(), SRCE )ι->CacheAwait<flat_map<K,V>>;
 
 		α TryExecuteSync( Sql&& sql, SRCE )ι->optional<uint>;
 
@@ -95,8 +95,8 @@ namespace Jde::DB{
 		ẗ ProcessMapRow( flat_map<K,V>& y, Row&& row )ε{ y.emplace( row.Get<K>(0), row.Get<V>(1) ); }
 	}
 
-	ẗ IDataSource::SelectMap( Sql&& sql, string cacheName, SL sl )ι->CacheAwait<flat_map<K,V>>{
-		return CacheAwait<flat_map<K,V>>( shared_from_this(), move(sql), zInternal::ProcessMapRow<K,V>, move(cacheName), sl );
+	ẗ IDataSource::SelectMap( Sql&& sql, string cacheName, optional<steady_clock::duration> duration, SL sl )ι->CacheAwait<flat_map<K,V>>{
+		return CacheAwait<flat_map<K,V>>( shared_from_this(), move(sql), zInternal::ProcessMapRow<K,V>, move(cacheName), duration, sl );
 	}
 }
 #undef let

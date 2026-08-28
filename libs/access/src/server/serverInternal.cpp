@@ -90,7 +90,7 @@ namespace Jde::Access{
 		SetSchema( *accessSchema );
 		_ql = localQL;
 		QL::Hook::Add( mu<GroupHook>() );//add before
-		return ConfigureAwait{ localQL, move(schemas), authorizer, executer, move(listener), {} };
+		return ConfigureAwait{ localQL, move(schemas), authorizer, executer, move(listener), {}, false, true };//allSchemas: the server's cache is everyone's authority.
 	}
 	α Server::CustomQuery( QL::TableQL& q, QL::Creds creds, SL sl )ι->up<TAwait<jvalue>>{
 		up<TAwait<jvalue>> y;

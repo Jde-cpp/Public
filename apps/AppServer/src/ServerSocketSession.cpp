@@ -21,8 +21,7 @@ namespace Jde::App::Server{
 		let _ = shared_from_this();
 		try{
 			auto info = co_await Web::Server::Sessions::UpsertAwait( Ƒ("{:x}", instance.session_id()), _userEndpoint.address().to_string(), true, nullptr );
-			_userPK = info->UserPK;
-			base::SetSessionId( instance.session_id() );
+			SetSessionInfo( info );
 			let [appPK,instancePK,connectionPK] = App::AddConnection( instance.application(), instance.instance_name(), instance.host(), instance.pid() );//TODO Don't block
 			INFOT( ELogTags::SocketServerRead, "[{}.{}]Adding application app:{}@{}:{} pid:{}, instancePK:{}, connectionPK:{}, sessionId: {}, endpoint: '{}'", hex(Id()), hex(requestId), instance.application(), instance.host(), instance.web_port(), instance.pid(), hex(instancePK), hex(connectionPK), hex(instance.session_id()), _userEndpoint.address().to_string() );
 			Server::RemoveExisting( instance.host(), instance.web_port() );
@@ -30,19 +29,21 @@ namespace Jde::App::Server{
 			auto& resource = *instance.mutable_auth_resource();
 			if( instance.auth_resource().size() ){
 				try{
-				 	Authorizer()->TestAdmin( resource, _userPK.value() );
+				 	Authorizer()->TestSchemaAdmin( resource, UserPK() );//Administer on each of the schema's active root resources, and an unknown schema is a denial (appserver-review3 #4) - the name-only TestAdmin this replaces skipped dotted schemas and returned quietly.
 					INFOT( ELogTags::Access, "[{}.{}]Instance '{}' authorizor with resource '{}'", hex(Id()), hex(requestId), instance.instance_name(), resource );
-					Authorizer()->AddAdminAuthorizer( resource, std::dynamic_pointer_cast<Access::IAdminAcl>(shared_from_this()) );
+					Authorizer()->AddAdminAuthorizer( resource, std::dynamic_pointer_cast<Access::IAdminAcl>(shared_from_this()), UserPK() );
 					authResult = true;
 				}
-				catch( runtime_error& ){
-					INFOT( ELogTags::Access, "[{}.{}]Instance '{}' denied authorizor with resource '{}'", hex(Id()), hex(requestId), instance.instance_name(), resource );
+				catch( runtime_error& e ){
+					INFOT( ELogTags::Access, "[{}.{}]Instance '{}' denied authorizor with resource '{}': {} - grant its user Administer on the schema's root resources and reconnect; until then the flat rule applies.", hex(Id()), hex(requestId), instance.instance_name(), resource, e.what() );
 					authResult = false;
 				}
 			}
 
-			_instancePK = instancePK; _programPK = appPK; _connectionPK = connectionPK;
-			{ lg _{_instanceMutex}; _instance = move( instance ); }//serialize with the Instance() copies taken by _sessions visitors on other threads.
+			//Publish the whole registration in one critical section: a _sessions visitor on another thread sees all of it or
+			//none of it.  The pks used to be three plain stores above this lock, so a forward could match on ProgramPK and
+			//read ConnectionPK 0 from before the write (appserver-review3 #14).
+			{ lg _{_registrationMutex}; _pks = Registration{appPK, instancePK, connectionPK}; _instance = move( instance ); }
 			Write( FromServer::ConnectionInfo(appPK, instancePK, connectionPK, requestId, AppClient()->PublicKey(), info, authResult) );
 		}
 		catch( runtime_error& e ){
@@ -82,7 +83,7 @@ namespace Jde::App::Server{
 		try{
 			THROW_IF( !SessionId(), "A forwarded execution requires an authenticated session." );
 			//Anonymous means "forward with no creds" - pass UserPK{0} so ExecuteRequest emits kExecuteAnonymous; otherwise the target runs under the caller's identity.  Mirrors the kExecuteAnonymous path.
-			string result = co_await ForwardExecutionAwait{ anonymous ? Jde::UserPK{0} : _userPK.value_or(Jde::UserPK{0}), move(m), SharedFromThis(), sl };
+			string result = co_await ForwardExecutionAwait{ anonymous ? Jde::UserPK{0} : UserPK(), move(m), SharedFromThis(), sl };
 			LogWrite( Ƒ("ForwardExecution{} size: {:10L}", functionSuffix, result.size()), requestId );
 			Write( FromServer::Execute(move(result), requestId) );
 		}
@@ -109,12 +110,13 @@ namespace Jde::App::Server{
 	}
 
 	α ServerSocketSession::SaveLogEntry( Log::Proto::LogEntryClient entry, RequestId requestId )ι->void{
-		if( !_programPK || !_instancePK ){
+		let pks = Pks();
+		if( !pks.Program || !pks.Instance ){
 			WriteException( Exception{"ApplicationId or InstanceId not set.", ELogLevel::Warning}, requestId );
 			return;
 		}
 		Logging::Entry y{ LogProto::FromLogEntry(move(entry)) };
-		Logging::Log( move(y), _programPK, _instancePK );
+		Logging::Log( move(y), pks.Program, pks.Instance );
 	}
 	α ServerSocketSession::SendAck( uint32 id )ι->void{
 		Write( FromServer::Ack(id) );
@@ -132,8 +134,8 @@ namespace Jde::App::Server{
 		let _ = shared_from_this();
 		try{
 			LogRead( Ƒ("SetSessionId={:x}", sessionId), requestId );
-			co_await Web::Server::Sessions::UpsertAwait( Ƒ("{:x}", sessionId), _userEndpoint.address().to_string(), true, nullptr );
-			base::SetSessionId( sessionId );
+			auto info = co_await Web::Server::Sessions::UpsertAwait( Ƒ("{:x}", sessionId), _userEndpoint.address().to_string(), true, nullptr );
+			SetSessionInfo( move(info) );
 			Write( FromServer::Complete(requestId) );
 		}
 		catch( runtime_error& e ){
@@ -142,15 +144,18 @@ namespace Jde::App::Server{
 		}
 	}
 	α ServerSocketSession::NoteFailedAdoption()ι->void{
-		if( _userPK || ++_failedAdoptions<_maxFailedAdoptions )//an authenticated socket, or still under the limit - a legitimate client adopts once, so only unauthenticated guessing accumulates.
+		if( Session() || ++_failedAdoptions<_maxFailedAdoptions )//an authenticated socket, or still under the limit - a legitimate client adopts once, so only unauthenticated guessing accumulates.
 			return;
 		WARNT( ELogTags::SocketServerRead, "[{}]Closing socket after {} failed session-id adoptions.", hex(Id()), _failedAdoptions );
-		OnClose();
+		Close();
 	}
 	//The remote admin check as an awaitable any coroutine can co_await. Suspend launches a glue coroutine of
 	//QueryClientAwait's task type; the strand stays free to deliver the reply. The BlockTAwait this replaces
 	//deadlocked the self-registration case - the reply only arrives on the strand the block was holding
 	//(reviews/todo.md §12), recovered only by the QueryClient timeout as a wrongful denial.
+	//The answer comes from the OpcServer (OpcServerQL's adminCheck → OpcAuthorize::TestAdminNode) - it alone knows which
+	//resource governs a node.  Its exception, "not ready" during its startup included, resumes as a denial:  an admin check never
+	//guesses.  Two identities travel here:  _userPK is the user under test, the executer is the session's own (the OpcServer's).
 	struct TestAdminAwait final : AnyVoidAwait{
 		TestAdminAwait( sp<IWebsocketSession> session, string resource, string criteria, Jde::UserPK userPK, SL sl )ι:
 			AnyVoidAwait{sl}, _session{move(session)}, _resource{move(resource)}, _criteria{move(criteria)}, _userPK{userPK}{}
@@ -163,10 +168,10 @@ namespace Jde::App::Server{
 	};
 	α TestAdminAwait::Execute()ι->QueryClientAwait::Task{
 		try{
-			string q = "permissionRight( user:$user ){isAdmin resource( resource:$resource, criteria:$criteria )}";
+			string q = "adminCheck( user:$user ){isAdmin resource( resource:$resource, criteria:$criteria )}";//adminCheck, not permissionRight:  the client parses this schemaless, and only a registered system table - one no schema owns - passes QL::Parse.
 			auto ql = QL::ParseQuery( move(q), jobject{{"user", _userPK.Value}, {"resource", _resource}, {"criteria", _criteria}}, {}, true, Source() );
 			let result = co_await _session->QueryClient( move(ql), _session->UserPK(), Source() );
-			if( result.at("permissionRight").at("isAdmin").as_bool() )
+			if( result.at("adminCheck").at("isAdmin").as_bool() )
 				Resume();
 			else
 				ResumeExp( Exception{Source(), {}, "User {:x} is not admin for resource '{}' with criteria '{}'.", _userPK.Value, _resource, _criteria} );
@@ -183,24 +188,27 @@ namespace Jde::App::Server{
 	}
 
 	α ServerSocketSession::OnRead( Proto::FromClient::Transmission&& t )ι->void{
-		ProcessTransmission( move(t), _userPK, nullopt, 0 );
+		ProcessTransmission( move(t), UserPK() ? optional<Jde::UserPK>{UserPK()} : nullopt, nullopt, 0 );
 	}
 
 	α ServerSocketSession::GetJwt( Jde::RequestId requestId )ι->TAwait<jobject>::Task{
 		let _ = shared_from_this();
 		try{
-			THROW_IF( !_userPK, "Not logged in to system." );
-			jobject vars{ {"id", _userPK->Value} };
+			THROW_IF( !Session(), "Not logged in to system." );
+			jobject vars{ {"id", UserPK().Value} };
 			let user = co_await QL::QLAwait<jobject>( "user(id:$id){name target}", move(vars), {UserPK::System}, QLPtr() );
 			let info = Web::Server::Sessions::Find( SessionId() );
 			THROW_IF( !info, "Session not found." );
 			let expiration = Chrono::ToClock<Clock,steady_clock>( info->Expiration );
-			Write( FromServer::Jwt(Server::GetJwt(*_userPK, string{user.at("name").as_string()}, string{user.at("target").as_string()}, _userEndpoint.address().to_string(), SessionId(), expiration, {}), requestId) );
+			Write( FromServer::Jwt(Server::GetJwt(UserPK(), string{user.at("name").as_string()}, string{user.at("target").as_string()}, _userEndpoint.address().to_string(), SessionId(), expiration, {}), requestId) );
 		}
 		catch( runtime_error& e ){
 			WriteException( move(e), requestId );
 		}
 	}
+	//kJwt is a *delegated* validation, not an adoption: JwtLoginAwait::LoginAppServer relays a browser's token over the
+	//gateway's own registered app socket to ask who it belongs to.  So the answer is echoed back and nothing is installed
+	//here - binding it would silently re-identify a registered server-side socket as whichever user logged in last.
 	α ServerSocketSession::Login( string&& jwt, RequestId requestId )ι->TAwait<sp<Web::Server::SessionInfo>>::Task{
 		let _ = shared_from_this();
 		try{
@@ -234,8 +242,8 @@ namespace Jde::App::Server{
 				}else{
 					auto e = ProtoUtils::ToException( move(*m.mutable_exception()) );//keeps status/category - Exception{what} dropped them.
 					auto what = e->What();
-					//A failure reply to one of our QueryClient calls (TestAdmin/QuerySessions) echoes a per-session id; resolve it on
-					//this session's own map first so it can't fall through and clobber an unrelated forward that shares the id value.
+					//Both routers key on an id this session was given, and both draw from its NextRequestId counter, so an id can
+					//only be pending in one of them (finding #12).  QueryClient first: its map is this session's own.
 					if( !ResumeQueryException(requestId, move(*e)) && !ForwardExecutionAwait::ResumeExp(move(*e), requestId, ConnectionPK()) )
 						LogRead( Ƒ("Exception not handled - {}", what), requestId, ELogLevel::Critical );
 				}
@@ -298,7 +306,7 @@ namespace Jde::App::Server{
 				auto& status = *m.mutable_status();
 				//:10L
 				LogRead( "Status", requestId );
-				Server::BroadcastStatus( _programPK, _instancePK, _instance.host(), move(status) );
+				let pks = Pks(); Server::BroadcastStatus( pks.Program, pks.Instance, Instance().host(), move(status) );
 				break;}*/
 			case kSubscription:{
 				auto& s = *m.mutable_subscription();
@@ -307,8 +315,8 @@ namespace Jde::App::Server{
 				try{
 					auto vars = variablesString.empty() ? jobject{} : Json::Parse( move(variablesString) );
 					LogRead( Ƒ("Subscription - {}", ql.substr(0, MaxLogLength())), requestId, ELogLevel::Trace, ELogTags::SocketClientReadSub );
-					THROW_IF( !_userPK, "A subscription requires an authenticated session." );//as GetJwt does - a socket that never adopted a session id is anonymous.
-					Write( FromServer::SubscriptionAck(AddSubscription(move(ql), move(vars), requestId, *_userPK), requestId) );
+					THROW_IF( !userPK, "A subscription requires an authenticated session." );
+					Write( FromServer::SubscriptionAck(AddSubscription(move(ql), move(vars), requestId, *userPK), requestId) );
 				}
 				catch( runtime_error& e ){
 					WriteException( move(e), requestId );

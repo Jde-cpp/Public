@@ -18,6 +18,10 @@ namespace Jde::Web::Server{
 		IWebsocketSession( sp<IRestStream>&& stream, beast::flat_buffer&& buffer, TRequestType request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι;
 		α Run()ι->void;
 		α Id()Ι->SocketId{ return _id; }
+		//The one counter for every request this server sends *this* session, whatever kind - QueryClient below and the
+		//AppServer's forwarded executions both draw from it, so the id in a reply can only belong to one of them (finding
+		//#12 of appserver-review3).  Per-session, so an id is only unique together with the connection it was sent to.
+		α NextRequestId()ι->RequestId{ return ++_requestId; }
 		α QueryClient( QL::TableQL query, Jde::UserPK executer, SRCE )ι->QueryClientAwait{ return QueryClientAwait{move(query), executer, shared_from_this(), sl}; }
 		α QueryClient( QL::TableQL&& query, Jde::UserPK executer, QueryClientAwait::Handle h, SRCE )ι->void;
 		α AddSubscription( string&& query, jobject variables, RequestId requestId, Jde::UserPK executer, SRCE )ε->flat_set<QL::SubscriptionId>;
@@ -29,7 +33,7 @@ namespace Jde::Web::Server{
 		β WriteComplete( RequestId requestId )ι->void=0;
 		β WriteException( runtime_error&& e, RequestId requestId )ι->void=0;
 		β WriteException( string&& e, RequestId requestId )ι->void=0;
-		α UserPK()Ι{ return _userPK; }
+		β UserPK()Ι->Jde::UserPK=0;
 		α IsOpen()ι->bool{ return StreamPtr()!=nullptr; }//OnClose nulls Stream, so this is the one place that knows the socket behind a registration is gone.
 		α SessionId()ι{ return _sessionInfo ? _sessionInfo->SessionId : SessionPK{}; }//public: Sessions::Remove has to find the sockets bound to a revoked id (#5).
 		β Close()ι->void;
@@ -76,7 +80,6 @@ namespace Jde::Web::Server{
 		flat_map<RequestId, std::pair<QueryClientAwait::Handle, sp<DurationTimer>>> _pendingQueries; mutex _pendingQueriesMutex;
 		atomic<RequestId> _requestId;
 		sp<SessionInfo> _sessionInfo;
-		Jde::UserPK _userPK{};
 		template<class> friend struct SocketStream;
 	};
 

@@ -61,9 +61,9 @@ namespace Jde::Access::Tests{
 		ASSERT_FALSE( row.empty() );
 		Purge( "resource", GetId(row), root ); //un-sync it - the next sync has to create it.
 
-		//what the next start would enforce:  the loader (Loader::Resources) puts every active row into SchemaResources.  In-process a
-		//created row is not enforced until something restores or grants on it - CreateResource fills only Resources - which is why
-		//the finding's lockout is a restart away, and why this looks through the loader rather than at Test().
+		//what the next start would enforce:  the loader (Loader::Resources) puts every active row into SchemaResources.  CreateResource
+		//registers an active row the same way now (appserver-review3 #13) - it used to fill only Resources, so the lockout was a restart
+		//away - but this looks through the loader rather than at Test(), as the finding is about what a start enforces.
 		auto loadsActive = [&]()->optional<bool>{
 			let loaded = BlockAwait<ResourceLoadAwait,ResourcePermissions>( ResourceLoadAwait{QLPtr(), Schemas(), {}, system} );
 			auto p = find_if( loaded.Resources, [&](let& kv){ return kv.second.Target==target; } );

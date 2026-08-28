@@ -1,6 +1,7 @@
 #include "../src/access/UAAccess.h"
 #include "../src/access/OpcAuthorize.h"
 #include "../src/ql/OpcQL.h"
+#include <jde/ql/ql.h>
 #define let const auto
 
 namespace Jde::Opc::Server::Tests{
@@ -92,6 +93,27 @@ namespace Jde::Opc::Server::Tests{
 		EXPECT_EQ( underlying(accessLevel("readerUser")) & UA_ACCESSLEVELMASK_WRITE, 0u ); //...and not WRITE, which the cast handed a reader (ERights::Read is 0x2).
 		EXPECT_EQ( accessLevel("writerUser"), ToAccess(_writerAllowed) ); //+Write|HistoryWrite; cast raw, Read|Update=0x6 was WRITE|HISTORYREAD.
 		EXPECT_EQ( accessLevel("adminUser"), ToAccess(_adminAllowed) ); //EAccess::All
+	}
+
+	//appserver-review3 #13:  the AppServer's delegated admin check, answered here (OpcServerQL's adminCheck →
+	//OpcAuthorize::TestAdminNode):  who may grant on a node is whoever administers the resource governing it - its own row when
+	//it has one, else the nearest configured ancestor's, else root.  The criteria row is created by SetUpTestCase after
+	//AssignRights ran, so on a fresh db it is unmapped and inherits the root;  on a persisted one it is its own resource - the
+	//roles grant the same rights on both, so the answers hold either way.
+	TEST_F( AccessTests, DelegatedAdminAnswer ){
+		auto isAdmin = [&]( const string& user, const string& criteria )->bool{
+			jobject vars{ {"user", _users.at(user)}, {"resource", "nodeIds"}, {"criteria", criteria} };
+			auto q = QL::Parse( "adminCheck( user:$user ){isAdmin resource( resource:$resource, criteria:$criteria )}", move(vars), {} );//as AppClientSocketSession::ClientQuery parses it: no schema.
+			let y = _app->ClientQuery( move(q), _app->UserPK() )->await_resume();
+			return Json::AsObject( y ).at( "adminCheck" ).at( "isAdmin" ).as_bool();
+		};
+		EXPECT_TRUE( isAdmin("adminUser", "") ) << "Administer on the root";
+		EXPECT_FALSE( isAdmin("readerUser", "") );
+		EXPECT_FALSE( isAdmin("writerUser", "") ) << "Administer denied explicitly";
+		EXPECT_TRUE( isAdmin("adminUser", "ns=4;i=6020") );
+		EXPECT_FALSE( isAdmin("readerUser", "ns=4;i=6020") );
+		EXPECT_TRUE( isAdmin("adminUser", "ns=4;i=6021") ) << "unmapped - inherits what protects it";
+		EXPECT_FALSE( isAdmin("readerUser", "ns=4;i=6021") );
 	}
 
 	//the mapping on its own, without a server.

@@ -46,6 +46,7 @@ namespace Jde::App::Server::Tests{
 			return _cv.wait_for( l, timeout, [&]{ return _closeCount>0; } );
 		}
 		α CloseCount()ι->uint{ std::unique_lock l{ _mtx }; return _closeCount; }
+		α CloseCode()ι->beast::error_code{ std::unique_lock l{ _mtx }; return _closeCode; }//why the socket ended: websocket::error::closed means the server sent a close frame, anything else that it dropped the transport.
 	private:
 		α Query( string&&, jobject, bool, SL )ι->Web::Client::ClientSocketAwait<jvalue> override{ ASSERT(false); return { {}, {}, {} }; }
 		α Subscribe( string&&, jobject, sp<QL::IListener>, SL )ε->Web::Client::ClientSocketAwait<jarray> override{ ASSERT(false); return { {}, {}, {} }; }
@@ -62,7 +63,8 @@ namespace Jde::App::Server::Tests{
 		α OnClose( beast::error_code ec )ι->void override{
 			{
 				std::unique_lock _{ _mtx };
-				++_closeCount;
+				if( ++_closeCount==1 )
+					_closeCode = ec;
 			}
 			_cv.notify_all();
 			base::OnClose( ec );
@@ -72,6 +74,7 @@ namespace Jde::App::Server::Tests{
 		std::condition_variable _cv;
 		std::vector<FromServerMessage> _messages;
 		uint _closeCount{};
+		beast::error_code _closeCode;
 	};
 
 	Ξ Connect()ε->sp<RawClientSession>{
@@ -87,8 +90,8 @@ namespace Jde::App::Server::Tests{
 	struct RegisteredInstance{ App::ProgramPK Program{}; ProgInstPK Instance{}; App::ConnectionPK Connection{}; bool AuthResult{}; };
 	//registers session as an application instance (kInstance) and returns the pks the server minted for it.
 	//authResource: the schema the instance asks to be the admin authorizer for (M10).  Empty for an app that authorizes nothing,
-	//which is every caller here bar the one testing that arm.
-	Ξ RegisterInstance( RawClientSession& session, str application, str instanceName, str host, PortType webPort, uint32 pid=1234, str authResource="" )ε->RegisteredInstance{
+	//which is every caller here bar the ones testing that arm;  userPK is the session's user, the one the gate tests.
+	Ξ RegisterInstance( RawClientSession& session, str application, str instanceName, str host, PortType webPort, uint32 pid=1234, str authResource="", Jde::UserPK userPK={1} )ε->RegisteredInstance{
 		FromClientTrans t;
 		auto& m = *t.add_messages();
 		const auto requestId = session.NextRequestId();
@@ -99,7 +102,7 @@ namespace Jde::App::Server::Tests{
 		instance.set_host( host );
 		instance.set_web_port( webPort );
 		instance.set_pid( pid );
-		instance.set_session_id( MintSession() );
+		instance.set_session_id( MintSession(userPK) );
 		instance.set_auth_resource( authResource );
 		session.Write( move(t) );
 		auto reply = session.WaitFor( [requestId](const FromServerMessage& m){ return m.request_id()==requestId && m.value_case()==FromServerMessage::kConnectionInfo; } );

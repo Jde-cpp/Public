@@ -20,8 +20,8 @@ namespace Jde::Access{
 
 	struct ResourcePermissions{ flat_map<ResourcePK,Resource> Resources; flat_map<PermissionPK,Permission> Permissions; };
 	struct ResourceLoadAwait final : TAwait<ResourcePermissions>, noncopyable{
-		ResourceLoadAwait( sp<QL::IQL> qlServer, vector<sp<DB::AppSchema>> schemas, string opcServerInstance, UserPK executer )ι:
-			_executer{executer}, _opcServerInstance{move(opcServerInstance)}, _qlServer{qlServer}, _schemas{schemas}{};
+		ResourceLoadAwait( sp<QL::IQL> qlServer, vector<sp<DB::AppSchema>> schemas, string opcServerInstance, UserPK executer, bool allSchemas=false )ι:
+			_executer{executer}, _opcServerInstance{move(opcServerInstance)}, _qlServer{qlServer}, _schemas{schemas}, _allSchemas{allSchemas}{};
 	private:
 		α Suspend()ι->void{ Load(); }
 		α Load()ι->QL::QLAwait<jarray>::Task;
@@ -30,5 +30,6 @@ namespace Jde::Access{
 		string _opcServerInstance;
 		sp<QL::IQL> _qlServer;
 		vector<sp<DB::AppSchema>> _schemas;
+		bool _allSchemas;//ConfigureAwait::AllSchemas - every schema's rows, not just _schemas'.
 	};
 }

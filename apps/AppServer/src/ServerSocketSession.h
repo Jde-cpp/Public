@@ -13,10 +13,16 @@ namespace Jde::App::Server{
 	struct ServerSocketSession final: TWebsocketSession<Proto::FromServer::Transmission,Proto::FromClient::Transmission>, Access::IAdminAcl{
 		using base = TWebsocketSession<Proto::FromServer::Transmission,Proto::FromClient::Transmission>;
 		ServerSocketSession( sp<IRestStream> stream, beast::flat_buffer&& buffer, TRequestType&& request, tcp::endpoint&& userEndpoint, uint32 connectionIndex )ι;
-		α ProgramPK()Ι->ProgramPK{ return _programPK; }
-		α Instance()Ι->Proto::FromClient::Instance{ lg _{_instanceMutex}; return _instance; }//copy under the lock: _instance is written on this session's strand (AddInstance) while _sessions visitors read it from other threads.
-		α InstancePK()Ι->ProgInstPK{ return _instancePK; }
-		α ConnectionPK()Ι->ConnectionPK{ return _connectionPK; }
+		//The pks App::AddConnection mints for a kInstance registration - one value, not three members.  A _sessions visitor
+		//that matched a session on Program and then read Connection could catch AddInstance between two plain stores and
+		//bind a forward to connection 0: a key no reply names and OnCloseConnection's sweep skips (appserver-review3 #14).
+		struct Registration final{ App::ProgramPK Program{}; App::ProgInstPK Instance{}; App::ConnectionPK Connection{}; };
+		α Pks()Ι->Registration{ lg _{_registrationMutex}; return _pks; }//prefer this to the three below when more than one is used for the same decision.
+		α ProgramPK()Ι->ProgramPK{ return Pks().Program; }
+		α Instance()Ι->Proto::FromClient::Instance{ lg _{_registrationMutex}; return _instance; }//copy under the lock: _instance is written on this session's strand (AddInstance) while _sessions visitors read it from other threads.
+		α InstancePK()Ι->ProgInstPK{ return Pks().Instance; }
+		α ConnectionPK()Ι->ConnectionPK{ return Pks().Connection; }
+		α UserPK()Ι->Jde::UserPK override{ return Session() ? Session()->UserPK : Jde::UserPK{}; }//the adopted session is the only identity this socket has - see SessionUserPK.
 	private:
 		α OnRead( Proto::FromClient::Transmission&& transmission )ι->void override;
 		α OnClose()ι->void override;//OnDisconnect is not overridden: the base now routes it here (#6), which is all this override did.
@@ -46,11 +52,8 @@ namespace Jde::App::Server{
 		α NoteFailedAdoption()ι->void;//closes the socket after too many failed session-id adoptions - a 32-bit id is otherwise cheap to brute-force.
 
 		Proto::FromClient::Instance _instance;
-		mutable mutex _instanceMutex;//guards _instance across the AddInstance write and the Instance() copies made by _sessions visitors on other threads.
-		App::ProgramPK _programPK{};
-		ProgInstPK _instancePK{};
-		App::ConnectionPK _connectionPK{};
-		optional<Jde::UserPK> _userPK{};
+		Registration _pks;
+		mutable mutex _registrationMutex;//guards _instance and _pks together: AddInstance publishes both on this session's strand while _sessions visitors read them from other threads.
 		uint8 _failedAdoptions{};
 	};
 }

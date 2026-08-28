@@ -11,16 +11,16 @@ namespace Jde::Access{
 	constexpr ELogTags _tags{ ELogTags::Access };
 	constexpr ELogTags _ptags{ ELogTags::Access | ELogTags::Pedantic };
 
-	α Authorize::AddAdminAuthorizer( str schemaName, sp<IAdminAcl> authorizer )ι->void{
-		_adminAuthorizers.insert_or_assign( schemaName, move(authorizer) );//not emplace: a restarted app must replace its stale registration, not be silently discarded behind the closed one.
+	α Authorize::AddAdminAuthorizer( str schemaName, sp<IAdminAcl> authorizer, UserPK registrant )ι->void{
+		_adminAuthorizers.insert_or_assign( schemaName, AdminAuthorizer{move(authorizer), registrant} );//not emplace: a restarted app must replace its stale registration, not be silently discarded behind the closed one.
 	}
 	α Authorize::RemoveAdminAuthorizer( const sp<IAdminAcl>& authorizer )ι->void{
-		_adminAuthorizers.erase_if( [&](let& pair){ return pair.second==authorizer; } );//drop every schema this session authorized, so FindAdminAuthorizer falls back to the local check instead of a dead stream.
+		_adminAuthorizers.erase_if( [&](let& pair){ return pair.second.Acl==authorizer; } );//drop every schema this session authorized, so TestAdmin falls back to the local rule instead of a dead stream.
 	}
-	α Authorize::FindAdminAuthorizer( str schemaName )ι->sp<IAdminAcl>{
-		sp<IAdminAcl> authorizer;
-		_adminAuthorizers.cvisit( schemaName, [&](let& pair){authorizer = pair.second;} );
-		return authorizer ? authorizer : shared_from_this();
+	α Authorize::FindAdminAuthorizer( str schemaName )ι->optional<AdminAuthorizer>{
+		optional<AdminAuthorizer> y;
+		_adminAuthorizers.cvisit( schemaName, [&](let& pair){ y = pair.second; } );
+		return y;
 	}
 	α Authorize::AddResource( ResourcePK resourcePK, string schema, string resourceTarget, string criteria )ι->void{
 		ul _{ Mutex };
@@ -64,17 +64,50 @@ namespace Jde::Access{
 			TestAdmin( resource->second, executer, sl );
 	}
 	α Authorize::TestAdmin( str schema, str resource, str criteria, UserPK userPK, SL sl )ι->up<AnyVoidAwait>{
-		auto authorizer = FindAdminAuthorizer( schema );
-		return authorizer->TestAdmin( resource, criteria, userPK, sl );
-	}
-	α Authorize::TestAdmin( str resource, str /*criteria*/, UserPK userPK, SL sl )ι->up<AnyVoidAwait>{
+		if( auto remote = FindAdminAuthorizer(schema); remote ){
+			try{
+				TestSchemaAdmin( schema, remote->User, sl );//still entitled to answer for the schema - rights revoked since it registered fall through to the local rule.
+				return remote->Acl->TestAdmin( resource, criteria, userPK, sl );
+			}
+			catch( const runtime_error& e ){
+				DBGT( _tags, "[{}]registrant {} no longer administers the schema ({}) - local rule.", schema, remote->User.Value, e.what() );
+			}
+		}
 		up<Exception> error;
 		try{
-			TestAdmin( resource, userPK, sl ); //TODO handle criteria
+			TestAdminLocal( schema, resource, criteria, userPK, sl );
 		}
 		catch( Exception& e ){ error = e.Move(); }
 		catch( runtime_error& e ){ error = mu<Exception>( move(e) ); }
 		return mu<AnyCompletedAwait>( move(error), sl );
+	}
+	α Authorize::TestAdminLocal( str schema, str resource, str criteria, UserPK executer, SL sl )ε->void{
+		Jde::sl l{ Mutex };
+		auto active = [&]( str c )->const Resource*{ //SchemaResources keeps a deleted criteria row (UpdateResourceDeleted maintains it for criteria-less rows only) - the row decides.
+			let pk = FindActiveResourcePK( schema, resource, c, l );
+			auto p = pk ? Resources.find( *pk ) : Resources.end();
+			return p!=Resources.end() && !p->second.IsDeleted ? &p->second : nullptr;
+		};
+		auto p = active( criteria );
+		if( !p && criteria.size() )
+			p = active( {} );//an unmapped criteria inherits the target's root, as OpcAuthorize::UserRights does for an unmapped node.
+		if( p )//else permissions are not enabled for the target - passes, as Test does.
+			TestAdmin( *p, executer, sl );
+	}
+	α Authorize::TestSchemaAdmin( str schema, UserPK executer, SL sl )ε->void{
+		Jde::sl l{ Mutex };
+		uint active{};
+		if( auto targets = SchemaResources.find(schema); targets!=SchemaResources.end() ){
+			for( let& [_, criterias] : targets->second ){
+				auto root = criterias.find( string{} );
+				auto p = root!=criterias.end() ? Resources.find( root->second ) : Resources.end();
+				if( p==Resources.end() || p->second.IsDeleted )
+					continue;
+				++active;
+				TestAdmin( p->second, executer, sl );
+			}
+		}
+		THROW_IFX( !active, AccessException(sl, executer, "Schema '{}' has no active resources - nothing to delegate.", schema) );
 	}
 	α Authorize::TestAdmin( const Resource& resource, UserPK executer, SL sl )ε->void{
 		if( executer==UserPK{UserPK::System} )
@@ -269,7 +302,9 @@ namespace Jde::Access{
 
 	α Authorize::CreateResource( Resource&& resource )ε->void{
 		ul _{ Mutex };
-		Resources[resource.PK] = move( resource );
+		if( !resource.IsDeleted )//as Loader::Resources registers every active row:  a row created active is enforced - and found by TestSchemaAdmin - now, not at the next start (appserver-review3 #13).
+			SchemaResources[resource.Schema][resource.Target][resource.Criteria] = resource.PK;
+		Resources[resource.PK] = move( resource );//assignment, not emplace:  sqlite reuses a purged pk, and resource purges are not subscribed, so the entry may be a stale deleted row.
 	}
 	//A pk names one row.  No pk - the fan-out could not pick one, because a by-target delete hit several - names every row of that
 	//schema+target, and the db changed all of them, so the cache does too (access-review3 #22).
