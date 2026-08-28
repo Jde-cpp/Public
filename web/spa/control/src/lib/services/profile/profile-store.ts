@@ -35,28 +35,14 @@ export class ProfileStore{
 			ProfileStore.localOriginalValues.set( key, item );
 		return item ? JSON.parse( item ) as T : defaultValue;
 	}
-	async set<T>( key:string, value:T|string|null ):Promise<void>{
-		if( value!=null && typeof value != 'string' )
-			value = JSON.stringify( value );
-		if( value )
-			localStorage.setItem( key, value as string );//always: fallback copy + static local() readers (navbar showBreadcrumbs).
+	//browser-local only:  per-browser preferences (navbar showBreadcrumbs) and the copy the static local() readers and the
+	//logged-out/load-failure fallbacks below read back.  Never reaches the server - that is save()'s job.
+	set<T>( key:string, value:T|string|null ):void{
+		const json = ProfileStore.json( value );
+		if( json )
+			localStorage.setItem( key, json );
 		else
 			localStorage.removeItem( key );
-
-		const userKey = this.profileService?.userKey();
-		if( !this.profileService || !userKey )
-			return;
-		const json = (value as string) || null;
-		const cacheKey = ProfileStore.cacheKey( userKey, key );
-		if( this.cacheGet(cacheKey)===json )//save-as-needed: skip no-op mutations (e.g. unchanged ngOnDestroy saves).
-			return;
-		this.cacheSet( cacheKey, json );
-		try{
-			await this.profileService.save( key, json );
-		}
-		catch( e ){
-			console.warn( `ProfileStore.save('${key}') failed - value kept in localStorage.`, e );
-		}
 	}
 	async load<T>( key:string, defaultValue:T ): Promise<T>{
 		const userKey = this.profileService?.userKey();
@@ -76,7 +62,7 @@ export class ProfileStore{
 				const local = localStorage.getItem( key );
 				if( local!=null ){
 					json = local;
-					this.set( key, local );//fire & forget; also primes the cache.
+					this.save( key, local );//fire & forget; also primes the cache.
 				}
 			}
 			this.cacheSet( cacheKey, json );
@@ -121,8 +107,28 @@ export class ProfileStore{
 			localStorage.removeItem( `${collectionName}/viewIndex` );
 	}
 
+	//server only:  the user's profile row, through the 'IProfileService' token.  Logged out, or with no provider, there is
+	//nowhere to write and this is a no-op - a browser-local copy is set()'s job.
 	async save<T>( key:string, value:T|string|null ):Promise<void>{
-		return Promise.resolve( this.set<T>(key, value) );
+		const userKey = this.profileService?.userKey();
+		if( !this.profileService || !userKey )
+			return;
+		const json = ProfileStore.json( value );
+		const cacheKey = ProfileStore.cacheKey( userKey, key );
+		if( this.cacheGet(cacheKey)===json )//save-as-needed: skip no-op mutations (e.g. unchanged ngOnDestroy saves).
+			return;
+		this.cacheSet( cacheKey, json );
+		try{
+			await this.profileService.save( key, json );
+		}
+		catch( e ){
+			this.cache.delete( cacheKey );//the row is not what we just cached:  drop it so the next save retries instead of being deduped away.
+			console.warn( `ProfileStore.save('${key}') failed.`, e );
+		}
+	}
+	private static json<T>( value:T|string|null ):string|null{//empty string folds to null - both mean "no row" to the server and "remove" to localStorage.
+		const json = value!=null && typeof value!='string' ? JSON.stringify( value ) : value as string|null;
+		return json || null;
 	}
 	private static cacheKey( userKey:string, key:string ):string{
 		return `${userKey}\u0000${key}`;//user-scoped so re-login as another user can't hit stale entries.

@@ -10,6 +10,7 @@
 #include <jde/app/client/clientSubscriptions.h>
 #include <jde/app/client/AppClientSocketSession.h>
 #include "helpers.h"//table(): TableQL has no default ctor.
+#include <thread>
 
 #define let const auto
 

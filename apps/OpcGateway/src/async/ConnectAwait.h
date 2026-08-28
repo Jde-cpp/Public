@@ -6,6 +6,9 @@
 
 namespace Jde::Opc::Gateway{
 	struct UAClient; struct UAClientException;
+	//The credential a web session's connect uses for `opc`:  the one stored by a password login, else the session's jwt,
+	//else none (anonymous).  ConnectAwait keys the client on it - SearchQLAwait looks the same client up without connecting.
+	α SessionCredential( SessionPK sessionId, UserPK user, str opc )ι->optional<Credential>;
 
 	struct ConnectAwait final : TAwait<sp<UAClient>>, noncopyable{
 		using base = TAwait<sp<UAClient>>;

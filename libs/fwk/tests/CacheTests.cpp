@@ -1,6 +1,7 @@
 #include "jde/fwk/io/Cache.h"
 #include "jde/fwk/chrono.h"
 #include <string>
+#include <thread>
 
 #define let const auto
 namespace Jde::Tests{

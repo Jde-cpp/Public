@@ -5,6 +5,7 @@
 #include "helpers.h"
 #include "../src/LocalClient.h"
 #include "../src/appStartup.h"
+#include <thread>
 #define let const auto
 
 //ServerSocketSession::ProcessTransmission hardening: hostile or malformed frames on an (unauthenticated) socket must

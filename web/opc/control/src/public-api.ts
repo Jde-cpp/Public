@@ -16,3 +16,5 @@ export {OpcServerRouteService} from './lib/services/routes/opc-server-route-serv
 export {OpcNodeRouteService} from './lib/services/routes/opc-node-route-service';
 export {SettingsRouteService} from './lib/services/routes/settings-route-service';
 export {OpcStore} from './lib/services/opc-store';
+export {NodeSearchProvider} from './lib/services/node-search-provider';
+export type {NodeSearchRow} from './lib/services/node-search-provider';

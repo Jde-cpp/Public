@@ -75,10 +75,12 @@ export class NodeView extends View{
 		return custom ? (custom instanceof NodeId ? custom : custom.id).uaString() : ETypes[variable.dataType!] ?? `${variable.dataType}`;
 	}
 	static access( variable:Variable|undefined ):string|undefined{
-		if( !variable )
-			return undefined;
-		const level = variable.userAccessLevel ?? EAccess.None;
-		return NodeView.accessNames.filter( ([flag])=>level & flag ).map( ([,name])=>name ).join( ", " );
+		return variable ? NodeView.accessList( variable ).join( ", " ) : undefined;
+	}
+	//the flags the node grants, in flag order:  the Access cell renders one chip each, and access() joins them into the text the filter and sort work on
+	static accessList( variable:Variable|undefined ):string[]{
+		const level = variable?.userAccessLevel ?? EAccess.None;
+		return NodeView.accessNames.filter( ([flag])=>level & flag ).map( ([,name])=>name );
 	}
 	private static accessNames:[EAccess,string][] = [[EAccess.Read, "Read"], [EAccess.Write, "Write"], [EAccess.HistoryRead, "History Read"], [EAccess.HistoryWrite, "History Write"]];
 	private static compare( a:unknown, b:unknown ):number{

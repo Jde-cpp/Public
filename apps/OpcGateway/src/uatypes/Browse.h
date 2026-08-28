@@ -31,6 +31,7 @@ namespace Browse{
 	struct Request :UA_BrowseRequest{
 		Request( NodeId&& id, UA_BrowseResultMask mask )ι;
 		Request( NodeId&& id, const QL::TableQL& ql )ι;
+		Ω Hierarchical( NodeId&& id, UA_BrowseResultMask mask )ι->Request;//forward HierarchicalReferences (subtypes included), objects/variables/methods only - the NodeIndex crawl.
 		Request( Request&& x )ι:UA_BrowseRequest{ x }{ UA_BrowseRequest_init( &x );}
 		Request( const Request& x )ι{ UA_BrowseRequest_copy( &x, this ); }
 		~Request(){ UA_BrowseRequest_clear(this); }
@@ -39,6 +40,7 @@ namespace Browse{
 	struct FoldersAwait final : TAwait<Response>, noncopyable{
 		FoldersAwait( NodeId id, UA_BrowseResultMask mask, sp<UAClient>& c, SRCE )ι:TAwait<Response>{sl},_client{c}, _request{move(id), mask}{}
 		FoldersAwait( NodeId id, const QL::TableQL& ql, sp<UAClient>& c, SRCE )ι:TAwait<Response>{sl},_client{c}, _request{move(id), ql}{}
+		FoldersAwait( Request&& request, sp<UAClient>& c, SRCE )ι:TAwait<Response>{sl},_client{c}, _request{move(request)}{}
 
 		α Suspend()ι->void override;
 		α OnComplete( UA_BrowseResponse* response )ι->void;

@@ -1,6 +1,7 @@
 #include <processthreadsapi.h>
 #include <jde/fwk/process/thread.h>
 #include <jde/fwk/usings.h>
+#include <thread>
 
 #define let const auto
 constexpr Jde::ELogTags _tags{ Jde::ELogTags::Threads };

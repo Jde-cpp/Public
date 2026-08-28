@@ -12,6 +12,7 @@
 #include "types/ServerCnnctn.h"
 #include "types/MonitoringNodes.h"
 #include "uatypes/Browse.h"
+#include "NodeIndex.h"
 
 namespace Jde::Opc{ 	struct Value; }
 namespace Jde::Opc::Gateway{
@@ -37,6 +38,7 @@ namespace Jde::Opc::Gateway{
 		Ω Find( UA_Client* ua, SRCE )ε->sp<UAClient>;
 		Ω TryFind( UA_Client* ua, SRCE )ι->sp<UAClient>;
 		Ω RemoveClient( sp<UAClient>&& client )ι->bool;
+		Ω LiveClients()ι->vector<sp<UAClient>>;//snapshot of the live clients - the `search` fan-out, which must never connect.
 
 		α SubscriptionId()Ι->SubscriptionId{ auto p = CreatedSubscriptionResponse(); return p ? p->subscriptionId : 0; }
 		//Responses are written on the strand but read by await_ready/await_resume on arbitrary threads - guard the shared_ptrs themselves.
@@ -65,6 +67,8 @@ namespace Jde::Opc::Gateway{
 		Ω EnsureCertificate( const ServerCnnctnNK& target, sv certificateUri, SRCE )ε->void;//no-op if the cert exists. Callable before any client - the Jde OpcServer rescans trustedCertDirs on a failed verify (UATrust), so pre-start creation only matters for third-party servers that snapshot their trust list.
 		Ω CryptoSettings( const ServerCnnctnNK& target, sv certificateUri={} )ι->Crypto::CryptoSettings; //for soak
 		α Target()Ι->const ServerCnnctnNK&{ return _opcServer.Target; }
+		α Name()Ι->str{ return _opcServer.Name; }
+		α Index()ι->NodeIndex&{ return _nodeIndex; }//node names for `search`, crawled on first use;  dies with the client.
 		α Url()Ι->str{ return _opcServer.Url; }
 		α IsDefault()Ι->bool{ return _opcServer.IsDefault; }
 		α DefaultBrowseNs()Ι->NsIndex{ return _opcServer.DefaultBrowseNs; }
@@ -104,6 +108,7 @@ namespace Jde::Opc::Gateway{
 		friend α Write::OnResponse( UA_Client *ua, void *userdata, RequestId requestId, UA_WriteResponse *response )ι->void;
 		friend α Attributes::OnResponse( UA_Client* ua, void* userdata, RequestId requestId, StatusCode status, UA_NodeId* dataType )ι->void;
 
+		NodeIndex _nodeIndex;
 		std::once_flag _monitoredNodesOnce;
 		up<UAMonitoringNodes> _monitoredNodes;//destroy first
 	};

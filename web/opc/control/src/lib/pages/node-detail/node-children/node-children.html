@@ -90,11 +90,9 @@
 							<span>{{toString(r.value)}}</span>
 						}
 						@else if( r.dataType==ETypes.UtcDateTime && !r.isArray ){
-							<!-- <mat-form-field> -->
-								<input matInput [matDatepicker]="picker" [value]="toDate(r.value)" (dateInput)="dateInput(r, $event);" (change)="changeDate(r, $event);">
+								<input matInput [matDatepicker]="picker" [value]="dateValue(r)" (dateChange)="changeDate(r, $event);">
 								<mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
 								<mat-datepicker #picker></mat-datepicker>
-							<!-- </mat-form-field> -->
 						}
 						@else if( r.customDataType && !r.isArray ){
 							<mat-select [value]=r.value (selectionChange)="changeEnum(r, $event);" [disabled]="r.userAccessLevel < EAccess.Write">
@@ -110,7 +108,13 @@
 				</ng-container>
 				<ng-container matColumnDef="access">
 					<mat-header-cell mat-sort-header *matHeaderCellDef> Access </mat-header-cell>
-					<mat-cell mat-cell *matCellDef="let r">{{access(r)}}</mat-cell>
+					<mat-cell mat-cell *matCellDef="let r">
+						<mat-chip-set aria-label="Access">
+							@for( name of access(r); track name ){
+								<mat-chip class="access-chip" [class.access-write]="name.includes('Write')">{{name}}</mat-chip>
+							}
+						</mat-chip-set>
+					</mat-cell>
 				</ng-container>
 				<ng-container matColumnDef="description">
 					<mat-header-cell mat-sort-header *matHeaderCellDef> Description </mat-header-cell>
