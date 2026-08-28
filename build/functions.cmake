@@ -193,7 +193,11 @@ function( sqliteProcModule targetName )
 	add_library( ${targetName} MODULE )
 	compileOptions( ${targetName} )
 	set_property( TARGET ${targetName} PROPERTY POSITION_INDEPENDENT_CODE ON )
-	#RegisterProcs is exported from source via JDE_SQLITE_PROC in <jde/db/sqlite_api.h> - no /EXPORT: link flag needed.
+	#RegisterProcs is exported from source via JDE_SQLITE_PROC in <jde/db/sqlite_api.h> - no /EXPORT: link flag needed,
+	#and nothing ever reads the <target>_EXPORTS symbol CMake defines by default.  That default was the only thing
+	#differing between the proc modules' command lines; pinning one shared DEFINE_SYMBOL makes them identical, which
+	#is what lets them share a single PCH below.
+	set_target_properties( ${targetName} PROPERTIES DEFINE_SYMBOL JDE_SQLITE_PROC_EXPORTS )
 
 	#CONFIGURE_DEPENDS: the module is a MODULE, so a new proc twin that isn't in the glob still links (undefined
 	#symbols are legal) and only fails at dlopen - re-glob on build instead of making that a reconfigure-or-else.
@@ -206,11 +210,21 @@ function( sqliteProcModule targetName )
 	target_link_libraries( ${targetName} PRIVATE Threads::Threads ) #no sqlite3 link: the driver is reached only through IProcs (sqlite_api.h), which forward-declares sqlite3.
 	target_link_libraries( ${targetName} PRIVATE fmt::fmt Jde.DB ) #PUBLIC-links Jde on WIN32, propagated transitively.
 
-	target_precompile_headers( ${targetName}
-	  PRIVATE
-		<jde/fwk.h>
-		<jde/fwk/str.h>
-		<jde/fwk/io/json.h>
-		<jde/fwk/chrono.h>
-	)
+	#Every proc module precompiles the same four headers with now-identical flags, so only the first one
+	#configured builds the PCH (~61MB) and the rest reuse it.  The owner is tracked in a global property
+	#rather than hard-coded, so this holds both in the superbuild (three modules) and in a standalone app
+	#configure (one module, which then simply builds its own).
+	get_property( sqliteProcPchOwner GLOBAL PROPERTY jdeSqliteProcPchOwner )
+	if( sqliteProcPchOwner )
+		target_precompile_headers( ${targetName} REUSE_FROM ${sqliteProcPchOwner} )
+	else()
+		set_property( GLOBAL PROPERTY jdeSqliteProcPchOwner ${targetName} )
+		target_precompile_headers( ${targetName}
+		  PRIVATE
+			<jde/fwk.h>
+			<jde/fwk/str.h>
+			<jde/fwk/io/json.h>
+			<jde/fwk/chrono.h>
+		)
+	endif()
 endfunction()

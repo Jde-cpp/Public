@@ -1,6 +1,7 @@
 ﻿#include "WindowsWorker.h"
 #include "WindowsSvc.h"
 #include <jde/fwk/process/execution.h>
+#include <thread>
 //#include "../../Framework/source/coroutine/Coroutine.h"
 //#include "../../Framework/source/threading/Mutex.h"
 

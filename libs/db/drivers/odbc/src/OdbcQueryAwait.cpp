@@ -1,5 +1,6 @@
 ﻿#include "OdbcQueryAwait.h"
 #include <jde/fwk/process/thread.h>
+#include <thread>
 
 namespace Jde::DB::Odbc{
 	α OdbcQueryAwait::Suspend()ι->void{

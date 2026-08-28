@@ -4,6 +4,7 @@
 #include <jde/fwk/process/execution.h>
 #include <jde/fwk/utils/Stopwatch.h>
 #include <jde/fwk/utils/mathUtils.h>
+#include <thread>
 #ifdef _WIN32
 	#include <windows.h>
 	#include <timeapi.h>          // timeBeginPeriod/timeEndPeriod (WIN32_LEAN_AND_MEAN excludes it from windows.h)

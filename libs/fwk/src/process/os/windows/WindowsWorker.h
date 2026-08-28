@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <jde/fwk/process/os/windows/WindowsHandle.h>
 #include <jde/fwk/co/Task.h>
+#include <thread>
 
 namespace Jde::Windows
 {

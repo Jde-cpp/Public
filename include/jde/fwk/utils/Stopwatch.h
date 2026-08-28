@@ -1,5 +1,6 @@
 #pragma once
 #include <jde/fwk/chrono.h>
+#include <thread>
 
 namespace Jde{
 	struct Stopwatch final {

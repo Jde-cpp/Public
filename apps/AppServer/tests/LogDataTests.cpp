@@ -5,6 +5,7 @@
 #include <jde/db/meta/Table.h>
 #include "helpers.h"
 #include "../src/appStartup.h"
+#include <thread>
 #define let const auto
 
 //the connections bookkeeping in appStartup.cpp: AddConnection's proc-minted pks and EndConnection's deleted stamp.

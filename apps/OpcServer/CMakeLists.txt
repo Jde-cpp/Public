@@ -61,6 +61,16 @@ else()
 	endif()
 endif()
 target_link_libraries( ${targetName} Jde Jde.DB Jde.QL Jde.Access Jde.Web.Server Jde.App.Client Jde.Opc Jde.Opc.ServerLib )
+
+#Single TU (src/main.cpp), but the PUBLIC pc.h of Jde.Web.Client et al. propagates a ~116MB PCH into
+#this target - a PCH that costs more to build than the one file it serves.  Jde.App.Server inherits the
+#same header set (identical modulo include order) with identical defines and flags, so reuse its PCH
+#rather than building a second copy.  Guarded: a standalone (non-superbuild) configure of this app
+#does not define Jde.App.Server, and then the target keeps its own PCH.
+if( TARGET Jde.App.Server )
+	target_precompile_headers( ${targetName} REUSE_FROM Jde.App.Server )
+endif()
+
 if( WIN32 )
 	set( appOutDir "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${targetName}" )
 	set_target_properties( ${targetName} PROPERTIES
