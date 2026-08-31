@@ -32,7 +32,7 @@ export class GatewayResolver implements Resolve<GatewayData> {
 		var profile = new PageProfile();
 		const defaultView = new View( routing.tableSettings, schema );
 		profile.views.push( defaultView );
-		await profile.loadViews( schema.collectionName, this.profileStore, schema );
+		await profile.loadViews( schema.collectionName, this.profileStore, schema, defaultView.sort );
 		profile.currentViewIndex = ProfileStore.viewIndex( schema.collectionName );
 		profile.showDeleted = ProfileStore.showDeleted( schema.collectionName );
 

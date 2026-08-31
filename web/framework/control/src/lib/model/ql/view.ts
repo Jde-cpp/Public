@@ -146,7 +146,7 @@ export class ViewField{
 
 type ViewConfigArgs = { configColumns:(string|ViewFieldSettings)[], sort:Sort[], filters?:{name: string, filter: Filter} };
 type ViewJson = { name:string|undefined, collectionName:string, fields:ViewFieldJson[], filters:{ field?: Field, name:string, filter: Filter }[], limit?:number, showSelector:boolean|undefined, sort:Sort[]|undefined };
-export type ViewSerializedArgs = { name:string|undefined, collectionName:string, fields:ViewField[], limit?:number, showSelector:boolean, sort:Sort[], filters?:{name: string, filter: Filter}[] };
+export type ViewSerializedArgs = { name:string|undefined, collectionName:string, fields:ViewField[], limit?:number, showSelector:boolean, sort?:Sort[], filters?:{name: string, filter: Filter}[] };//sort optional:  toJson omits one that matched the default view's
 export type FieldFilter = { field: Field, filter: Filter };
 export enum ViewType{
 	System,
@@ -154,13 +154,13 @@ export enum ViewType{
 	User
 }
 export class View{
-	constructor( value:ViewConfigArgs|ViewSerializedArgs|View|TableSettings, schema?:TableSchema ){
+	constructor( value:ViewConfigArgs|ViewSerializedArgs|View|TableSettings, schema?:TableSchema, defaultSort?:Sort[] ){
 		if( value instanceof View )
 			this.copyConstructor( value as View );
 		else if( (value as ViewConfigArgs).configColumns )
 			this.configConstructor( value as ViewConfigArgs, schema! );
 		else if( (value as ViewSerializedArgs).fields )
-			this.serializedConstructor( value as ViewSerializedArgs, schema! );
+			this.serializedConstructor( value as ViewSerializedArgs, schema!, defaultSort );
 		else if( (value as TableSettings).columns ){
 			this.tableConstructor(value, schema!);
 		}
@@ -186,7 +186,7 @@ export class View{
 		this.fields = this.columns( schema, config.configColumns, ["id", "attributes"] );
 		this.appendAlwaysQueried( schema );
 	}
-	private serializedConstructor( config:ViewSerializedArgs, schema:TableSchema ):void{
+	private serializedConstructor( config:ViewSerializedArgs, schema:TableSchema, defaultSort:Sort[]|undefined ):void{
 		this.name = config.name;
 		this.collectionName = config.collectionName;
 		if( config.limit )
@@ -200,7 +200,7 @@ export class View{
 		}
 
 		this.showSelector = config.showSelector;
-		this.sort = config.sort;
+		this.sort = config.sort ?? defaultSort ?? [];
 		this.type = ViewType.User;
 		this.appendAlwaysQueried( schema );//toJson only persists displayed fields, so a saved view arrives without id/target
 	}
@@ -217,8 +217,15 @@ export class View{
 			if( field.name=="id" )
 				this.fields.unshift( viewField );
 			else
-				this.fields.push( viewField );
+				this.insertBeforeDescription( viewField );//deleted becomes visible with show-deleted, and columns() keeps description last
 		}
+	}
+	private insertBeforeDescription( field:ViewField ):void{
+		const description = this.fields.findIndex( f=>f.name=="description" );
+		if( description<0 )
+			this.fields.push( field );
+		else
+			this.fields.splice( description, 0, field );
 	}
 	private columnsToQuery( excludedColumns:string[], includeDeleted:boolean ):ViewField[]{
 		return this.fields.filter( (x)=>

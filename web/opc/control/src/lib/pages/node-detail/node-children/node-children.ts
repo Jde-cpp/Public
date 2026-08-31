@@ -1,5 +1,5 @@
 import { SelectionModel, SelectionChange } from '@angular/cdk/collections';
-import {ChangeDetectorRef, Component, computed, inject, Inject, model, OnDestroy, OnInit, signal} from '@angular/core';
+import {ChangeDetectorRef, Component, computed, effect, inject, Inject, model, OnDestroy, OnInit, signal} from '@angular/core';
 import {MatButtonModule} from '@angular/material/button';
 import {MatButtonToggleModule} from '@angular/material/button-toggle';
 import {MatCheckboxChange, MatCheckboxModule} from '@angular/material/checkbox';
@@ -20,6 +20,7 @@ import { ComponentPageTitle } from 'jde-spa';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { NodePageData } from '../../../services/resolvers/node-resolver';
 import { OpcNodeRouteService } from '../../../services/routes/opc-node-route-service';
+import { OpcStore } from '../../../services/opc-store';
 import { Value, valueString } from '../../../model/value';
 import { ENodeClass, Variable, UaNode }  from '../../../model/node';
 import { NodeView } from '../../../model/node-view';
@@ -42,14 +43,18 @@ export class NodeChildren implements OnInit, OnDestroy {
 		private snackbar: SnackbarService,
 		private componentPageTitle:ComponentPageTitle,
 		private cdRef:ChangeDetectorRef)
-	{}
+	{
+		//the sidenav siblings sort by the active view (OpcStore.setRoute), and a node switch is resolved before this component hears
+		//of it - so the store learns of every view change here, header sorts included, ahead of the next navigation.
+		effect( ()=>{ if( this.view() ) this.#opcStore.nodeView.set( this.view() ); } );
+	}
 
 	async ngOnInit() {
 		//the views are the table's, not a node's:  loaded once, ahead of the first node.  route.data replays its current
 		//value on subscribe, so a navigation during the load is not missed.
-		const saved = await this.#profileStore.loadClassArray<NodeView>( `${NodeView.collectionName}/views`, NodeView, NodeView.schema );
-		this.views.set( [NodeView.default(), ...saved] );
-		this.viewIndex.set( Math.min(ProfileStore.viewIndex(NodeView.collectionName), this.views().length-1) );
+		const {views, index} = await NodeView.loadActive( this.#profileStore );
+		this.views.set( views );
+		this.viewIndex.set( index );
 		this.route.data.subscribe( async (data)=>{
 			if( this.pageData )
 				this.#profileStore.save<UserSettings>( this.pageData.route.profileKey, this.profile );
@@ -102,18 +107,6 @@ export class NodeChildren implements OnInit, OnDestroy {
 		finally{
 			this.isRefreshing.set( false );
 		}
-	}
-
-	async retrieveSnapshot(){
-		this.retrievingSnapshot.set( true );
-		this.variables.forEach( r=>r.value=undefined );
-		var snapshots = await this._iot.snapshot( this.cnnctnTarget, this.variables );
-		for( let [node,value] of snapshots ){
-			let variable = this.variables.find( (n)=>n.equals(node) );
-			if( variable )
-				variable.value = value;
-		}
-		this.retrievingSnapshot.set( false );
 	}
 
 	//The view group and settings panel, as ql-list/log-detail have them.  A header sort or the panel's Show makes an Adhoc
@@ -211,7 +204,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 	#dates = new WeakMap<Variable,Date|null>();
 
 	toObject( x:ENodeClass ):string{ return ENodeClass[x]; }
-	toString( value:Value|undefined ){ return valueString(value); }//Variable.value is optional, and retrieveSnapshot clears it while reading
+	toString( value:Value|undefined ){ return valueString(value); }//Variable.value is optional - a node the read could not answer for has none
 	dataType( n:UaNode ):string{ return NodeView.cellValue( n, "dataType" )?.toString() ?? ""; }
 	//the Access cell is a chip per flag, so it takes the list the cell text is joined from rather than the text
 	access( n:UaNode ):string[]{ return NodeView.accessList( n.isVariable ? n as Variable : undefined ); }
@@ -349,7 +342,6 @@ export class NodeChildren implements OnInit, OnDestroy {
 	rows = computed<UaNode[]>( ()=>this.view() ? this.view().apply( this.nodes() ) : [] );
 	displayedColumns = computed<string[]>( ()=>this.view()?.displayedColumns ?? [] );
 	get variables():Variable[]{ return <Variable[]>this.nodes().filter((x)=>x.nodeClass==ENodeClass.Variable); }
-	retrievingSnapshot = signal<boolean>( false );
 	routerSubscription!:Subscription;
 	selections = new SelectionModel<UaNode>(true, []);
 	//sideNav = model.required<NodeRoute>();
@@ -365,6 +357,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 
 	#routeService = inject( OpcNodeRouteService );
 	#profileStore = inject( ProfileStore );
+	#opcStore = inject( OpcStore );
 }
 //per node (keyed by profileKey):  the subscriptions.  The tab index used to live here too, but is written only by ProfileStore.setTabIndex (localStorage);  the columns and sort are the view's now, shared by every node.
 class UserSettings{

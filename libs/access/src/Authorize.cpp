@@ -96,18 +96,15 @@ namespace Jde::Access{
 	}
 	α Authorize::TestSchemaAdmin( str schema, UserPK executer, SL sl )ε->void{
 		Jde::sl l{ Mutex };
-		uint active{};
 		if( auto targets = SchemaResources.find(schema); targets!=SchemaResources.end() ){
 			for( let& [_, criterias] : targets->second ){
 				auto root = criterias.find( string{} );
 				auto p = root!=criterias.end() ? Resources.find( root->second ) : Resources.end();
 				if( p==Resources.end() || p->second.IsDeleted )
 					continue;
-				++active;
 				TestAdmin( p->second, executer, sl );
 			}
 		}
-		THROW_IFX( !active, AccessException(sl, executer, "Schema '{}' has no active resources - nothing to delegate.", schema) );
 	}
 	α Authorize::TestAdmin( const Resource& resource, UserPK executer, SL sl )ε->void{
 		if( executer==UserPK{UserPK::System} )

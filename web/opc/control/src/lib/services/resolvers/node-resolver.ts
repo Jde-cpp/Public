@@ -1,11 +1,13 @@
-import { Inject, Injectable } from '@angular/core';
+import { Inject, inject, Injectable } from '@angular/core';
 import { ActivatedRouteSnapshot, createUrlTreeFromSnapshot, Params, Resolve, Router, RouterStateSnapshot } from '@angular/router';
 import { SnackbarService } from 'jde-framework';
+import { ProfileStore } from 'jde-spa';
 import { Gateway, GatewayService } from '../gateway-service';
 import { OpcObject, UaNode } from '../../model/node';
 import { NodeRoute } from '../../model/node-route';
 import { OpcStore } from '../opc-store';
 import { Server } from '../../model/server';
+import { NodeView } from '../../model/node-view';
 
 export type NodePageData = {
 	route:NodeRoute;
@@ -21,6 +23,7 @@ export class NodeResolver implements Resolve<NodePageData> {
 		@Inject('GatewayService') private gatewayService: GatewayService,
 		@Inject('OpcStore') private opcStore:OpcStore
 	){}
+	private profileStore = inject( ProfileStore );
 
 	async load( route:NodeRoute ):Promise<NodePageData>{
 		try{
@@ -37,6 +40,10 @@ export class NodeResolver implements Resolve<NodePageData> {
 			}
 			let references = await gateway.browseObjectsFolder( route.cnnctnTarget, route.node, true, (m)=>console.log(m) );
 			let displayed = references.filter( (r)=>r.displayed );
+			if( !this.opcStore.nodeView() ){//a load straight onto a node page:  NodeChildren has not read the views yet, and the sidenav order is fixed here.  ProfileStore caches the row, so the component's own read is a hit.
+				const {views, index} = await NodeView.loadActive( this.profileStore );
+				this.opcStore.nodeView.set( views[index] );
+			}
 			this.opcStore.setRoute( route, defaultBrowseNs );
 			return { route: route, nodes: displayed, gateway: gateway, server: server };
 		}catch( e ){

@@ -1,4 +1,5 @@
 import { Field, FieldKind, Operator, TableSchema, View, ViewType } from 'jde-framework';
+import { ProfileStore } from 'jde-spa';
 import { ENodeClass, UaNode, Variable } from './node';
 import { NodeId } from './node-id';
 import { EAccess, ETypes } from './types';
@@ -22,7 +23,11 @@ export class NodeView extends View{
 
 	//the rows in view order:  filtered, then sorted by each Sort in turn (the first is primary)
 	apply( nodes:readonly UaNode[] ):UaNode[]{
-		const rows = nodes.filter( n=>this.matches(n) );
+		return this.sortNodes( nodes.filter(n=>this.matches(n)) );
+	}
+	//the sort alone, on a copy:  the sidenav takes the siblings through this without the filters (OpcStore.setRoute), so it lists them as the parent's table did
+	sortNodes( nodes:readonly UaNode[] ):UaNode[]{
+		const rows = [...nodes];
 		const sorts = this.sort.filter( s=>s.active && s.direction );
 		if( sorts.length ){
 			rows.sort( (a,b)=>{
@@ -35,6 +40,13 @@ export class NodeView extends View{
 			});
 		}
 		return rows;
+	}
+	//the view group as the profile has it - the default first, then the user's saved views - with the remembered selection.
+	//NodeChildren and NodeResolver both build the group from here, so the table and the sidenav start from the same view.
+	static async loadActive( profileStore:ProfileStore ):Promise<{views:NodeView[], index:number}>{
+		const saved = await profileStore.loadClassArray<NodeView>( `${NodeView.collectionName}/views`, NodeView, NodeView.schema );
+		const views = [NodeView.default(), ...saved];
+		return { views, index: Math.min(ProfileStore.viewIndex(NodeView.collectionName), views.length-1) };
 	}
 	//In/NotIn match the cell text exactly, as the SQL `in` a ql-list filter turns into;  the comparisons go numeric when both sides are numbers
 	matches( node:UaNode ):boolean{

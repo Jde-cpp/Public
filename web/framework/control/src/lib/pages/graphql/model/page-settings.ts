@@ -1,3 +1,4 @@
+import { Sort } from "@angular/material/sort";
 import { ProfileStore } from "jde-spa";
 import { View, ViewFieldSettings } from "../../../model/ql/view";
 import { TableSchema } from '../../../model/ql/schema/table-schema';
@@ -25,8 +26,8 @@ export class PageProfile{
 			this.currentViewIndex = this.views.length - 1;
 		}
 	}
-	async loadViews( collectionName:string, profileStore:ProfileStore, schema:TableSchema ){
-		const views = await profileStore.loadClassArray<View>( `qlList/${collectionName}/views`, View, schema );
+	async loadViews( collectionName:string, profileStore:ProfileStore, schema:TableSchema, defaultSort:Sort[] ){
+		const views = await profileStore.loadClassArray<View>( `qlList/${collectionName}/views`, View, schema, defaultSort );
 		this.views.push( ...views );
 	}
 	async removeView( viewName:string, collectionName:string, profileStore:ProfileStore ){

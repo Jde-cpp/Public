@@ -112,7 +112,7 @@ namespace Jde::App::Client{
 			THROW_IF( Process::ShuttingDown(), "Shutting down." );
 			TRACET( ELogTags::App, "[{}]Creating socket session", hex(sessionId) );
 			auto info = co_await StartSocketAwait{ sessionId, _authorize, _appClient, _sl };
-			if( _appClient->ResourceSchema.size() && !info.auth_result() )//the AppServer's TestSchemaAdmin gate on the auth_resource we sent (appserver-review3 #4).
+			if( _appClient->ResourceSchema.size() && !info.auth_result() )//the AppServer's TestSchemaAdmin gate on the auth_resource we sent
 				WARNT( ELogTags::Access, "AppServer declined to delegate '{}' admin checks to this instance - grant its user Administer on the schema's root resources and reconnect;  until then the AppServer applies its flat rule.", _appClient->ResourceSchema );
 			_appClient->SetAppPKs( info.instance_pk(), info.connection_pk() );
 			Post( _h );  //in OnRead, will block subsequent reads
