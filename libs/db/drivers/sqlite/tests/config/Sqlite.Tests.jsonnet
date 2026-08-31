@@ -11,7 +11,7 @@ local cluster(path) = { //one backend; instantiated per-path as the 'memory' and
 				master:{ // n/a for sqlite
 					access: common.access(),
 					app: common.app(),
-					opc: common.opcSchema(),
+					opc: common.opcSchema(),//tables-less since the OpcServer address space moved to NodeSet2 xml - it keeps SyncSchema honest on an empty schema.
 					gateway: common.gateway( {prefix: "gtw_"} )
 				}
 			}
@@ -27,8 +27,7 @@ local cluster(path) = { //one backend; instantiated per-path as the 'memory' and
 	dbServers:{//clusters
 		scriptPaths: [
 			repoSourceDir+"/libs/access/config/sql/sqlite",
-			repoSourceDir+"/apps/AppServer/config/sql/sqlite",
-			repoSourceDir+"/apps/OpcServer/config/sql/sqlite"
+			repoSourceDir+"/apps/AppServer/config/sql/sqlite"
 		],
 		dataPaths: [
 			repoSourceDir+"/apps/AppServer/config",

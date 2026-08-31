@@ -13,6 +13,15 @@ namespace Jde::Opc::Server{
 	static flat_map<fs::path, Entry> _files;
 	static std::array<UA_CertificateGroup*,2> _groups{};//secureChannelPKI, sessionPKI in the server-owned config; a change updates BOTH so the shared mtime cache stays honest.
 	static std::array<UA_StatusCode(*)( UA_CertificateGroup*, const UA_ByteString* ),2> _originals{};//per-group - no assumption both are memorystore.
+	//A failed verify is what an unauthenticated OPN with a junk senderCertificate produces - before any body decryption -
+	//and each one used to rescan every trusted dir and deep-copy every cached DER, on the UA thread under the server lock
+	//(opcserver-review3 L34).  Deliberately small:  the rescan exists so a certificate re-issued after startup heals on
+	//the client's next handshake, and starving that is worse than the amplification this bounds - which the finding rates
+	//at only ~1.1-1.5x anyway.  50ms is below any handshake latency (TrustReloadTests' whole re-issue-and-reconnect takes
+	//~215ms, a 4x margin) while capping a junk-senderCertificate flood at 20 directory walks a second instead of one per
+	//OPN.  Raise it only with that test in hand.
+	constexpr auto _rescanInterval{ 50ms };
+	static std::atomic<int64_t> _lastRescanNs{};//steady_clock nanoseconds; 0 = never, so the first failure always rescans.
 
 	α UATrust::LoadTrustList( UA_TrustListDataType& list )ι->bool{
 		std::lock_guard _{ _mutex };
@@ -38,7 +47,7 @@ namespace Jde::Opc::Server{
 						INFO( "{} certificate:  {}", it==_files.end() ? "Added" : "Updated", entry.path().string() );
 						_files[entry.path()] = { mtime, move(der) };
 					}
-					catch( Crypto::OpenSslException& e ){//a corrupt file can neither wedge the rescan nor drop the other certs.
+					catch( Exception& e ){
 						e.PrependWhat( Ƒ("Could not load trusted certificate '{}'", entry.path().string()) );
 						_files[entry.path()] = { mtime, {} };
 					}
@@ -84,6 +93,11 @@ namespace Jde::Opc::Server{
 		if( sc==UA_STATUSCODE_GOOD )
 			return sc;//fast path - no lock, no disk.
 		auto y{ sc };
+		let nowNs = duration_cast<std::chrono::nanoseconds>( steady_clock::now().time_since_epoch() ).count();
+		auto lastNs = _lastRescanNs.load( std::memory_order_relaxed );
+		if( (lastNs && nowNs-lastNs<duration_cast<std::chrono::nanoseconds>(_rescanInterval).count())
+			|| !_lastRescanNs.compare_exchange_strong(lastNs, nowNs, std::memory_order_relaxed) )
+			return y;//rescanned just now, or another thread is: the original failure, exactly as before the reload existed.
 		UA_TrustListDataType fresh;
 		UA_TrustListDataType_init( &fresh );
 		try{

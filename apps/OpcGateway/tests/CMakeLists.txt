@@ -24,7 +24,7 @@ if( WIN32 )
 	list( APPEND sources OpcTests.rc )
 	add_dependencies( ${targetName} Jde.DB.Odbc )
 endif()
-sqliteProcDependencies( ${targetName} Jde.DB.Sqlite.AppServer Jde.DB.Sqlite.OpcServer Jde.DB.Sqlite.OpcGateway ) #the ctest run below dlopens these via config/args/sqlite
+sqliteProcDependencies( ${targetName} Jde.DB.Sqlite.AppServer Jde.DB.Sqlite.OpcGateway ) #the ctest run below dlopens these via config/args/sqlite
 file( GLOB headers *.h */*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 

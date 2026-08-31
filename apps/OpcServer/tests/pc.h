@@ -4,6 +4,7 @@
 #include <jde/db/Row.h>
 #include <jde/app/client/IAppClient.h>
 #include <jde/opc/uatypes/opcHelpers.h>
+#include <jde/opc/uatypes/NodeId.h>
 #include "../src/usings.h"
 #include "../src/globals.h"
 #include "../src/UAServer.h"

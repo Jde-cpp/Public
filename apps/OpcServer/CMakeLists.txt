@@ -4,12 +4,11 @@ include( ${CMAKE_CURRENT_LIST_DIR}/../../build/functions.cmake )
 project( Jde.Opc.Server VERSION ${JDE_VERSION} LANGUAGES CXX )
 
 if( NOT jde_Superbuild )
-	add_subdirectory( config/sql/sqlite )
 	add_subdirectory( ${jdeRoot}/libs/fwk/src ../../libs/fwk/lib )
 	set( opcCommonDir ${jdeRoot}/libs/opc )
 	add_subdirectory( ${opcCommonDir}/src ../../libs/opc/lib )
 	add_subdirectory( ${jdeRoot}/libs/db/src ../../libs/db/lib )
-	add_subdirectory( ${jdeRoot}/libs/db/drivers/sqlite/src ../../libs/db/drivers/sqlite/lib ) #the config/sql/sqlite MODULE above is only reachable through this driver
+	add_subdirectory( ${jdeRoot}/libs/db/drivers/sqlite/src ../../libs/db/drivers/sqlite/lib )
 	add_subdirectory( ${jdeRoot}/libs/db/drivers/mysql/src ../../libs/db/drivers/mysql/lib )
 	if( WIN32 ) #odbc is windows-only; mysql builds everywhere.
 		add_subdirectory( ${jdeRoot}/libs/db/drivers/odbc/src ../../libs/db/drivers/odbc/lib )

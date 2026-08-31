@@ -62,13 +62,22 @@ namespace Jde::Access{
 					}
 				}
 
-				for( let& [_,table] : schema->Tables ){
-					auto jsonName = DB::Names::ToJson( table->Name );
-					if( empty(table->Operations) || targets.contains(jsonName) )
+				//Tables with ops, plus the resources the schema declares without a table behind them (the OpcServer's
+				//`nodeIds`) - one list so both kinds get the identical row.
+				vector<std::pair<string,Access::ERights>> declared;
+				declared.reserve( schema->Tables.size()+schema->Resources.size() );
+				for( let& [_,table] : schema->Tables )
+					declared.emplace_back( table->Name, table->Operations );
+				for( let& [name,ops] : schema->Resources )
+					declared.emplace_back( name, ops );
+
+				for( let& [name,ops] : declared ){
+					auto jsonName = DB::Names::ToJson( name );
+					if( empty(ops) || targets.contains(jsonName) )
 						continue;
 
 					auto create = Ƒ( "createResource( schemaName:\"{}\", name:\"{}\", target:\"{}\", allowed:{}, description:\"From installation\" ){{id}}",
-						schemaName, table->Name, move(jsonName), underlying(table->Operations) );
+						schemaName, name, move(jsonName), underlying(ops) );
 					let resourceId = QL::AsId<UserPK::Type>( co_await *_qlServer->Query(move(create), {}, _executer) );
 					co_await *_qlServer->Query( Ƒ("deleteResource( id:{} )", resourceId), {}, _executer );
 				}

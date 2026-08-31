@@ -275,6 +275,10 @@ namespace Server{
 	}
 
 	α Internal::RunSocketSession( sp<IWebsocketSession>&& session )ι->void{
+		if( !session ){
+			WARNT( ELogTags::Socket | ELogTags::Server, "Request handler declined the websocket upgrade;  connection closed." );
+			return;
+		}
 		let id = session->Id();
 		_socketSessions.emplace( id, session );
 		session->Run();

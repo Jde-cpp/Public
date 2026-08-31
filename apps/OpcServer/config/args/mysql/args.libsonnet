@@ -13,7 +13,7 @@ common + {
 	},
 	dbServers: {
 		dataPaths: [],
-		scriptPaths:  [args.repoSourceDir + "/apps/OpcServer/config/sql/mysql"],
+		scriptPaths: [],
 		localhost:{
 			driver: args.repoBuildDir + "/libs/db/drivers/mysql/lib/libJde.DB.MySql.so",
 			connectionString: null,

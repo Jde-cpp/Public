@@ -22,8 +22,7 @@ local logsDir = args.logsDir;
 		scriptPaths: [
 			args.repoSourceDir + "/apps/AppServer/config/sql/"+args.sqlType,
 			args.repoSourceDir + "/libs/access/config/sql/"+args.sqlType,
-			args.repoSourceDir + "/apps/OpcGateway/config/sql/"+args.sqlType,
-			args.repoSourceDir + "/apps/OpcServer/config/sql/"+args.sqlType
+			args.repoSourceDir + "/apps/OpcGateway/config/sql/"+args.sqlType
 		],
 		dataPaths: [args.repoSourceDir + "/apps/AppServer/config", args.repoSourceDir + "/libs/access/config"],
 		sync:: true,
