@@ -12,7 +12,7 @@ common + {
 	},
 	dbServers: {
 		dataPaths: [],
-		scriptPaths:  [ args.repoSourceDir+"/apps/OpcServer/config/sql/sqlServer"],
+		scriptPaths: [],
 		localhost:{
 			driver: args.repoBuildDir+"/bin/Jde.DB.Odbc.dll",
 			connectionString: "DSN="+args.schema(),

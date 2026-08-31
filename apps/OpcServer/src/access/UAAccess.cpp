@@ -25,7 +25,6 @@ typedef struct {
 
 namespace Jde::Opc::Server{
 	ELogTags _tags = ( ELogTags )( (EOpcLogTags)ELogTags::Access | EOpcLogTags::Opc );
-	string _schemaName;
 }
 namespace Jde::Opc::Server::UAAccess{
 	constexpr auto _renewInterval{ 30s };//O2: bounds what a genuinely-dead session costs - one AppServer round trip per interval, not one per node access.
@@ -33,40 +32,68 @@ namespace Jde::Opc::Server::UAAccess{
 	//whatever the web session's expiry was then - a day for a socket-backed one (/http/socketTimeout) - and every rights, browse
 	//and subscribe check below was denied from that moment on, while the web session behind it was still alive and being
 	//refreshed by the gateway on every request.  Re-ask the authority when the snapshot lapses; deny only if it agrees.
+	//open62541 calls the access-control plugin with its serviceMutex held, so anything that waits here stops every OPC
+	//client, not just this session.  The renewal used to be a BlockAwait on that thread:  a *hung* AppServer froze the
+	//whole server for the socket deadline (/web/client/socketRequestTimeout, 60s), and the timeout then tore down the
+	//app-client socket as collateral (opcserver-review3 L20).  It is now posted and answered on the io thread;  the
+	//answers land here, keyed by session id rather than by SessionContext*, so a session closing under an in-flight
+	//renewal cannot be written through.
+	static std::mutex _renewalsMutex;
+	static flat_map<SessionPK,TimePoint> _renewals;
+
+	Ω renew( SessionPK sessionId, UserPK user )ι->TAwait<Web::FromServer::SessionInfo>::Task{
+		try{
+			//Same call ActivateSession made, against the same authority - this is a re-read of the session, not a new one.
+			if( auto await = AppClient()->SessionInfoAwait(sessionId); await ){
+				let info = co_await *await;
+				std::scoped_lock _{ _renewalsMutex };
+				_renewals.insert_or_assign( sessionId, Protobuf::ToTimePoint(info.expiration()) );
+			}
+		}
+		catch( runtime_error& e ){
+			//A failure is an answer:  the authority was reached and had nothing for this session, or is unreachable - either
+			//way the grace below must not keep serving the lapsed snapshot.  Epoch reads as "expired long ago".
+			std::scoped_lock _{ _renewalsMutex };
+			_renewals.insert_or_assign( sessionId, TimePoint{} );
+			Exception{ move(e), ExceptionArgs{ELogLevel::Debug, _tags}, SRCE_CUR };
+		}
+	}
+
 	Ω expired( SessionContext* ctx )ι->bool{//non-authenticated paths set Expiration=TimePoint::max(); only JWT/SessionInfo sessions carry a real expiry.
 		if( !ctx || ctx->Expiration>=Clock::now() )
 			return false;
-		if( ctx->SessionId && Clock::now()-ctx->LastRenewal>=_renewInterval ){
-			ctx->LastRenewal = Clock::now();
-			try{
-				//Same call ActivateSession made, against the same authority - this is a re-read of the session, not a new one.
-				if( auto await = AppClient()->SessionInfoAwait(ctx->SessionId); await ){
-					let info = BlockAwait<TAwait<Web::FromServer::SessionInfo>, Web::FromServer::SessionInfo>( move(*await) );
-					ctx->Expiration = Protobuf::ToTimePoint( info.expiration() );
-					if( ctx->Expiration>=Clock::now() ){
-						DBG( "[{:x}]Renewed session for user '{}' to '{}'", ctx->SessionId, ctx->UserPK.Value, ToIsoString(ctx->Expiration) );
-						return false;
-					}
+		if( ctx->SessionId ){
+			{//whatever the io thread has delivered since the last check, whichever way it went.
+				std::scoped_lock _{ _renewalsMutex };
+				if( auto p = _renewals.find(ctx->SessionId); p!=_renewals.end() ){
+					ctx->Expiration = p->second;
+					ctx->Answered = true;
+					_renewals.erase( p );
 				}
 			}
-			catch( Exception& e ){
-				e.PrependWhat( Ƒ("[{}]Could not renew session for user '{}': {}", hex(ctx->SessionId), ctx->UserPK.Value, e.what()) );
+			if( ctx->Expiration>=Clock::now() ){
+				ctx->Answered = false;//fresh again - the next lapse is a new question, and gets its own grace.
+				DBG( "[{}]Renewed session for user '{}' to '{}'", hex(ctx->SessionId), ctx->UserPK.Value, ToIsoString(ctx->Expiration) );
+				return false;
+			}
+			if( !ctx->Answered ){
+				if( Clock::now()-ctx->LastRenewal>=_renewInterval ){
+					ctx->LastRenewal = Clock::now();
+					renew( ctx->SessionId, ctx->UserPK );//posts the request and returns; it is answered on the io thread.
+				}
+				//Serve the lapsed snapshot only while the question is outstanding, bounded by one renewal interval.  A snapshot
+				//going stale is the ordinary case - the web session behind it is alive and being refreshed - so denying on
+				//every lapse would fail live sessions over what used to be a blocking wait of milliseconds;  an authority
+				//that never answers must not become a way in, hence the bound.  Any answer, including a failure, ends it.
+				if( Clock::now()-ctx->Expiration<_renewInterval )
+					return false;
 			}
 		}
 		DBG( "Session for user '{}' expired at '{}'", ctx->UserPK.Value, ToIsoString(ctx->Expiration) );
 		return true;
 	}
-	Ω authorize( sv resource, Access::ERights rights, UserPK userPK )ι->bool{
-		bool allow{ true };
-		try{
-			GetSchema().Authorizer->Test( _schemaName, string{resource}, rights, userPK );
-		}
-		catch( runtime_error& e ){
-			TRACE( "Access denied to resource '{}' for user {}: {}", resource, userPK.Value, e.what() );
-			allow = false;
-		}
-		return allow;
-	}
+	//Startup installs it (opcServerStartup: SetAcl, then explicitly on the cached schema), so the cast is the schema's own type.
+	Ω authorizer()ι->OpcAuthorize&{ return static_cast<OpcAuthorize&>( *GetSchema().Authorizer ); }
 	Ω setContext( UA_AccessControl& ac )ι->AccessControlContext&{
     auto cntxt = ( AccessControlContext* )UA_malloc( sizeof(AccessControlContext) );
     memset( cntxt, 0, sizeof(AccessControlContext) );
@@ -109,8 +136,6 @@ namespace Jde::Opc::Server::UAAccess{
 }
 namespace Jde::Opc::Server{
 	α UAAccess::Init( UAConfig& config )ε->void{
-		auto suffix = Settings::FindString( "/opcServer/resource" );
-		_schemaName = suffix ? "opc." + *move( suffix ) : "opc";
 		auto& ac = config.accessControl;
 		assignFunctions( ac );
 		auto& context = setContext( ac );
@@ -133,6 +158,20 @@ namespace Jde::Opc::Server{
 			log.pop_back();//drop trailing comma
 		INFOT( (ELogTags)EOpcLogTags::Server, "UserToken Uris:  [{}]", move(log) );
 		log.clear();
+		//An explicit /opc/userTokenPolicyUri is stamped on every token policy below whether or not the server offers that
+		//security policy;  a client then has no endpoint to present its token on and every ActivateSession fails.  The
+		//unsecured config is where this bites - it offers None alone, and the setting defaults to Basic256Sha256.
+		if( context.UserTokenPolicyUri.length ){//otherwise each policy names itself, which always matches.
+			string offered; bool found{};
+			for( uint i=0; i<config.securityPoliciesSize; ++i ){
+				found = found || UA_String_equal( &context.UserTokenPolicyUri, &config.securityPolicies[i].policyUri );
+				offered += ToString( config.securityPolicies[i].policyUri )+",";
+			}
+			if( !offered.empty() )
+				offered.pop_back();
+			if( !found )
+				WARNT( (ELogTags)EOpcLogTags::Server, "/opc/userTokenPolicyUri '{}' is not one of this server's security policies [{}] - no client can present a user token.", ToString(context.UserTokenPolicyUri), offered );
+		}
 
 		ac.userTokenPoliciesSize = policies * numOfPolicies;
     ac.userTokenPolicies = ( UA_UserTokenPolicy* )UA_Array_new( ac.userTokenPoliciesSize, &UA_TYPES[UA_TYPES_USERTOKENPOLICY] );
@@ -187,6 +226,12 @@ namespace Jde::Opc::Server{
         userIdentityToken = &tmpIdentity;
     }
 
+		//Built here and installed at the single success point below.  open62541 passes &session->context on *every*
+		//ActivateSession and re-activation is explicitly allowed (accesscontrol.h: "can be called several times for a
+		//Session"), while closeSession only ever sees the last pointer - so assigning straight through leaked the previous
+		//context on every reconnect, which the vendor's own client does on a channel renew (opcserver-review3 L24).
+		//A local, not an early delete:  a branch that throws must leave the session's existing context untouched.
+		up<SessionContext> ctx;
 		try{
 			/* Could the token be decoded? */
 			if( userIdentityToken->encoding < UA_EXTENSIONOBJECT_DECODED )
@@ -212,7 +257,7 @@ namespace Jde::Opc::Server{
 											anonymous_policy.length) != 0)) {
 							throw UAException{ UA_STATUSCODE_BADIDENTITYTOKENINVALID };
 					}
-					*sessionContext = new SessionContext{ {}, TimePoint::max(), 0, {} };//UserPK{}==0: unauthenticated. Every later callback dereferences sessionContext, so it must be non-null on the GOOD path.
+					ctx = mu<SessionContext>( string{}, TimePoint::max(), SessionPK{}, UserPK{} );//UserPK{}==0: unauthenticated. Every later callback dereferences sessionContext, so it must be non-null on the GOOD path.
 			} else if( tokenType == &UA_TYPES[UA_TYPES_USERNAMEIDENTITYTOKEN] ) {
 				/* Username and password */
 				const UA_UserNameIdentityToken *userToken = ( UA_UserNameIdentityToken* )
@@ -252,7 +297,7 @@ namespace Jde::Opc::Server{
 				}
 				if( !match )
 						throw UAException{ UA_STATUSCODE_BADUSERACCESSDENIED };
-				*sessionContext = new SessionContext{ {}, TimePoint::max(), 0, {} };//the static login list carries no UserPK; grant no rights until username auth resolves a real user. Must be non-null so later callbacks don't deref null.
+				ctx = mu<SessionContext>( string{}, TimePoint::max(), SessionPK{}, UserPK{} );//the static login list carries no UserPK; grant no rights until username auth resolves a real user. Must be non-null so later callbacks don't deref null.
 			} else if( tokenType == &UA_TYPES[UA_TYPES_X509IDENTITYTOKEN] ) {
 				const UA_X509IdentityToken *userToken = ( UA_X509IdentityToken* )userIdentityToken->content.decoded.data;
 				if( userToken->policyId.length < certificate_policy.length ||
@@ -267,26 +312,32 @@ namespace Jde::Opc::Server{
 				let exp = publicKey.ExponentInt();
 				let user = AppClient()->QuerySync( Ƒ("user( modulus: \"{}\", exponent: {} ){{id target name}}", publicKey.ModulusHex(), exp), {} );
 				THROW_IF( user.empty(), "Certificate user not found: modulus: {}, exponent: {}", publicKey.ModulusHex(), exp );
-				*sessionContext = new SessionContext{ {}, TimePoint::max(), 0, {QL::AsId<UserPK::Type>(user)} };
+				ctx = mu<SessionContext>( string{}, TimePoint::max(), SessionPK{}, UserPK{QL::AsId<UserPK::Type>(user)} );
 			}
 			else if( tokenType == &UA_TYPES[UA_TYPES_ISSUEDIDENTITYTOKEN] ) {
 				const UA_IssuedIdentityToken* userToken = ( UA_IssuedIdentityToken* )userIdentityToken->content.decoded.data;
 				THROW_IFX( !userToken->tokenData.length, Exception("Empty issued token", {_tags}) );
 				if( userToken->tokenData.length<9 ){
-					let sessionId = std::stoul( string{ToSV(userToken->tokenData)}, 0, 16 );
-					let sessionInfo = BlockAwait<TAwait<Web::FromServer::SessionInfo>, Web::FromServer::SessionInfo>( 	move(*AppClient()->SessionInfoAwait(sessionId)) );
-					*sessionContext = new SessionContext{ sessionInfo.user_endpoint(), Protobuf::ToTimePoint(sessionInfo.expiration()), sessionInfo.session_id(), {sessionInfo.user_pk()} };
+					let token = string{ ToSV(userToken->tokenData) };
+					uint end{};
+					let sessionId = Str::TryTo<SessionPK>( token, &end, 16 );//attacker-chosen plaintext on the None endpoint;  std::stoul threw invalid_argument for a non-hex token, past this ι boundary.
+					THROW_IFX( !sessionId || end!=token.size(), UAException{UA_STATUSCODE_BADIDENTITYTOKENINVALID} );
+					let sessionInfo = BlockAwait<TAwait<Web::FromServer::SessionInfo>, Web::FromServer::SessionInfo>( 	move(*AppClient()->SessionInfoAwait(*sessionId)) );
+					ctx = mu<SessionContext>( sessionInfo.user_endpoint(), Protobuf::ToTimePoint(sessionInfo.expiration()), (SessionPK)sessionInfo.session_id(), UserPK{sessionInfo.user_pk()} );
 				}
 				else{
 					Web::Jwt jwt{ ToSV(userToken->tokenData) };
 					AppClient()->Verify( jwt );
-					*sessionContext = new SessionContext{ {}, jwt.Expires(), Str::TryTo<SessionPK>(jwt.SessionId, 0, 16).value_or(0), jwt.UserPK };
+					ctx = mu<SessionContext>( string{}, jwt.Expires(), Str::TryTo<SessionPK>(jwt.SessionId, 0, 16).value_or(0), jwt.UserPK );
 				}
 			}
 			else {
 					/* Unsupported token type */
 					throw UAException{ UA_STATUSCODE_BADIDENTITYTOKENINVALID };
 			}
+			ASSERT( ctx );
+			delete static_cast<SessionContext*>( *sessionContext );//the one this call replaces, if the session is re-activating.
+			*sessionContext = ctx.release();
 	    return UA_STATUSCODE_GOOD;
 		}
 		catch( const UAException& e ){
@@ -298,13 +349,22 @@ namespace Jde::Opc::Server{
 	}
 	α UAAccess::CloseSession( UA_Server* server, UA_AccessControl* ac,const UA_NodeId* sessionId, void* sessionContext )ι->void{
 		SessionContext* ctx = static_cast<SessionContext*>( sessionContext );
+		if( ctx && ctx->SessionId ){//an answer that arrived for a session nobody will ask about again.
+			std::scoped_lock _{ _renewalsMutex };
+			_renewals.erase( ctx->SessionId );
+		}
 		delete ctx;
 	}
 	α UAAccess::GetUserRightsMask( UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_NodeId *nodeId, void *nodeContext )ι->UA_UInt32{
+		ASSERT( nodeId );
 		let ctx = static_cast<SessionContext*>( sessionContext ); ASSERT( ctx );
-		if( !ctx || expired(ctx) )
+		if( !nodeId || !ctx || expired(ctx) )
 			return 0;
-		let rights = GetSchema().Authorizer->Rights( _schemaName, "node", ctx->UserPK );
+		//Was Rights( <schema>, "node", … ) - a resource name nothing ever creates, which Authorize::Rights answers with
+		//ERights::All, so every session got every UA_WRITEMASK bit the node's own writeMask allowed:  DisplayName,
+		//Description and AccessLevel rewritable by a user with no rights at all, and AccessLevel is the Value-write gate
+		//(opcserver-review3 #8).  The node's own acl is the answer, exactly as getUserAccessLevel reads it.
+		let rights = authorizer().NodeRights( *nodeId, ctx->UserPK );
 		UA_UInt32 mask = 0;
 		if( !empty(rights & Access::ERights::Update) )
 			mask = UA_WRITEMASK_ARRRAYDIMENSIONS | UA_WRITEMASK_BROWSENAME | UA_WRITEMASK_CONTAINSNOLOOPS | UA_WRITEMASK_DATATYPE | UA_WRITEMASK_DESCRIPTION | UA_WRITEMASK_DISPLAYNAME | UA_WRITEMASK_EVENTNOTIFIER | UA_WRITEMASK_EXECUTABLE | UA_WRITEMASK_HISTORIZING | UA_WRITEMASK_INVERSENAME | UA_WRITEMASK_ISABSTRACT  | UA_WRITEMASK_MINIMUMSAMPLINGINTERVAL | UA_WRITEMASK_NODECLASS | UA_WRITEMASK_NODEID | UA_WRITEMASK_SYMMETRIC | UA_WRITEMASK_USEREXECUTABLE | UA_WRITEMASK_VALUERANK | UA_WRITEMASK_VALUEFORVARIABLETYPE | UA_WRITEMASK_DATATYPEDEFINITION;
@@ -322,8 +382,7 @@ namespace Jde::Opc::Server{
 		let ctx = static_cast<SessionContext*>( sessionContext ); ASSERT( ctx );
 		if( !ctx || expired(ctx) )
 			return 0;
-		OpcAuthorize& authorizer = static_cast<OpcAuthorize&>( *GetSchema().Authorizer );
-		return underlying( authorizer.UserRights(*nodeId, ctx->UserPK) );
+		return underlying( authorizer().UserRights(*nodeId, ctx->UserPK) );
 	}
 
 	α UAAccess::GetUserExecutable( UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_NodeId *methodId, void *methodContext )ι->UA_Boolean{
@@ -338,19 +397,26 @@ namespace Jde::Opc::Server{
 	α UAAccess::GetUserExecutableOnObject( UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_NodeId *methodId, void *methodContext, const UA_NodeId *objectId, void *objectContext )ι->UA_Boolean{ ASSERT(false); return false; }
 	α UAAccess::AllowAddNode( UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_AddNodesItem *item )ι->UA_Boolean{ ASSERT(false); return false; }
 	α UAAccess::AllowAddReference( UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_AddReferencesItem *item )ι->UA_Boolean{
+		ASSERT( item );
 		let ctx = static_cast<SessionContext*>( sessionContext ); ASSERT( ctx );
-		if( !ctx || expired(ctx) )
+		if( !item || !ctx || expired(ctx) )
 			return false;
-		let authorized = authorize( "variables", Access::ERights::Subscribe, ctx->UserPK );
-		return authorized;
+		//Was Test( "variables", Subscribe ) - a resource name nothing creates, so Authorize::Test returned silently and
+		//every session could restructure the address space (opcserver-review3 #8).  A reference is a write to its source
+		//node, so Update on that node is the right;  the nodeset loader is unaffected - open62541 skips this callback
+		//entirely for its adminSession (ua_services_nodemanagement.c Operation_addReference).
+		return !empty( authorizer().NodeRights(item->sourceNodeId, ctx->UserPK) & Access::ERights::Update );
 	}
 	α UAAccess::AllowDeleteNode( UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_DeleteNodesItem *item )ι->UA_Boolean{ ASSERT(false); return false; }
 	α UAAccess::AllowDeleteReference( UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_DeleteReferencesItem *item )ι->UA_Boolean{ ASSERT(false); return false; }
 	α UAAccess::AllowBrowseNode( UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_NodeId *nodeId, void *nodeContext )ι->UA_Boolean{
+		ASSERT( nodeId );
 		let ctx = static_cast<SessionContext*>( sessionContext ); ASSERT( ctx );
-		if( !ctx || expired(ctx) )
+		if( !nodeId || !ctx || expired(ctx) )
 			return false;
-		return authorize( "browse", Access::ERights::Read, ctx->UserPK );
+		//Was Test( "browse", Read ) - a resource name nothing creates, so browse was ungated for every session
+		//(opcserver-review3 #8).  Read on the node itself, the same right that opens its value.
+		return !empty( authorizer().NodeRights(*nodeId, ctx->UserPK) & Access::ERights::Read );
 	}
 	α UAAccess::AllowTransferSubscription( UA_Server *server, UA_AccessControl *ac, const UA_NodeId *oldSessionId, void *oldSessionContext, const UA_NodeId *newSessionId, void *newSessionContext )ι->UA_Boolean{ ASSERT(false); return false; }
 	α UAAccess::AllowHistoryUpdateUpdateData( UA_Server *server, UA_AccessControl *ac, const UA_NodeId *sessionId, void *sessionContext, const UA_NodeId *nodeId, UA_PerformUpdateType performInsertReplace, const UA_DataValue *value )ι->UA_Boolean{ ASSERT(false); return false; }

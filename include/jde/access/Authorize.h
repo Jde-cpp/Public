@@ -79,8 +79,8 @@ namespace Jde::Access{
 		α AddUserPermissions( User& user, PermissionRole permissionRole, flat_set<RolePK>& visitedRoles )ι->void;
 		α UpdatePermission( PermissionPK permissionPK, optional<ERights> allowed, optional<ERights> denied )ε->void;
 
-		α CreateResource( Resource&& resource )ε->void;
-		α UpdateResourceDeleted( ResourcePK pk, sv schemaName, const jobject& args, bool restored )ε->void;
+		β CreateResource( Resource&& resource )ε->void;
+		β UpdateResourceDeleted( ResourcePK pk, sv schemaName, const jobject& args, bool restored )ε->void;
 
 		α DeleteRestoreRole( RolePK rolePK, bool deleted )ι->void;
 		α PurgeRole( RolePK rolePK )ι->void;
@@ -114,7 +114,13 @@ namespace Jde::Access{
 			pk = FindActiveResourcePK( resource.Schema, resource.Target, resource.Criteria, l ).value_or( 0 );
 		if( auto p = pk ? Resources.find(pk) : Resources.end(); p!=Resources.end() )
 			return &p->second;
-		else if( resource.Target.size() ){
+		//Only a criteria-less request may fall back to the criteria-less row.  Without that guard a *criteria-scoped* lookup
+		//that missed - its row not cached yet, which is the ordinary case for a resource created by the same mutation that
+		//grants on it - resolved to the target's root row instead, and AddRolePermission then wrote the node's rights over
+		//the root's.  A node-scoped grant silently rewriting the root grant is the opposite of what it says (opcserver-review3
+		//L30, found fixing that test).  Missing now returns null, and AddRolePermission's `new resource` branch caches the
+		//row from the payload, which carries its pk.
+		if( resource.Target.size() && resource.Criteria.empty() ){
 			for( const auto& [existingPK,existing] : Resources ){
 				if( (resource.Schema.empty() || existing.Schema==resource.Schema) && existing.Target==resource.Target && existing.Criteria.empty() )
 					return &existing;

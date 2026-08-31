@@ -26,7 +26,7 @@ file( GLOB sources *.cpp )
 #lets ProcRegistryTests register throwaway names without disturbing the real twins.
 target_sources( ${targetName} PRIVATE ${sources} ${CMAKE_CURRENT_LIST_DIR}/../src/SqliteProcs.cpp ${CMAKE_CURRENT_LIST_DIR}/../src/SqliteRow.cpp )
 target_compile_definitions( ${targetName} PRIVATE TESTS JDE_SQLITE_EXPORTS )
-sqliteProcDependencies( ${targetName} Jde.DB.Sqlite.AppServer Jde.DB.Sqlite.OpcServer Jde.DB.Sqlite.OpcGateway )
+sqliteProcDependencies( ${targetName} Jde.DB.Sqlite.AppServer Jde.DB.Sqlite.OpcGateway )
 target_link_libraries( ${targetName} GTest::gtest Threads::Threads SQLite::SQLite3 )
 target_link_libraries( ${targetName} Jde.Access Jde.DB Jde )
 

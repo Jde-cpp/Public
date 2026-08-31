@@ -57,14 +57,19 @@ namespace Jde::DB::Sqlite{
 				if( dbSchemaName.starts_with('_') ) //internal schema, not a real db schema.
 					continue;
 				for( auto&& [appSchemaName, vappSchema] : Json::AsObject(dbSchema) ){
-					let lib = Json::FindSV( Json::AsObject(vappSchema), "dynamicLib" );
-					THROW_IFX( !lib, Exception(SRCE_CUR, {ELogLevel::Critical, ELogTags::App}, "No dynamicLib for {}.{}.{}", catalogName, dbSchemaName, appSchemaName) );
+					//An explicit null says "this schema has no native procs" (the OpcServer's, since its address space moved
+					//to NodeSet2 xml);  the key missing altogether is still the configuration error it always was.
+					let jlib = Json::AsObject(vappSchema).if_contains( "dynamicLib" );
+					THROW_IFX( !jlib, Exception(SRCE_CUR, {ELogLevel::Critical, ELogTags::App}, "No dynamicLib for {}.{}.{}", catalogName, dbSchemaName, appSchemaName) );
+					if( jlib->is_null() )
+						continue;
+					let lib = Json::AsSV( *jlib );
 					//weakly_canonical: _procDlls and DllApiCache both key on the path as written, so `…/lib/x.so` and
 					//`…/lib/./x.so` would load the same dll twice and register every twin twice over.
 					std::error_code ec;
-					fs::path dynamicLib{ fs::weakly_canonical(fs::path{*lib}, ec) };
+					fs::path dynamicLib{ fs::weakly_canonical(fs::path{lib}, ec) };
 					if( ec )
-						dynamicLib = fs::path{ *lib }; //unresolvable (a path that does not exist yet): use it as written and let the load report.
+						dynamicLib = fs::path{ lib }; //unresolvable (a path that does not exist yet): use it as written and let the load report.
 					if( !_procDlls.contains(dynamicLib) ){
 						auto api = _dllApis.Get( dynamicLib ); //ctor loads the dll and registers its procs.
 						_procDlls.emplace( move(dynamicLib), move(api) );

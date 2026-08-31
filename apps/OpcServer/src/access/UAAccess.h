@@ -10,6 +10,7 @@ namespace Jde::Opc::Server::UAAccess{
 		SessionPK SessionId;
 		UserPK UserPK;
 		TimePoint LastRenewal{};//Throttles the renewal, so a session the authority says is genuinely gone costs one round trip per interval, not one per node access.
+		bool Answered{};//the authority has since answered for this Expiration - so it is its verdict, not a stale snapshot, and gets no grace.
 	};
 
 	α Init( UAConfig& config )ε->void;

@@ -34,7 +34,13 @@ namespace Jde::Opc::Server{
 
 	struct OpcAuthorize final: Access::Authorize{
 		OpcAuthorize( string app )ι:Access::Authorize{move(app)}{}
-		α UserRights( NodeId nodeId, UserPK executer )ι->EAccess;
+		//The rights this user holds on this node, in the generic vocabulary the acl rows are written in:  the node's own
+		//resource when it has one, else the nearest configured ancestor's, else root - and ERights::All when the server
+		//has no base resources at all (unauthorized:  every node open).  The node-scoped answer every access-control
+		//callback owes;  a flat Authorize::Rights/Test on a resource *name* answers All for a name nothing created,
+		//which is what left writeMask, browse and AddReferences ungated (opcserver-review3 #8).
+		α NodeRights( const NodeId& nodeId, UserPK executer )ι->Access::ERights;
+		α UserRights( NodeId nodeId, UserPK executer )ι->EAccess;//NodeRights in UA access-level bits, for getUserAccessLevel.
 		α AssignRights( UA_Server& server )ι->void;
 		//The AppServer's delegated admin check (ServerSocketSession::TestAdminAwait → OpcServerQL's adminCheck):  who may grant on a node is
 		//whoever administers the resource governing it - the nearest configured ancestor's, else root - the same resolution
@@ -42,8 +48,15 @@ namespace Jde::Opc::Server{
 		//on denial;  a plain Exception before AssignRights has run, so a check that races startup (the socket registers before
 		//Configure and AssignRights) is a denial, never a guess.
 		α TestAdminNode( str target, str criteria, UserPK user, SRCE )ε->void;
+
+		β CreateResource( Access::Resource&& resource )ε->void override;
+		β UpdateResourceDeleted( Access::ResourcePK pk, sv schemaName, const jobject& args, bool restored )ε->void override;
 	private:
-		α AssignRights( const NodeId& nodeId, UA_Server& server, Access::ResourcePK resourcePK, const std::map<NodeId, Access::ResourcePK>& baseResources, std::set<NodeId>& visited )ι->void;
+		α ReassignRights( sv why )ι->void;
+		α IsNodeResource( Access::ResourcePK pk, sv schemaName, const jobject& args )ι->bool;
+		//Fills `nodeResources` - a local map the public overload swaps in afterwards, never the member, so no lock is held
+		//across UA_Server_browse (opcserver-review3 #10).
+		α AssignRights( const NodeId& nodeId, UA_Server& server, Access::ResourcePK resourcePK, const std::map<NodeId, Access::ResourcePK>& baseResources, std::map<NodeId, Access::ResourcePK>& nodeResources, std::set<NodeId>& visited )ι->void;
 		std::map<NodeId, Access::ResourcePK> _nodeResources; shared_mutex _nodeResourcesMutex;
 		bool _enabled{};//true once base resources are configured; when false the server is unauthorized and every node is fully accessible.
 		std::atomic<bool> _assigned{};//AssignRights has run (with or without base resources) - TestAdminNode denies until then.

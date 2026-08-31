@@ -12,7 +12,7 @@ common + {
 	},
 	dbServers: {
 		dataPaths: [],
-		scriptPaths:  [args.repoSourceDir + "/apps/OpcServer/config/sql/"+args.sqlType],
+		scriptPaths: [],
 		localhost: common.localhost({
 			_appServer:{
 				//test debug with schema, debug with default schema ie dbo.  No dynamicLib: this process loads no

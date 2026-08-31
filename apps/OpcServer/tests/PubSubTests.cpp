@@ -53,7 +53,7 @@ namespace Jde::Opc::Server::Tests{
 		//Startup already built a reader on its server, but sibling fixtures replace the global UAServer (Initialize), so
 		//rebuild the OpcServer side here exactly as opcServerStartup does: load, run, subscribe.
 		Ω SetUpTestCase()ε->void{
-			Server::Initialize( ServerId(), GetSchemaPtr() );
+			Server::Initialize( GetSchemaPtr() );
 			auto& ua = GetUAServer();
 			ua.Load( pumpsNodeset() );
 			ua.Run();

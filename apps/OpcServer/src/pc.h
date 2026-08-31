@@ -12,14 +12,9 @@
 #include <jde/fwk/settings.h>
 #include <jde/fwk/co/Await.h>
 #include <jde/fwk/chrono.h>
-#include <jde/db/Row.h>
-#include <jde/db/IDataSource.h>
-#include <jde/db/awaits/SelectAwait.h>
-#include <jde/db/generators/Functions.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/opc/uatypes/opcHelpers.h>
 #include <jde/opc/uatypes/NodeId.h>
-#include <jde/opc/uatypes/ExNodeId.h>
 #include <jde/opc/UAException.h>
 #include "usings.h"
 #include "globals.h"

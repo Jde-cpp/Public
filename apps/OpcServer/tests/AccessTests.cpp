@@ -1,3 +1,7 @@
+#include <semaphore>
+#include <thread>
+#include <jde/db/meta/AppSchema.h>//GetSchema().Authorizer
+#include "../src/UATrust.h"
 #include "../src/access/UAAccess.h"
 #include "../src/access/OpcAuthorize.h"
 #include "../src/ql/OpcQL.h"
@@ -17,6 +21,13 @@ namespace Jde::Opc::Server::Tests{
 		constexpr static ERights _readerDenied = ERights::Update | ERights::Delete | ERights::Administer;
 		constexpr static ERights _writerDenied = ERights::Administer;
 		constexpr static ERights _adminDenied = ERights::None;
+		//The criteria resource withholds everything, so a node it governs answers None whatever the role allows on the root.
+		//It used to grant the *same* rights as the root, on `ns=4;i=6020` - a node no nodeset here loads - so UserAccess
+		//passed identically whether _nodeResources worked or not (opcserver-review3 L30).  ServerStatus is in ns0, so the
+		//browse actually reaches it, and it is not a node the other tests assert on.
+		constexpr static ERights _nodeDenied = ERights::All;
+		Ω criteriaNode()ι->UA_NodeId{ return UA_NODEID_NUMERIC( 0, UA_NS0ID_SERVER_SERVERSTATUS ); }
+		Ω roleTarget( const string& target )ι->string{ return DB::Names::Capitalize( target ); }
 
 		Ω addRole( const string& target, ERights allowed, ERights denied )ε->void{
 			let userTarget = Ƒ( "{}User", target );
@@ -27,25 +38,31 @@ namespace Jde::Opc::Server::Tests{
 			let userId = Json::AsNumber<uint>( user.at("id") );
 			_users.emplace( userTarget, userId );
 
-			let roleTarget = DB::Names::Capitalize( target );
-			//auto role = _app->QuerySync("role(target:$target){id}", {{"target", roleTarget}});
-			//if( role.empty() )
-			auto role = _app->QuerySync<jobject>( "createRole( target:$target, name:$name ){id}", {{"target",roleTarget}, {"name", roleTarget+" name"}} );
+			let target_ = roleTarget( target );
+			//Find-or-create, as the user above already is:  createRole on a persisted db trips the roles.target unique index
+			//and takes the whole suite with it, which is what a non-ctest re-run (recreateDB=false, the documented way to run
+			//beside live services) does every time (opcserver-review3 L30).
+			auto role = _app->QuerySync( "role(target:$target){id}", {{"target", target_}} );
+			let existed = !role.empty();
+			if( !existed )
+				role = _app->QuerySync<jobject>( "createRole( target:$target, name:$name ){id}", {{"target",target_}, {"name", target_+" name"}} );
 			let roleId = Json::AsNumber<Access::RolePK>( role.at("id") );
-			_roles.emplace( target, roleId );
+			_roles.emplace( target_, roleId );//keyed as the db names it - the same key SetUpTestCase's roles() load uses, which is what made every guard below always-true.
+			if( existed )
+				return;//its permissions and acl are in the db already; re-adding them trips their unique indexes too.
 
 			jobject vars{ {"roleId", roleId}, {"allowed", underlying(allowed)}, {"denied", underlying(denied)}, {"schema", _resource} };
 			string query{ "addRole( id:$roleId, permissionRight:{allowed:$allowed, denied:$denied, resource:{schemaName:$schema, target:\"nodeIds\"}} )" };
 			_app->QuerySync<jvalue>( move(query), move(vars) );
 
-			vars = { {"roleId", roleId}, {"allowed", underlying(allowed)}, {"denied", underlying(denied)}, {"schema", _resource}, {"criteria", "ns=4;i=6020"}, {"resourceName", "SignalOn"} }; //Examples/Stacklights/ExampleStacklight/Lamp1/SignalOn - the same rights as the root: the generic vocabulary has no separate history-read right to withhold here.
+			vars = { {"roleId", roleId}, {"allowed", underlying(allowed)}, {"denied", underlying(_nodeDenied)}, {"schema", _resource}, {"criteria", NodeId{criteriaNode()}.ToString()}, {"resourceName", "ServerStatus"} };
 			query = "addRole( id:$roleId, permissionRight:{allowed:$allowed, denied:$denied, resource:{schemaName:$schema, target:\"nodeIds\", criteria:$criteria, name:$resourceName}} )";
 			_app->QuerySync<jvalue>( move(query), move(vars) );
 
 			_app->QuerySync<jvalue>( "createAcl( identity:{ id:$userId }, role:{id:$roleId} )", {{"userId", userId}, {"roleId", roleId}} );
 		}
 		Ω SetUpTestCase()ε->void{
-			Server::Initialize( ServerId(), GetSchemaPtr() );
+			Server::Initialize( GetSchemaPtr() );
 			_ua = &Server::GetUAServer();
 			_app = AppClient();
 
@@ -54,20 +71,14 @@ namespace Jde::Opc::Server::Tests{
 			let jroles = _app->QuerySync<jarray>( "roles(){ id target }", {} );
 			for( let& jrole : jroles )
 				_roles.emplace( jrole.at("target").get_string(), jrole.at("id").to_number<Access::RolePK>() );
-			if( !_roles.contains("opcTestReaders") ){
+			if( !_roles.contains(roleTarget("reader")) )//this program's own acl, once - re-creating it trips the same indexes.
 				_app->QuerySync<jvalue>( "createAcl( identity:{id:$testProgUser}, permissionRight:{ allowed:$allowed, denied:0, resource:{schemaName: $schemaName, target:$nodeResTarget}} )",
 					{ {"testProgUser", AppClient()->UserPK().Value}, {"allowed", underlying(ERights::All)}, {"schemaName", _resource}, {"nodeResTarget", "nodeIds"} } );
-				addRole( "reader", _readerAllowed, _readerDenied );
-			}
-			else{
-				let jusers = _app->QuerySync<jarray>( "users(){ id, target }", {} );
-				for( let& juser : jusers )
-					_users.emplace( juser.at("target").get_string(), juser.at("id").to_number<UserPK::Type>() );
-			}
-			if( !_roles.contains("opcTestWritters") )
-				addRole( "writer", _writerAllowed, _writerDenied );
-			if( !_roles.contains("opcTestAdmins") )
-				addRole( "admin", _adminAllowed, _adminDenied );
+			//Unconditional now that addRole is find-or-create:  it is also the only thing that fills _users, which the guards
+			//used to skip on a re-run, leaving every _users.at() below to throw.
+			addRole( "reader", _readerAllowed, _readerDenied );
+			addRole( "writer", _writerAllowed, _writerDenied );
+			addRole( "admin", _adminAllowed, _adminDenied );
 			_app->QuerySync<jvalue>( "restoreResource( target:$target, criteria:null )", nodeTarget );
 		}
 		Ω TearDownTestCase()ι->void{}
@@ -93,6 +104,54 @@ namespace Jde::Opc::Server::Tests{
 		EXPECT_EQ( underlying(accessLevel("readerUser")) & UA_ACCESSLEVELMASK_WRITE, 0u ); //...and not WRITE, which the cast handed a reader (ERights::Read is 0x2).
 		EXPECT_EQ( accessLevel("writerUser"), ToAccess(_writerAllowed) ); //+Write|HistoryWrite; cast raw, Read|Update=0x6 was WRITE|HISTORYREAD.
 		EXPECT_EQ( accessLevel("adminUser"), ToAccess(_adminAllowed) ); //EAccess::All
+
+		//The criteria resource, on a node the browse actually reaches: it withholds everything, so these answer None while
+		//the root above answers the role's rights.  Identical rights on a node no nodeset loaded made this pass either way.
+		let statusNode = criteriaNode();
+		let statusAccess = [&]( const string& user ){
+			UAAccess::SessionContext ctx{ "", TimePoint::max(), 0, {(UserPK::Type)_users.at(user)} };
+			return (EAccess)UAAccess::GetUserAccessLevel( _ua->Ptr(), nullptr, nullptr, &ctx, &statusNode, nullptr );
+		};
+		EXPECT_EQ( statusAccess("readerUser"), EAccess::None ) << "governed by its own resource, not the root";
+		EXPECT_EQ( statusAccess("adminUser"), EAccess::None );
+	}
+
+	//opcserver-review3 #8:  getUserRightsMask, allowBrowseNode and allowAddReference used to ask Authorize for the resource
+	//names "node", "browse" and "variables" - names nothing in the repo ever creates, and Authorize answers a missing name
+	//with ERights::All / a silent Test.  So every session, including one holding a *denied* nodeIds right, got every
+	//UA_WRITEMASK bit the node's own writeMask allowed (DisplayName, Description and AccessLevel - and AccessLevel is what
+	//gates the Value write), browsed the whole tree, and could add references.  All three now read the node's own acl.
+	TEST_F( AccessTests, NodeRightsGateWriteMaskBrowseAndAddReference ){
+		let nodeId = UA_NODEID_NUMERIC( 4, 6020 );
+		let context = []( uint userPK ){ return UAAccess::SessionContext{ "", TimePoint::max(), 0, {(UserPK::Type)userPK} }; };
+		let writeMask = [&]( uint userPK ){
+			auto ctx = context( userPK );
+			return UAAccess::GetUserRightsMask( _ua->Ptr(), nullptr, nullptr, &ctx, &nodeId, nullptr );
+		};
+		let mayBrowse = [&]( uint userPK ){
+			auto ctx = context( userPK );
+			return UAAccess::AllowBrowseNode( _ua->Ptr(), nullptr, nullptr, &ctx, &nodeId, nullptr );
+		};
+		let mayAddReference = [&]( uint userPK ){
+			auto ctx = context( userPK );
+			UA_AddReferencesItem item; UA_AddReferencesItem_init( &item );
+			item.sourceNodeId = nodeId;
+			return UAAccess::AllowAddReference( _ua->Ptr(), nullptr, nullptr, &ctx, &item );
+		};
+		let unknownUser = uint{ std::numeric_limits<UserPK::Type>::max() };//no acl row at all - the shape a fail-open answers All for.
+
+		EXPECT_EQ( writeMask(_users.at("readerUser")), 0u ) << "a reader holds neither Update nor Administer, so no attribute is writable";
+		EXPECT_EQ( writeMask(unknownUser), 0u );
+		EXPECT_NE( writeMask(_users.at("writerUser")) & UA_WRITEMASK_DISPLAYNAME, 0u );//Update
+		EXPECT_EQ( writeMask(_users.at("writerUser")) & UA_WRITEMASK_ACCESSLEVEL, 0u ) << "AccessLevel is the Value-write gate - Administer only";
+		EXPECT_NE( writeMask(_users.at("adminUser")) & UA_WRITEMASK_ACCESSLEVEL, 0u );
+
+		EXPECT_TRUE( mayBrowse(_users.at("readerUser")) );//Read
+		EXPECT_FALSE( mayBrowse(unknownUser) );
+
+		EXPECT_FALSE( mayAddReference(_users.at("readerUser")) ) << "a reference is a write to its source node";
+		EXPECT_TRUE( mayAddReference(_users.at("writerUser")) );//Update
+		EXPECT_FALSE( mayAddReference(unknownUser) );
 	}
 
 	//appserver-review3 #13:  the AppServer's delegated admin check, answered here (OpcServerQL's adminCheck →
@@ -129,6 +188,47 @@ namespace Jde::Opc::Server::Tests{
 		EXPECT_EQ( ToAccess(ERights::Delete), EAccess::HistoryWrite );
 		EXPECT_EQ( ToAccess(ERights::Administer), EAccess::StatusWrite | EAccess::TimestampWrite | EAccess::SemanticChange );
 	}
+	//opcserver-review3 #9:  CustomMutation routed every updateLogSetting* straight to the client await with no credential
+	//check, while LogSettingsQuery beside it required a user - so an anonymous POST to /graphql on the web listener rewrote
+	//the live SpdLog/ProtoLog levels and, `persist` defaulting on, had the AppServer store them in instance_tag_levels under
+	//the OpcServer's own identity.  Nothing here resumes an await, so no level moves and no round trip is made.
+	struct CustomMutationTests : ::testing::Test{
+	protected:
+		Ω mutation( string commandName )ε->QL::MutationQL{//system: a registered system table resolves against no schema, as QL::Parse admits it.
+			return QL::MutationQL{ move(commandName), jobject{}, ms<jobject>(), optional<QL::TableQL>{}, true, Server::Schemas(), true };
+		}
+		//The status a refusal carries, or empty when the caller got a real await instead (only a refusal is ready).
+		Ω refusalStatus( QL::MutationQL& m, UserPK executer )ε->optional<EHttpStatus>{
+			auto y = Server::QL().CustomMutation( m, QL::Creds{executer}, SRCE_CUR );
+			if( !y || !y->await_ready() )
+				return {};
+			try{
+				y->await_resume();
+			}
+			catch( const Exception& e ){
+				return e.HttpStatus();
+			}
+			return {};
+		}
+	};
+
+	TEST_F( CustomMutationTests, AnonymousLogSettingsIsRefused ){
+		auto m = mutation( "updateLogSetting" );
+		EXPECT_EQ( refusalStatus(m, UserPK{}), EHttpStatus::Unauthorized );//401, not 403: it is about who is asking.
+	}
+	TEST_F( CustomMutationTests, AuthenticatedLogSettingsStillRoutes ){
+		auto m = mutation( "updateLogSetting" );//the AppServer's push arrives this way, carrying the admin who made the change.
+		auto y = Server::QL().CustomMutation( m, QL::Creds{UserPK{7}}, SRCE_CUR );
+		ASSERT_TRUE( y );
+		EXPECT_FALSE( y->await_ready() ) << "LogSettingsClientMAwait suspends; only a refusal answers ready";
+	}
+	TEST_F( CustomMutationTests, EveryOtherMutationStaysForbidden ){
+		auto m = mutation( "createObject" );
+		EXPECT_EQ( refusalStatus(m, UserPK{}), EHttpStatus::Forbidden );//#3, unchanged by #9's split.
+		EXPECT_EQ( refusalStatus(m, UserPK{7}), EHttpStatus::Forbidden ) << "authenticated is not the gate here - the schema owns no tables";
+		EXPECT_FALSE( Server::QL().CustomMutation(m, QL::Creds{UserPK{UserPK::System}}, SRCE_CUR) ) << "the schema sync's .mutation files still write";
+	}
+
 	TEST_F( AccessTests, Query ){
 		auto q = "roles{ id name permissionRight{id allowed denied resource(schemaName:$schemaName, target:$target, criteria:$criteria){id criteria}} }";
 		jobject vars{ {"schemaName", "opc.default"}, {"target", "nodeIds"}, {"criteria", jarray{jvalue{}}} };
@@ -138,19 +238,157 @@ namespace Jde::Opc::Server::Tests{
 		TRACE( "{}", serialize(result) );
 	}
 
-	//ql-review3 #40: `nodeIds.guid` is EType::Guid, which ColumnQL::QLType has no graphql spelling for, so introspectFields
-	//threw and `__type` answered "Query failed." for the whole document - for NodeId and, through Extends, for every node table.
-	//This is the only schema in the repo with a Guid column, which is why the pin lives here;  the ql-side unit is
-	//IntrospectionTests.AColumnWithNoQLTypeIsOmittedRatherThanFailingTheType.  Server::QL(), not _app: OpcServerAppClient routes
-	//everything but log settings to the app server, whose schema has no node tables.
-	TEST( IntrospectionTests, NodeIdTypeAnswersWithoutItsGuidColumn ){
-		let y = Server::QL().QuerySync<jobject>( R"(__type(name:"NodeId"){ name fields{ name } })", {}, UserPK{UserPK::System} );
-		EXPECT_EQ( Json::AsSV(y, "name"), "NodeId" );
-		flat_set<string> names;
-		for( let& f : Json::AsArray(y, "fields") )
-			names.emplace( Json::AsSV(Json::AsObject(f), "name") );
-		ASSERT_FALSE( names.empty() );
-		EXPECT_FALSE( names.contains("guid") ) << Str::Join( names, "," );  //no graphql spelling - left out, not fatal.
-		EXPECT_FALSE( names.contains("bytes") ) << Str::Join( names, "," ); //varbinary, skipped before this finding too.
+	//opcserver-review3 #10:  AssignRights held _nodeResourcesMutex exclusively across UA_Server_browse, which takes the
+	//server's serviceMutex - while open62541 calls the access-control plugin *with* serviceMutex already held, so a client
+	//Read on the UA thread landed in NodeRights wanting the shared lock.  Neither side could proceed.
+	//A node-lifecycle constructor runs from exactly that position (recursiveCallConstructors asserts the serviceMutex), so
+	//it stands in for the UA thread here without needing a client:  it signals, holds the lock while the other thread runs
+	//AssignRights, then asks NodeRights.  On the pre-fix code both threads park forever;  now AssignRights browses with
+	//nothing held and simply waits its turn for serviceMutex.  A deadlock can only be observed by not finishing, so the
+	//failure here is the suite's ctest TIMEOUT rather than an EXPECT - verified by restoring the old lock scope, where the
+	//binary sits in this test until it is killed (exit 124) instead of the ~260ms it takes now.  Last in the fixture - it
+	//re-runs AssignRights, so it must not precede the tests that read the map it rebuilds.
+	TEST_F( AccessTests, AssignRightsHoldsNoLockAcrossTheBrowse ){
+		auto server = _ua->Ptr();
+		ASSERT_TRUE( server );
+		auto& auth = static_cast<OpcAuthorize&>( *GetSchema().Authorizer );
+		static std::binary_semaphore holdingServiceMutex{ 0 };
+		static std::atomic<bool> askedNodeRights{ false };
+		static OpcAuthorize* authorizer{ &auth };//the constructor is a C callback: no captures, so the state is static.
+
+		UA_NodeTypeLifecycle lifecycle{};
+		lifecycle.constructor = []( UA_Server*, const UA_NodeId*, void*, const UA_NodeId*, void*, const UA_NodeId*, void** )->UA_StatusCode{
+			holdingServiceMutex.release();
+			std::this_thread::sleep_for( 250ms );//long enough that AssignRights is inside its browse, wanting this lock.
+			authorizer->NodeRights( NodeId::ObjectsFolder(), UserPK{7} );//pre-fix: blocks on the exclusive _nodeResourcesMutex AssignRights is holding.
+			askedNodeRights = true;
+			return UA_STATUSCODE_GOOD;
+		};
+		let baseObjectType = UA_NODEID_NUMERIC( 0, UA_NS0ID_BASEOBJECTTYPE );
+		ASSERT_EQ( UA_Server_setNodeTypeLifecycle(server, baseObjectType, lifecycle), UA_STATUSCODE_GOOD );
+
+		{
+			std::jthread adder{ [server, baseObjectType]{
+				UA_NodeId added;
+				UA_Server_addObjectNode( server, UA_NODEID_NULL, UA_NODEID_NUMERIC(0,UA_NS0ID_OBJECTSFOLDER),
+					UA_NODEID_NUMERIC(0,UA_NS0ID_ORGANIZES), UA_QUALIFIEDNAME(1,(char*)"opcserver-review3-10"),
+					baseObjectType, UA_ObjectAttributes_default, nullptr, &added );
+			} };
+			ASSERT_TRUE( holdingServiceMutex.try_acquire_for(10s) ) << "the type constructor never ran - the test would be vacuous";
+			auth.AssignRights( *server );
+		}
+		UA_Server_setNodeTypeLifecycle( server, baseObjectType, UA_NodeTypeLifecycle{} );//leave the server as it was found.
+		EXPECT_TRUE( askedNodeRights );
+		//Non-vacuity: AssignRights returns before the browse when no base resource is configured, and this fixture's are.
+		EXPECT_EQ( auth.NodeRights(NodeId::ObjectsFolder(), UserPK{(UserPK::Type)_users.at("readerUser")}), _readerAllowed );
+	}
+
+	//opcserver-review3 L27:  LoadTrustList is ι but caught only OpenSslException and filesystem_error, while
+	//Crypto::ReadCertificate reaches Crypto::Internal::File, which throws IO::IOException for a path that is not there -
+	//unrelated to either, so it crossed the noexcept boundary and terminated the process.
+	//This does NOT reproduce that:  the only way to reach that read with the file gone is the TOCTOU between the directory
+	//iterator and it, and a dangling symlink - the obvious stand-in - throws filesystem_error out of last_write_time first,
+	//which was always caught.  What it pins is the contract the finding is about:  a bad entry does not escape the ι scan,
+	//and does not cost the directory's other certificates their trust.
+	TEST( TrustListTests, AnUnreadableEntryDoesNotEscapeTheNoexceptScan ){
+		let dirs = Settings::FindStringArray( "/access/trustedCertDirs" );
+		ASSERT_FALSE( dirs.empty() );
+		const fs::path dir{ dirs.front() };
+		std::error_code ec; fs::create_directories( dir, ec );
+		let dangling = dir/"opcserver-review3-L27.pem";
+		fs::remove( dangling, ec );
+		fs::create_symlink( dir/"no-such-certificate-file", dangling, ec );
+		ASSERT_FALSE( ec ) << "could not stage the dangling symlink: " << ec.message();
+
+		UA_TrustListDataType list; UA_TrustListDataType_init( &list );
+		EXPECT_NO_THROW( UATrust::LoadTrustList(list) );//it is ι - anything escaping is std::terminate, not a throw the test sees.
+		UA_TrustListDataType_clear( &list );
+
+		fs::remove( dangling, ec );
+		UA_TrustListDataType after; UA_TrustListDataType_init( &after );
+		UATrust::LoadTrustList( after );//resync the mtime cache so the rest of the process sees the real trust list.
+		EXPECT_NE( after.trustedCertificatesSize, 0u ) << "the good certificates in that directory are still trusted";
+		UA_TrustListDataType_clear( &after );
+	}
+
+	//opcserver-review3 L24:  every accepting branch of ActivateSession assigned straight through *sessionContext, and
+	//open62541 passes &session->context on *every* activation - re-activation is explicitly allowed, and the vendor's own
+	//client re-activates on a channel renew - while closeSession only ever sees the last pointer.  So each re-activation
+	//dropped the previous context on the floor.  Nothing but the gateway suite drives activation at all, and nothing
+	//drives it twice on one session;  this does.
+	TEST_F( AccessTests, ReactivatingASessionReplacesItsContext ){
+		let jwt = BlockAwait<Web::Client::ClientSocketAwait<Jde::Web::Jwt>,Web::Jwt>( AppClient()->Jwt() );
+		let token = jwt.Payload();//the wire form the gateway sends (TokenTests does the same).
+		UA_IssuedIdentityToken issued; UA_IssuedIdentityToken_init( &issued );
+		issued.tokenData = UA_BYTESTRING_ALLOC( token.c_str() );
+		UA_ExtensionObject identity; UA_ExtensionObject_init( &identity );
+		UA_ExtensionObject_setValueNoDelete( &identity, &issued, &UA_TYPES[UA_TYPES_ISSUEDIDENTITYTOKEN] );
+
+		void* slot{};
+		auto& accessControl = UA_Server_getConfig( _ua->Ptr() )->accessControl;//ActivateSession reads ac->context before it branches.
+		let activate = [&]{ return UAAccess::ActivateSession( _ua->Ptr(), &accessControl, nullptr, nullptr, nullptr, &identity, &slot ); };
+		ASSERT_EQ( activate(), UA_STATUSCODE_GOOD );
+		let first = slot; ASSERT_TRUE( first );
+		EXPECT_EQ( static_cast<UAAccess::SessionContext*>(slot)->UserPK, AppClient()->UserPK() );
+
+		ASSERT_EQ( activate(), UA_STATUSCODE_GOOD ) << "re-activation is allowed and must not be refused";
+		EXPECT_TRUE( slot );
+		EXPECT_EQ( static_cast<UAAccess::SessionContext*>(slot)->UserPK, AppClient()->UserPK() ) << "the replacement carries the same identity";
+		//`first` is freed by the second activation - the fix.  Not asserted: the free itself is not observable here, since
+		//Process::Shutdown ends in std::_Exit and LSan never runs, and a recoverable leak check would trip on the suite's
+		//pre-existing ones (opcserver-review #23).
+		UAAccess::CloseSession( _ua->Ptr(), nullptr, nullptr, slot );
+		UA_IssuedIdentityToken_clear( &issued );
+	}
+
+	//opcserver-review3 L20:  the session-expiry renewal was a BlockAwait made from inside the access-control callbacks -
+	//which open62541 calls with its serviceMutex held - so a hung AppServer froze every OPC client for the socket deadline,
+	//and the timeout then tore down the app-client socket.  It is now posted and answered on the io thread; the UA thread
+	//serves the lapsed snapshot while the question is outstanding, bounded by one renewal interval, and any answer -
+	//including a failure - ends that grace.  These drive GetUserAccessLevel, which is what consults it.
+	TEST_F( AccessTests, ALapsedSessionIsServedWhileTheRenewalIsOutstandingThenDenied ){
+		let nodeId = UA_NODEID_NUMERIC( 0, UA_NS0ID_SERVER );
+		let readerPK = (UserPK::Type)_users.at( "readerUser" );
+		let access = [&]( UAAccess::SessionContext& ctx ){ return (EAccess)UAAccess::GetUserAccessLevel( _ua->Ptr(), nullptr, nullptr, &ctx, &nodeId, nullptr ); };
+
+		//No session id: nothing to ask the authority about, so a lapsed snapshot is simply expired.
+		UAAccess::SessionContext noId{ "", Clock::now()-1s, 0, {readerPK} };
+		EXPECT_EQ( access(noId), EAccess::None );
+
+		//Lapsed well past the renewal interval: outstanding or not, the snapshot is too old to serve.
+		UAAccess::SessionContext stale{ "", Clock::now()-10min, 4242, {readerPK} };
+		EXPECT_EQ( access(stale), EAccess::None );
+
+		//Just lapsed, renewal outstanding: served rather than denied - and it returned, which is the whole point.
+		UAAccess::SessionContext lapsed{ "", Clock::now()-1s, 4243, {readerPK} };
+		let start = Clock::now();
+		EXPECT_EQ( access(lapsed), ToAccess(_readerAllowed) );
+		EXPECT_LT( Clock::now()-start, 5s ) << "the callback must not wait on the AppServer";
+
+		//4243 is not a session the AppServer knows, so the renewal fails - and a failure is an answer, which ends the grace.
+		for( uint i=0; i<100 && access(lapsed)!=EAccess::None; ++i )
+			std::this_thread::sleep_for( 50ms );
+		EXPECT_EQ( access(lapsed), EAccess::None ) << "once the authority has answered, the lapsed snapshot is no longer served";
+	}
+
+	//access-review3 L22:  _nodeResources was built once, by the AssignRights that startup runs, and nothing rebuilt it - so
+	//a criteria-scoped `nodeIds` resource created afterwards (what the node-access page writes) was never mapped.  The node
+	//kept falling back to the root's rights, and a per-node allow or deny did nothing until the process restarted.
+	//OpcAuthorize now overrides the two Authorize hooks the AccessListener already calls and re-maps on them;  this drives
+	//them exactly as AccessListener::ResourceChanged does, so no QL round trip is needed.
+	TEST_F( AccessTests, ACriteriaResourceCreatedAfterStartupIsMapped ){
+		auto& auth = static_cast<OpcAuthorize&>( *GetSchema().Authorizer );
+		let reader = UserPK{ (UserPK::Type)_users.at("readerUser") };
+		const NodeId serverNode{ UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER) };//ns0, and ObjectsFolder organizes it - the browse reaches it.
+		constexpr Access::ResourcePK scratchPK{ 999999 };//no row owns this; only the in-memory maps are touched.
+
+		ASSERT_EQ( auth.NodeRights(serverNode, reader), _readerAllowed ) << "before: the node inherits the root resource";
+
+		auth.CreateResource( Access::Resource{scratchPK, jobject{ {"schemaName",_resource}, {"target","nodeIds"}, {"criteria",serverNode.ToString()} }} );
+		EXPECT_EQ( auth.NodeRights(serverNode, reader), Access::ERights::None ) << "after: its own resource governs it, and the reader holds nothing on that one";
+		EXPECT_EQ( auth.NodeRights(NodeId::ObjectsFolder(), reader), _readerAllowed ) << "the root is untouched";
+
+		auth.UpdateResourceDeleted( scratchPK, _resource, jobject{{"id",scratchPK}}, false );
+		EXPECT_EQ( auth.NodeRights(serverNode, reader), _readerAllowed ) << "deleting it hands the node back to the root, also without a restart";
 	}
 }
