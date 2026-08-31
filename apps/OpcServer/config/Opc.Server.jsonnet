@@ -77,7 +77,6 @@ function( sync=false )
 		target: "TestServer",
 		resource: args.buildTarget,
 		description: "Test OPC",
-		db: false,
 		ssl:{
 			certificate: {
 				path:: "{ApplicationDataFolder}/ssl/certs/OpcServer.pem",

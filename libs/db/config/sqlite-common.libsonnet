@@ -53,8 +53,9 @@ paths + {
 	app( extra={} ):: { meta: common.repoSourceDir+"/apps/AppServer/config/app-meta.jsonnet", prefix: "app_", dynamicLib: common.appServerDll } + extra,
 	//opcSchema, not opc: the OpcGateway/OpcServer leaf configs also carry a top-level `opc` data field (the OPC-UA
 	//endpoint urn/url), which would shadow a helper named `opc` in the merged object.
-	opcSchema( extra={} ):: { meta: common.repoSourceDir+"/apps/OpcServer/config/opcServer-meta.jsonnet", prefix: "opc_",
-		dynamicLib: common.lib( "Jde.DB.Sqlite.OpcServer", "/apps/OpcServer/config/sql/sqlite" ) } + extra,
+	//dynamicLib null, not absent: the OpcServer schema owns no tables and no native procs - its address space lives in
+	//NodeSet2 xml - and SqliteDataSource::SetConfig reads the explicit null as "nothing to load" (a missing key still throws).
+	opcSchema( extra={} ):: { meta: common.repoSourceDir+"/apps/OpcServer/config/opcServer-meta.jsonnet", prefix: "opc_", dynamicLib: null } + extra,
 	gateway( extra={} ):: { meta: common.repoSourceDir+"/apps/OpcGateway/config/opcGateway-meta.jsonnet", prefix: "gateway_",
 		dynamicLib: common.lib( "Jde.DB.Sqlite.OpcGateway", "/apps/OpcGateway/config/sql/sqlite" ) } + extra,
 }

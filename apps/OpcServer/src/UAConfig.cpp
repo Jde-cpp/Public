@@ -17,20 +17,34 @@ namespace Jde::Opc::Server{
 		UA_ServerConfig{
 			.logging = &_logger,
 		}{
-		if( auto ssl = Settings::FindObject("/opcServer/ssl"); ssl ){
-			try{
+		try{
+			if( auto ssl = Settings::FindObject("/opcServer/ssl"); ssl )
 				SetupSecurityPolicies( Crypto::CryptoSettings{*ssl} );
-			}
-			catch( std::exception& ){
-				UA_ServerConfig_clear( this );
-				throw;//rethrow original: `throw move(e)` slices to std::exception, losing the derived type and Jde::Exception state.
-			}
+			else
+				SetupUnsecured();
 		}
-		else
-			UA_ServerConfig_setDefault( this );
+		catch( std::exception& ){
+			UA_ServerConfig_clear( this );
+			throw;//rethrow original: `throw move(e)` slices to std::exception, losing the derived type and Jde::Exception state.
+		}
 		auto accessResource = Settings::FindString( "/opcServer/resource" ).value_or( "default" );
 		UA_LocalizedText_clear( &applicationDescription.applicationName );// setDefaultConfig/setBasics already allocated applicationName; clear before overwriting or it leaks.
 		applicationDescription.applicationName = UA_LOCALIZEDTEXT_ALLOC( "en-US", Ƒ("Jde-Cpp OpcServer [{}]", accessResource).c_str() );
+	}
+
+	//No /opcServer/ssl.  This used to be UA_ServerConfig_setDefault, which is setMinimalCustomBuffer - and that installs
+	//UA_AccessControl_default( config, allowAnonymous=true, … ), whose getUserRightsMask/getUserAccessLevel/allowBrowseNode
+	//answer 0xFFFFFFFF/0xFF/true to every session, never reaches UAAccess::Init, and hard-codes port 4840 while ignoring
+	///opc/tokenTypes/* (opcserver-review3 #7).  Silently, too: the missing "UserToken Uris" INFO was the only tell, and
+	//a hidden `ssl::` or a mistyped key reads here exactly like a deliberate omission.  Same sequence as the vendor's,
+	//with our access control in place of its allow-all and the configured port.
+	α UAConfig::SetupUnsecured()ε->void{
+		let port = Settings::FindNumber<PortType>( "/opcServer/port" ).value_or( 4840 );
+		WARN( "No '/opcServer/ssl':  the OPC UA server on port {} runs unencrypted - one None endpoint, no trust list, no client-certificate verification.  Both shipped configs set it.", port );
+		UAε( UA_ServerConfig_setBasics_withPort(this, port) );
+		UAε( UA_ServerConfig_addSecurityPolicyNone(this, nullptr) );
+		UAAccess::Init( *this );//throws "No allowed policies set." when /opc/tokenTypes/* leaves nothing enabled - a server nobody can activate a session on, which is the fail-closed answer.
+		UAε( UA_ServerConfig_addAllEndpoints(this) );
 	}
 
 	α UAConfig::SetupSecurityPolicies( const Crypto::CryptoSettings& settings, SL sl )ε->void{
@@ -105,9 +119,5 @@ namespace Jde::Opc::Server{
     //UAε( UA_ServerConfig_addSecurityPolicyEccNistP256(this, &localCertificate, &decryptedPrivateKey);
     UA_ByteString_memZero( &decryptedPrivateKey );
     UA_ByteString_clear( &decryptedPrivateKey );
-	}
-
-	α UAConfig::SetAccessControl()ι{
-
 	}
 }

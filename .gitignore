@@ -70,7 +70,6 @@ libs/app/shared/proto/Web.FromServer.proto
 !.github/
 !.github/**
 apps/OpcGateway/config/common-meta.libsonnet
-apps/OpcServer/config/common-meta.libsonnet
 apps/AppServer/config/common-meta.libsonnet
 libs/access/config/common-meta.libsonnet
 **/*.aps

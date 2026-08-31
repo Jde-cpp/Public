@@ -31,7 +31,6 @@ if( NOT WIN32 )
   target_include_directories( ${targetName} PRIVATE /usr/include/libxml2 )
 endif()
 
-sqliteProcDependencies( ${targetName} Jde.DB.Sqlite.OpcServer )
 
 target_link_libraries( ${targetName} PUBLIC Jde.App.Client Jde.Web.Server Jde.Opc )
 if( NOT WIN32 )
@@ -44,4 +43,3 @@ target_precompile_headers( ${targetName}
 	PRIVATE
 		pc.h
 )
-linkConfigFile( "${jdeRoot}/libs/db/config/common-meta.libsonnet" "${jdeRoot}/apps/OpcServer/config/common-meta.libsonnet" )

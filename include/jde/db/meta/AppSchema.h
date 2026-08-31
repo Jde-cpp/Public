@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <jde/db/exports.h>
+#include <jde/access/usings.h>//Access::ERights, for the declared-resource map below.
 
 namespace Jde::Access{ struct IAcl; }
 namespace Jde::DB{
@@ -34,6 +35,11 @@ namespace Jde::DB{
 		string Prefix;
 		flat_map<string,sp<Table>> Tables;
 		flat_map<string,sp<View>> Views;
+		//Access resources the schema declares outright, as `resources:{ <jsonName>:{ ops:[…] } }`, keyed by the same
+		//internal name a table of that name would carry.  ResourceSyncAwait creates a row for each exactly as it does
+		//for a table with ops - for a target that names something the schema governs without owning a table for it
+		//(the OpcServer's `nodeIds`: its address space is NodeSet2 xml, but every node acl still hangs off that resource).
+		flat_map<string,Access::ERights> Resources;
 	private:
 		AppSchema( sv name, sv prefix, const jobject& meta, sp<Access::IAcl> authorizer )ε;
 	};

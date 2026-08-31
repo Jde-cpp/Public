@@ -382,7 +382,7 @@ namespace Jde::Opc::Gateway{
 			UA_ClientConfig_setAuthenticationCert( &_config, *certificate, *privateKey );//read above, before anything was allocated.
 		}else if( Credential.Type()==ETokenType::IssuedToken ){
 			ASSERT( Credential.Token().size() );
-			INFO( "[{}]Using issued token authentication: '{}'", hex(Handle()), Credential.Token() );
+			INFO( "[{}]Using issued token authentication ({} bytes).", hex(Handle()), Credential.Token().size() );
 			UA_IssuedIdentityToken* identityToken = UA_IssuedIdentityToken_new();
 			identityToken->policyId = AllocUAString( "open62541-anonymous-policy"sv );
 			UA_ByteString_allocBuffer( &identityToken->tokenData, Credential.Token().size() );

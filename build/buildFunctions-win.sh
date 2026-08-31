@@ -18,7 +18,6 @@ function projectName() (
 	elif [[ $absoluteFile == *"config/sql/sqlite"* ]]; then #native-proc modules
 		if [[ $absoluteFile == *"AppServer"* || $absoluteFile == *"access"* ]]; then project="Jde.DB.Sqlite.AppServer"; #access procs are registered in AppServer's module
 		elif [[ $absoluteFile == *"OpcGateway"* ]]; then project="Jde.DB.Sqlite.OpcGateway";
-		elif [[ $absoluteFile == *"OpcServer"* ]]; then project="Jde.DB.Sqlite.OpcServer";
 		fi;
 	elif [[ $absoluteFile == *"access/src"* ]]; then project="Jde.Access";
 	elif [[ $absoluteFile == *"db/drivers/sqlite/tests"* ]]; then project="Jde.DB.Sqlite.Tests"; #each tests arm precedes its driver arm - the driver pattern also matches files under it.

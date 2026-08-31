@@ -20,6 +20,15 @@ namespace Jde::DB{
 		return tables;
 	}
 
+	//`resources:{ <jsonName>:{ ops:[…] } }` - a resource the schema declares without a table behind it.  Same key
+	//convention as tables, so the row the sync writes is the one a table of that name would have produced.
+	α GetResources( const jobject& jresources )ε->flat_map<string,Access::ERights>{
+		flat_map<string,Access::ERights> y;
+		for( let& [jname,resource] : jresources )
+			y.emplace( Names::FromJson(jname), Access::ToRights(Json::AsArray(Json::AsObject(resource), "ops")) );
+		return y;
+	}
+
 	α GetViews( const jobject& jviews )ε->flat_map<string,sp<View>>{
 		flat_map<string,sp<View>> views;
 		for( let& [jname,view] : jviews ){
@@ -34,7 +43,8 @@ namespace Jde::DB{
 		Authorizer{ authorizer },
 		Prefix{ prefix },
 		Tables{ GetTables(Json::AsObject(meta,"tables")) },
-		Views{ meta.contains("views") ? GetViews(Json::AsObject(meta.at("views"))) : flat_map<string,sp<View>>{} }
+		Views{ meta.contains("views") ? GetViews(Json::AsObject(meta.at("views"))) : flat_map<string,sp<View>>{} },
+		Resources{ meta.contains("resources") ? GetResources(Json::AsObject(meta.at("resources"))) : flat_map<string,Access::ERights>{} }
 	{}
 
 	AppSchema::AppSchema( sv name, const jobject& appSchema, sp<Access::IAcl> authorizer )ε:
