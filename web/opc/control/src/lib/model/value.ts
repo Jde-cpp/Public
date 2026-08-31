@@ -24,7 +24,7 @@ export function valueJson( value: Value ):any/*:NodeIdJson*/{
 
 export function valueString( value: Value|undefined ):string{
 	if( value===undefined || value===null )
-		return "";//retrieveSnapshot blanks every Variable.value while the read is in flight, and the Object.hasOwn test below throws on null/undefined - so rendering a row in that window crashed the page
+		return "";//a Variable the browse could not read has no value, and the Object.hasOwn test below throws on null/undefined - so rendering that row crashed the page
 	else if( typeof value === "string" )
 		return value;
 	else if( typeof value === "number" )

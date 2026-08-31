@@ -9,7 +9,6 @@
 		"cmake.sourceDirectory": "${config:workspace}/../..",
 		"cmake.buildDirectory": "${command:jde.repoBuildDir}",
 		"settings": "${workspaceFolder:config}/App.Server.jsonnet",
-		"program-linux": "${config:subDir}/exe/${config:target}",
 		"program": "${config:binDir}/${config:target}${config:targetExtension}"
 	},
 	"launch": {

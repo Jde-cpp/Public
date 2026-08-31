@@ -260,7 +260,7 @@ export class QLList implements OnInit, OnDestroy{
 	get routeConfig():Route{ return this.route.routeConfig!; }
 	routeStore = inject( RouteStore );
 	schema = computed<TableSchema>( ()=>this.resolvedData().schema );
-	get sort():Sort{ return this.view().sort?.length ? this.view().sort[0] : {active: "name", direction: "asc"}; }
+	get sort():Sort{ return this.view().sort?.length ? this.view().sort[0] : {active: "", direction: ""}; }
 	showDeleted = computed<boolean>( ()=>this.resolvedData().profile.showDeleted );
 	canAdd = computed<boolean>( ()=>this.tableSettings().canAdd ?? true );//off the tableSettings, like canPurge - a route that set it anywhere else was silently ignored
 	tableSettings = computed<TableSettings>( ()=>this.resolvedData().routing.tableSettings );

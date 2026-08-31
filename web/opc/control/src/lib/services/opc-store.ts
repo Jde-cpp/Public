@@ -1,4 +1,4 @@
-import { Injectable } from "@angular/core";
+import { Injectable, signal } from "@angular/core";
 import { CnnctnTarget, ServerCnnctn } from "../model/server-cnnctn";
 import { browseEq, ETypes, Ns, toBrowse } from '../model/types';
 import { NodeRoute } from "../model/node-route";
@@ -7,6 +7,7 @@ import { NodeId, NodeKey } from "../model/node-id";
 import { RouteItem } from "jde-spa";
 import { Gateway, GatewayTarget } from "./gateway-service";
 import { Server, ServerProps } from "../model/server";
+import { NodeView } from "../model/node-view";
 
 class StoreNode{
 	constructor( node:UaNode ){
@@ -21,6 +22,10 @@ class StoreNode{
 export class OpcStore{
 	constructor()
 	{}
+
+	//the node table's active view, kept current by NodeChildren.  setRoute orders the sidenav siblings by its sort, and runs from
+	//the resolver - before the component hears of the new route - so the view has to already be here rather than asked for.
+	nodeView = signal<NodeView|undefined>( undefined );
 
 	public async getConnection( gatewayService:Gateway, cnnctn:CnnctnTarget ):Promise<Server>{
 		//#connections = new Map<GatewayTarget,Map<CnnctnTarget, ServerCnnctn>>();
@@ -132,6 +137,8 @@ export class OpcStore{
 	//siblings bare browse names.  Both used to be full paths, so every link resolved relative to the sidenav route
 	//('/gateways/Debug/local/2~DeviceSet/local/2~DeviceSet/2~DeviceFeatures') - no sibling matched the current url and the
 	//routerLinkActive highlight never came on.
+	//The siblings come in the node table's order - the active view's sort, without its filters - so the sidenav lists them as
+	//the parent page did;  in browse order a name-sorted table's last row could land anywhere.
 	setRoute(route: NodeRoute, defaultBrowseNs:Ns|undefined ):void{
 		const cnnctnName = this.cnnctnName( route.gatewayTarget, route.cnnctnTarget );
 		if( route.node.equals(OpcObject.rootNode) ){
@@ -154,13 +161,15 @@ export class OpcStore{
 		//the root store node is named after the target, so the connection level takes the display name instead
 		const parentTitle = parent.node.equals( OpcObject.rootNode ) ? cnnctnName : (parent.node.name ?? cnnctnName);
 		route.parent = new RouteItem( {path: [route.cnnctnUrl, ...parentPaths.reverse()].join('/'), title: parentTitle} );
-		route.siblings = [];
+		const siblings:UaNode[] = [];
 		for( const sibling of parent.children ){
 			const siblingStore = sibling.key == route.nodeId.key ? store : findStore( sibling.nodeId );
 			const siblingRef = siblingStore?.node;
 			if( siblingRef?.isObject && siblingRef?.displayed )
-				route.siblings.push( new RouteItem({path: siblingRef.browseFQ(defaultBrowseNs), title: siblingRef.name}) );
+				siblings.push( siblingRef );
 		}
+		const view = this.nodeView() ?? NodeView.default();
+		route.siblings = view.sortNodes( siblings ).map( n=>new RouteItem({path: n.browseFQ(defaultBrowseNs), title: n.name}) );
 	}
 	findNodeId( gateway:string, cnnctnTarget:string, browsePath:string ):UaNode|undefined{
 		let nodes = this.getNodes(gateway, cnnctnTarget);

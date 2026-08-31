@@ -3,8 +3,7 @@
 		<ql-list-settings [suggestions]=colSuggestions() [columns]=columns [view]=viewCopy() [schema]=schema (onSave)=onViewSave($event) (onShow)=onViewShow($event) (onDelete)=onViewDelete($event) (onCancel)="isSettings.set(false)"></ql-list-settings>
 	} @else {
 		<mat-toolbar>
-			<div class="bar-left">
-				<button matButton="outlined" [disabled]="retrievingSnapshot() || !variables.length" (click)="retrieveSnapshot()" >Snapshot</button>
+			<div class="bar-left"><!--empty: the browse carries every value, so Refresh is the only reader.  kept as the spacer `justify-content: space-between` needs to hold .bar-right at the right edge, as ql-list's is when Add is hidden-->
 			</div>
 			<div class="bar-center"><!--the two icon buttons are equal width, so they bracket the group symmetrically and it lands dead centre-->
 				<button matIconButton aria-label="Refresh" matTooltip="Refresh" [disabled]="isRefreshing()" (click)="onRefresh()">
@@ -89,7 +88,7 @@
 						@else if( r.dataType==ETypes.BaseData && !r.isArray ){
 							<span>{{toString(r.value)}}</span>
 						}
-						@else if( r.dataType==ETypes.UtcDateTime && !r.isArray ){
+						@else if( [ETypes.DateTime, ETypes.UtcDateTime].includes(r.dataType) && !r.isArray ){
 								<input matInput [matDatepicker]="picker" [value]="dateValue(r)" (dateChange)="changeDate(r, $event);">
 								<mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
 								<mat-datepicker #picker></mat-datepicker>

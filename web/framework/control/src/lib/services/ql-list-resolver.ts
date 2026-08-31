@@ -89,7 +89,7 @@ export class QLListResolver implements Resolve<QLListData> {
 		let defaultView = await QLListResolver.defaultView( schema, pageSettings.configColumns );
 		var profile = new PageProfile();
 		profile.views.push( defaultView );
-		await profile.loadViews( collectionName, profileStore, schema );
+		await profile.loadViews( collectionName, profileStore, schema, defaultView.sort );
 		profile.currentViewIndex = ProfileStore.viewIndex( collectionName );
 		profile.showDeleted = ProfileStore.showDeleted( collectionName );
 		return {pageSettings, profile, schema, results: null, routing, columns: QLListResolver.columns(schema, routing.tableSettings.columns!, routing.tableSettings.excludedColumns)};
