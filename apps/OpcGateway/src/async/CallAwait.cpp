@@ -2,6 +2,8 @@
 #include <jde/opc/uatypes/Variant.h>
 #include <jde/fwk/utils/collections.h>
 
+#define let const auto
+
 namespace Jde::Opc::Gateway{
 	CallResponse::CallResponse( CallResponse&& x )ι:
 		UA_CallResponse{ x }{
@@ -27,17 +29,6 @@ namespace Jde::Opc::Gateway{
 	}
 	α CallResponse::ToJson()ι->jvalue{
 		return jobject{};
-/*		jarray resultsJson;
-		for( size_t i=0; i<resultsSize; ++i )
-			resultsJson.push_back( results[i].ToJson() );
-		jarray diagnosticInfosJson;
-		for( size_t i=0; i<diagnosticInfosSize; ++i )
-			diagnosticInfosJson.push_back( diagnosticInfos[i].ToJson() );
-		return jobject{
-			{"responseHeader", responseHeader.ToJson()},
-			{"results", resultsJson},
-			{"diagnosticInfos", diagnosticInfosJson}
-		};*/
 	}
 
 	Ω callback( UA_Client*, void* hptr, UA_UInt32, UA_CallResponse* cr )ι->void{
@@ -52,7 +43,7 @@ namespace Jde::Opc::Gateway{
 				try{
 					jarray jargs = Json::FindDefaultArray( _ql.Args, "args" );
 					auto args = Reserve<Variant>( jargs.size() );
-					UA_Client_call_async(
+					UACε( UA_Client_call_async(
 						*_client,
 						NodeId{ _ql.Args },
 						NodeId{ _ql.As<jobject>("method") },
@@ -61,7 +52,7 @@ namespace Jde::Opc::Gateway{
 						callback,
 						&_h,
 						&_requestId
-					);
+					) );
 					_client->Process( _requestId, "call" );
 				}
 				catch( runtime_error& e ){

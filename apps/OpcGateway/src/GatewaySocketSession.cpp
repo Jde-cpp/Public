@@ -21,6 +21,7 @@ namespace Jde::Opc::Gateway{
 		if( !Stream )
 			return;
 		LogRead( "OnClose", 0 );
+		UAClient::Unsubscribe( SharedFromThis() );
 		Server::RemoveSession( Id() );
 		base::OnClose();
 	}
@@ -50,7 +51,10 @@ namespace Jde::Opc::Gateway{
 		try{
 			auto self = SharedFromThis(); //keep alive
 			LogRead( Ƒ("({:x})Subscribe: opcId: '{}', nodeCount: {}", base::SessionId(), opcId, nodes.size()), requestId );
-			ASSERT( Session() );
+			if( !Session() ){//a client can send kSubscribe with no preceding kSessionId; *Session() would be a null deref.
+				WriteException( Exception{"Send sessionId before subscribing."}, requestId );
+				co_return;
+			}
 			auto client = co_await ConnectAwait( string{opcId}, *Session() );
 			if( client )
 				CreateSubscription( move(client), move(nodes), requestId );

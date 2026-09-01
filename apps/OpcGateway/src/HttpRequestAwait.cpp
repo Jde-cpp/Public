@@ -79,6 +79,7 @@ namespace Jde::Opc::Gateway{
 				throw RestException{ EHttpStatus::BadRequest, SRCE_CUR, move(_request), "user not specified" };
 			auto password = Json::AsString( body, "password" );
 			_request.LogRead( Ƒ("(opc: {}, user: {})", *domain, *user) );
+			THROW_IFX( !_request.SessionInfo, RestException(EHttpStatus::Unauthorized, SRCE_CUR, move(_request), "No session.") ); // no use case
 			let sessionInfo = co_await PasswordAwait{ move(*user), move(password), move(*domain), endpoint, false, _request.SessionInfo->SessionId };
 			if( sessionInfo ){
 				_request.SessionInfo->SessionId = sessionInfo->session_id();
@@ -115,8 +116,6 @@ namespace Jde::Opc::Gateway{
 			Login( _request.UserEndpoint.address().to_string() );
 		else if( _request.IsPost("/logout") )
 			Logout();
-		else if( _request.IsGet("/graphql") || _request.IsPost("/graphql") )
-			ResumeExp( RestException{ EHttpStatus::NotFound, SRCE_CUR, move(_request), "Unknown target '{}'", _request.Target() } );
 		else{
 			auto opc = _request["opc"];
 			if( opc.size() )

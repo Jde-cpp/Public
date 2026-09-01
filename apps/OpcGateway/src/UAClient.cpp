@@ -26,7 +26,7 @@ namespace Jde::Opc::Gateway{
 		bool erased{};
 		ul _{ _clientsMutex };
 		if( auto serverCreds = _clients.find(client->Target()); serverCreds!=_clients.end() ){
-			if( auto cred = serverCreds->second.find(client->Credential); cred!=serverCreds->second.end() ){
+			if( auto cred = serverCreds->second.find(client->Credential); cred!=serverCreds->second.end() && cred->second==client ){
 				DBG( "[{}]Removing client: '{}'.", hex(client->Handle()), client->Target() );
 				serverCreds->second.erase( cred );
 				erased = true;
@@ -34,11 +34,17 @@ namespace Jde::Opc::Gateway{
 					_clients.erase( serverCreds );
 
 			}
+			else if( cred!=serverCreds->second.end() )
+				DBG( "[{}] - already replaced by [{}] for '{}' - leaving it.", hex(client->Handle()), hex(cred->second->Handle()), client->Target() );
 		}
 		if( !erased )
 			DBG( "[{}] - could not find client='{}'.", hex(client->Handle()), client->Target() );
 		client = nullptr;
 		return erased;
+	}
+	α UAClient::RemoveIfDisconnected( StatusCode sc, const sp<UAClient>& client )ι->void{
+		if( sc==UA_STATUSCODE_BADSERVERNOTCONNECTED && client )
+			RemoveClient( sp<UAClient>{client} );
 	}
 	α UAClient::LiveClients()ι->vector<sp<UAClient>>{
 		vector<sp<UAClient>> y;
@@ -116,8 +122,8 @@ namespace Jde::Opc::Gateway{
 		}
 		//Must not hold _clientsMutex across co_await: the awaitable resumes on another pool thread (UB to unlock a shared_mutex off-thread) and the resume path (RemoveClient, StateCallback insertion) needs the unique lock.
 		for( auto& client : clients ){
-			if( auto p = move(client->_monitoredNodes); p )
-				co_await p->Shutdown();
+			if( client->_monitoredNodes )
+				co_await client->_monitoredNodes->Shutdown();
 			client->StopProcessing();
 			if( client.use_count()>2 )//_clients + this local copy are expected; more may just be pending strand closures (StopProcessing above) - log-only heuristic.
 				WARN( "[{}]use_count={}", hex(client->Handle()), client.use_count() );
@@ -480,11 +486,18 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α UAClient::Unsubscribe( const sp<IDataChange>&& dataChange )ι->void{
-		sl _{ _clientsMutex };
-		for( auto&& [_, credClients] : _clients ){
-			for( auto&& [_, client] : credClients )
-				client->MonitoredNodes().Unsubscribe( dataChange );
+	α UAClient::Unsubscribe( const sp<IDataChange>& dataChange )ι->void{
+		vector<sp<UAClient>> clients;
+		{
+			sl _{ _clientsMutex };
+			for( let& [_, credClients] : _clients ){
+				for( let& [_, client] : credClients )
+					clients.push_back( client );
+			}
+		}
+		for( let& client : clients ){//outside the lock, as StatusCounts does:  Unsubscribe takes the nodes mutex.
+			if( auto p = client->TryMonitoredNodes(); p )//a client that never subscribed has nothing to drop - no reason to build it one here.
+				p->Unsubscribe( dataChange );
 		}
 	}
 

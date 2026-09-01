@@ -51,7 +51,7 @@ namespace Jde::Opc::Gateway{
 			for( auto h : x.second )
 				resume( move(h) );
 			}) ){
-			CRITICALT( ELogTags::App, "Could not find client ({:x}) for SetMonitoringModeAwait", (uint)_client->UAPointer() );
+			CRITICALT( ELogTags::App, "Could not find client ({}) for SetMonitoringModeAwait", hex((uint)_client->UAPointer()) );
 		}
 		_monitoringRequests.erase( _client );
 	}

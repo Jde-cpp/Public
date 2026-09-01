@@ -30,8 +30,10 @@ namespace Browse{
 
 	struct Request :UA_BrowseRequest{
 		Request( NodeId&& id, UA_BrowseResultMask mask )ι;
+		Request( vector<NodeId>&& ids, UA_BrowseResultMask mask )ι;//one BrowseDescription per id;  results[i] answers ids[i].
 		Request( NodeId&& id, const QL::TableQL& ql )ι;
 		Ω Hierarchical( NodeId&& id, UA_BrowseResultMask mask )ι->Request;//forward HierarchicalReferences (subtypes included), objects/variables/methods only - the NodeIndex crawl.
+		Ω Hierarchical( vector<NodeId>&& ids, UA_BrowseResultMask mask )ι->Request;//the same, for a whole BFS level in one round trip.
 		Ω Properties( NodeId&& id )ι->Request;//forward HasProperty (no subtypes), variables only, browse names - a DataType's EnumValues/EnumStrings (EnumTypeCache).
 		Request( Request&& x )ι:UA_BrowseRequest{ x }{ UA_BrowseRequest_init( &x );}
 		Request( const Request& x )ι{ UA_BrowseRequest_copy( &x, this ); }

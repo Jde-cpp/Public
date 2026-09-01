@@ -16,13 +16,13 @@ namespace Jde::Opc::Gateway{
 		auto pClient = UAClient::TryFind(ua); if(!pClient) return;
 		Value value{ move(*uaValue) };
 		let h = MonitorHandle{ subId, monId };
-		TRACET( DataChangesTag, "[{:x}.{:x}] DataChangesCallback - {}", (uint)ua, (Handle)h, serialize(value.ToJson()) );
+		TRACET( DataChangesTag, "[{}.{}] DataChangesCallback - {}", hex((uint)ua), hex((Handle)h), serialize(value.ToJson()) );
 		if( !pClient->MonitoredNodes().SendDataChange(h, move(value)) )
-			DBGT( DataChangesTag, "[{:x}.{:x}]Could not find node monitored item.", (uint)ua, (Handle)MonitorHandle{subId, monId} );
+			DBGT( DataChangesTag, "[{}.{}]Could not find node monitored item.", hex((uint)ua), hex((Handle)MonitorHandle{subId, monId}) );
 	}
 
 	Ω dataChangesDeleteCallback( UA_Client* ua, SubscriptionId subId, void* /*_subContext_*/, MonitorId monId, void* /*_monContext_*/ )->void{
-		TRACE( "[{:x}.{:x}]DataChangesDeleteCallback", (uint)ua, (Handle)MonitorHandle{subId, monId} );
+		TRACE( "[{}.{}]DataChangesDeleteCallback", hex((uint)ua), hex((Handle)MonitorHandle{subId, monId}) );
 	}
 
 	α DataChangeAwait::Suspend()ι->void{

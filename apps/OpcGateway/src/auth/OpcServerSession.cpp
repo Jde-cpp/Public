@@ -98,9 +98,9 @@ namespace Jde::Opc{
 		ul _{ _sessionsMutex };
 		let erased = _sessions.erase( sessionId );
 		if( erased ){
-			TRACET( ELogTags::App, "Session {:x} erased.", sessionId );
+			TRACET( ELogTags::App, "Session {} erased.", hex(sessionId) );
 		}else
-			TRACET( ELogTags::App, "Session {:x} not found.", sessionId );
+			TRACET( ELogTags::App, "Session {} not found.", hex(sessionId) );
 	}
 	α Gateway::GetCredential( SessionPK sessionId, str opcId )ι->optional<Credential>{
 		optional<Credential> cred;

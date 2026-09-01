@@ -277,7 +277,8 @@ namespace Jde::QL{
 		catch( std::logic_error e ){
 			throw Exception( SRCE_CUR, {}, move(e), "Could not parse '{}' @ '{}'.", json, i );
 		}
-		THROW_IF( i>=json.size() || json[i]!='}', "Expected '}}' vs '{}' in {} @ '{}'.", json[i], json, i );
+		THROW_IF( i>=json.size(), "Expected '}}' in {} @ '{}'.", json, i );
+		THROW_IF( json[i]!='}', "Expected '}}' vs '{}' in {} @ '{}'.", json[i], json, i );
 		y+=json[i++];
 		return i;
 	}

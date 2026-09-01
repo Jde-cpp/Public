@@ -112,8 +112,9 @@ namespace Browse{
 	α ObjectsFolderAwait::Snapshot( Browse::Response response )ι->TAwait<flat_map<NodeId, Value>>::Task{
 		try{
 			if( !_client->Connected ){
-				_client = UAClient::Find( _client->Target(), _client->Credential );
-				THROW_IF( !_client, "Could not find UAClient for: {}", _client->Target() );
+				let target = _client->Target();
+				_client = UAClient::Find( target, _client->Credential );
+				THROW_IF( !_client, "Could not find UAClient for: {}", target );
 			}
 			auto vars = response.Variables();
 			auto values = vars.size() ? co_await ReadValueAwait{ vars, _client } : flat_map<NodeId, Value>{};
@@ -165,6 +166,13 @@ namespace Browse{
 		nodesToBrowse[0].nodeId = id.Move(); //not move(id): that slices, and ~NodeId then frees the id the in-flight request points at.
 	 	nodesToBrowse[0].resultMask = mask;
 	}
+	Request::Request( vector<NodeId>&& ids, UA_BrowseResultMask mask )ι:
+		UA_BrowseRequest{ .requestedMaxReferencesPerNode=0, .nodesToBrowseSize=ids.size(), .nodesToBrowse=(UA_BrowseDescription*)UA_Array_new(ids.size(), &UA_TYPES[UA_TYPES_BROWSEDESCRIPTION]) }{
+		for( uint i=0; i<ids.size(); ++i ){
+			nodesToBrowse[i].nodeId = ids[i].Move();//Move(), as above:  a slice would leave ~NodeId freeing the id the in-flight request points at.
+			nodesToBrowse[i].resultMask = mask;
+		}
+	}
 
 	α calcMask( const QL::TableQL& ql )ι->UA_BrowseResultMask{
 		UA_BrowseResultMask mask = UA_BROWSERESULTMASK_NONE;
@@ -178,12 +186,18 @@ namespace Browse{
 		Request( move(id), calcMask(ql) )
 	{}
 	α Request::Hierarchical( NodeId&& id, UA_BrowseResultMask mask )ι->Request{
-		Request y{ move(id), mask };
-		auto& d = y.nodesToBrowse[0];
-		d.browseDirection = UA_BROWSEDIRECTION_FORWARD;
-		d.referenceTypeId = UA_NODEID_NUMERIC( 0, UA_NS0ID_HIERARCHICALREFERENCES );
-		d.includeSubtypes = true;
-		d.nodeClassMask = UA_NODECLASS_OBJECT | UA_NODECLASS_VARIABLE | UA_NODECLASS_METHOD;
+		vector<NodeId> ids; ids.push_back( move(id) );//one description setup, shared - so the two overloads cannot drift.
+		return Hierarchical( move(ids), mask );
+	}
+	α Request::Hierarchical( vector<NodeId>&& ids, UA_BrowseResultMask mask )ι->Request{
+		Request y{ move(ids), mask };
+		for( uint i=0; i<y.nodesToBrowseSize; ++i ){
+			auto& d = y.nodesToBrowse[i];
+			d.browseDirection = UA_BROWSEDIRECTION_FORWARD;
+			d.referenceTypeId = UA_NODEID_NUMERIC( 0, UA_NS0ID_HIERARCHICALREFERENCES );
+			d.includeSubtypes = true;
+			d.nodeClassMask = UA_NODECLASS_OBJECT | UA_NODECLASS_VARIABLE | UA_NODECLASS_METHOD;
+		}
 		return y;
 	}
 	α Request::Properties( NodeId&& id )ι->Request{
@@ -223,7 +237,10 @@ namespace Browse{
 		return y;
 	}
 	α Response::VisitWhile( uint resultsIndex, function<bool(const UA_ReferenceDescription& ref)> f )Ι->bool{
-		ASSERT_DESC( resultsIndex<resultsSize, Ƒ("resultsIndex {} out of range {}.", resultsIndex, resultsSize) );
+		if( resultsIndex>=resultsSize ){
+			ASSERT_DESC( !resultsSize, Ƒ("resultsIndex {} out of range {}.", resultsIndex, resultsSize) );//an index past a *non-empty* response is a caller bug, and still worth flagging.
+			return true;
+		}
 		bool returnedFalse{};
 		for( size_t j = 0; j < results[resultsIndex].referencesSize; ++j ){
 			returnedFalse = !f( results[resultsIndex].references[j] );
@@ -277,22 +294,22 @@ namespace Browse{
 				const UA_QualifiedName& browseName = ref.browseName;
 				bn["ns"] = browseName.namespaceIndex;
 				bn["name"] = ToSV( browseName.name );
-				reference["browse"] = bn;
+				reference["browse"] = move( bn );
 
 				jobject dn;
 				const UA_LocalizedText& displayName = ref.displayName;
 				dn["locale"] = ToSV( displayName.locale );
 				dn["text"] = ToSV( displayName.text );
-				reference["displayName"] = dn;
+				reference["displayName"] = move( dn );
 
 				reference["nodeClass"] = ref.nodeClass;
 				reference["typeDef"] = Opc::ToJson( ref.typeDefinition );
 
-				references.push_back( reference );
+				references.push_back( move(reference) );
 			}
 		}
 		jobject j;
-		j["refs"] = references;
+		j["refs"] = move( references );
 		return j;
 	}
 }}
