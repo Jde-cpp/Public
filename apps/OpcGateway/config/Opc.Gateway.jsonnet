@@ -9,6 +9,7 @@ function( sync=false )
 		search:{ //the `search` query's per-connection node-name index (src/NodeIndex.cpp), crawled on the first search and dropped with the client at ttl.
 			maxDepth: 12, //levels under Objects
 			maxNodes: 25000, //stop crawling (results flagged truncated) beyond this
+			browseBatch: 64, //folders browsed per request - the crawl browses a whole BFS level at once; a server refusing with BadTooManyOperations drops it to 1 for the rest of that crawl
 			limit: 20, //default rows when the query passes no limit
 			includeServer: false //index the ns=0 Server object's diagnostics subtree
 		},
@@ -85,10 +86,6 @@ function( sync=false )
 	},
 	ql:{
 		introspection: [
-			"introspection/di.jsonnet",
-			"introspection/ia.jsonnet",
-			"introspection/machineTool.jsonnet",
-			"introspection/additive.jsonnet",
 			"introspection/serverConnection.jsonnet",
 			"introspection/search.jsonnet"
 		]

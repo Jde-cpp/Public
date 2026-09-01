@@ -10,7 +10,7 @@ namespace Jde::Opc::Gateway{
 	static ELogTags _tags{ (ELogTags)(EOpcLogTags::Monitoring) };
 	Ω statusChangeNotificationCallback( UA_Client* ua, UA_UInt32 subId, void* /*subContext*/, UA_StatusChangeNotification* /*notification*/ )ι->void{
 		BREAK;
-		TRACE( "[{:x}.{}]StatusChangeNotificationCallback", (uint)ua, subId );
+		TRACE( "[{}.{}]StatusChangeNotificationCallback", hex((uint)ua), subId );
 	}
 
 	Ω deleteSubscriptionCallback( UA_Client* ua, UA_UInt32 subId, void* /*subContext*/ )ι->void{

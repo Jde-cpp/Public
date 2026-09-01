@@ -60,7 +60,7 @@ namespace Jde::Opc::Gateway{
 					let level = _requests.size()>0 ? ELogLevel::Critical : ELogLevel::Debug;
 					string requests;
 					for_each( _requests, [&requests](auto r){requests += Ƒ("{:x}, ", r);} );
-					LOG( level, _tags, "{}UA_Client_run_iterate returned ({:x}){}, requests: [{}]", logPrefix(), sc, UAException::Message(sc), requests );
+					LOG( level, _tags, "{}UA_Client_run_iterate returned ({}){}, requests: [{}]", logPrefix(), hex(sc), UAException::Message(sc), requests );
 					_requests.clear();
 					break;
 				}

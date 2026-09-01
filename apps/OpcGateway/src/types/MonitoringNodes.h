@@ -45,7 +45,7 @@ namespace Jde::Opc::Gateway{
 		};
 		α GetClient()ι->sp<UAClient>;
 		α FindNode( const NodeId& node )ι->tuple<MonitorHandle,Subscription*>;
-		α DeleteMonitoring( wp<UAClient> ua, Handle uaHandle, flat_map<SubscriptionId,flat_set<MonitorId>> requested )ι->DurationTimer::Task;
+		α DeleteMonitoring( sp<UAClient> ua, Handle uaHandle, flat_map<SubscriptionId,flat_set<MonitorId>> requested )ι->DurationTimer::Task;//sp: it has to outlive the wait, and it owns `this`.
 
 		atomic<RequestId> _requestId{};
 		flat_map<MonitorHandle,flat_set<NodeId>> _requests;

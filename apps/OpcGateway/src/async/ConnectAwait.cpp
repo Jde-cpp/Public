@@ -50,7 +50,7 @@ namespace Jde::Opc::Gateway{
 
 	α ConnectAwait::Suspend()ι->void{
 		if( auto client = UAClient::Find(_opcTarget, _cred); client ){
-			TRACET( ((ELogTags)EOpcLogTags::Opc) | ELogTags::Access, "[{:x}]Found client for cred: {}", client->Handle(), _cred.ToString() );
+			TRACET( ((ELogTags)EOpcLogTags::Opc) | ELogTags::Access, "[{}]Found client for cred: {}", hex(client->Handle()), _cred.ToString() );
 			base::Resume( move(client) );
 			return;
 		}
@@ -79,14 +79,27 @@ namespace Jde::Opc::Gateway{
 			client->Connect();
 		}
 		catch( Exception& e ){
-			lg l{ _requestMutex };
-			auto handles = EraseRequests( _opcTarget, _cred, l );
+			vector<ConnectAwait::Handle> handles;
+			{
+				lg l{ _requestMutex };
+				handles = EraseRequests( _opcTarget, _cred, l );
+			}
+			//Copy per waiter, never Move:  Move() moves the payload *out of* e, so the first "clone" hollowed it and every
+			//waiter after it - the last, which takes e itself, included - got the format string with its _args gone
+			//("Could not find connection:  '{}'").  Only the last may consume e.  The UAClientException cast keeps the UA status and UserMessage a connect failure carries;
+			//any other subclass copies as its Exception base, which a polymorphic copy would need a Copy() virtual
+			//mirroring Move() across the hierarchy to avoid.
+			auto copy = [&e]()->up<Exception>{
+				if( let p = dynamic_cast<const UAClientException*>(&e); p )
+					return mu<UAClientException>( *p );
+				return mu<Exception>( e );
+			};
 			for( uint i=0; i<handles.size(); ++i ){
 				auto& h = handles[i];
 				if( i==handles.size()-1 )
 					h.promise().ResumeExp( move(e), h );
 				else
-					h.promise().ResumeExp( move(*e.Move()), h );
+					h.promise().ResumeExp( move(*copy()), h );
 			}
 		}
 	}

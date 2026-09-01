@@ -37,13 +37,16 @@ namespace Jde::Opc::Gateway{
 
 	α NodeIndex::Crawl( sp<UAClient> client )ι->TAwait<Browse::Response>::Task{
 		vector<Entry> entries;
-		bool truncated{};
+		bool truncated{};//the index is incomplete - reported through Truncated().
+		bool stop{};//abandon the crawl entirely.  Only maxNodes does that:  a continuation point caps one folder, and the
+		//children that folder *did* return still have to be visited and queued, so the two cannot share a flag.
 		up<Exception> error;
 		let start = std::chrono::steady_clock::now();
 		//value_or defaults mirror config/Opc.Gateway.jsonnet - keep them in lockstep.
 		let maxDepth = Settings::FindNumber<uint8>( "/gateway/search/maxDepth" ).value_or( 12 );
 		let maxNodes = Settings::FindNumber<uint>( "/gateway/search/maxNodes" ).value_or( 25000 );
 		let includeServer = Settings::FindBool( "/gateway/search/includeServer" ).value_or( false );
+		let browseBatch = std::max<uint>( 1, Settings::FindNumber<uint>("/gateway/search/browseBatch").value_or(64) );
 		try{
 			let defaultNs = client->DefaultBrowseNs();
 			struct Pending{ NodeId Id; string Path; uint8 Depth; };
@@ -52,44 +55,74 @@ namespace Jde::Opc::Gateway{
 			flat_set<NodeId> seen; seen.emplace( NodeId::ObjectsFolder() );//cycles:  hierarchical references may still reach a node twice.
 			bool warnedSlash{};
 			constexpr UA_BrowseResultMask mask{ UA_BROWSERESULTMASK_BROWSENAME|UA_BROWSERESULTMASK_DISPLAYNAME|UA_BROWSERESULTMASK_NODECLASS };
-			while( pending.size() && !truncated ){
-				auto parent = move( pending.front() ); pending.pop_front();
-				auto response = co_await Browse::FoldersAwait{ Browse::Request::Hierarchical(NodeId{parent.Id}, mask), client };
-				if( response.resultsSize==0 )
-					continue;
-				if( response.results[0].continuationPoint.length ){//v1 does not BrowseNext:  the folder is indexed up to the server's per-browse cap.
-					WARNT( BrowseTag, "[{}]search index: '{}' returned a continuation point - children beyond the server's limit are not indexed.", hex(client->Handle()), parent.Path );
-					truncated = true;
+			//Browse a whole BFS level per round trip rather than one folder at a time:  a Browse request carries a
+			//BrowseDescription per node and answers results[i] for nodesToBrowse[i], which is what VisitWhile's
+			//resultsIndex was always for.  On a deep server this is the difference between one round trip per folder and
+			//one per level.
+			uint batch = browseBatch;
+			while( pending.size() && !stop ){
+				let count = std::min<uint>( batch, pending.size() );
+				vector<Pending> level; level.reserve( count );
+				vector<NodeId> ids; ids.reserve( count );
+				for( uint i=0; i<count; ++i ){
+					level.push_back( move(pending.front()) ); pending.pop_front();
+					ids.push_back( NodeId{level.back().Id} );
 				}
-				response.VisitWhile( 0, [&]( const UA_ReferenceDescription& ref ){
-					NodeId id{ ref.nodeId.nodeId };
-					if( seen.find(id)!=seen.end() )
-						return true;
-					if( !includeServer && ref.nodeId.nodeId.namespaceIndex==0 && ref.nodeId.nodeId.identifierType==UA_NODEIDTYPE_NUMERIC && ref.nodeId.nodeId.identifier.numeric==UA_NS0ID_SERVER )
-						return true;//the Server object's diagnostics/capabilities subtree is hundreds of nodes nobody searches for.
-					string browse{ ToSV(ref.browseName.name) };
-					if( browse.find('/')!=string::npos ){//unroutable:  the node url is '/'-delimited browse segments.
-						if( !warnedSlash ){
-							WARNT( BrowseTag, "[{}]search index: skipping browse names containing '/' ('{}' under '{}').", hex(client->Handle()), browse, parent.Path );
-							warnedSlash = true;
+				optional<Browse::Response> response;
+				bool tooMany{};
+				try{
+					response = co_await Browse::FoldersAwait{ Browse::Request::Hierarchical(move(ids), mask), client };
+				}
+				catch( UAException& e ){
+					//The server's MaxNodesPerBrowse is below our batch.  Nothing advertises it on this path, so learn it
+					//from the refusal rather than guessing:  put the level back and go one at a time from here on.
+					if( e.Code()!=UA_STATUSCODE_BADTOOMANYOPERATIONS || batch==1 )
+						throw;
+					tooMany = true;
+				}
+				if( tooMany ){
+					WARNT( BrowseTag, "[{}]search index: browse of {} nodes refused with BadTooManyOperations - falling back to one node per request.", hex(client->Handle()), count );
+					batch = 1;
+					for( auto p = level.rbegin(); p!=level.rend(); ++p )
+						pending.push_front( move(*p) );
+					continue;
+				}
+				for( uint r=0; r<level.size() && r<response->resultsSize && !stop; ++r ){
+					let& parent = level[r];
+					if( response->results[r].continuationPoint.length ){//v1 does not BrowseNext:  the folder is indexed up to the server's per-browse cap.
+						WARNT( BrowseTag, "[{}]search index: '{}' returned a continuation point - children beyond the server's limit are not indexed.", hex(client->Handle()), parent.Path );
+						truncated = true;//not `stop`:  the references this browse did return are still ours to index.
+					}
+					response->VisitWhile( r, [&]( const UA_ReferenceDescription& ref ){
+						NodeId id{ ref.nodeId.nodeId };
+						if( seen.find(id)!=seen.end() )
+							return true;
+						if( !includeServer && ref.nodeId.nodeId.namespaceIndex==0 && ref.nodeId.nodeId.identifierType==UA_NODEIDTYPE_NUMERIC && ref.nodeId.nodeId.identifier.numeric==UA_NS0ID_SERVER )
+							return true;//the Server object's diagnostics/capabilities subtree is hundreds of nodes nobody searches for.
+						string browse{ ToSV(ref.browseName.name) };
+						if( browse.find('/')!=string::npos ){//unroutable:  the node url is '/'-delimited browse segments.
+							if( !warnedSlash ){
+								WARNT( BrowseTag, "[{}]search index: skipping browse names containing '/' ('{}' under '{}').", hex(client->Handle()), browse, parent.Path );
+								warnedSlash = true;
+							}
+							return true;
 						}
-						return true;
-					}
-					let segment = ref.browseName.namespaceIndex==defaultNs ? browse : Ƒ( "{}~{}", ref.browseName.namespaceIndex, browse );
-					string path = parent.Path.empty() ? segment : Ƒ( "{}/{}", parent.Path, segment );
-					let depth = (uint8)( parent.Depth+1 );
-					if( (ref.nodeClass==UA_NODECLASS_OBJECT || ref.nodeClass==UA_NODECLASS_VARIABLE) && depth<maxDepth )//DI/IA hang children under variables too.
-						pending.push_back( {NodeId{id}, path, depth} );
-					seen.emplace( NodeId{id} );
-					Entry e{ move(id), move(path), string{ToSV(ref.displayName.text)}, browse, {}, Str::ToLower(browse), ref.browseName.namespaceIndex, ref.nodeClass, depth };
-					e.NameLower = Str::ToLower( e.Name );
-					entries.push_back( move(e) );
-					if( entries.size()>=maxNodes ){
-						WARNT( BrowseTag, "[{}]search index: stopped at /gateway/search/maxNodes={}.", hex(client->Handle()), maxNodes );
-						truncated = true;
-					}
-					return !truncated;
-				} );
+						let segment = ref.browseName.namespaceIndex==defaultNs ? browse : Ƒ( "{}~{}", ref.browseName.namespaceIndex, browse );
+						string path = parent.Path.empty() ? segment : Ƒ( "{}/{}", parent.Path, segment );
+						let depth = (uint8)( parent.Depth+1 );
+						if( (ref.nodeClass==UA_NODECLASS_OBJECT || ref.nodeClass==UA_NODECLASS_VARIABLE) && depth<maxDepth )//DI/IA hang children under variables too.
+							pending.push_back( {NodeId{id}, path, depth} );
+						seen.emplace( NodeId{id} );
+						Entry e{ move(id), move(path), string{ToSV(ref.displayName.text)}, browse, {}, Str::ToLower(browse), ref.browseName.namespaceIndex, ref.nodeClass, depth };
+						e.NameLower = Str::ToLower( e.Name );
+						entries.push_back( move(e) );
+						if( entries.size()>=maxNodes ){
+							WARNT( BrowseTag, "[{}]search index: stopped at /gateway/search/maxNodes={}.", hex(client->Handle()), maxNodes );
+							truncated = stop = true;
+						}
+						return !stop;
+					} );
+				}
 			}
 			let ms = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now()-start ).count();
 			INFOT( BrowseTag, "[{}]Indexed {} nodes under Objects for '{}' (maxDepth={}) in {}ms{}.", hex(client->Handle()), entries.size(), client->Target(), maxDepth, ms, truncated ? " - truncated" : "" );

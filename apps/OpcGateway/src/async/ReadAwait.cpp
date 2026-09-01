@@ -87,7 +87,7 @@ namespace Jde::Opc::Gateway{
 
 		auto add = [&]( const UA_ReferenceDescription& ref, const vector<UA_AttributeId>& attribs ){
 			for( let& attrib : attribs )
-				_readIds.push_back( UA_ReadValueId{ref.nodeId.nodeId, (UA_UInt32)attrib, UA_STRING_NULL, {0, UA_STRING_NULL}} );
+				Push( ref.nodeId.nodeId, attrib );
 		};
 		browse.VisitWhile( 0, [&](let& ref){
 			if( all!=attribs.end() )
@@ -96,37 +96,60 @@ namespace Jde::Opc::Gateway{
 				add( ref, p->second );
 			return true;
 		});
-		nodesToReadSize=_readIds.size();
-		nodesToRead=_readIds.data();
+		SetNodesToRead();
 	}
 
 	ReadRequest::ReadRequest( const vector<NodeId>& ids, const QL::TableQL& ql )ι:
 		UA_ReadRequest{}{
 		let attribs = allAttributes( ql );
+		_readIds.reserve( ids.size()*attribs.size() );
 		for( let& nodeId : ids ){
 			for( let& attrib : attribs )
-				_readIds.push_back( UA_ReadValueId{nodeId, (UA_UInt32)attrib, UA_STRING_NULL, {0, UA_STRING_NULL}} );
+				Push( nodeId, attrib );
 		}
-		nodesToReadSize=_readIds.size();
-		nodesToRead=_readIds.data();
+		SetNodesToRead();
 	}
 	ReadRequest::ReadRequest( const NodeId& nodeId, std::initializer_list<UA_AttributeId> attribs )ι:
 		UA_ReadRequest{}{
 		_readIds.reserve( attribs.size() );
 		for( let attrib : attribs )
-			_readIds.push_back( UA_ReadValueId{nodeId, (UA_UInt32)attrib, UA_STRING_NULL, {0, UA_STRING_NULL}} );
-		nodesToReadSize=_readIds.size();
-		nodesToRead=_readIds.data();
+			Push( nodeId, attrib );
+		SetNodesToRead();
+	}
+	ReadRequest::ReadRequest( ReadRequest&& x )ι:
+		UA_ReadRequest{ x },
+		_readIds{ move(x._readIds) }{
+		x.nodesToRead=nullptr; x.nodesToReadSize=0;//x no longer owns the identifiers this points at.
+		SetNodesToRead();
+	}
+	ReadRequest::~ReadRequest(){
+		for( auto& id : _readIds )
+			UA_ReadValueId_clear( &id );
+	}
+	α ReadRequest::operator=( ReadRequest&& x )ι->ReadRequest&{
+		if( this != &x ){
+			for( auto& id : _readIds )
+				UA_ReadValueId_clear( &id );
+			*( UA_ReadRequest* )this = x;
+			_readIds = move( x._readIds );
+			x.nodesToRead=nullptr; x.nodesToReadSize=0;
+			SetNodesToRead();
+		}
+		return *this;
+	}
+	α ReadRequest::Push( const UA_NodeId& nodeId, UA_AttributeId attrib )ι->void{
+		auto& id = _readIds.emplace_back( UA_ReadValueId{{}, (UA_UInt32)attrib, UA_STRING_NULL, {0, UA_STRING_NULL}} );
+		UA_NodeId_copy( &nodeId, &id.nodeId );//deep: ~ReadRequest clears it, and the source is gone by the time Suspend encodes.
 	}
 
 	α ReadRequest::Add( const QL::TableQL& ql, const flat_map<NodeId, jobject>& nodes )ι->void{
 		let attribs = allAttributes( ql );
+		_readIds.reserve( _readIds.size()+nodes.size()*attribs.size() );
 		for( let& [nodeId, _] : nodes ){
 			for( let& attrib : attribs )
-				_readIds.push_back( UA_ReadValueId{nodeId, (UA_UInt32)attrib, UA_STRING_NULL, {0, UA_STRING_NULL}} );
+				Push( nodeId, attrib );
 		}
-		nodesToReadSize=_readIds.size();
-		nodesToRead=_readIds.data();
+		SetNodesToRead();
 	}
 
 	α ReadRequest::AtribString( UA_AttributeId id )->const string&{
@@ -199,8 +222,13 @@ namespace Jde::Opc::Gateway{
 
 	α ReadAwait::Suspend()ι->void{
 		_client->PostUA( [this]{//UA submissions must run on the client's strand; `this` outlives suspension (resume only via OnComplete).
-			UA_Client_sendAsyncReadRequest( *_client, &_request, ReadAwait::OnResponse, this, &_requestId );
-			_client->Process( _requestId, "read" );
+			try{
+				UACε( UA_Client_sendAsyncReadRequest(*_client, &_request, ReadAwait::OnResponse, this, &_requestId) );
+				_client->Process( _requestId, "read" );
+			}
+			catch( UAException& e ){
+				ResumeExp( move(e) );
+			}
 		});
 	}
 	α ReadAwait::OnResponse( UA_Client* /*client*/, void* await, UA_UInt32 /*requestId*/, UA_ReadResponse* rr )ι->void{

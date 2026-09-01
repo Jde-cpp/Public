@@ -39,7 +39,9 @@ namespace Jde::Opc::Gateway{
 		Ω Find( UA_Client* ua, SRCE )ε->sp<UAClient>;
 		Ω TryFind( UA_Client* ua, SRCE )ι->sp<UAClient>;
 		Ω RemoveClient( sp<UAClient>&& client )ι->bool;
+		Ω RemoveIfDisconnected( StatusCode sc, const sp<UAClient>& client )ι->void;
 		Ω LiveClients()ι->vector<sp<UAClient>>;//snapshot of the live clients - the `search` fan-out, which must never connect.
+		Ω Unsubscribe( const sp<IDataChange>& dataChange )ι->void;//drop dataChange from every client's monitored items - a websocket session's OnClose, which is the only thing that ends its subscriptions.
 
 		α SubscriptionId()Ι->SubscriptionId{ auto p = CreatedSubscriptionResponse(); return p ? p->subscriptionId : 0; }
 		//Responses are written on the strand but read by await_ready/await_resume on arbitrary threads - guard the shared_ptrs themselves.
@@ -53,6 +55,7 @@ namespace Jde::Opc::Gateway{
 		α ClearRequest( RequestId requestId )ι->void;
 		Ŧ ClearRequestH( RequestId requestId )ι->T;//{ return ClearRequest<UARequest<T>>( requestId )->CoHandle; }
 		α MonitoredNodes()ι->UAMonitoringNodes&{ std::call_once(_monitoredNodesOnce, [this]{_monitoredNodes = mu<UAMonitoringNodes>(shared_from_this());}); return *_monitoredNodes; }//lazy but thread-safe: callers run on the loop thread (data-change callbacks) and pool threads (subscribe/unsubscribe) concurrently. Can't build eagerly in the ctor — shared_from_this() isn't valid until make_shared finishes wiring the weak ref.
+		α TryMonitoredNodes()ι->UAMonitoringNodes*{ return _monitoredNodes.get(); }//never constructs: null means "no subscriptions", which for a query or an unsubscribe is simply nothing to do. Nothing clears the member once set - Shutdown used to move it out, which left this and MonitoredNodes() racing a still-pumping strand.
 		Ŧ Retry( function<void(sp<UAClient>&&, T)> f, UAException&& e, sp<UAClient> pClient, T h )ι->ConnectAwait::Task;
 		α RetryVoid( function<void(sp<UAClient>&&) > f, UAException&& e, sp<UAClient>&& pClient )ι->ConnectAwait::Task;
 		α Process( RequestId requestId, sv what )ι->void;
@@ -81,7 +84,6 @@ namespace Jde::Opc::Gateway{
 		Gateway::Credential Credential;
 		bool Connected{};
 	private:
-		Ω Unsubscribe( const sp<IDataChange>&& dataChange )ι->void;
 		Ω StateCallback( UA_Client *ua, UA_SecureChannelState channelState, UA_SessionState sessionState, StatusCode connectStatus )ι->void;
 		Ω ServiceNotificationCallback( UA_Client* ua, UA_ApplicationNotificationType type, const UA_KeyValueMap payload )ι->void;
 		α Configuration()ε->UA_ClientConfig*;
