@@ -1,10 +1,8 @@
 import {
-  ChangeDetectionStrategy,
   Component,
   OnDestroy,
   OnInit,
-  ViewEncapsulation,
-} from '@angular/core';
+  ViewEncapsulation, inject } from '@angular/core';
 import {StyleManager} from '../style-manager';
 import {DocsSiteTheme, ThemeStorage} from './theme-storage/theme-storage';
 import {MatButtonModule} from '@angular/material/button';
@@ -20,7 +18,6 @@ import {LiveAnnouncer} from '@angular/cdk/a11y';
   selector: 'theme-picker',
   templateUrl: 'theme-picker.html',
   styleUrls: ['theme-picker.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
   imports: [MatButtonModule, MatTooltipModule, MatMenuModule, MatIconModule]
 })
@@ -57,10 +54,11 @@ export class ThemePicker implements OnInit, OnDestroy {
     },
   ];
 
-  constructor(public styleManager: StyleManager,
-              private _themeStorage: ThemeStorage,
-              private _activatedRoute: ActivatedRoute,
-              private liveAnnouncer: LiveAnnouncer) {
+  public styleManager:StyleManager = inject( StyleManager );
+  private _themeStorage:ThemeStorage = inject( ThemeStorage );
+  private _activatedRoute:ActivatedRoute = inject( ActivatedRoute );
+  private liveAnnouncer:LiveAnnouncer = inject( LiveAnnouncer );
+  constructor() {
     const themeName = this._themeStorage.getStoredThemeName();
     if (themeName) {
       this.selectTheme(themeName);

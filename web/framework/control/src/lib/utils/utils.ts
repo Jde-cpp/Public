@@ -1,6 +1,6 @@
 import { ActivatedRoute } from "@angular/router";
 
-export function arraysEqual(a:any[], b:any[]) {
+export function arraysEqual(a:readonly unknown[], b:readonly unknown[]) {
   if (a == b) return true;
   if (a == null || b == null) return false;
   if (a.length !== b.length) return false;
@@ -14,7 +14,7 @@ export function verify( expr:unknown, msg?:string ):asserts expr{
 	}
 }
 
-export function clone( obj: any ):any{
+export function clone<T>( obj:T ):T{//a JSON round trip, so the result really is the same shape - not `any`
 	return JSON.parse( JSON.stringify(obj) );
 }
 
@@ -66,7 +66,7 @@ export function fromIsoDuration( str:string ):number{
 	return seconds;
 }
 
-export function getEnumName(enumObj: any, enumValue: number | string): string {
+export function getEnumName(enumObj: Record<string, unknown>, enumValue: number | string): string {
   return Object.keys(enumObj).find((key) => enumObj[key] === enumValue)!;
 }
 
@@ -102,7 +102,7 @@ export function subscribe( route: ActivatedRoute, who: string ){
 	});
 }
 
-export function toIdArray( from:number[] ):any{
+export function toIdArray( from:number[] ):{id:number}[]{
 	let clone = [];
 	for( let id of from )
 		clone.push( {id:id} );

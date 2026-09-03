@@ -83,7 +83,7 @@ export class RouteSearchProvider implements ISearchProvider{
 					continue;
 				const url = '/'+segments.map( s=>encodeURIComponent(s) ).join('/');
 				if( !out.has(url) )
-					out.set( url, { title: child.title, route: url, icon: child.icon, summary: RouteSearchProvider.parentSummary('/'+segments.slice(0, -1).join('/')), source: this.name } );
+					out.set( url, { title: child.title, route: ['/'+segments[0], ...segments.slice(1)], icon: child.icon, summary: RouteSearchProvider.parentSummary('/'+segments.slice(0, -1).join('/')), source: this.name } );
 			}
 		}
 	}

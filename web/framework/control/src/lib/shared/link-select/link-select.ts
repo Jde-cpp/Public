@@ -1,33 +1,34 @@
-import {Component, Input, Output, OnInit, EventEmitter, NgModule} from '@angular/core';
+import {Component, OnInit, input, output} from '@angular/core';
 import {MatChipListbox, MatChipsModule} from '@angular/material/chips';
 import {MatOption, MatSelect, MatSelectModule} from '@angular/material/select';
 import { CircularBuffer } from '../../utils/collections'
-import { KeyValuePipe,NgFor } from '@angular/common';
+import { KeyValuePipe } from '@angular/common';
 
 @Component( {
 	selector: 'link-select',
 	templateUrl: 'link-select.html',
-	imports:[KeyValuePipe,MatChipListbox, MatChipsModule,MatOption,MatSelect,NgFor] })
+	imports:[KeyValuePipe,MatChipListbox, MatChipsModule,MatOption,MatSelect] })
 export class LinkSelect<TOptionKey> implements OnInit{
 	ngOnInit()
 	{}
-	valueChange( selectedId:any ){
+	valueChange( selectedId:TOptionKey ){
 		this.selected = selectedId;
 		this.selectChange.emit( selectedId );
 		this.links.unshift( selectedId );
 	}
 
-	@Input() set placeholder( value ){ this._placeholder = value;} get placeholder(){return this._placeholder} private _placeholder:string="Date range";
-	get links(){ return this.options.links; }
-	get selected(){ return this.options.selected; } set selected(x){ if( this.options.selected!=x ) this.options.selected=x; } @Output() selectChange = new EventEmitter<TOptionKey>();
-	@Input() options!:LinkSelectOptions<TOptionKey>;
+	placeholder = input<string>( "Date range" );
+	get links(){ return this.options().links; }
+	get selected(){ return this.options().selected; } set selected(x){ if( this.options().selected!=x ) this.options().selected=x; }
+	selectChange = output<TOptionKey>();
+	options = input.required<LinkSelectOptions<TOptionKey>>();
 	get linkValues():Map<TOptionKey,string>
 	{
 		let y=new Map<TOptionKey,string>();
 		this.links?.forEach( x =>
 		{
-			if( x!=this.selected && this.options.values.has(x) )
-				y.set( x, this.options.values.get(x)! );
+			if( x!=this.selected && this.options().values.has(x) )
+				y.set( x, this.options().values.get(x)! );
 		});
 		return y;
 	}

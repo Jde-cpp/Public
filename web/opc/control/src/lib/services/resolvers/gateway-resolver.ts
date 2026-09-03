@@ -15,7 +15,10 @@ export type GatewayData = {
 
 @Injectable()
 export class GatewayResolver implements Resolve<GatewayData> {
-	constructor( private route: ActivatedRoute, private router:Router, @Inject('GatewayService') private gatewayService: GatewayService, private cnsl: SnackbarService )
+	private route:ActivatedRoute = inject( ActivatedRoute );
+	private router:Router = inject( Router );
+	private cnsl:SnackbarService = inject( SnackbarService );
+	constructor( @Inject('GatewayService') private gatewayService: GatewayService )
 	{}
 
 	resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<GatewayData>{

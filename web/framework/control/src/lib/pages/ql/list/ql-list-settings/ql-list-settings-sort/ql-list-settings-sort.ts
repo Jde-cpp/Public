@@ -1,6 +1,5 @@
 import { CommonModule } from "@angular/common";
 import { Component, input, OnInit, ViewChild } from "@angular/core";
-import { FormsModule } from "@angular/forms";
 import { MatAutocompleteModule } from "@angular/material/autocomplete";
 import { MatButtonModule } from "@angular/material/button";
 import { MatIcon } from "@angular/material/icon";
@@ -17,7 +16,7 @@ import { View } from '../../../../../model/ql/view';
 		templateUrl: './ql-list-settings-sort.html',
 		styleUrls: ['./ql-list-settings-sort.scss'],
 		host: {class:'main-content.mat-drawer-container.my-content'},
-		imports: [CommonModule, FormsModule, MatAutocompleteModule, MatButtonModule, MatIcon, MatInputModule, MatSelectModule, MatTableModule]
+		imports: [CommonModule, MatAutocompleteModule, MatButtonModule, MatIcon, MatInputModule, MatSelectModule, MatTableModule]
 })
 export class QLListSettingsSort implements OnInit{
 	ngOnInit(){

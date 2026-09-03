@@ -24,6 +24,7 @@ export class LogTags implements OnInit{
 		const stored = this.tags();
 		const configured = Object.entries( stored ).filter( ([tag])=>tag!=LogTags.defaultTag ).map( ([tag,level])=>({tag, level: LogTags.fromWire(level)}) );
 		const defaultLevel = stored[LogTags.defaultTag];
+		this.#synthesizedDefault = !defaultLevel;//the row still has to show something; it just is not an override yet - see entries()
 		this.dataSource = [
 			{ tag: LogTags.defaultTag, level: defaultLevel ? LogTags.fromWire(defaultLevel) : ELogLevel.Information },//LogTags() in logTags.h defaults to Information when nothing is stored
 			...configured,
@@ -31,6 +32,13 @@ export class LogTags implements OnInit{
 		];
 	}
 	isDefault( row:TagRow ):boolean{ return row.tag==LogTags.defaultTag; }
+	//Picking a level is what turns the synthesized default into a real override - Information included, since the instance's
+	//CONFIGURED default may be something else and choosing Information is then a deliberate change.
+	onLevelChange( row:TagRow, level:ELogLevel ){
+		row.level = level;
+		if( this.isDefault(row) )
+			this.#synthesizedDefault = false;
+	}
 	onTagChange( row:TagRow, tag:string ){
 		const isNew = !row.tag;
 		row.tag = tag;
@@ -47,9 +55,16 @@ export class LogTags implements OnInit{
 	selectableTags( row:TagRow ):string[]{
 		return this.catalogue().filter( t=>t==row.tag || !this.dataSource.some(r=>r.tag==t) );
 	}
+	//What this sink actually overrides.  A default row the instance never stored and the user never touched is NOT one:
+	//LogSettingsPanel.save diffs this against the stored rows, so reporting the synthesized Information made
+	//`previous['default']` undefined != 'Information' on every Save - even one with no edits - and wrote a tag-0/Information
+	//row for text, binary AND appServer, pinning the instance's default over its configured level across restarts.
 	entries():Record<string,string>{
-		return Object.fromEntries( this.dataSource.filter(r=>r.tag).map(r=>[r.tag, LogTags.toWire(r.level)]) );
+		return Object.fromEntries( this.dataSource
+			.filter( r=>r.tag && !(this.#synthesizedDefault && this.isDefault(r)) )
+			.map( r=>[r.tag, LogTags.toWire(r.level)] ) );
 	}
+	#synthesizedDefault = false;
 
 	tags = input.required<Record<string,string>>();
 	catalogue = input.required<string[]>();

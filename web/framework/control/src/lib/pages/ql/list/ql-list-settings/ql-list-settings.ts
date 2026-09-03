@@ -1,6 +1,5 @@
 import { Component, OnInit, input, signal, computed, output, ViewChild, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -21,7 +20,7 @@ const tabKey = 'qlListSettings';
 	styleUrls: ['ql-list-settings.scss'],
 	templateUrl: './ql-list-settings.html',
 	host: {class:'main-content.mat-drawer-container.my-content'},
-	imports: [CommonModule, FormsModule, MatButtonModule, MatIcon, MatInputModule, MatSelectModule, MatTabsModule, MatToolbar, QLListSettingsFilter, QLListSettingsDisplay, QLListSettingsSort]
+	imports: [CommonModule, MatButtonModule, MatIcon, MatInputModule, MatSelectModule, MatTabsModule, MatToolbar, QLListSettingsFilter, QLListSettingsDisplay, QLListSettingsSort]
 })
 export class QLListSettings implements OnInit, OnDestroy{
 	ngOnInit(){
@@ -57,6 +56,8 @@ export class QLListSettings implements OnInit, OnDestroy{
 	//and logs' onViewDelete opens with an assertion on the type, so clicking it there threw (via a `debugger;` that freezes
 	//the page outright whenever DevTools/automation is attached).
 	disableDelete():boolean{ return !this.view().isUser; }
+	onNameInput( event:Event ){ this.name.set( (<HTMLInputElement>event.target).value ); }
+	onNameFocus( event:FocusEvent ){ (<HTMLInputElement>event.target).select(); }//was `$event.target.select()` in the template, which type-checks only because EventTarget is loose there
 	onTabIndexChanged( index:number ){ this.tabIndex.set(index); }
 	excludedColumns = input<string[]>([]);
 	suggestions = input.required<Record<string,any[]>>();

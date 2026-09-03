@@ -1,5 +1,6 @@
 //Silent Google re-login on session expiry (reviews/todo.md §7): GoogleAuthService owns the GIS prompt machinery and
 //ProtoService.authGet renews a lapsed Google session in place, retrying the original request with the fresh session.
+import { TestBed } from '@angular/core/testing';
 import { HttpClient, HttpHeaders, HttpResponse } from '@angular/common/http';
 import { of, throwError } from 'rxjs';
 
@@ -136,7 +137,8 @@ describe( 'ProtoService silent Google re-login on 401', ()=>{
 
 	beforeEach( ()=>{
 		localStorage.clear();
-		authStore = new AuthStore();
+		TestBed.resetTestingModule();
+		authStore = TestBed.inject( AuthStore );//not `new AuthStore()`: it inject()s RouteStore to clear the browsed route names on logout
 		logout = vi.spyOn( authStore, 'logout' );
 		http = { get:vi.fn(), post:vi.fn() };
 	});

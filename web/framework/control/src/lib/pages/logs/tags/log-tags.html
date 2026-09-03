@@ -20,7 +20,7 @@
 		<mat-header-cell *matHeaderCellDef> Minimum Level </mat-header-cell>
 		<mat-cell *matCellDef="let row">
 			@if( row.tag ){
-				<severity-picker [level]="row.level" (levelChange)="row.level=$event"></severity-picker>
+				<severity-picker [level]="row.level" (levelChange)="onLevelChange(row, $event)"></severity-picker>
 			}
 		</mat-cell>
 	</ng-container>

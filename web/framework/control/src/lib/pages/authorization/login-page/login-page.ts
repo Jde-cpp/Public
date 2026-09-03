@@ -13,7 +13,8 @@ import {GoogleAuthService, googleLoginHintKey} from '../../../services/google-au
     imports: [MatButtonModule,MatFormFieldModule,MatInputModule,RouterLink,ReactiveFormsModule],
 })
 export class LoginPage implements OnDestroy{
-	constructor( @Inject('IAuth') private authService: IAuth, private snackbar: SnackbarService, @Inject('IEnvironment') private envService: IEnvironment ){
+	private snackbar:SnackbarService = inject( SnackbarService );
+	constructor( @Inject('IAuth') private authService: IAuth, @Inject('IEnvironment') private envService: IEnvironment ){
 		effect( async ()=>{
 			if( this.providers?.value()?.includes(EProvider.Google) && !this.showedGoogleLogin ){
 				this.showedGoogleLogin = true;

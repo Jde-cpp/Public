@@ -71,15 +71,18 @@ export class DetailResolver<T> implements Resolve<DetailResolverData<T>> {
 		}
 	}
 
-	static async load<T>( ql:IGraphQL, collectionName:string, target:string, routing:DetailRoute ):Promise<DetailResolverData<T>>{
+	//`vars` is a parameter only so ClientResolver can share this body without changing what goes on the wire (review3 C1):
+	//ql() appends `&variables=` for any TRUTHY vars, so the {} the access pages have always sent is not the same request as
+	//the null the gateway has always had, and the two talk to different servers.  Neither behaviour is proven on the other.
+	static async load<T>( ql:IGraphQL, collectionName:string, target:string, routing:DetailRoute, vars:any={} ):Promise<DetailResolverData<T>>{
 		const schema = await ql.schemaWithEnums( MetaObject.toTypeFromCollection(collectionName), (m)=>console.log(m) );
 		let obj:any = {};
-		if( target!="$new" ){
-			obj = await ql.querySingle( ql.targetQuery(schema, target, ProfileStore.showDeleted(collectionName), routing.tableSettings.excludedColumns), {}, (m)=>console.log(m) );
+		if( target && target!="$new" ){//`target &&`: a missing route param must not query for the row named 'undefined'
+			obj = await ql.querySingle( ql.targetQuery(schema, target, ProfileStore.showDeleted(collectionName), routing.tableSettings.excludedColumns), vars, (m)=>console.log(m) );
 			if( obj==null )//{"data":{"<singular>":null}} - the row is not there.  Checked before the subQueries loop, whose obj["id"] would otherwise TypeError and hide every other failure behind the same message.
 				throw new TargetNotFoundError( target );
 			for( let query of ql.subQueries(schema.type, obj["id"]) ){
-				const subRows = await ql.query<any>( query, {}, (m)=>console.log(m) );
+				const subRows = await ql.query<any>( query, vars, (m)=>console.log(m) );
 				//"acl":[{"role":{"id":33,"name":"Opc Gateway Permissions","deleted":null},"identity":{"id":1}}]}
 				let [property, propValue] = Object.entries(subRows)[0];
 				if( !obj[property] )

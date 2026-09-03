@@ -1,7 +1,7 @@
 //https://github.com/angular/components/blob/a55b19797f0bccf467d5602f526eef236737498b/docs/src/app/shared/navbar/navbar.ts
 import {Component, computed, ElementRef, inject, OnInit, signal, viewChild} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import {FormControl, FormsModule, ReactiveFormsModule} from '@angular/forms';
+import {FormControl, ReactiveFormsModule} from '@angular/forms';
 import {MatAutocompleteModule, MatAutocompleteTrigger} from '@angular/material/autocomplete';
 import {MatButtonModule} from '@angular/material/button';
 import {MatFormFieldModule} from '@angular/material/form-field';
@@ -43,7 +43,6 @@ export type Folder = { folderName:string, items:Favorite[] };
     Authorization,
 		Breadcrumbs,
     Favorites,
-		FormsModule,
 		MatAutocompleteModule,
     MatButtonModule,
 		MatFormFieldModule,
@@ -60,7 +59,8 @@ export type Folder = { folderName:string, items:Favorite[] };
 export class NavBar implements OnInit {
   skipLinkHref: string | null | undefined;
   skipLinkHidden = true;
-  constructor( private navigationFocusService: NavigationFocusService ) {
+  private navigationFocusService:NavigationFocusService = inject( NavigationFocusService );
+  constructor() {
     this.defaultFavorites = this.router.config.filter( x=>
 			x.path!="login"
 			&& x.path!.indexOf(':target')==-1
@@ -101,7 +101,7 @@ export class NavBar implements OnInit {
 				favs[index] = { ...favs[index], name: change.name, folderName: change.folderName };
 		}
 		this.favorites.set( favs );
-		this.#profileStore.save( "favorites", favs );
+		this.#profileStore.save( "favorites", favs ).catch( e=>console.warn("Could not save favorites.", e) );
 	}
 	onToggleBreadcrumbs(){
 		const show = !this.showBreadcrumbs();
@@ -144,9 +144,12 @@ export class NavBar implements OnInit {
 	}
 	//Enter with no highlighted option (the panel is closed, or nothing matched yet) goes to the first result;  with one, the
 	//autocomplete trigger already selected it and marked the event handled.
+	//Read defaultPrevented BEFORE preventing:  this used to call preventDefault() and then test the flag it had just set,
+	//so the flag was always true, the branch below unreachable, and Enter with nothing highlighted did nothing at all.
 	onSearch( event:Event ){
+		const handled = event.defaultPrevented || (this.searchTrigger()?.panelOpen && this.searchTrigger()?.activeOption);
 		event.preventDefault();//never submit anything
-		if( event.defaultPrevented || (this.searchTrigger()?.panelOpen && this.searchTrigger()?.activeOption) )
+		if( handled )
 			return;
 		const first = this.searchResults()[0];
 		if( first )

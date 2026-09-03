@@ -11,7 +11,7 @@ import { RouteItem, ProfileStore, RouteStore } from 'jde-spa';
 import { FieldFilter, View, ViewFieldSettings } from '../model/ql/view';
 import { Sort } from '@angular/material/sort';
 
-export type TableSettings = {canPurge?:boolean,canAdd?:boolean, excludedColumns?:string[], columns?:(string|ViewFieldSettings)[], sort?:Sort[]|string};
+export type TableSettings = {canPurge?:boolean,canAdd?:boolean, canNavigate?:boolean, excludedColumns?:string[], columns?:(string|ViewFieldSettings)[], sort?:Sort[]|string};//canNavigate: a collection with no ':target' detail route must not offer the row click-through
 export type CollectionItem = string | { path:string, title?:string, data?:{summary:string, collectionName:string, tableSettings:TableSettings} };
 export class ListRoute extends RouteItem{
 	constructor( collection:string|CollectionItem ){
@@ -45,7 +45,10 @@ export type QLListData = {
 
 @Injectable()
 export class QLListResolver implements Resolve<QLListData> {
-	constructor( private route: ActivatedRoute, private router:Router, @Inject('IGraphQL') private ql: IGraphQL, private cnsl: SnackbarService ){}
+	private route:ActivatedRoute = inject( ActivatedRoute );
+	private router:Router = inject( Router );
+	private cnsl:SnackbarService = inject( SnackbarService );
+	constructor( @Inject('IGraphQL') private ql: IGraphQL ){}
 
 	resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<QLListData>{
 		const collectionDisplay = route.paramMap.get( "collectionDisplay" );

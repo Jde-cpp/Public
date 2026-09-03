@@ -16,7 +16,8 @@ import { Resource } from "../../model/resource";
 		imports: [CommonModule, MatTableModule, MatCheckbox, EnumKeysPipe, MatSortModule],
 })
 export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
-	constructor( @Inject('AccessService') private accessService: AccessService, private cnsle: SnackbarService )
+	private cnsle:SnackbarService = inject( SnackbarService );
+	constructor( @Inject('AccessService') private accessService: AccessService )
 	{}
 
 	async ngOnInit(){
@@ -43,7 +44,10 @@ export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
 //		await this.profile.loadedPromise;
 	}
 	ngOnDestroy(){
-		this.profileStore.save<Profile>( 'permissionTable', { sort: this.sort, showDeleted: this.profile?.showDeleted } );
+		//the component is already going away, so a snackbar would follow the user to the next page:  warn, but never leave the
+		//rejection unhandled - save() reports failures now instead of swallowing them.
+		this.profileStore.save<Profile>( 'permissionTable', { sort: this.sort, showDeleted: this.profile?.showDeleted } )
+			.catch( e=>console.warn("Could not save the permission table settings.", e) );
 	}
 	sortData($event:Sort){
 		this.#sort = $event;//remember what the user clicked; ngOnDestroy used to persist the hardcoded getter instead, so the choice was thrown away

@@ -171,18 +171,25 @@ export class OpcStore{
 		const view = this.nodeView() ?? NodeView.default();
 		route.siblings = view.sortNodes( siblings ).map( n=>new RouteItem({path: n.browseFQ(defaultBrowseNs), title: n.name}) );
 	}
+
 	findNodeId( gateway:string, cnnctnTarget:string, browsePath:string ):UaNode|undefined{
-		let nodes = this.getNodes(gateway, cnnctnTarget);
-		let storeNode = nodes.get( OpcObject.rootNode.key )!;
+		const nodes = this.getNodes( gateway, cnnctnTarget );
+		let storeNode = nodes.get( OpcObject.rootNode.key );
 		if( !storeNode )
 			return undefined;
+		const cnnctn = this.#connections.get( gateway )?.get( cnnctnTarget );
+		const segments = browsePath.split( "/" );
 		let uaNode: UaNode|undefined;
-		let cnnctn = this.#connections.get( gateway )?.get( cnnctnTarget );
-		browsePath.split("/").forEach( (segment, i)=>{
-			uaNode = storeNode.children.find( (c)=>browseEq(c.browse!, toBrowse(segment, cnnctn?.connection.defaultBrowseNs)) );
-			if( uaNode )
-				storeNode = this.findStore( gateway, cnnctnTarget, uaNode.nodeId )!;
-		} );
+		for( let i=0; i<segments.length; ++i ){
+			uaNode = storeNode.children.find( (c)=>browseEq(c.browse!, toBrowse(segments[i], cnnctn?.connection.defaultBrowseNs)) );
+			if( !uaNode )
+				return undefined;
+			if( i+1==segments.length )
+				break;//the last segment is the answer;  its own store entry is not needed and may legitimately be absent
+			storeNode = this.findStore( gateway, cnnctnTarget, uaNode.nodeId );
+			if( !storeNode )
+				return undefined;//a known child with no store entry of its own - the rest of the path cannot be walked
+		}
 		return uaNode;
 	}
 

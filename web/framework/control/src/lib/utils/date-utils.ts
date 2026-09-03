@@ -12,15 +12,13 @@ export class DateUtils{
 		copy.setUTCHours( 0, 0, 0, 0 );
 		return copy;
 	}
-	// //date control sends a local time date, but
+	//The inverse of toDays, which floors UTC epoch-days - so this is UTC midnight of `value`, and
+	//`toDays(fromDays(d))==d` everywhere.  It used to build its epoch from LOCAL 1970-01-01 midnight, which made the pair
+	//disagree by the zone offset:  east of UTC every round trip lost a day (`toDays(fromDays(d))==d-1`), and DateRange.toDate,
+	//which adds the offset back to render a picker date, applied it twice and showed 22:00 of the day before.
+	//endOfDay is the last whole second of the day, as before.
 	static fromDays( value:Day, endOfDay=false ):Date{
-		let t = new Date( 1970, 0, 1 ), offset = 0;
-		if( endOfDay ){
-			++value;
-			--offset;
-		}
-		t.setSeconds( value*24*60*60+offset );
-		return t;
+		return new Date( endOfDay ? (value+1)*86400000-1000 : value*86400000 );
 	}
 	static toDays( value:Date ):Day{
 		if( value==null )
@@ -35,15 +33,17 @@ export class DateUtils{
 		const days = ["Sun", "Mon", "Tue", "Wed", "Thr", "Fri", "Sat"];
 		return days[ date.getUTCDay() ];
 	}
+	//UTC fields throughout, like dayOfWeekAbr below and everything else here:  fromDays now hands back UTC midnight, so the
+	//LOCAL getters this used to mix in named the day before anywhere west of UTC.
 	static display( date:Date ):string{
 		const now = new Date();
-		const showYear = date.getFullYear()<now.getFullYear() && ( now.getFullYear()-date.getFullYear()>1 || date.getMonth()<=now.getMonth() );
+		const showYear = date.getUTCFullYear()<now.getUTCFullYear() && ( now.getUTCFullYear()-date.getUTCFullYear()>1 || date.getUTCMonth()<=now.getUTCMonth() );
 		const showMonth = showYear || date>now || DateUtils.toDays(now)-DateUtils.toDays(date)>6;
 		let display = "";
 		if( showYear )
-			display = `${date.getFullYear()-2000}-`;
+			display = `${date.getUTCFullYear()-2000}-`;
 		if( showMonth )
-			display += `${date.getMonth()+1}-${date.getDate()}`;
+			display += `${date.getUTCMonth()+1}-${date.getUTCDate()}`;
 		else
 			display = this.dayOfWeekAbr( date );
 

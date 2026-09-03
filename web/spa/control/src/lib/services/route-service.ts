@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { ActivatedRoute, Router, Routes, UrlSegment } from "@angular/router";
 import { RouteItem } from '../pages/component-sidenav/route-item';
 
@@ -10,8 +10,7 @@ export interface IRouteService{
 
 @Injectable()
 export class RouteService implements IRouteService{
-	constructor( protected route: ActivatedRoute )
-	{}
+	protected route:ActivatedRoute = inject( ActivatedRoute );
 	children( urlSegments:UrlSegment[] ):Promise<Routes>{
 		let config = this.route.parent?.routeConfig! ?? this.route.routeConfig;
 		return Promise.resolve( config.children! );

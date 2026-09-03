@@ -1,13 +1,11 @@
-import { Component, effect, OnInit, OnDestroy, signal, inject, model } from '@angular/core';
+import { Component, effect, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {ActivatedRoute, Router} from '@angular/router';
 import { SelectionModel } from '@angular/cdk/collections';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 
-import { ComponentPageTitle, RouteItem, ProfileStore } from 'jde-spa';
-import { arraysEqual, cloneClassArray, DetailResolverData, SnackbarService, IGraphQL, Properties, QLSelector, TableSettings, TargetRow, toIdArray, Style} from 'jde-framework';
+import { arraysEqual, cloneClassArray, DetailPage, IGraphQL, Properties, QLSelector, TableSettings, TargetRow, toIdArray, Style} from 'jde-framework';
 import { Role, RolePK } from '../../model/role';
 import { PermissionTable } from '../../shared/permissions/permission-table';
 import { Permission } from '../../model/permission';
@@ -18,98 +16,60 @@ import { UserPK } from '../../model/user';
 @Component( {
     templateUrl: './role-detail.html',
 		styleUrls: ['./role-detail.scss'],
-		host: {class:'main-content mat-drawer-container my-content'},
+		//the trailing class is load-bearing:  Angular hashes a component's *shape* into its style-encapsulation id and leaves
+		//the class name out, so four routed pages that now share DetailPage and this host string could collide with NG0912.
+		host: {class:'main-content mat-drawer-container my-content role-detail'},
     imports: [CommonModule, MatButtonModule, MatIcon, MatTabsModule, Properties, PermissionTable, QLSelector]
 })
-export class RoleDetail implements OnDestroy, OnInit{
-	constructor( private route: ActivatedRoute, private router:Router, private componentPageTitle:ComponentPageTitle, private snackbar: SnackbarService ){
+export class RoleDetail extends DetailPage<Role>{
+	constructor(){
+		super( 'roleDetail' );
 		effect(() => {
-			if( !this.properties() )
-				return;
-			if( !this.properties().canSave )
-				this.isChanged.set( false );
-			else if( !(this.properties() as Role).equals(this.role.properties!) )
+			if( this.childRoles() && !arraysEqual(TargetRow.idArray(this.row.childRoles), this.childRoles().selected) )
 				this.isChanged.set( true );
 		});
 		effect(() => {
-			if( this.childRoles() && !arraysEqual(TargetRow.idArray(this.role.childRoles), this.childRoles().selected) )
+			if( this.groups() && !arraysEqual(TargetRow.idArray(this.row.groups),this.groups().selected) )
 				this.isChanged.set( true );
 		});
 		effect(() => {
-			if( this.groups() && !arraysEqual(TargetRow.idArray(this.role.groups),this.groups().selected) )
+			if( this.users() && !arraysEqual(TargetRow.idArray(this.row.users),this.users().selected) )
 				this.isChanged.set( true );
 		});
 		effect(() => {
-			if( this.users() && !arraysEqual(TargetRow.idArray(this.role.users),this.users().selected) )
+			if( this.permissions() && !Permission.arraysEqual(this.row.permissions, this.permissions()) )
 				this.isChanged.set( true );
 		});
-		effect(() => {
-			if( this.permissions() && !Permission.arraysEqual(this.role.permissions, this.permissions()) )
-				this.isChanged.set( true );
-		});
+	}
 
-		route.data.subscribe( async (data)=>{
-			if( this.tabIndex==null )
-				this.tabIndex = ProfileStore.tabIndex( 'roleDetail' );
-
-			this.pageData = data["pageData"];
-			this.role = new Role( this.pageData.row );
-			this.pageData.row = null;
-
-			this.properties.set( this.role.properties );
-			this.permissions.set( cloneClassArray(this.role.permissions, Permission) );
-			this.childRoles.set( new SelectionModel<RolePK>(true, TargetRow.idArray(this.role.childRoles)) );
-			this.groups.set( new SelectionModel<GroupPK>(true, TargetRow.idArray(this.role.groups)) );
-			this.users.set( new SelectionModel<UserPK>(true, TargetRow.idArray(this.role.users)) );
+	protected override get ctor(){ return Role; }
+	protected override onRow(){
+		this.permissions.set( cloneClassArray(this.row.permissions, Permission) );
+		this.childRoles.set( new SelectionModel<RolePK>(true, TargetRow.idArray(this.row.childRoles)) );
+		this.groups.set( new SelectionModel<GroupPK>(true, TargetRow.idArray(this.row.groups)) );
+		this.users.set( new SelectionModel<UserPK>(true, TargetRow.idArray(this.row.users)) );
+	}
+	protected override upsert():Role{
+		return new Role( {
+			id:this.properties().id,
+			...this.properties(),
+			permissions: this.permissions(),
+			roles: this.childRoles().selected,
+			groups: toIdArray(this.groups().selected),
+			users: toIdArray(this.users().selected)
 		});
 	}
-	ngOnDestroy(){
-		ProfileStore.setTabIndex( 'roleDetail', this.tabIndex );
-	}
-	ngOnInit(){
-		this.sideNav.set( this.pageData.routing );
-	}
-	tabIndexChanged( index:number ){ this.tabIndex = index;}
 
-	async onSubmitClick(){
-		try{
-			const upsert = new Role( {
-				id:this.properties().id,
-				...this.properties(),
-				permissions: this.permissions(),
-				roles: this.childRoles().selected,
-				groups: toIdArray(this.groups().selected),
-				users: toIdArray(this.users().selected)
-			});
-			const mutation = upsert.mutation( this.role );
-			await this.ql.mutate( mutation, (m)=>console.log(m) );
-			this.router.navigate( ['..'], { relativeTo: this.route } );
-		}catch(e){
-			this.snackbar.exception( "Save failed.", e );
-		}
-	}
-	public onCancelClick(){
-		this.router.navigate( ['..'], { relativeTo: this.route } );
-	}
 	public copy( existing:Role ):Role{
 		return new Role( existing );
 	}
-	role!:Role;
-	pageData!:DetailResolverData<Role>;
-	ctor:new (item: any) => any = Role;
-	isChanged = signal<boolean>( false );
+
+	get role(){ return this.row; }//the template's name for it
 	permissions = signal<Permission[]>( null as any );
-	properties = signal<Partial<Role>>( null as any );
 	childRoles = signal<SelectionModel<RolePK>>( null as any );
-
 	groups = signal<SelectionModel<RolePK>>( null as any );
-	sideNav = model.required<RouteItem>();
-	tabIndex:number|undefined;
 	users = signal<SelectionModel<RolePK>>( null as any );
-
-	get schema(){ return this.pageData.schema; }
-
-	ql:IGraphQL = inject( AccessService );
+	override ql:IGraphQL = inject( AccessService );
 }
 export const roleTableSettings:TableSettings = {
 	excludedColumns:["permissions"],

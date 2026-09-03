@@ -1,7 +1,9 @@
 <!-- @if( !isLoading() ) { -->
 	<mat-toolbar>
 		<mat-form-field>
-			<input matInput [(ngModel)]="name" placeholder="View Name" (focus)="$event.target.select()">
+			<!--`name` is already the signal every consumer here reads (disableSave, getView), so it binds natively:  one text
+			field does not need a FormControl on top of it, and [(ngModel)] made this the only template-driven form left.-->
+			<input matInput [value]="name()" (input)="onNameInput($event)" placeholder="View Name" (focus)="onNameFocus($event)">
 		</mat-form-field>
 		<button matButton="tonal" (click)="onSave.emit(getView(false))" [disabled]=disableSave()>Save</button>
 		<button matButton="tonal" (click)="onShow.emit(getView(true))">Show</button>

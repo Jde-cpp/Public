@@ -3,6 +3,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { ActivatedRoute } from '@angular/router';
 import { ComponentPageTitle, ProfileStore, RouteItem, RouteStore } from 'jde-spa';
 import { AppService } from '../../../services/app/app-service';
+import { errorMessage } from '../../../utils/errors';
 import { LogDetail } from '../../logs/detail/log-detail';
 import { LogSettingsPanel } from '../../logs/settings/log-settings-panel';
 
@@ -19,8 +20,8 @@ import { LogSettingsPanel } from '../../logs/settings/log-settings-panel';
 		imports: [MatTabsModule, LogDetail, LogSettingsPanel]
 })
 export class AppServerDetail implements OnInit, OnDestroy{
-	constructor( private route: ActivatedRoute, private componentPageTitle:ComponentPageTitle )
-	{}
+	private route:ActivatedRoute = inject( ActivatedRoute );
+	private componentPageTitle:ComponentPageTitle = inject( ComponentPageTitle );
 
 	ngOnInit(): void {
 		//the ':instance' param sits on the parent route; this component is its path:'' child, which inherits it.
@@ -35,7 +36,7 @@ export class AppServerDetail implements OnInit, OnDestroy{
 				this.instanceId.set( id );
 			}
 			catch( e ){
-				this.error.set( `${e}` );//without this the page stays behind isLoading and renders blank
+				this.error.set( errorMessage(e, "Could not load the application server.") );//errorMessage, not `${e}`: an HttpErrorResponse and a {error:IError} rejection both render "[object Object]".  Without this the page stays behind isLoading and renders blank
 			}
 			this.isLoading.set( false );
 		});

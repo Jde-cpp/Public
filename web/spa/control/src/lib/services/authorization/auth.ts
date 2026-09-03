@@ -52,6 +52,8 @@ export class User extends UserJson {
 
 	static decodeJwt(idToken: string):any{
 		const base64Url = idToken.split( "." )[1];
+		if( !base64Url )//a legacy/truncated stored value used to surface as `.replace of undefined` from inside the AuthStore constructor - see its comment
+			throw new Error( `'${idToken}' is not a jwt:  no '.'-separated payload.` );
 		const base64 = base64Url.replace( /-/g, "+" ).replace( /_/g, "/" );
 		const jsonPayload = decodeURIComponent(
 			window.atob( base64 ).split("")

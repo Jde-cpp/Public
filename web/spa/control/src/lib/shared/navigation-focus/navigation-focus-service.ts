@@ -1,4 +1,4 @@
-import {Injectable, OnDestroy} from '@angular/core';
+import {Injectable, OnDestroy, inject } from '@angular/core';
 import {Event, NavigationEnd, Router} from '@angular/router';
 import {filter, skip} from 'rxjs/operators';
 import {Subscription} from 'rxjs';
@@ -15,7 +15,8 @@ export class NavigationFocusService implements OnDestroy {
   readonly navigationEndEvents;
   readonly softNavigations;
 
-  constructor(private router: Router) {
+  private router:Router = inject( Router );
+  constructor() {
 		this.navigationEndEvents = this.router.events.pipe(filter((event: Event): event is NavigationEnd => event instanceof NavigationEnd));
 		this.softNavigations = this.navigationEndEvents.pipe(skip(1));
     this.subscriptions.add(this.softNavigations.subscribe(() => {

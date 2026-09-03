@@ -1,9 +1,10 @@
 import { Injectable, Inject, inject } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Router } from '@angular/router';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Subject,Observable, finalize } from 'rxjs';
 import { AppService, AuthStore, describeFetchError, Duration, ETransport, GoogleAuthService, Guid, IGraphQL, Instance, Log, Mutation, MutationSchema, ProtoService, ProtoUtils, Query, StringUtils, TableSchema, Timestamp, Type } from 'jde-framework';
 import { EProvider, User } from 'jde-spa';
+import { errorText } from 'jde-framework';
 
 
 import { OpcError } from '../model/opc-error';
@@ -16,7 +17,7 @@ import { NodeRoute } from '../model/node-route';
 import { CnnctnTarget, ServerCnnctn } from "../model/server-cnnctn";
 import { NodeKey, NodeId } from '../model/node-id';
 import { ENodeClass, ObjectType, OpcObject, UaNode, Variable } from '../model/node';
-import { OpcId, StatusCode } from '../model/types';
+import { OpcId, scBadUnexpectedError, StatusCode } from '../model/types';
 import { ExNodeId } from '../model/ex-node-id';
 import { toValue, Value, valueJson } from '../model/value';
 import { Enum } from '../model/enum';
@@ -25,27 +26,20 @@ interface IError{ requestId:number; message: string; }
 type Owner = any;
 
 export type GatewayTarget = string;
+//app.routes.ts: 'gateways/:gateway[/:connection/**]' and 'apps/gateways/:instance[/:connection]'.  Both segments hold a
+//Gateway.target (== instances[0].instanceName), so one pattern covers the lot.  Module scope, not a static #field:  a
+//decorated class cannot carry a static private identifier (TS18036).
+const gatewayUrl = /^\/(?:apps\/)?gateways\/([^/?#]+)/;
 @Injectable( {providedIn: 'root'} )
 export class GatewayService implements IGraphQL{
 	constructor(
 		@Inject("AuthStore") authStore:AuthStore,
-		private route: ActivatedRoute,
 		private router: Router,
 		@Inject("OpcStore") opcStore:OpcStore ){
 		this.appService.gatewayInstances().then(
 			(instances)=>this.onGatewaySuccess( instances, this.appService.transport, this.http, authStore, opcStore ),
 			(e)=>this.onInstancesError( e )//wrap so `this` is bound (bare method reference would run with this===undefined)
 		);
-		route.paramMap.subscribe( async params=>{
-			const gatewayTarget = params.get('gateway');
-			const gateway = gatewayTarget ? this.#gateways?.find( gateway=>gateway.target==gatewayTarget ) : undefined;
-			if( gateway )//never cache a miss: the param is absent on most routes and #gateways is still unset early on, and the old unconditional assignment WIPED an already-resolved default on every such navigation
-				this.#defaultGateway = gateway;
-		});
-		route.url.subscribe( async urlSegments=>{
-			const url = urlSegments.map(segment=>segment.path).join("/");
-			console.debug( `GatewayService:  url changed to '${url}'` );
-		});
 	}
 	private onGatewaySuccess(gateways:Instance[], transport:ETransport, http: HttpClient, authStore:AuthStore, opcStore:OpcStore){
 		if( gateways.length==0 )
@@ -53,7 +47,13 @@ export class GatewayService implements IGraphQL{
 		this.#gateways = gateways.map( instance=>new Gateway(instance, transport, http, authStore, opcStore, this.googleAuth) );
 		this.#gatewaysCallbacks.forEach( cb=>cb.resolve(this.#gateways) );
 		this.#gatewaysCallbacks = [];
-		this.#gatewayCallbacks.forEach( cb=>cb.resolve(this.#gateways.find(gateway=>gateway.instances[0].instanceName==cb.instanceName)!) );
+		this.#gatewayCallbacks.forEach( cb=>{
+			const gateway = this.#gateways.find( gateway=>gateway.instances[0].instanceName==cb.instanceName );
+			if( gateway )
+				cb.resolve( gateway );
+			else
+				cb.reject( this.#unknownGateway(cb.instanceName) );
+		});
 		this.#gatewayCallbacks = [];
 	}
 	onInstancesError(e:HttpErrorResponse){
@@ -63,10 +63,20 @@ export class GatewayService implements IGraphQL{
 		this.#gatewayCallbacks.forEach( x=>x.reject(e) );
 		this.#gatewayCallbacks = [];
 	}
+	//A url segment naming a gateway that is not registered - a stale bookmark, a renamed instance - used to come back as
+	//`undefined` behind a `!`, so the miss only surfaced as "cannot read properties of undefined" inside the resolver's
+	//first query, with nothing naming the gateway.  Reject:  the Router turns that into a NavigationError that does.
 	async gateway( instanceName:string ):Promise<Gateway>{
 		if( !this.#gateways )
 			return new Promise<Gateway>( (resolve,reject)=>this.#gatewayCallbacks.push({instanceName, resolve, reject}) );
-		return this.#gateways.find( gateway=>gateway.instances[0].instanceName==instanceName )!;
+		const gateway = this.#gateways.find( gateway=>gateway.instances[0].instanceName==instanceName );
+		if( !gateway )
+			throw this.#unknownGateway( instanceName );
+		return gateway;
+	}
+	#unknownGateway( instanceName:string ):Error{
+		const known = this.#gateways?.map( gateway=>gateway.instances[0].instanceName ) ?? [];
+		return new Error( `No gateway '${instanceName}' is registered.  ${known.length ? `Registered: '${known.join("', '")}'.` : "None are registered."}` );
 	}
 	async gateways():Promise<Gateway[]>{
 		if( !this.#gateways )
@@ -99,22 +109,28 @@ export class GatewayService implements IGraphQL{
 			await this.gateways();//queues on #gatewaysCallbacks, and rejects if gatewayInstances() failed
 		return this.defaultGateway;
 	}
+	//Resolved from the CURRENT url on every read, never cached.  This service is providedIn:'root', so its own ActivatedRoute
+	//is the ROOT route and its paramMap never carries the child ':gateway' - the old subscription therefore fired with nothing,
+	//#defaultGateway kept whatever the first url-suffix guess produced, and every IGraphQL call made on gateway B (reload,
+	//delete<Type>(id), restore, OpcAuthService.logout) went to gateway A against B's row ids.  Masked only by single-gateway
+	//deployments, where the find-miss and the [0] fallback happen to name the same instance.
+	#urlGateway():Gateway|undefined{
+		const navigation = this.router.getCurrentNavigation();//guards/resolvers run BEFORE activation, so routerState still holds the route being left
+		const url = navigation ? this.router.serializeUrl( navigation.finalUrl ?? navigation.extractedUrl ) : this.router.url;
+		const target = gatewayUrl.exec( url )?.[1];
+		return target ? this.#gateways?.find( gateway=>gateway.target==decodeURIComponent(target) ) : undefined;
+	}
 	get defaultGateway():Gateway{
-		if( !this.#defaultGateway ){
-			let target = this.router.url.split('/').slice(-1)[0];
-			//?? gateways[0]: 'default' means "when nothing names one", and the last url segment is only a gateway target on
-			//the /gateways/<target> routes - on a node url it is a browse path, so the find misses.  loginPassword already
-			//treats gateways[0] as the one to use.
-			this.#defaultGateway = this.#gateways?.find( gateway=>gateway.target==target ) ?? this.#gateways?.[0]!;
-		}
-		if( !this.#defaultGateway )//was `undefined!`, so callers died on "cannot read properties of undefined" far from the cause
+		//?? gateways[0]: 'default' means "when nothing names one" - loginPassword already treats gateways[0] as the one to use.
+		const gateway = this.#urlGateway() ?? this.#gateways?.[0];
+		if( !gateway )//was `undefined!`, so callers died on "cannot read properties of undefined" far from the cause
 			throw new Error( "No gateway is available: the gatewayInstances() lookup has not resolved yet, or returned none.  Await defaultGatewayAsync() instead." );
-		return this.#defaultGateway;
-	} #defaultGateway!:Gateway;
+		return gateway;
+	}
 	#gateways!:Gateway[];
 
-	#gatewaysCallbacks:{resolve: (value:Gateway[])=>void, reject:(e?:any)=>void}[]= [];
-	#gatewayCallbacks:{ instanceName:string, resolve: (value:Gateway)=>void, reject:(e?:any)=>void}[]= [];
+	#gatewaysCallbacks:{resolve: (value:Gateway[])=>void, reject:(e?:unknown)=>void}[]= [];
+	#gatewayCallbacks:{ instanceName:string, resolve: (value:Gateway)=>void, reject:(e?:unknown)=>void}[]= [];
 	appService = inject(AppService);
 	googleAuth = inject(GoogleAuthService);//Gateway is built by hand below, so the silent-renewal service is threaded through rather than injected there
 	http = inject(HttpClient);
@@ -160,8 +176,8 @@ export class Gateway extends ProtoService<FromClient.Transmission,FromServer.Mes
 			await this.postRaw<string>( 'logout', {}, false, {} );
 			if( this.log.restResults ) console.log( `logout` );
 		}
-		catch( e:any ){
-			log( `logout failed:  ${e["message"] ?? "Unknown error"}` );
+		catch( e:unknown ){
+			log( `logout failed:  ${errorText(e) ?? "Unknown error"}` );
 		}
 		this.authStore.logout();
 	}
@@ -295,8 +311,8 @@ export class Gateway extends ProtoService<FromClient.Transmission,FromServer.Mes
 							let x = await super.querySingle<Type>( `__type( opc: ${StringUtils.qlString(cnnctn)}, ${nodeId.qlArgs()}){ name enumValues{id name description}}`, null, log );
 							variable.customDataType = new Enum(nodeId, x);
 						}
-						catch( e:any ){
-							log( e["message"] );
+						catch( e:unknown ){
+							log( errorText(e) ?? "Unknown error" );
 						}
 					break;
 				default: console.error( `browseObjectsFolder - unhandled nodeClass ${ref.nodeClass} for '${ref.name}'` );//was `debugger;` — froze the app whenever a debugger (DevTools/automation) was attached
@@ -355,32 +371,38 @@ export class Gateway extends ProtoService<FromClient.Transmission,FromServer.Mes
 		}
 	}
 
+	//A failed subscribe costs the caller only the nodes it asked for.  Two ways it used to cost more:  the per-node failure
+	//path `delete`d the whole per-node-key entry, taking every OTHER owner's registration with it - the server kept pushing
+	//and nodeValues' `opcSubscriptions.get(node.key)?.forEach` silently no-oped - and the catch called clearOwner, which
+	//unsubscribed the owner's already-live nodes server-side and errored the shared Subject, ending subscriptions that had
+	//nothing to do with the request.  Now only this owner's registration for the FAILED nodes goes, and the failure is
+	//reported the way the server reports a bad reading: an OpcError value on the owner's stream, which stays open.
 	private async _subscribe( opcId:OpcId, nodes:NodeId[], owner:Owner ):Promise<void>{
 		const request:FromClient.Subscribe = { nodes:Gateway.toProto(nodes), opcId:opcId };
-		let toDelete = new Array<NodeId>();
-		let error:any;
+		const failed = new Array<{node:NodeId, sc:StatusCode}>();
 		try{
-		 	let y = await this.sendPromise<FromServer.MonitoredItemCreateResult[]>( {"subscribe":request}, `subscribe opcId: ${opcId}, nodeCount: ${nodes.length}` );
-		 	for( let i=0; i<y.length; ++i ){
-				const node = nodes[i];
-				if( y[i].statusCode ){
-					toDelete.push( node );
-					let e = new OpcError( y[i].statusCode!, "Subscribe", new Error().stack!, undefined );
-					console.log( `Subscription failed for '${node}' - ${e}` );
-				}
-		 	}
+			const y = await this.sendPromise<FromServer.MonitoredItemCreateResult[]>( {"subscribe":request}, `subscribe opcId: ${opcId}, nodeCount: ${nodes.length}` );
+			for( let i=0; i<y.length; ++i ){
+				if( y[i].statusCode )
+					failed.push( {node: nodes[i], sc: y[i].statusCode!} );
+			}
 		}
-		catch( e:any ){
-			console.error( `subscribe failed - ${e?.error?.message ?? e?.message ?? e}` );
-			toDelete.push( ...nodes );
-			error = e;
+		catch( e:unknown ){
+			console.error( `subscribe failed - ${errorText(e)}` );
+			const sc = <StatusCode>((<{error?:{sc?:number}}>e)?.error?.sc ?? scBadUnexpectedError);
+			failed.push( ...nodes.map( node=>({node, sc}) ) );//the request never reached the server, so none of THESE is subscribed - the owner's others still are
 		}
-		toDelete.forEach( (n)=>this.getOpcSubscriptions(opcId).delete(n.key) );
-		if( error ){
-			const subject = this.#ownerSubscriptions.get( owner );
-			this.clearOwner( owner );//error() terminates the Subject — drop the owner so a later addToSubscription starts a fresh one
-			subject?.error( error );
+		if( !failed.length )
+			return;
+		const opcSubscriptions = this.getOpcSubscriptions( opcId );
+		const subject = this.#ownerSubscriptions.get( owner );
+		for( const {node, sc} of failed ){
+			this.clearOwnerNode( opcSubscriptions, node.key, owner );//drops the key only when no owner is left on it
+			const e = new OpcError( sc, "Subscribe", new Error().stack!, undefined );
+			console.log( `Subscription failed for '${node}' - ${e}` );
+			subject?.next( {opcId, node, value: e, sc} );
 		}
+		this.clearUnusedNodes();//nothing was subscribed server-side, so there is nothing to unsubscribe - only the bookkeeping
 	}
 
 	#ownerSubscriptions = new Map<Owner,Subject<SubscriptionResult>>();

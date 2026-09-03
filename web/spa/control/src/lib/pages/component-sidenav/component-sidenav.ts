@@ -5,8 +5,7 @@ import {
   OnInit,
   ViewEncapsulation,
   model,
-  viewChild
-} from '@angular/core';
+  viewChild, inject } from '@angular/core';
 import {BreakpointObserver} from '@angular/cdk/layout';
 import {AsyncPipe} from '@angular/common';
 import {MatSidenav, MatSidenavModule} from '@angular/material/sidenav';
@@ -41,12 +40,11 @@ export class ComponentSidenav implements OnInit, OnDestroy {
   isScreenSmall: Observable<boolean>;
   private subscriptions = new Subscription();
 	item = model<RouteItem>(null as any);
-  constructor( private _route: ActivatedRoute,
-              private _navigationFocusService: NavigationFocusService,
-              zone: NgZone,
-              breakpoints: BreakpointObserver,
-							private router: Router/*,
-							@Optional() @Inject('IRouteService') private routeService:IRouteService*/) {
+  private _route:ActivatedRoute = inject( ActivatedRoute );
+  private _navigationFocusService:NavigationFocusService = inject( NavigationFocusService );
+  private router:Router = inject( Router );
+  constructor( /*@Optional() @Inject('IRouteService') private routeService:IRouteService*/ ) {
+    const breakpoints:BreakpointObserver = inject( BreakpointObserver );//local, not a field: nothing else reads it
     this.isScreenSmall = breakpoints.observe(`(max-width: ${SMALL_WIDTH_BREAKPOINT}px)`).pipe(map(breakpoint => breakpoint.matches));
   }
 

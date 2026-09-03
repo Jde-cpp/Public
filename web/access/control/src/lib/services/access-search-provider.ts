@@ -34,7 +34,7 @@ export class AccessSearchProvider implements ISearchProvider{
 			.map( ({entity, rank})=>({
 				title: entity.name,
 				prefix: entity.kind,
-				route: entity.kind=='resource' ? `/access/${collections.resource}` : `/access/${collections[entity.kind]}/${encodeURIComponent(entity.target)}`,
+				route: entity.kind=='resource' ? `/access/${collections.resource}` : [ '/access', collections[entity.kind], entity.target ],
 				icon: icons[entity.kind],
 				summary: entity.summary,
 				rank,

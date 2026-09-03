@@ -14,8 +14,8 @@ import { Gateway } from '../../services/gateway-service';
 		imports: [MatTabsModule, QLList, LogDetail, LogSettingsPanel]
 })
 export class GatewayDetail implements OnInit, OnDestroy{
-	constructor( private route: ActivatedRoute, private componentPageTitle:ComponentPageTitle )
-	{}
+	private route:ActivatedRoute = inject( ActivatedRoute );
+	private componentPageTitle:ComponentPageTitle = inject( ComponentPageTitle );
 
 	ngOnInit(): void {
 		this.route.data.subscribe( async (routeData)=>{

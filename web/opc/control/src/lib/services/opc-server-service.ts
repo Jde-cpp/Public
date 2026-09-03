@@ -15,7 +15,8 @@ export class OpcServerService{
 	//the promise is the cache, so concurrent callers share one round trip instead of racing to build duplicate services.
 	servers():Promise<OpcServer[]>{
 		return this.#servers ??= this.appService.opcServerInstances().then(
-			instances=>instances.map( instance=>new OpcServer(instance, this.appService.transport, this.http, this.authStore, this.googleAuth) ) );
+			instances=>instances.map( instance=>new OpcServer(instance, this.appService.transport, this.http, this.authStore, this.googleAuth) ) )
+			.catch( (e)=>{ this.#servers = undefined; throw e; } );
 	} #servers:Promise<OpcServer[]>|undefined;
 
 	async server( instanceName:string ):Promise<OpcServer>{
@@ -41,7 +42,7 @@ export class OpcServer extends ProtoService<FromClient.Transmission,FromServer.M
 	}
 
 	protected override processMessage( bytearray:Uint8Array ):void{ console.error( `OpcServer '${this.name}' has no websocket transport; discarding ${bytearray.length} bytes.` ); }
-	protected override handleConnectionError( err:any ):void{ console.error( `OpcServer '${this.name}' has no websocket transport.`, err ); }
+	protected override handleConnectionError( err:unknown ):void{ console.error( `OpcServer '${this.name}' has no websocket transport.`, err ); }
 
 	get name():string{ return this.instances[0].instanceName!; }
 	get host():string{ return this.instances[0].host; }

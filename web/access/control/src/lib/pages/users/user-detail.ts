@@ -1,13 +1,11 @@
-import { Component, computed, effect, OnInit, OnDestroy, signal, inject, model } from '@angular/core';
+import { Component, computed, effect, signal, inject } from '@angular/core';
 import { SelectionModel } from '@angular/cdk/collections';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 
-import { ComponentPageTitle, RouteItem, ProfileStore } from 'jde-spa';
-import { arraysEqual, cloneClassArray, DetailResolverData, SnackbarService, IGraphQL, Properties, QLSelector, Style, TableSettings, TargetRow, toIdArray} from 'jde-framework';
+import { arraysEqual, cloneClassArray, DetailPage, IGraphQL, Properties, QLSelector, Style, TableSettings, TargetRow, toIdArray} from 'jde-framework';
 
 import { RolePK } from '../../model/role';
 import { PermissionTable } from '../../shared/permissions/permission-table';
@@ -20,84 +18,47 @@ import { KeyProperties } from './key-properties/key-properties';
 @Component( {
     templateUrl: './user-detail.html',
 		styleUrls: ['./user-detail.scss'],
-		host: {class:'main-content mat-drawer-container my-content'},
+		//the trailing class is load-bearing:  Angular hashes a component's *shape* into its style-encapsulation id and leaves
+		//the class name out, so four routed pages that now share DetailPage and this host string could collide with NG0912.
+		host: {class:'main-content mat-drawer-container my-content user-detail'},
     imports: [CommonModule, MatButtonModule, MatIcon, MatTabsModule, Properties, KeyProperties, PermissionTable, QLSelector]
 })
-export class UserDetail implements OnDestroy, OnInit{
-	constructor( private route: ActivatedRoute, private router:Router, private componentPageTitle:ComponentPageTitle, private snackbar: SnackbarService ){
+export class UserDetail extends DetailPage<User>{
+	constructor(){
+		super( 'userDetail' );
 		effect(() => {
-			if( !this.properties() )
-				return;
-			if( !this.properties().canSave )
-				this.isChanged.set( false );
-			else if(  !(this.properties() as User).equals(this.user.properties!) )
+			if( this.groups() && !arraysEqual(TargetRow.idArray(this.row.groups ?? []),this.groups().selected) )
 				this.isChanged.set( true );
 		});
+		effect(() => {
+			if( this.roles() && !arraysEqual(TargetRow.idArray(this.row.roles), this.roles().selected) )
+				this.isChanged.set( true );
+		});
+		effect(() => {
+			if( this.permissions() && !Permission.arraysEqual(this.row?.permissions ?? [], this.permissions()) )//value-compare like role-detail — identity arraysEqual on the clones marked the page dirty on load
+				this.isChanged.set( true );
+		});
+	}
 
-		effect(() => {
-			if( this.groups() && !arraysEqual(TargetRow.idArray(this.user.groups ?? []),this.groups().selected) )
-				this.isChanged.set( true );
-		});
-		effect(() => {
-			if( this.roles() && !arraysEqual(TargetRow.idArray(this.user.roles), this.roles().selected) )
-				this.isChanged.set( true );
-		});
-		effect(() => {
-			if( this.permissions() && !Permission.arraysEqual(this.user?.permissions ?? [], this.permissions()) )//value-compare like role-detail — identity arraysEqual on the clones marked the page dirty on load
-				this.isChanged.set( true );
-		});
-		route.data.subscribe( (data)=>{
-			this.pageData = data["pageData"];
-			this.user = new User( this.pageData.row );
-			this.sideNav.set( this.pageData.routing );
-			this.pageData.row = null;
-			this.properties.set( this.user.properties );
-			this.groups.set( new SelectionModel<GroupPK>(true, TargetRow.idArray(this.user.groups)) );
-			this.permissions.set( cloneClassArray(this.user.permissions ?? [], Permission) );
-			this.roles.set( new SelectionModel<RolePK>(true, TargetRow.idArray(this.user.roles ?? [])) );
-			this.componentPageTitle.title = this.user.name;
-			this.isLoading.set( false );
-		});
+	protected override get ctor(){ return User; }
+	protected override onRow(){
+		this.groups.set( new SelectionModel<GroupPK>(true, TargetRow.idArray(this.row.groups)) );
+		this.permissions.set( cloneClassArray(this.row.permissions ?? [], Permission) );
+		this.roles.set( new SelectionModel<RolePK>(true, TargetRow.idArray(this.row.roles ?? [])) );
 	}
-	ngOnDestroy(){
-		ProfileStore.setTabIndex( 'userDetail', this.tabIndex() );
+	protected override upsert():User{
+		return new User( { ...this.properties(), permissions: this.permissions(), roles: this.roles().selected, groups: toIdArray(this.groups().selected) } );
 	}
-	ngOnInit(){
-		this.sideNav.set( this.pageData.routing );
-	}
-	onTabIndexChanged( index:number ){ this.tabIndex.set(index);}
 
-	async onSubmitClick(){
-		try{
-			const upsert = new User( { ...this.properties(), permissions: this.permissions(), roles: this.roles().selected, groups: toIdArray(this.groups().selected) } );
-			const mutation = upsert.mutation( this.user );
-			await this.ql.mutate( mutation, (m)=>console.log(m) );
-			this.router.navigate( ['..'], { relativeTo: this.route } );
-		}catch(e){
-			this.snackbar.exception( "Save failed.", e );
-		}
-	}
-	public onCancelClick(){
-		this.router.navigate( ['..'], { relativeTo: this.route } );
-	}
 	public copy( existing:User ):User{
 		return new User( existing );
 	}
 
-	user!:User;
-	ctor:new (item: any) => any = User;
-	isChanged = signal<boolean>( false );
-	isLoading = signal<boolean>( true );
-	properties = signal<Partial<User>>( null as any );
+	get user(){ return this.row; }//the template's name for it
 	groups = signal<SelectionModel<GroupPK>>( null as any );
 	permissions = signal<Permission[]>( null as any );
 	roles = signal<SelectionModel<RolePK>>( null as any );
 
-	sideNav = model.required<RouteItem>();
-
-	pageData!:DetailResolverData<User>;
-	get schema(){ return this.pageData.schema; }
-	tabIndex = signal<number>( ProfileStore.tabIndex('userDetail') );
 	userTableSettings = userTableSettings;
 	providerName = computed<string>( ()=>{
 		const value = this.properties()?.provider as string|number|undefined;
@@ -107,7 +68,7 @@ export class UserDetail implements OnDestroy, OnInit{
 	});
 	isKeyProvider = computed<boolean>( ()=>this.providerName().toLowerCase()=="key" );
 	excludedColumns = [...userTableSettings.excludedColumns!, ...keyFields];
-	ql:IGraphQL = inject( AccessService );
+	override ql:IGraphQL = inject( AccessService );
 }
 
 const keyFields = ["modulus", "exponent", "issuer", "subjectAlt", "distinguished", "expiration"];
@@ -123,6 +84,7 @@ export const userTableSettings:TableSettings = {
  export const resourceTableSettings:TableSettings = {
 	canAdd: false,
 	canPurge: false,
+	canNavigate: false,//there is no 'resources/:target' route - resources are server-defined rows with no detail page
 	columns: [
 		{ name:"name", style: new Style(300) },
 		"description"

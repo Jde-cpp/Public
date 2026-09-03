@@ -4,10 +4,7 @@ import { RouteItem, RouteService } from "jde-spa";
 
 @Injectable( {providedIn: 'root'} )
 export class SettingsRouteService extends RouteService{
-	constructor( protected override route: ActivatedRoute, private router: Router){
-		super( route )
-	}
-
+	private router:Router = inject( Router );
 	override children( urlSegments:UrlSegment[] ):Promise<Routes>{
 		let y: Routes = [];
 		for( let config of this.router.config.filter(x => x.path!.startsWith('settings/') && !x.path!.includes(':')) ){

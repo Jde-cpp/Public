@@ -2,7 +2,7 @@
 
 export class std
 {
-	static accumulate( input: any[], initial:number, fnctn: (sum:number,element:any) => number ):number
+	static accumulate<T>( input: readonly T[], initial:number, fnctn: (sum:number,element:T) => number ):number
 	{
 		let acc:number = initial;
 		for( const element of input )

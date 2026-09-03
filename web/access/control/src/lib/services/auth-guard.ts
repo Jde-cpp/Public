@@ -5,8 +5,7 @@ import { AccessService } from './access-service';
 
 @Injectable( {providedIn: 'root'} )
 export class AuthGuard implements CanActivate, CanActivateChild {
-	constructor( private router:Router)
-	{}
+	private router:Router = inject( Router );
 
 	canActivate( route: ActivatedRouteSnapshot, state: RouterStateSnapshot ):Promise<GuardResult>{
 		return Promise.resolve(true);

@@ -149,6 +149,13 @@ for libraryDir in "${libraries[@]}"; do
 		if [ "$sibling" != "$library" ]; then libraryPaths="$libraryPaths\"$sibling\":[\"../../dist/$sibling\"],"; fi;
 	done;
 	jqEdit projects/$library/tsconfig.lib.json ".compilerOptions.paths = {${libraryPaths%,}}";
+	#`ng test <lib>` needs the APPLICATION's build options, preserveSymlinks above all:  the library sources are symlinked in,
+	#and without it esbuild resolves each spec to its real path outside the workspace while the TS program holds the
+	#projects/<lib>/ one - every library spec then failed the build with "not found in TypeScript compilation" and the target
+	#ran no tests at all.  The unit-test builder has no preserveSymlinks option of its own, buildTarget is how it inherits one,
+	#and the default (the library's own ng-packagr build target) carries none.  The application's test target needs nothing:
+	#it already defaults to <workspace>:build.
+	jqEdit angular.json ".projects.\"$library\".architect.test.options.buildTarget = \"$workspace:build\"";
 	#the generated projects/$library/package.json is what ng-packagr publishes, and `ng g library` only writes it when the
 	#project is first created (with whatever @angular/* range that cli scaffolds).  The tracked control/package.json is
 	#the source of truth for what the library needs at runtime - @angular/* + rxjs ranges and the jde-* siblings it

@@ -29,8 +29,7 @@ export type RolePermission = {
 	imports: [CommonModule, MatTabsModule, MatToolbarModule, MatButtonModule, NodeRights]
 })
 export class NodeAccess implements OnInit, OnDestroy{
-	constructor( private actRoute: ActivatedRoute )
-	{}
+	private actRoute:ActivatedRoute = inject( ActivatedRoute );
 
 	async ngOnInit(): Promise<void> {
 		this.actRoute.data.subscribe( async (data)=>await this.load() );
@@ -89,8 +88,10 @@ export class NodeAccess implements OnInit, OnDestroy{
 		}else if( NodeRights.isDenied(role, rights) ){//denied->none
 			role.denied &= ~rights;
 		}else{//none->allowed
-			if( rights==0 )
+			if( rights==0 ){
 				role.allowed = 0;
+				role.denied = 0;
+			}
 			else
 				role.allowed |= rights;
 		}
@@ -104,8 +105,12 @@ export class NodeAccess implements OnInit, OnDestroy{
 		let index = this.mutations().findIndex( x=>x.id==role.roleId );
 		let mutation:Mutation|undefined = undefined;
 		if( Object.keys(args).length>0 ){
-			if( !args.allowed && !args.denied )
-				mutation = new Mutation(Role.typeName, role.roleId, {permissionRight:{id: role.permissionId}}, MutationType.Remove );
+			//Remove-vs-Add is decided from the role's RESULTING rights, never from `args` - `args` only carries the side that
+			//CHANGED, so clearing one half of a two-sided permission (allowed=Read, denied=Write -> clear the denied Write)
+			//gave args={denied:0}, made `!args.allowed && !args.denied` true, and removed the whole permissionRight, silently
+			//dropping the still-wanted allowed=Read.  Permission.roleMutations evaluates the resulting row; match it.
+			if( !role.allowed && !role.denied )
+				mutation = role.permissionId ? new Mutation(Role.typeName, role.roleId, {permissionRight:{id: role.permissionId}}, MutationType.Remove ) : undefined;//permissionId 0 = nothing on the server to remove (a pending Add is dropped by falling through with no mutation)
 			else{
 				let resource:any = role.resourceId ? { id: role.resourceId } : { schemaName: `opc.${this.accessResource()}`, target: "nodeIds" };//was `schema:` — server ignored it and stored schemaName as "opc", putting the permission on the wrong resource
 				resource["criteria"] = role.criteria ? role.criteria : null;

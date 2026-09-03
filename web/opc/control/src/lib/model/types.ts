@@ -1,6 +1,7 @@
 export type OpcId = string;
 export type Ns = number;
 export type StatusCode = number;
+export const scBadUnexpectedError:StatusCode = 0x80010000;
 
 export interface ILocalizedText{
 	locale: string|undefined;

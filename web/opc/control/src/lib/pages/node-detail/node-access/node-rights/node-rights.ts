@@ -37,13 +37,20 @@ export class NodeRights {
 	toggle( role: RolePermission, rights:number ):void{
 		this.toggleEmitter.emit( { role: role, rights: rights } );
 	}
-	sortData($event:Sort){
-		this.data = this.data.slice().sort((a:any,b:any)=>{
-			const colName = $event.active;
-			let y:number;
-			y = a[colName].localeCompare( b[colName] );
-			return $event.direction=="asc" ? y : -y;
-		});
+	//Every header carries mat-sort-header, but only 'roleName' is a field on the row:  the rights columns are named after the
+	//RIGHT (available.value) and 'inherited' is not on RolePermission at all, so `a[colName]` was undefined and localeCompare
+	//threw on every header but Role.  Sort a rights column by what the row shows in it, and keep roleName as the tiebreak so
+	//the order inside a group stays the alphabetical one.
+	sortData( $event:Sort ){
+		const colName = $event.active;
+		const right = this.available.find( kv=>kv.value==colName );
+		const rank = ( role:RolePermission ):number=>
+			right ? (NodeRights.isAllowed(role, right.key) ? 0 : NodeRights.isDenied(role, right.key) ? 1 : 2)
+			: (<any>role).inherited ? 0 : 1;//'inherited' is a stub column - undefined must sort, not throw
+		const compare = colName=="roleName"
+			? ( a:RolePermission, b:RolePermission )=>a.roleName.localeCompare( b.roleName )
+			: ( a:RolePermission, b:RolePermission )=>rank(a)-rank(b) || a.roleName.localeCompare( b.roleName );
+		this.data = this.data.slice().sort( (a,b)=>$event.direction=="asc" ? compare(a,b) : -compare(a,b) );
 		if( this.table )
 			this.table.renderRows();
 	}

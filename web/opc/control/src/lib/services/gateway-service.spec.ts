@@ -1,0 +1,122 @@
+//the vitest environment provides window/document but no localStorage - back the bare-global references with an
+//in-memory one BEFORE importing jde-spa/jde-framework (see the site specs).
+if( typeof globalThis.localStorage=="undefined" ){
+	const backing = new Map<string,string>();
+	(globalThis as any).localStorage = {
+		getItem: ( k:string )=>backing.has(k) ? backing.get(k)! : null,
+		setItem: ( k:string, v:string )=>{ backing.set(k, String(v)); },
+		removeItem: ( k:string )=>{ backing.delete(k); },
+		clear: ()=>backing.clear()
+	};
+}
+import { TestBed } from '@angular/core/testing';
+import { provideRouter, Router, Routes } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { AppService, AuthStore, ETransport } from 'jde-framework';
+import { GatewayService } from './gateway-service';
+
+class Dummy{}
+//the routes GatewayService has to read a gateway out of - app.routes.ts carries both forms, and 'apps/gateways/:instance'
+//is the one that maps the 'IGraphQL' token to this service.
+const routes:Routes = [
+	{ path: '', component: Dummy },
+	{ path: 'gateways/:gateway', component: Dummy },
+	{ path: 'gateways/:gateway/:connection', component: Dummy, children: [ {path: '**', component: Dummy} ] },
+	{ path: 'apps/gateways/:instance', component: Dummy, children: [ {path: '', component: Dummy}, {path: ':connection', component: Dummy} ] },
+	{ path: 'access/users/:target', component: Dummy }
+];
+const instances = [ {host:'localhost', port:1968, instanceName:'A'}, {host:'localhost', port:1969, instanceName:'B'} ];
+
+describe('GatewayService.defaultGateway', () => {
+	let service:GatewayService;
+	let router:Router;
+	beforeEach( async () => {
+		TestBed.configureTestingModule({ providers: [
+			provideRouter( routes ),
+			provideHttpClient(),
+			{ provide: 'AuthStore', useValue: {user: ()=>undefined, logout: ()=>{}} as unknown as AuthStore },
+			{ provide: 'OpcStore', useValue: {} },
+			{ provide: AppService, useValue: {transport: ETransport.Unsecure, gatewayInstances: ()=>Promise.resolve(instances)} }
+		]});
+		router = TestBed.inject( Router );
+		service = TestBed.inject( GatewayService );
+		await service.gateways();//the instance lookup is a promise; nothing resolves before it lands
+	});
+
+	//review3 #4: this used to be cached off the ROOT ActivatedRoute's paramMap, which never carries a child ':gateway' -
+	//so the first url-suffix guess stuck and every later mutation went to the wrong gateway.
+	it('follows navigation on the /gateways/:gateway routes', async () => {
+		await router.navigateByUrl( '/gateways/B' );
+		expect( service.defaultGateway.target ).toBe( 'B' );
+		await router.navigateByUrl( '/gateways/A' );
+		expect( service.defaultGateway.target ).toBe( 'A' );
+	});
+
+	it('reads the gateway out of a node url, past the browse path', async () => {
+		await router.navigateByUrl( '/gateways/B/local/2~DeviceSet/2~Machine' );
+		expect( service.defaultGateway.target ).toBe( 'B' );
+	});
+
+	it("follows the 'apps/gateways/:instance' routes, which are the ones bound to the 'IGraphQL' token", async () => {
+		await router.navigateByUrl( '/apps/gateways/B' );
+		expect( service.defaultGateway.target ).toBe( 'B' );
+		await router.navigateByUrl( '/apps/gateways/B/local' );
+		expect( service.defaultGateway.target ).toBe( 'B' );
+	});
+
+	it('falls back to the first gateway where the url names none', async () => {
+		await router.navigateByUrl( '/gateways/B' );
+		await router.navigateByUrl( '/access/users/Google-someone%40gmail.com' );
+		expect( service.defaultGateway.target ).toBe( 'A' );
+	});
+
+	it('falls back to the first gateway for an unknown target rather than throwing', async () => {
+		await router.navigateByUrl( '/gateways/nosuch' );
+		expect( service.defaultGateway.target ).toBe( 'A' );
+	});
+});
+
+//review3 L4: `gateway()` ended in `find(...)!`, so a url segment naming a gateway that is not registered - a stale
+//bookmark, a renamed instance - resolved with `undefined`.  The miss only surfaced as "cannot read properties of
+//undefined" inside the resolver's first query, with nothing naming the gateway that was asked for.
+describe('GatewayService.gateway', () => {
+	const configure = ( gatewayInstances:()=>Promise<any[]> )=>{
+		TestBed.configureTestingModule({ providers: [
+			provideRouter( routes ),
+			provideHttpClient(),
+			{ provide: 'AuthStore', useValue: {user: ()=>undefined, logout: ()=>{}} as unknown as AuthStore },
+			{ provide: 'OpcStore', useValue: {} },
+			{ provide: AppService, useValue: {transport: ETransport.Unsecure, gatewayInstances} }
+		]});
+		return TestBed.inject( GatewayService );
+	};
+
+	it('resolves a registered gateway', async () => {
+		const service = configure( ()=>Promise.resolve(instances) );
+		await service.gateways();
+		expect( (await service.gateway('B')).target ).toBe( 'B' );
+	});
+
+	it('rejects for an unregistered gateway, naming the ones that are', async () => {
+		const service = configure( ()=>Promise.resolve(instances) );
+		await service.gateways();
+		await expect( service.gateway('nosuch') ).rejects.toThrow( /No gateway 'nosuch' is registered.*'A', 'B'/ );
+	});
+
+	//the queued path: the same miss, taken before gatewayInstances() has landed, used to resolve its awaiter with undefined.
+	it('rejects a request queued before the instance lookup landed', async () => {
+		let land:( instances:any[] )=>void;
+		const service = configure( ()=>new Promise<any[]>( resolve=>{ land = resolve; } ) );
+		const queued = service.gateway( 'nosuch' );
+		land!( instances );
+		await expect( queued ).rejects.toThrow( /No gateway 'nosuch' is registered/ );
+	});
+
+	it('still resolves a queued request that does name a registered gateway', async () => {
+		let land:( instances:any[] )=>void;
+		const service = configure( ()=>new Promise<any[]>( resolve=>{ land = resolve; } ) );
+		const queued = service.gateway( 'B' );
+		land!( instances );
+		expect( (await queued).target ).toBe( 'B' );
+	});
+});

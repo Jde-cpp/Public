@@ -101,3 +101,4 @@ web/proto/*.d.ts
 web/proto/google/
 *.binpb
 **/CTestCostData.txt
+*.output

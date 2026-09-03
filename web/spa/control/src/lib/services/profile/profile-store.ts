@@ -62,7 +62,9 @@ export class ProfileStore{
 				const local = localStorage.getItem( key );
 				if( local!=null ){
 					json = local;
-					this.save( key, local );//fire & forget; also primes the cache.
+					//fire & forget; also primes the cache.  Nothing the user did is behind this one, so a warning is the whole
+					//story - but it still needs a handler now that save() reports a failure instead of eating it.
+					this.save( key, local ).catch( e=>console.warn(`ProfileStore: could not migrate the local '${key}' to the server.`, e) );
 				}
 			}
 			this.cacheSet( cacheKey, json );
@@ -109,6 +111,9 @@ export class ProfileStore{
 
 	//server only:  the user's profile row, through the 'IProfileService' token.  Logged out, or with no provider, there is
 	//nowhere to write and this is a no-op - a browser-local copy is set()'s job.
+	//THROWS on a failed write.  Catching and warning here made every caller's error handling dead code:  the promise
+	//resolved normally, so node-children's .catch and ql-list's try/catch never ran - the UI showed the view as saved,
+	//it was gone after a reload, and a console.warn was the only evidence.
 	async save<T>( key:string, value:T|string|null ):Promise<void>{
 		const userKey = this.profileService?.userKey();
 		if( !this.profileService || !userKey )
@@ -123,7 +128,7 @@ export class ProfileStore{
 		}
 		catch( e ){
 			this.cache.delete( cacheKey );//the row is not what we just cached:  drop it so the next save retries instead of being deduped away.
-			console.warn( `ProfileStore.save('${key}') failed.`, e );
+			throw e;
 		}
 	}
 	private static json<T>( value:T|string|null ):string|null{//empty string folds to null - both mean "no row" to the server and "remove" to localStorage.

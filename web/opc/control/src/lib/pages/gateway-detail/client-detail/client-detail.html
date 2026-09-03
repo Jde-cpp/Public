@@ -1,6 +1,6 @@
 <mat-tab-group class="my-content" mat-stretch-tabs="false" mat-align-tabs="start"
-	[selectedIndex]="tabIndex"
-	(selectedIndexChange)="tabIndexChanged($event)">
+	[selectedIndex]="tabIndex()"
+	(selectedIndexChange)="onTabIndexChanged($event)">
 	<mat-tab>
 		<ng-template mat-tab-label>{{properties().name ?? "Properties"}}</ng-template>
 		<ng-template matTabContent>

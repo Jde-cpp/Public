@@ -1,4 +1,4 @@
-import { Component, input, effect, model, Signal, output } from '@angular/core';
+import { Component, input, effect, model, Signal, output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SelectionModel } from '@angular/cdk/collections';
 import { MatTableModule } from '@angular/material/table';
@@ -17,8 +17,7 @@ import { ViewField } from '../../../model/ql/view';
 	imports: [CommonModule, MatCheckbox, MatIcon, MatTableModule, MatSortModule]
 })
 export class GraphQLTable{
-	constructor( private cnsle: SnackbarService ){
-	}
+	private cnsle:SnackbarService = inject( SnackbarService );
 
 	checkboxLabel( row?: any ): string{
 		return row
