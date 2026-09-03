@@ -1,11 +1,15 @@
+import { TestBed } from '@angular/core/testing';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { HttpErrorResponse } from '@angular/common/http';
 import { SnackbarService } from './snackbar-service';
+import { errorMessage, errorText, httpStatus } from '../../utils/errors';
 import { Snackbar } from './snackbar';
 
 describe('SnackbarService', () => {
 	const snackbar = { openFromComponent: vi.fn() };
-	const service = new SnackbarService( snackbar as unknown as MatSnackBar );
+	//MatSnackBar is inject()ed since C5, so the stub goes in through the injector rather than the constructor
+	TestBed.configureTestingModule({ providers: [ {provide: MatSnackBar, useValue: snackbar} ] });
+	const service = TestBed.inject( SnackbarService );
 	const lastConfig = () => snackbar.openFromComponent.mock.lastCall?.[1];
 
 	beforeEach( () => snackbar.openFromComponent.mockClear() );
@@ -60,3 +64,47 @@ describe('SnackbarService', () => {
 		expect( lastConfig()?.panelClass ).toEqual( ['red-snackbar'] );
 	});
 });
+
+//review3 L13: the inline error banners built their text with `${e}`, which renders "[object Object]" for the two shapes
+//that actually reach production - an HttpErrorResponse and a {error:IError} ProtoService rejection.  errorText was the
+//snackbar's private static; it is module scope now so a banner and a snackbar cannot disagree about the same throw.
+describe( 'errorMessage', ()=>{
+	const rejection = { error: {requestId: 1, message: "no such instance", sc: 0, httpStatus: 404} };
+	const http = new HttpErrorResponse( {status: 500, error: {message: "server exploded"}} );
+
+	it( 'never renders [object Object]', ()=>{
+		for( const e of [rejection, http, new Error("boom"), "plain string", {}, undefined] )
+			expect( errorMessage(e, "Could not load.") ).not.toContain( "[object Object]" );
+	} );
+
+	it( 'quotes a ProtoService rejection with its http status', ()=>{
+		expect( errorMessage(rejection, "Could not load.") ).toBe( "Could not load.  (404)no such instance" );
+	} );
+
+	it( 'quotes an HttpErrorResponse', ()=>{
+		expect( errorMessage(http, "Could not load.") ).toBe( "Could not load.  server exploded" );
+	} );
+
+	it( "falls back to the caller's context when the throw says nothing quotable", ()=>{
+		expect( errorMessage({}, "Could not load.") ).toBe( "Could not load." );
+		expect( errorText({}) ).toBeUndefined();
+	} );
+
+	it( 'says something even with no context at all', ()=>{
+		expect( errorMessage(undefined) ).toBe( "Unknown error" );
+	} );
+} );
+
+//review3 C4: handle401 used to read `e["status"]` off an `any`, which compiled whatever it was spelled.  This narrows once.
+describe( 'httpStatus', ()=>{
+	it( 'reads an HttpErrorResponse', ()=>{
+		expect( httpStatus(new HttpErrorResponse({status: 401})) ).toBe( 401 );
+	} );
+	it( 'reads a plain rejection carrying a numeric status', ()=>{
+		expect( httpStatus({status: 0, error: 'net'}) ).toBe( 0 );//0 is a real status here - the opaque network failure - so it must not read as absent
+	} );
+	it( 'is undefined for anything else', ()=>{
+		for( const e of [new Error("boom"), "plain", {status: "401"}, undefined, null] )
+			expect( httpStatus(e) ).toBeUndefined();
+	} );
+} );

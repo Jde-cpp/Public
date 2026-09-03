@@ -1,4 +1,4 @@
-import {Injectable, signal} from '@angular/core';
+import {Injectable, signal, inject } from '@angular/core';
 import {Title} from '@angular/platform-browser';
 
 /**
@@ -27,5 +27,5 @@ export class ComponentPageTitle {
 		//const main = this.title?.includes("|") ? this.title.substring( this.title.lastIndexOf('|') ) : this.title;
 		this._title.set( x );
  	}
-  constructor(private bodyTitle: Title) {}
+  private bodyTitle:Title = inject( Title );
 }

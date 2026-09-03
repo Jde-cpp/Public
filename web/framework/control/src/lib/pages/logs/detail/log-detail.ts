@@ -2,18 +2,13 @@ import { Component, OnDestroy, OnInit, ViewChild, input, effect, Signal, signal,
 import { CommonModule } from '@angular/common';
 import { MatTable, MatTableModule } from '@angular/material/table';
 import {MatSortModule, Sort} from '@angular/material/sort';
-import {MatDatepickerInputEvent} from '@angular/material/datepicker';
-import { Subject, Unsubscribable } from 'rxjs';
 import { LogDataSource } from '../log-data-source';
-import {AppStatus} from '../../../services/app/application';
 import {LogSettings} from '../log-settings';
 import { QLListSettings } from '../../ql/list/ql-list-settings/ql-list-settings';
 import {SnackbarService} from '../../../shared/snackbar/snackbar-service';
 
 
-import * as FromServer from 'jde-proto/App.FromServer';
 import { ELogLevel } from 'jde-proto/Log';
-import { FormControl } from '@angular/forms';
 import { MatToolbar } from '@angular/material/toolbar';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
@@ -42,12 +37,11 @@ import { Entry,LogEntries, LogEntriesRest, LogView } from '../log-entry';
 	imports: [CommonModule, MatButtonToggle, MatButtonToggleGroup, MatChip, MatFormFieldModule, MatIcon, MatIconButton, MatTableModule, MatToolbar, MatTooltip, MatSelectModule, MatSortModule, Paginator, QLListSettings]
 })
 export class LogDetail implements OnInit, OnDestroy{
-	constructor( private snackBar: SnackbarService ){
-	}
+	private snackBar:SnackbarService = inject( SnackbarService );
 
 	async ngOnInit(){
 		this.data = new LogDataSource( this.view );
-		this.profile = await this.profileStore.load<LogSettings>( "logs", new LogSettings() );
+		this.profile = new LogSettings( await this.profileStore.load<LogSettings>("logs", new LogSettings()) );
 		this.data.filter.level = this.profile.level;//assigned straight in, so the level setter did not run
 		const views = await this.profileStore.loadClassArray<LogView>( `logs/views`, LogView, LogView.schema );
 		this.views.set( [ LogView.default(), ...views ] );
@@ -55,8 +49,8 @@ export class LogDetail implements OnInit, OnDestroy{
 		await this.load();//load() sends the profile's level, so the first page already matches the combo
 	}
 	ngOnDestroy(){
-		this.unsubscribe();
-		this.profileStore.save<LogSettings>( "logs", this.profile );
+		//on the way out: warn rather than snackbar a page the user has already left, but handle the rejection.
+		this.profileStore.save<LogSettings>( "logs", this.profile ).catch( e=>console.warn("Could not save the log profile.", e) );
 	}
 
 	async load( startIndex:number=0 ){
@@ -81,51 +75,6 @@ export class LogDetail implements OnInit, OnDestroy{
 		this.data.clear();
 		this.paginator()?.startIndex.set( 0 );
 		this.load();
-	}
-	onStrings = ( value:FromServer.Strings ):void =>{
-		let i=0;
-		let entries = [];
-		for( ; i<this.buffer.length; ++i ){
-			let entry = this.buffer[i];
-			const haveStrings = entry.templateId && !entry.fileId && !entry.functionId;
-			if( haveStrings )
-				entries.push( entry );
-			else{
-				break;
-			}
-		}
-		if( i>0 ){
-			this.buffer.splice( 0, i );
-		}
-	}
-
-	onChangeApplication( event:number ){
-		//if( event.source.selected )
-			this.subscribe( event, this.level );
-	}
-	subscribe( applicationId:number|undefined, level:ELogLevel ){
-		var subscription = { applicationId: applicationId, level: level, start:this.start, limit:this.view().limit };
-		if( JSON.stringify(this.currentSubscription)!=JSON.stringify(subscription) ){
-			this.buffer.length=0;
-			this.data.clear();
-			this.startIndexChange.next( 0 );
-			//this.lengthChange.next( 0 );
-			this.unsubscribe();
-			this.level = level;
-			this.currentSubscription = subscription;
-		}
-	}
-
-	unsubscribe(){
-		if( this.subscription ){
-			this.subscription.unsubscribe();
-			this.subscription = undefined;
-			this.currentSubscription = LogDetail.DefaultSubscription;
-		}
-	}
-
-	onLevelChange( logLevel:ELogLevel ){
-		this.subscribe( this.applicationId, logLevel );
 	}
 	//minimum level to show - the level goes into the query, so re-read instead of filtering what is loaded.
 	onMinLevelChange( level:ELogLevel ){
@@ -217,7 +166,8 @@ export class LogDetail implements OnInit, OnDestroy{
 		this.viewIndex.set( newIndex );
 		verify( view.type==ViewType.User );
 		if( view.type==ViewType.User )
-			this.profileStore.save( `logs/views`, newViews.filter(v=>v.isUser).map(v=>v.toJson(undefined)) );
+			this.profileStore.save( `logs/views`, newViews.filter(v=>v.isUser).map(v=>v.toJson(undefined)) )
+				.catch( e=>this.snackBar.exception("Could not save view.", e) );
 
 		this.data.clear();
 		this.load();
@@ -260,7 +210,8 @@ export class LogDetail implements OnInit, OnDestroy{
 		this.views.set( remaining );
 		this.viewIndex.set( newIndex );
 		ProfileStore.setViewIndex( "logs", newIndex );//never persisted here, so a reload could restore an index pointing at a different view
-		this.profileStore.save( `logs/views`, remaining.filter(v=>v.isUser).map(v=>v.toJson(undefined)) );
+		this.profileStore.save( `logs/views`, remaining.filter(v=>v.isUser).map(v=>v.toJson(undefined)) )
+			.catch( e=>this.snackBar.exception("Could not delete view.", e) );
 		if( current!=remaining[newIndex] ){//the selection actually moved — without this the table keeps the deleted view's rows under another view's columns
 			this.data.clear();
 			this.load();
@@ -306,8 +257,6 @@ export class LogDetail implements OnInit, OnDestroy{
 	service = input.required<IGraphQL>();
 	profile!:LogSettings;
 	data!: LogDataSource;
-	get paused(){return this.data.paused;} set paused(value){this.data.paused=value;}
-	connected = false;
 	displayedColumns = computed( () => {
 		return this.view().fields.filter(f=>f.displayed).map( (f)=>f.name );
 	} );
@@ -369,27 +318,14 @@ export class LogDetail implements OnInit, OnDestroy{
 		el.title = el.scrollWidth>el.clientWidth ? el.innerText.trim() : "";
 	}
 
-	get applicationId(){ return this.profile.applicationId; } set applicationId(value){ this.profile.applicationId=value; }
 	get columns():Record<string,string>{ return LogEntries.columns; }
-	get start():Date{ return this._start.value; } set start(value:Date){ this._start.setValue(value); this.profile.start = value; } private _start = new FormControl();
 	private filter!:string; 	//get filter(){return _filter;} set filter(value){ this._filter = value.trim().toLowerCase(); }
-	startChange( event: MatDatepickerInputEvent<Date> ){ this.subscribe( this.applicationId, this.level ); }
-	private buffer:Entry[] = [];
-	static DefaultSubscription:ISubscription={ applicationId: 0, level:  ELogLevel.NoLog, start:null };
-	private currentSubscription:ISubscription=LogDetail.DefaultSubscription;//actual subscribtion
 	isLoading = signal<boolean>( true );
 	isSettings = signal<boolean>( false );
-//	lengthChange = new Subject<number>();
-	startIndexChange = new Subject<number>();
 	//push() hides arriving rows below data.filter.level, so the setter writes both.  otherwise widening the combo
 	//re-reads the lower levels and they are hidden on arrival against the level that was in force before.
 	get level():ELogLevel{ return this.profile.level; } set level( value:ELogLevel ){ this.profile.level=value; this.data.filter.level=value; }
-	private get application():AppStatus|undefined{ return this.applications.find( (existing)=>{return existing.id==this.applicationId;} ); }
-	applications:AppStatus[]=[];
 	schema:TableSchema = LogView.schema;
-	private subscription:Unsubscribable|undefined;
-	//private applicationStrings:ApplicationStrings = new ApplicationStrings();
-	//private pushTimeout:{ entries: TraceEntry[], id:any, end:number };
 	//get selectedIndex(){ return this.selectedEntry?.index; } set selectedIndex(x){ this.selectedEntry = this.data.entries.find( (y)=>y.index==x ); }
 	get selectedEntry(){ return this.data.allEntries.find( (e)=>e.selected ); }
 	views = signal<LogView[]>(null as any);
@@ -398,5 +334,3 @@ export class LogDetail implements OnInit, OnDestroy{
 	viewIndex = signal<number>(null as any);
 	profileStore = inject(ProfileStore);
 }
-
-interface ISubscription{ applicationId:number|undefined, level:ELogLevel, start:Date|null }

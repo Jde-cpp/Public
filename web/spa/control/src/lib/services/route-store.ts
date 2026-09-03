@@ -48,6 +48,20 @@ export class RouteStore{
 		}
 		return children;
 	}
+	//Logout has to drop this:  the cached children are the NAMES of the rows the last user browsed - users, roles, groups,
+	//gateway connections - and the navbar search reads them straight back out of localStorage for whoever logs in next.
+	//Best effort by design:  a key written before the key list existed is only reachable once loadChildren has hydrated it,
+	//so those go with the in-memory map here and with the rest of the list the next time they are read.
+	clear():void{
+		for( const key of this.#keys() ){
+			try{ localStorage.removeItem( key ); }
+			catch( e ){ console.warn( `Could not clear localStorage['${key}']:`, e ); }
+		}
+		try{ localStorage.removeItem( RouteStore.keysKey ); }
+		catch( e ){ console.warn( `Could not clear localStorage['${RouteStore.keysKey}']:`, e ); }
+		this.#children.clear();
+	}
+
 	#rememberKey( key:string ):void{
 		const keys = this.#keys();
 		if( !keys.includes(key) )

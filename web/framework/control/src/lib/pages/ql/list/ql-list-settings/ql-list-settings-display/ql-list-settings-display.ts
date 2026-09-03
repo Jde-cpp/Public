@@ -2,7 +2,6 @@ import {CdkDragDrop, CdkDropList, CdkDrag, moveItemInArray} from '@angular/cdk/d
 import { Component, OnInit, OnDestroy, Inject, ViewChild, input, signal, model, computed, Injectable, inject, output, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {ActivatedRoute, Route, Router, Routes, UrlSegment} from '@angular/router';
-import { FormsModule } from '@angular/forms';
 import {Sort} from '@angular/material/sort';
 import {Field} from '../../../../../model/ql/schema/field';
 import {TableSchema}  from '../../../../../model/ql/schema/table-schema';
@@ -24,7 +23,7 @@ import { Schema } from '@angular/forms/signals';
 		styleUrls: ['ql-list-settings-display.scss'],
 		templateUrl: './ql-list-settings-display.html',
 		host: {class:'main-content.mat-drawer-container.my-content'},
-		imports: [CommonModule, FormsModule, CdkDrag, CdkDropList, MatCheckbox, MatIcon, MatSelectModule, MatTableModule, MatInputModule]
+		imports: [CommonModule, CdkDrag, CdkDropList, MatCheckbox, MatIcon, MatSelectModule, MatTableModule, MatInputModule]
 })
 export class QLListSettingsDisplay implements OnInit{
 	ngOnInit(){

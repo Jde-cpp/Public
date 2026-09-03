@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import {ActivatedRoute, Route, Router, Routes, UrlSegment} from '@angular/router';
 import {Sort} from '@angular/material/sort';
 import { MatTable } from '@angular/material/table';
-import {FormsModule} from '@angular/forms';
 import { QLListSettings } from './ql-list-settings/ql-list-settings';
 import {SnackbarService} from '../../../shared/snackbar/snackbar-service'
 import {IGraphQL, EnumValue } from '../../../services/graphql';
@@ -32,7 +31,7 @@ import { verify } from '../../../utils/utils';
 	styleUrls: ['ql-list.scss'],
 	templateUrl: './ql-list.html',
 	host: {class:'main-content mat-drawer-container my-content'},
-	imports: [CommonModule, FormsModule, GraphQLTable, MatButton, MatButtonToggle, MatButtonToggleGroup, MatCheckbox, MatIcon, MatIconButton, MatProgressBar, MatToolbar, MatTooltip, QLListSettings]
+	imports: [CommonModule, GraphQLTable, MatButton, MatButtonToggle, MatButtonToggleGroup, MatCheckbox, MatIcon, MatIconButton, MatProgressBar, MatToolbar, MatTooltip, QLListSettings]
 })
 export class QLList implements OnInit, OnDestroy{
 	constructor(
@@ -97,14 +96,16 @@ export class QLList implements OnInit, OnDestroy{
 		this.ql.mutate( `restore${this.type()}(id:${this.selection().id})`, (m)=>console.log(m) ).then( ()=>this.selection().deleted=null ).catch( (e)=>console.log(e) );
 	}
 
+	//The try/catch was dead:  router.navigate is ASYNC, so a route that does not exist rejects the promise long after the
+	//block has returned.  /access/resources has no 'resources/:target' route, so every row click there dead-ended in a
+	//NavigationError the user never saw - hence both halves here:  don't offer the click where there is nowhere to go, and
+	//report it through the returned promise where the navigation still fails.
 	onRowActivate( row:any ){
-		if( this.selector() )//ql-table already toggled the row; a selector has nowhere to navigate to
+		if( this.selector() || !this.canNavigate() )//ql-table already toggled the row; a selector has nowhere to navigate to
 			return;
-		try{
-			this.router.navigate([row.target], {relativeTo: this.route} );
-		}catch( e ){
-			this.snackbar.exception( "Could not navigate to properties", e );
-		}
+		this.router.navigate( [row.target], {relativeTo: this.route} )
+			.then( ok=>{ if( !ok ) this.snackbar.error( `Could not navigate to '${row.target}'.` ); } )
+			.catch( e=>this.snackbar.exception("Could not navigate to properties", e) );
 	}
 
 	onAdd(){
@@ -112,12 +113,19 @@ export class QLList implements OnInit, OnDestroy{
 	}
 
 	async onRefresh(){
-		try{
-			await this.refresh( this.resolvedData().profile );//keep the current rows visible; the progress bar signals the reload
-		}
-		catch( e ){
-			this.snackbar.exception( "Could not refresh data.", e );
-		}
+		await this.#refresh( this.resolvedData().profile );//keep the current rows visible; the progress bar signals the reload
+	}
+
+	//refresh() and reload() are only ever driven from template event handlers, so a rejection has nowhere to go but the
+	//console:  three call sites did not even await it, and two more awaited with no catch.  The user was left looking at an
+	//empty or stale table with nothing said.  Every re-query reports through one of these two now.
+	async #refresh( profile: PageProfile ){
+		try{ await this.refresh( profile ); }
+		catch( e ){ this.snackbar.exception( "Could not refresh data.", e ); }
+	}
+	async #reload(){
+		try{ await this.reload(); }
+		catch( e ){ this.snackbar.exception( "Could not refresh data.", e ); }
 	}
 
 	async delete(){
@@ -150,14 +158,14 @@ export class QLList implements OnInit, OnDestroy{
 		profile.upsertView( view, this.collectionName(), this.profileStore );
 		if( view.type==ViewType.User ){
 			try{
-				this.profileStore.save( `qlList/${this.collectionName()}/views`, profile.views.filter(v=>v.isUser).map(v=>v.toJson(this.tableSettings())) );
+				await this.profileStore.save( `qlList/${this.collectionName()}/views`, profile.views.filter(v=>v.isUser).map(v=>v.toJson(this.tableSettings())) );//awaited, or the catch below is dead code
 			}
 			catch( e ){
 				this.snackbar.exception( "Could not save view.", e );
 			}
 		}
 
-		await this.reload();
+		await this.#reload();
 		this.isSettings.set( false );
 	}
 	async onViewShow(view:View){
@@ -168,13 +176,13 @@ export class QLList implements OnInit, OnDestroy{
 		view.type = ViewType.Adhoc;
 		let profile = new PageProfile( this.resolvedData().profile );
 		profile.upsertView( view, this.collectionName(), this.profileStore );
-		this.refresh( profile );
+		await this.#refresh( profile );
 	}
 	async onChangeView(index:number){
 		let profile = new PageProfile( this.resolvedData().profile );
 		profile.currentViewIndex = index;
 		ProfileStore.setViewIndex( this.collectionName(), index );
-		this.refresh( profile );
+		await this.#refresh( profile );
 	}
 	async refresh( profile: PageProfile ){
 		this.resolvedData().profile = profile;
@@ -194,9 +202,9 @@ export class QLList implements OnInit, OnDestroy{
 	}
 	async onViewDelete(view:View){
 		let profile = this.resolvedData().profile;
-		profile.removeView( view.name!, this.collectionName(), this.profileStore );
+		profile.removeView( view.name!, this.collectionName(), this.profileStore, this.tableSettings() ).catch( e=>this.snackbar.exception("Could not save view.", e) );
 		profile.currentViewIndex = 0;
-		await this.reload();
+		await this.#reload();
 		this.isSettings.set( false );
 	}
 
@@ -208,7 +216,7 @@ export class QLList implements OnInit, OnDestroy{
 		let profile = new PageProfile( this.resolvedData().profile );
 		profile.updateView( view );
 		profile.showDeleted = showDeleted;
-		this.refresh( profile );
+		await this.#refresh( profile );
 	}
 
 	colSuggestions():Record<string,any[]>{
@@ -263,6 +271,7 @@ export class QLList implements OnInit, OnDestroy{
 	get sort():Sort{ return this.view().sort?.length ? this.view().sort[0] : {active: "", direction: ""}; }
 	showDeleted = computed<boolean>( ()=>this.resolvedData().profile.showDeleted );
 	canAdd = computed<boolean>( ()=>this.tableSettings().canAdd ?? true );//off the tableSettings, like canPurge - a route that set it anywhere else was silently ignored
+	canNavigate = computed<boolean>( ()=>this.tableSettings().canNavigate ?? true );
 	tableSettings = computed<TableSettings>( ()=>this.resolvedData().routing.tableSettings );
 	type = computed<string>( ()=>MetaObject.toTypeFromCollection(this.collectionName()) );
 	view = signal<View>( null as any );

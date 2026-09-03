@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Inject, OnDestroy, OnInit, ViewChild, computed, input, output, signal } from '@angular/core';
+import { Component, Inject, OnDestroy, OnInit, ViewChild, computed, input, output, signal, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatToolbar } from '@angular/material/toolbar';
@@ -8,6 +8,7 @@ import { LogEntries } from '../log-entry';
 import { LogTags } from '../tags/log-tags';
 import { IGraphQL } from '../../../services/graphql';
 import { SnackbarService } from '../../../shared/snackbar/snackbar-service';
+import { errorMessage } from '../../../utils/errors';
 import { Mutation, MutationType } from '../../../model/ql/mutation';
 
 type TagLevels = Record<string,string>;
@@ -34,7 +35,8 @@ const flatten = ( group:LevelTags|undefined ):TagLevels=>{
 	imports: [CommonModule, MatButtonModule, MatTabsModule, MatToolbar, LogTags]
 })
 export class LogSettingsPanel implements OnInit, OnDestroy{
-	constructor( private snackBar: SnackbarService, @Inject('IEnvironment') private environment: IEnvironment ){}
+	private snackBar:SnackbarService = inject( SnackbarService );
+	constructor( @Inject('IEnvironment') private environment: IEnvironment ){}
 
 	async ngOnInit(){ await this.load(); }
 	ngOnDestroy(){ ProfileStore.setTabIndex( 'log-settings', this.tabIndex() ); }
@@ -53,7 +55,7 @@ export class LogSettingsPanel implements OnInit, OnDestroy{
 			this.isLoading.set( false );
 		}
 		catch( e ){
-			this.error.set( `${e}` );//without this the panel stays behind isLoading and renders blank
+			this.error.set( errorMessage(e, "Could not load log settings.") );//errorMessage, not `${e}`: an HttpErrorResponse and a {error:IError} rejection both render "[object Object]".  Without this the panel stays behind isLoading and renders blank
 			this.isLoading.set( false );
 			this.snackBar.exception( "Could not load log settings.", e );
 		}

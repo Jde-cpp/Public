@@ -191,13 +191,25 @@ export class View{
 		this.collectionName = config.collectionName;
 		if( config.limit )
 			this.limit = config.limit;
-		this.fields = config.fields.map( f=>new ViewField({field: f, schema: schema}) );
+		const missing:(string|undefined)[] = [];
+		for( const f of config.fields ){
+			if( schema.fields.some(s=>s.name==f.name) )
+				this.fields.push( new ViewField({field: f, schema: schema}) );
+			else
+				missing.push( f.name );
+		}
 		for( let fieldFilter of config.filters ?? [] ){//{name: string, filter: Filter}
-			const field = schema.fields.find( f=>f.name==fieldFilter.name )!;
-			if( field?.isDateTime )//JSON round-trip leaves Days as {days:n} and Date as an ISO string — the filter UI's instanceof checks need real instances
+			const field = schema.fields.find( f=>f.name==fieldFilter.name );
+			if( !field ){
+				missing.push( fieldFilter.name );
+				continue;
+			}
+			if( field.isDateTime )//JSON round-trip leaves Days as {days:n} and Date as an ISO string — the filter UI's instanceof checks need real instances
 				fieldFilter.filter.value = fieldFilter.filter.value.map( v=>View.reviveDateValue(v) );
 			this.fieldFilters.push( {field: field, filter: fieldFilter.filter} );
 		}
+		if( missing.length )
+			console.warn( `View '${config.name}' (${config.collectionName}) references ${missing.join(", ")} - not in the schema, dropped.` );
 
 		this.showSelector = config.showSelector;
 		this.sort = config.sort ?? defaultSort ?? [];

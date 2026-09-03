@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, ElementRef, Inject, Signal, ViewChild, computed, inject, input, model, output, resource, signal} from '@angular/core';
+import {Component, ElementRef, Inject, Signal, ViewChild, computed, inject, input, model, output, resource, signal} from '@angular/core';
 import {form, FormField} from '@angular/forms/signals';
 import {MatButtonModule} from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -48,10 +48,12 @@ export class Favorites {
   templateUrl: 'favorites-dialog.html',
 	styles: "mat-form-field { display: block; } .ok { background: var(--mat-sys-primary); } .remove { background: var(--mat-sys-error); }",
   imports: [MatButtonModule, MatDialogActions, MatDialogClose, MatDialogTitle, MatDialogContent, MatFormFieldModule, MatInputModule, MatAutocompleteModule, FormField],
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FavoritesDialog {
-	constructor( public dialogRef: MatDialogRef<FavoritesDialog>, @Inject(MAT_DIALOG_DATA) public data: DialogData ){
+	public dialogRef:MatDialogRef<FavoritesDialog> = inject( MatDialogRef<FavoritesDialog> );
+	public data:DialogData = inject<DialogData>( MAT_DIALOG_DATA );//an InjectionToken, so inject() takes it - unlike the string tokens elsewhere
+	constructor(){
+		const data = this.data;
 		this.favoriteModel.set( {name: data.existing?.name || data.name || this.titleService.getTitle(), folderName: data.existing?.folderName ?? ""} );//the document title is ':instance' for parameterized routes; data.name is the resolved segment.
 		this.folderNames = data.folderNames;
 	};

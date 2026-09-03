@@ -1,12 +1,11 @@
+import { inject } from '@angular/core';
 import { Injectable } from "@angular/core";
 import { ActivatedRoute, Route, Router, Routes, UrlSegment } from "@angular/router";
 import { IRouteService, RouteItem, RouteService } from "jde-spa";
 
 @Injectable( {providedIn: 'root'} )
 export class QLListRouteService extends RouteService implements IRouteService{
-	constructor( private router:Router, route: ActivatedRoute ){
-		super( route )
-	}
+	private router:Router = inject( Router );
 	//the tiles wear the tint of the section they sit under - the same one its home tile advertised.  The class
 	//is set here rather than on the route data, which is shared with the router config, and the section comes
 	//from the url so a second section using this service picks up its own color.

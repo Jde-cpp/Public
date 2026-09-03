@@ -17,36 +17,46 @@
 			</mat-cell>
 		</ng-container>
 	}
-	<ng-container [matColumnDef]="column" *ngFor="let column of stringColumnNames">
-		<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header [style]="columnStyle(column)"> {{columnName(column)}} </mat-header-cell>
-		<mat-cell *matCellDef="let row" [style]="columnStyle(column)"> {{row[column]}} </mat-cell>
-	</ng-container>
+	@for( column of stringColumnNames; track column ){
+		<ng-container [matColumnDef]="column">
+			<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header [style]="columnStyle(column)"> {{columnName(column)}} </mat-header-cell>
+			<mat-cell *matCellDef="let row" [style]="columnStyle(column)"> {{row[column]}} </mat-cell>
+		</ng-container>
+	}
 	@for( column of objectColumnNames; track column ){
 		<ng-container [matColumnDef]="column">
 			<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header [disabled]="!sortable(column)" [style]="columnStyle(column)"> {{columnName(column)}} </mat-header-cell>
 			<mat-cell *matCellDef="let row" [style]="columnStyle(column)"> {{objectValue(row[column])}} </mat-cell>
 		</ng-container>
 	}
-	<ng-container [matColumnDef]="column" *ngFor="let column of listColumnNames">
-		<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header> {{columnName(column)}} </mat-header-cell>
-		<mat-cell *matCellDef="let element"> {{element[column].join()}}
-			<button mat-icon-button color="primary" (click)="edit(column,element)" aria-label="Edit">
-				<mat-icon>edit</mat-icon>
-			</button>
-		</mat-cell>
-	</ng-container>
-	<ng-container [matColumnDef]="column" *ngFor="let column of dateColumnNames">
-		<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header class="dateColumn"> {{columnName(column)}} </mat-header-cell>
-		<mat-cell *matCellDef="let element" class="dateColumn"> {{element[column] | date:'yy-MM-dd HH:mm a'}} </mat-cell>
-	</ng-container>
-	<ng-container [matColumnDef]="column" *ngFor="let column of boolColumnNames">
-		<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header class="boolColumn"> {{columnName(column)}} </mat-header-cell>
-		<mat-cell *matCellDef="let element" class="boolColumn"> {{element[column] ? '&#10003;' : '&#10005;'}} </mat-cell>
-	</ng-container>
-	<ng-container [matColumnDef]="column" *ngFor="let column of uintColumnNames">
-		<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header> {{columnName(column)}} </mat-header-cell>
-		<mat-cell *matCellDef="let element"> {{element[column]}} </mat-cell>
-	</ng-container>
+	@for( column of listColumnNames; track column ){
+		<ng-container [matColumnDef]="column">
+			<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header> {{columnName(column)}} </mat-header-cell>
+			<mat-cell *matCellDef="let element"> {{element[column].join()}}
+				<button mat-icon-button color="primary" (click)="edit(column,element)" aria-label="Edit">
+					<mat-icon>edit</mat-icon>
+				</button>
+			</mat-cell>
+		</ng-container>
+	}
+	@for( column of dateColumnNames; track column ){
+		<ng-container [matColumnDef]="column">
+			<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header class="dateColumn"> {{columnName(column)}} </mat-header-cell>
+			<mat-cell *matCellDef="let element" class="dateColumn"> {{element[column] | date:'yy-MM-dd HH:mm a'}} </mat-cell>
+		</ng-container>
+	}
+	@for( column of boolColumnNames; track column ){
+		<ng-container [matColumnDef]="column">
+			<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header class="boolColumn"> {{columnName(column)}} </mat-header-cell>
+			<mat-cell *matCellDef="let element" class="boolColumn"> {{element[column] ? '&#10003;' : '&#10005;'}} </mat-cell>
+		</ng-container>
+	}
+	@for( column of uintColumnNames; track column ){
+		<ng-container [matColumnDef]="column">
+			<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header> {{columnName(column)}} </mat-header-cell>
+			<mat-cell *matCellDef="let element"> {{element[column]}} </mat-cell>
+		</ng-container>
+	}
 	<mat-header-row *matHeaderRowDef="displayedColumnNames; sticky: true"></mat-header-row>
 	<mat-row mat-row *matRowDef="let row; columns: displayedColumnNames;" (click)="cellClick(row)" [class.highlight]="isSelected(row)"></mat-row>
 </mat-table>

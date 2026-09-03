@@ -57,7 +57,9 @@ export class NodeChildren implements OnInit, OnDestroy {
 		this.viewIndex.set( index );
 		this.route.data.subscribe( async (data)=>{
 			if( this.pageData )
-				this.#profileStore.save<UserSettings>( this.pageData.route.profileKey, this.profile );
+				//the previous node's settings, on the way to the next one:  warn rather than snackbar a page being navigated away from.
+				this.#profileStore.save<UserSettings>( this.pageData.route.profileKey, this.profile )
+					.catch( e=>console.warn("Could not save the node settings.", e) );
 			this.pageData = data["pageData"];
 			//A node switch is a param change, so Angular reuses this component and ngOnDestroy never runs: without this the
 			//previous node's rows stayed selected, and since `nodes` is a fresh UaNode array per navigation, re-selecting the
@@ -90,6 +92,15 @@ export class NodeChildren implements OnInit, OnDestroy {
 		this.pageData.nodes = nodes;
 		this.nodes.set( nodes );
 		const persisted = nodes.filter( n=>this.profile.subscriptions.some(s=>s.key==n.key) );
+		//A re-browse can drop a row the live subscription still holds - deleted or renamed server-side, or `displayed` flipped.
+		//Nothing else unsubscribed it (a new SelectionModel emits no `changed`), so the server went on publishing values for a
+		//node with no row and the next-handler below threw on every tick.  The persisted INTENT stays put, so the node
+		//re-subscribes on its own if a later browse brings it back.
+		if( !resubscribe && this.subscription ){
+			const orphaned = this.profile.subscriptions.filter( s=>!nodes.some(n=>n.key==s.key) );
+			if( orphaned.length )
+				this._iot.unsubscribe( this.cnnctnTarget, orphaned, this.Key ).catch( e=>this.snackbar.exception("Could not remove subscription.", e) );
+		}
 		this.selections = new SelectionModel<UaNode>( true, resubscribe ? [] : persisted );
 		this.selections.changed.subscribe( this.onSubscriptionChange.bind(this) );
 		if( resubscribe )
@@ -226,18 +237,26 @@ export class NodeChildren implements OnInit, OnDestroy {
 				if( !this.subscription){
 					this.subscription = this._iot.subscribe( this.cnnctnTarget, nodes, this.Key ).subscribe({
 						next:(value: SubscriptionResult) =>{
-							this.variables.find( (r)=>r.nodeId.equals(value.node) )!.value = value.value;
+							const row = this.variables.find( (r)=>r.nodeId.equals(value.node) );
+							if( !row )
+								return console.debug( `subscription value for '${value.node}', which is no longer a row on this page.` );
+							row.value = value.value;
 							this.#repaint();
 						},
 						error:(e: Error) =>{
+							//An errored Subscription is dead but still TRUTHY, so `if( !this.subscription )` sent the next tick down
+							//the addToSubscription branch - which builds a fresh gateway Subject with no observer on it.  Every value
+							//was then dropped while the rows still showed as live, until the user navigated away and back.  Clearing
+							//it first (before anything that could throw) makes the next tick re-subscribe for real.
+							this.subscription = undefined;
 							this.snackbar.exception( "Subscription error.", e );
 						},
-						complete:()=>{ console.debug( "complete" );}
+						complete:()=>{ this.subscription = undefined; console.debug( "complete" );}
 					});
 				}
 				else
 					this._iot.addToSubscription( this.cnnctnTarget, nodes, this.Key );
-			} catch (e:any) {
+			} catch (e) {
 				this.snackbar.exception( "Could not add subscription.", e );
 			}
 		}
@@ -250,7 +269,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 				try{
 					this._iot.unsubscribe( this.cnnctnTarget, nodes, this.Key );
 				}
-				catch( e:any ) {
+				catch( e ) {
 					this.snackbar.exception( "Could not remove subscription.", e );
 				}
 			}
@@ -279,9 +298,9 @@ export class NodeChildren implements OnInit, OnDestroy {
 	}
 	async changeDouble( x:Variable, e:Event ){
 		try {
-			x.value = await this._iot.write( this.cnnctnTarget, x.nodeId, +(e.target as any)["value"], (x)=>console.log(x) );
+			x.value = await this._iot.write( this.cnnctnTarget, x.nodeId, +(<HTMLInputElement>e.target).value, (x)=>console.log(x) );
 		}
-		catch (e:any) {
+		catch (e) {
 			this.snackbar.exception( "Could not change double value.", e );
 			x.value = await this._iot.read( this.cnnctnTarget, x.nodeId );
 			console.log(x.value);
@@ -290,10 +309,10 @@ export class NodeChildren implements OnInit, OnDestroy {
 	}
 	async changeString( n:Variable, e:Event ){
 		try{
-			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, (e.target as any)["value"], (x)=>console.log(x) );
+			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, (<HTMLInputElement>e.target).value, (x)=>console.log(x) );
 		}
-		catch(err:any){
-			(e.target as any)["value"] = n.value;
+		catch(err){
+			(<HTMLInputElement>e.target).value = String( n.value );
 			this.snackbar.exception( "Could not change string value.", err );
 		}
 		this.#repaint();
@@ -302,7 +321,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 		try{
 			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, e.value, (x)=>console.log(x) );
 		}
-		catch(err:any){
+		catch(err){
 			e.source.value = <number>n.value;
 			this.snackbar.exception( "Could not change enum value.", err );
 		}

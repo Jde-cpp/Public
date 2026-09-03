@@ -47,7 +47,11 @@ back inside a library.
 
 Run `ng` from `web/opc/my-workspace`.
 
-- **`ng test` runs Vitest**, not Karma (`@angular/build:unit-test`).
+- **`ng test` runs Vitest**, not Karma (`@angular/build:unit-test`). It runs every project; `ng test <lib>` runs one. Library
+  specs live next to the code in `web/<lib>/control/src/…` and are picked up through the symlink — but only because each
+  library's test target is given `buildTarget: my-workspace:build` (by `create-workspace.sh`), which is how the unit-test
+  builder inherits `preserveSymlinks`. Without it esbuild realpaths every spec out of the workspace and the target silently
+  runs nothing. A library with no spec files errors with "No tests found" and fails bare `ng test`, so keep at least one.
 - `ng build <lib>` works, but only in dependency order — a library whose dependencies are not yet
   in `dist/` fails with `Cannot find module 'jde-spa'`. Build `jde-spa` first, or just build the
   application (`ng build my-workspace`), which compiles every library from the symlinked sources.

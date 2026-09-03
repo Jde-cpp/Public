@@ -1,23 +1,29 @@
-import { Injectable, Signal, signal } from '@angular/core';
-import { User, UserJson } from 'jde-spa';
+import { Injectable, Signal, inject, signal } from '@angular/core';
+import { RouteStore, User, UserJson } from 'jde-spa';
 import { clone } from '../utils/utils'
 
 const userStorageKey = 'user';
 
 @Injectable({ providedIn: 'root' })
 export class AuthStore{
+	//A bad stored user must never take the app down.  This is providedIn:'root' at the head of the
+	//NavBar -> Authorization -> OpcAuthService -> AppService injection chain, so anything thrown here fails bootstrap, and
+	//main.ts only console.errors it:  the user got a blank page on EVERY load, with nothing clearing the offending key.
+	//Both halves threw - JSON.parse on a truncated/legacy value, and User.decodeJwt's split('.')[1] on a jwt with no
+	//separators.  Treat an unreadable value as "logged out" and drop it, so the next login writes a good one.
 	constructor(){
-		let userString = localStorage.getItem(userStorageKey);
-		if( this.log ) console.log( `AuthService User: ${userString}` );
-		if( userString ){
-			let juser = JSON.parse( userString );
-			let reinit = false;
-			if( reinit ){
-				juser.jwt = "ey...";
-				juser.sessionId = null;
-			}
-			let user = new User( juser );
-			this.#userSignal.set( user );
+		let userString:string|null = null;
+		try{
+			userString = localStorage.getItem( userStorageKey );//localStorage access itself throws where site data is blocked
+			if( this.log ) console.log( `AuthService User: ${userString}` );
+			if( userString )
+				this.#userSignal.set( new User(JSON.parse(userString)) );
+		}
+		catch( e ){
+			console.error( `Discarding unreadable localStorage['${userStorageKey}'] (${userString}):`, e );
+			try{ localStorage.removeItem( userStorageKey ); }
+			catch( e2 ){ console.error( `Could not clear localStorage['${userStorageKey}']:`, e2 ); }
+			this.#userSignal.set( undefined );
 		}
 	}
 
@@ -41,7 +47,10 @@ export class AuthStore{
 		this.#userSignal.set( user );
 	}
 
+	//Every logout path lands here - the navbar button through AppService/GatewayService, and both 401 handlers once silent
+	//renewal has given up - so this is where the browsed route names get dropped.  They are the previous user's rows.
 	logout(){
+		this.#routeStore.clear();
 		let newAuth = new User( {serverInstances:this.user()?.serverInstances} );
 		if( newAuth.serverInstances ){
 			localStorage.setItem( userStorageKey, JSON.stringify(newAuth) );
@@ -52,6 +61,7 @@ export class AuthStore{
 		this.#userSignal.set( newAuth );
 	}
 
+	#routeStore = inject( RouteStore );
 	log:boolean = false;
 	#userSignal = signal<User | undefined>( undefined );
 	get user():Signal<User | undefined>{ return this.#userSignal.asReadonly(); }

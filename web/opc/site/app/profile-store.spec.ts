@@ -113,17 +113,20 @@ describe( 'ProfileStore', ()=>{
 		finally{ warn.mockRestore(); }
 	});
 
-	it( 'save failure is not cached: the next save retries instead of being deduped away', async ()=>{
+	//angular-review3 #11: save() used to catch and console.warn, so it resolved normally and every caller's error handling
+	//was dead code - the UI showed the view as saved and it was gone after a reload.
+	it( 'save failure REJECTS, and is not cached: the next save retries instead of being deduped away', async ()=>{
 		const service = new MockProfileService();
 		service.save.mockRejectedValue( new Error('down') );
 		const store = new ProfileStore( service );
-		const warn = vi.spyOn( console, 'warn' ).mockImplementation( ()=>{} );
-		try{
-			await store.save( 'k', 'v' );
-			await store.save( 'k', 'v' );//same value, but the failed write left nothing cached to compare against
-			expect( service.save ).toHaveBeenCalledTimes( 2 );
-		}
-		finally{ warn.mockRestore(); }
+		await expect( store.save('k', 'v') ).rejects.toThrow( 'down' );
+		await expect( store.save('k', 'v') ).rejects.toThrow( 'down' );//same value, but the failed write left nothing cached to compare against
+		expect( service.save ).toHaveBeenCalledTimes( 2 );
+	});
+
+	it( 'a successful save resolves', async ()=>{
+		const store = new ProfileStore( new MockProfileService() );
+		await expect( store.save('k', 'v') ).resolves.toBeUndefined();
 	});
 
 	it( 'the 11th key evicts the least-recently-used entry', async ()=>{

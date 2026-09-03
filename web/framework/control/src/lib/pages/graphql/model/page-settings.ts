@@ -2,6 +2,7 @@ import { Sort } from "@angular/material/sort";
 import { ProfileStore } from "jde-spa";
 import { View, ViewFieldSettings } from "../../../model/ql/view";
 import { TableSchema } from '../../../model/ql/schema/table-schema';
+import type { TableSettings } from '../../../services/ql-list-resolver';//type-only: ql-list-resolver imports this file, and a value import would close the cycle
 
 export class PageProfile{
 	constructor( args?:PageProfile ){
@@ -30,9 +31,9 @@ export class PageProfile{
 		const views = await profileStore.loadClassArray<View>( `qlList/${collectionName}/views`, View, schema, defaultSort );
 		this.views.push( ...views );
 	}
-	async removeView( viewName:string, collectionName:string, profileStore:ProfileStore ){
+	async removeView( viewName:string, collectionName:string, profileStore:ProfileStore, defaultSettings:TableSettings|undefined ){
 		this.views = this.views.filter( v=>v.name!=viewName );
-		await profileStore.save( `qlList/${collectionName}/views`, this.views.filter(v=>v.isUser) );
+		await profileStore.save( `qlList/${collectionName}/views`, this.views.filter(v=>v.isUser).map(v=>v.toJson(defaultSettings)) );
 	}
 	updateView( view:View ){
 		this.views[this.views.findIndex( v=>v.name==view.name && view.type==v.type)] = view;

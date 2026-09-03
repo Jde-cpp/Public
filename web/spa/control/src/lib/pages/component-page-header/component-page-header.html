@@ -3,7 +3,7 @@
     <mat-icon>menu</mat-icon>
     Menu
   </button>
-  @if(backUrl?.length){
+  @if(backUrl()?.length){
     <button mat-icon-button (click)="back()"><mat-icon class="iconButton">arrow_back</mat-icon></button>
   }
   <h1>{{getTitle()}} </h1>

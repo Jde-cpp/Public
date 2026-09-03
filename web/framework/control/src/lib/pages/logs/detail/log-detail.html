@@ -32,7 +32,9 @@
 				<paginator (onPageEvent)="onPagerChange($event)" [pageSize]="view().limit"></paginator>
 			</div>
 			<!--parked from the old toolbar - applications picker, pause, date range, filter and the hidden-message
-			buttons were never rebuilt, so the markup stays here rather than being lost to git history-->
+			buttons were never rebuilt, so the markup stays here rather than being lost to git history.  Their handlers
+			are GONE as of review3 C3:  subscribe()/unsubscribe() never subscribed to anything - `subscription` was never
+			assigned - so un-parking any of this means writing the live-log path, not just uncommenting.-->
 			<!-- <i class="material-icons" [innerHTML]="connected ? 'power' : 'power_off'"></i> -->
 			<!-- <button class="mdc-icon-button material-icons" (click)="settings()" >settings</button>  -->
 			<!--  [value]="application.Name" -->

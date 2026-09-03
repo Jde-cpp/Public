@@ -1,4 +1,4 @@
-import {Component, effect, input, signal} from '@angular/core';
+import {Component, effect, input, signal, inject } from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 import {MatListModule} from '@angular/material/list';
 import {ActivatedRoute, Router, RouterLink, RouterLinkActive} from '@angular/router';
@@ -22,7 +22,9 @@ import {RouteItem} from './route-item';
   imports: [ MatIconModule, MatListModule, RouterLinkActive, RouterLink ],
 })
 export class ComponentNav {
-  constructor(private router: Router, private route: ActivatedRoute ){
+  private router:Router = inject( Router );
+  private route:ActivatedRoute = inject( ActivatedRoute );
+  constructor(){
 		effect(() => {
 			let loaded = this.item()!=null;
 			if( loaded ){

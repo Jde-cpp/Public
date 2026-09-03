@@ -18,7 +18,10 @@ import { StringUtils } from '../../utils/string-utils';
 @Injectable( {providedIn: 'root'} )
 export class AppService extends ProtoService<FromClient.Transmission,FromServer.Message> implements IGraphQL, IAuth{
 	constructor( http: HttpClient, @Inject('IEnvironment') private environment: IEnvironment, @Inject("AuthStore") authStore:AuthStore ){
-		super( FromClient.Transmission, http, environment.get<ETransport>("httpTransport"), authStore, true, inject(GoogleAuthService) );
+		//?? Unsecure:  the key was missing from both environment files, so this passed `undefined` as the transport.  Every
+		//test in ProtoService is `==Secure`/`==Hybrid`, which undefined fails, so it behaved as Unsecure by accident - but
+		//`transport==ETransport.Unsecure` was FALSE too, since that enumerator is 0.  Default it to a real enumerator.
+		super( FromClient.Transmission, http, environment.get<ETransport>("httpTransport") ?? ETransport.Unsecure, authStore, true, inject(GoogleAuthService) );
 		let appServer = environment.get<Instance>( 'applicationServer' );
 		if( !appServer ){
 			console.log( "No Application Server set in environment" );
@@ -30,6 +33,20 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 	// ping():Promise<string>{
 	// 	return this.sendSingularRequest( FromClient.ERequest.Ping );
 	// }
+
+	//App.FromClient's session_id is a `uint32` - a session PK the AppServer turns straight back into the session key with
+	//{:x} - while the browser holds it as the hex string the Authorization response header carried.  So it has to go back as
+	//a NUMBER;  the raw string threw @bufbuild's assertUInt32 and left the socket unauthenticated (see the base method).
+	//A user holding only a jwt has no session to adopt yet:  Message.jwt is a DELEGATED validation (ServerSocketSession::Login
+	//echoes the answer and installs nothing on the socket), not a handshake, so there is nothing to send.
+	protected override authorizationMessage( authorization:string ):any|undefined{
+		const sessionId = /^[0-9a-fA-F]+$/.test( authorization ) ? parseInt( authorization, 16 ) : NaN;//parseInt alone stops at the first bad digit, so "Bearer ey..." would have become NaN but "1a2bZZ" a plausible-looking 6699
+		if( !Number.isSafeInteger(sessionId) || sessionId<=0 || sessionId>0xFFFFFFFF ){
+			console.warn( `AppService.authorizationMessage: '${authorization}' is not a uint32 hex session id.` );
+			return undefined;
+		}
+		return { sessionId };
+	}
 
 	async gatewayInstances():Promise<Instance[]>{
 		const y = await this.get( "opcGateways", (m)=>console.log(m) ) as any;
@@ -48,6 +65,10 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 		return match?.instanceId ?? match?.id;//servers whose connections view predates the instanceId column emit the instance pk under 'id'
 	}
 
+	//BROKEN, same class as requestStrings below (angular-review3 L10):  App.FromClient.proto has no `graph_ql` field, so both
+	//`{graphQl:…}` here and `{graphQL:…}` in updateLogLevel encode to a requestId-only message.  Unlike the two renames
+	//nearby the fix is not a rename - it is `subscription`/`query`, whose type is a Jde.Proto.Query {text variables
+	//returnRaw} - and neither method has an in-repo caller to verify the choice against, so they are left flagged.
 	logs( applicationId:number, level:ELogLevel, start:Date, limit:number ):Observable<FromServer.Trace>{
 		const columns = "id instance_id time level message_id file_id function_id line user_pk thread_id args";
 		const q = `subscribe logs(applicationId:${applicationId}, limit:${limit}, filter:{ level:{gte:${level}}, {time:{gte:${start.toISOString()}}} }){ ${columns} }`;
@@ -61,7 +82,7 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 	logsUnsubscribe( requestId:RequestId ){
 		if( this.log.subRequest ) console.log( `[${requestId}]UnSubscribe: logs()` );
 		this.logsSubscriptions.delete( requestId );
-		this.sendWithId( {requestIdType:FromClient.ERequestType.UnsubscribeLogs}, requestId, "UnSubscribe: logs" );
+		this.sendWithId( {requestType:FromClient.ERequestType.UnsubscribeLogs}, requestId, "UnSubscribe: logs" );//`requestType`, per App.FromClient.proto's `ERequestType request_type = 14` - see requestStrings below
 	};
 
 	updateLogLevel( instanceId:number, defaultFileLevel:ELogLevel, defaultDBLevel:ELogLevel ):void{
@@ -69,8 +90,11 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 		this.send( {graphQL:q}, q );
 	}
 
+	//`requestStrings`, not `strings`:  App.FromClient.proto declares `StringMD5s request_strings = 10` and there is no
+	//`strings` field, so ts-proto's encode() dropped the payload and put a requestId-only message on the wire.  The server
+	//has nothing to answer, so the promise below never settled and the log rows kept their raw ids forever.
 	requestStrings( strings:App.StringMD5s ):Promise<FromServer.Strings>{
-		const requestId = this.send( {strings:strings}, `AppService::requestStrings count='${strings.files.length+strings.functions.length+strings.messages.length+strings.userPKs.length}'` );
+		const requestId = this.send( {requestStrings:strings}, `AppService::requestStrings count='${strings.files.length+strings.functions.length+strings.messages.length+strings.userPKs.length}'` );
 		return new Promise<FromServer.Strings>( (resolve,reject)=>{ this.stringRequests.set(requestId,{resolve:resolve,reject:reject})} );
 	}
 
@@ -103,7 +127,7 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 	private logsSubscriptions:Map<RequestId,Subject<FromServer.Trace>>= new Map<RequestId,Subject<FromServer.Trace>>();
 	//private addMessage( msg ):void{}
 	//the base settles _callbacks; these three maps are AppService's own pending work and would otherwise hang forever when the socket drops.
-	override handleConnectionError( err:any ):void{
+	override handleConnectionError( err:unknown ):void{
 		const e = { message: "Connection to the application server was lost." };
 		const strings = [...this.stringRequests.values()]; this.stringRequests.clear();//drain-then-settle: a handler may issue a fresh request, and it must not land in the map being cleared
 		strings.forEach( p=>p.reject(e) );

@@ -18,7 +18,7 @@ export class LogSettings{
 		if( params.start )
 			this.start = params.start;
 		if( params.hiddenMessages )
-			this.hiddenMessages = params.hiddenMessages;
+			this.hiddenMessages = params.hiddenMessages.map( g=>Guid.fromJson(g) ).filter( g=>g!=undefined );
 	}
 	assign( other: LogSettings ){
 		this.autoScroll = other.autoScroll;

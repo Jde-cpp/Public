@@ -1,3 +1,4 @@
+import { inject } from '@angular/core';
 import { Component, Inject, Injectable, OnInit, signal } from "@angular/core";
 import { ActivatedRoute, Router, RouterLink, Routes, UrlSegment } from "@angular/router";
 import { MatIconModule } from "@angular/material/icon";
@@ -6,9 +7,7 @@ import { RouteItem, IRouteService, RouteService } from "jde-spa";
 
 @Injectable( {providedIn: 'root'} )
 export class HomeRouteService extends RouteService{
-	constructor( protected override route: ActivatedRoute, private router: Router ){
-		super( route );
-	}
+	private router:Router = inject( Router );
 	override children():Promise<Routes>{
 		let y:Routes = [];
 		for( let config of this.router.config.filter(x=> x.title && x.path!.length && x.path!="login" && !x.path!.includes('/')) ){
@@ -34,7 +33,9 @@ export function pageHeading( route:ActivatedRoute ):string{
 	imports: [MatIconModule, RouterLink]
 })
 export class Cards implements OnInit {
-	constructor( private route: ActivatedRoute, private router: Router, @Inject("IRouteService") private routerService: IRouteService )
+	private route:ActivatedRoute = inject( ActivatedRoute );
+	private router:Router = inject( Router );
+	constructor( @Inject("IRouteService") private routerService: IRouteService )
 	{}
 	ngOnInit(){
 		this.route.url.subscribe( async (urlSegments)=>{

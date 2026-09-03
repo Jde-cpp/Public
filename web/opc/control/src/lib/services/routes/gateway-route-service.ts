@@ -26,7 +26,8 @@ export class GatewayRouteService implements IRouteService{
 
 @Injectable( {providedIn: 'root'} )
 export class GatewayCnnctnRouteService implements IRouteService{
-	constructor( @Inject('GatewayService') private _gatewayService:GatewayService, private _route: ActivatedRoute ){
+	private _route:ActivatedRoute = inject( ActivatedRoute );
+	constructor( @Inject('GatewayService') private _gatewayService:GatewayService ){
 	}
 	async children():Promise<Routes>{
 		throw new Error("Not implemented");
@@ -37,8 +38,6 @@ export class GatewayCnnctnRouteService implements IRouteService{
 		let route = this._route.snapshot.children[0];
 		let gatewayTarget = route.paramMap.get("gateway")!;
 		let gateway = await this._gatewayService.gateway( gatewayTarget );
-		if( !gateway )
-			throw new Error( "Gateway not found: "+gatewayTarget );
 		let connections = await gateway.queryArray<any>( `serverConnections{ name target }`,  );
 		for( const c of connections )
 			y.push( new RouteItem({path: c.target, title: c.name, icon: "lan"}) );

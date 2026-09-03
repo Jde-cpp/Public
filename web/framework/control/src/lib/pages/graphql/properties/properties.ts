@@ -1,4 +1,4 @@
-import {Component, effect, Inject, input, output, AfterViewInit, EventEmitter, ViewChild, ViewChildren, ElementRef, OnInit, OnDestroy, QueryList, ChangeDetectorRef, computed, viewChildren, model, signal, CUSTOM_ELEMENTS_SCHEMA} from '@angular/core';
+import {Component, effect, Inject, input, output, AfterViewInit, EventEmitter, ViewChild, ViewChildren, ElementRef, OnInit, OnDestroy, QueryList, ChangeDetectorRef, computed, viewChildren, model, signal, CUSTOM_ELEMENTS_SCHEMA, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatFormFieldModule, MatLabel } from '@angular/material/form-field';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -20,7 +20,12 @@ import { MatButtonModule } from '@angular/material/button';
 		schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class Properties implements OnInit{
-	constructor( private route: ActivatedRoute, private router:Router, private componentPageTitle:ComponentPageTitle, @Inject('IGraphQL') private graphQL: IGraphQL, private cdr: ChangeDetectorRef, private cnsl: SnackbarService ){
+	private route:ActivatedRoute = inject( ActivatedRoute );
+	private router:Router = inject( Router );
+	private componentPageTitle:ComponentPageTitle = inject( ComponentPageTitle );
+	private cdr:ChangeDetectorRef = inject( ChangeDetectorRef );
+	private cnsl:SnackbarService = inject( SnackbarService );
+	constructor( @Inject('IGraphQL') private graphQL: IGraphQL ){
 		effect( ()=>{
 			this.componentPageTitle.detail = this.record()["name"] ?? `New ${this.schema().type}`;
 		});
@@ -37,7 +42,7 @@ export class Properties implements OnInit{
 		this.record.set( newRecord );
 	}
 
-	originalOrder = ( a: any, b: any )=> {return 0;}
+	originalOrder = ()=>0;//keyvalue pipe comparator: keep insertion order
 
 	fields = computed<PropertyField[]>( ()=>{
 		let y = [];

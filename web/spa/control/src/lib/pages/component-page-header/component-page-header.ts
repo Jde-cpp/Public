@@ -1,4 +1,4 @@
-import {Component, EventEmitter, Input, Output} from '@angular/core';
+import {Component, inject, input, output } from '@angular/core';
 import {ComponentPageTitle} from '../component-page-title/component-page-title';
 import {MatButtonModule} from '@angular/material/button';
 import {MatIconModule} from '@angular/material/icon';
@@ -11,13 +11,13 @@ import { Router } from '@angular/router';
   imports: [MatButtonModule, MatIconModule]
 })
 export class ComponentPageHeader {
-  constructor(private _componentPageTitle: ComponentPageTitle, private router: Router) {
-	}//
-  @Output() toggleSidenav = new EventEmitter<void>();
+  private _componentPageTitle:ComponentPageTitle = inject( ComponentPageTitle );
+  private router:Router = inject( Router );//
+  toggleSidenav = output<void>();
 
   getTitle() {//
     return this._componentPageTitle.title;//
   }//
-  @Input() backUrl!:string;//
-  back(){ this.router.navigate([this.backUrl] ); }//
+  backUrl = input<string>();
+  back(){ this.router.navigate([this.backUrl()] ); }
 }

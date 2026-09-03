@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import {Component, ElementRef, Input, OnInit} from '@angular/core';
+import {Component, ElementRef, OnInit, inject, input } from '@angular/core';
 
 @Component({
     selector: 'docs-svg-viewer',
@@ -7,21 +7,22 @@ import {Component, ElementRef, Input, OnInit} from '@angular/core';
     standalone: false
 })
 export class SvgViewer implements OnInit {
-  @Input() src: string | undefined;
-  @Input() scaleToContainer: boolean | undefined;
+  src = input<string>();
+  scaleToContainer = input<boolean>();
 
-  constructor(private elementRef: ElementRef, private http: HttpClient) { }
+  private elementRef:ElementRef = inject( ElementRef );
+  private http:HttpClient = inject( HttpClient );
 
   ngOnInit() {
-    if (this.src) {
-      this.fetchAndInlineSvgContent(this.src);
+    if (this.src()) {
+      this.fetchAndInlineSvgContent(this.src()!);
     }
   }
 
   private inlineSvgContent(template: string) {
     this.elementRef.nativeElement.innerHTML = template;
 
-    if (this.scaleToContainer) {
+    if (this.scaleToContainer()) {
       const svg = this.elementRef.nativeElement.querySelector('svg');
       svg.setAttribute('width', '100%');
       svg.setAttribute('height', '100%');

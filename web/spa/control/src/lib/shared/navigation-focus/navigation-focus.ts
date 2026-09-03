@@ -1,20 +1,25 @@
-import {Directive, ElementRef, HostBinding, OnDestroy} from '@angular/core';
+import {Directive, ElementRef, OnDestroy, inject } from '@angular/core';
 import {NavigationFocusService} from './navigation-focus-service';
 
 let uid = 0;
 @Directive({
-  selector: '[focusOnNavigation]'
+  selector: '[focusOnNavigation]',
+  //bindings, not static attributes:  @HostBinding bound the tabindex PROPERTY and the outline style, and a static
+  //`tabindex` in here could be overridden by one on the host element instead of winning (review3 C9).
+  host: {
+    '[tabindex]': '"-1"',
+    '[style.outline]': '"none"'
+  }
 })
 export class NavigationFocus implements OnDestroy {
-  @HostBinding('tabindex') readonly tabindex = '-1';
-  @HostBinding('style.outline') readonly outline = 'none';
-
-  constructor(private el: ElementRef, private navigationFocusService: NavigationFocusService) {
-    if (!el.nativeElement.id) {
-      el.nativeElement.id = `skip-link-target-${uid++}`;
+  private el:ElementRef = inject( ElementRef );
+  private navigationFocusService:NavigationFocusService = inject( NavigationFocusService );
+  constructor() {
+    if (!this.el.nativeElement.id) {
+      this.el.nativeElement.id = `skip-link-target-${uid++}`;
     }
-    this.navigationFocusService.requestFocusOnNavigation(el.nativeElement);
-    this.navigationFocusService.requestSkipLinkFocus(el.nativeElement);
+    this.navigationFocusService.requestFocusOnNavigation(this.el.nativeElement);
+    this.navigationFocusService.requestSkipLinkFocus(this.el.nativeElement);
   }
 
   ngOnDestroy() {

@@ -1,4 +1,4 @@
-import { Component, computed, Inject, model, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, computed, Inject, model, OnDestroy, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTabsModule } from '@angular/material/tabs';
 import { NodePageData } from '../../services/resolvers/node-resolver';
@@ -17,8 +17,8 @@ import { ProfileStore } from 'jde-spa';
 	imports: [CommonModule, MatTabsModule, NodeChildren, NodeAccess]
 })
 export class NodeDetail implements OnDestroy, OnInit{
-	constructor( private activatedRoute: ActivatedRoute, private componentPageTitle:ComponentPageTitle )
-	{}
+	private activatedRoute:ActivatedRoute = inject( ActivatedRoute );
+	private componentPageTitle:ComponentPageTitle = inject( ComponentPageTitle );
 	ngOnDestroy(){
 		ProfileStore.setTabIndex( `nodeDetail/${JSON.stringify(this.node().toJson())}`, this.tabIndex );
   }

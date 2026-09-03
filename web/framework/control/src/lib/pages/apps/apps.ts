@@ -15,8 +15,7 @@ import { pageHeading } from '../cards/cards';
     imports: [DatePipe, MatCardModule, MatIconModule, RouterLink]
 })
 export class Apps implements OnInit{
-	constructor( private route: ActivatedRoute ){
-	}
+	private route:ActivatedRoute = inject( ActivatedRoute );
 
 	async ngOnInit(){
 		this.heading = pageHeading( this.route );

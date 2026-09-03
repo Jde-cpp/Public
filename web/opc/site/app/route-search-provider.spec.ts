@@ -10,7 +10,7 @@ if( typeof globalThis.localStorage=="undefined" ){
 	};
 }
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Routes } from '@angular/router';
+import { provideRouter, Router, Routes } from '@angular/router';
 import { RouteItem, RouteSearchProvider, RouteStore } from 'jde-spa';
 
 class Dummy{}
@@ -47,6 +47,8 @@ describe('RouteSearchProvider', () => {
 		expect( byRoute.get('/access/roles')?.title ).toBe( 'Roles' );
 	});
 
+	//the dynamic hits navigate by COMMANDS ARRAY, raw segments - router.navigate encodes each one, and a pre-encoded string
+	//double-encoded them (angular-review3 #7).  The encoded url survives as the dedup key only.
 	it('rebuilds absolute urls from every RouteStore key style the writers use', () => {
 		stored.set( 'gateways/gw1', [ new RouteItem({title: 'Line 1', path: 'cn1'}) ] );//GatewayCnnctnRouteService: joined UrlSegments
 		stored.set( '/apps', [ new RouteItem({title: 'Gateway/Debug', path: 'gateways/Debug'}) ] );//Apps page: leading slash, child carries its section
@@ -55,11 +57,23 @@ describe('RouteSearchProvider', () => {
 		stored.set( 'nowhere', [ new RouteItem({title: 'Lost', path: 'x'}) ] );//no route matches - dropped
 		const items = provider.items();
 		const find = ( title:string )=>items.find( i=>i.title==title );
-		expect( find('Line 1') ).toMatchObject( {route: '/gateways/gw1/cn1', summary: 'gateways / gw1'} );
-		expect( find('Gateway/Debug')?.route ).toBe( '/apps/gateways/Debug' );
+		expect( find('Line 1') ).toMatchObject( {route: ['/gateways', 'gw1', 'cn1'], summary: 'gateways / gw1'} );
+		expect( find('Gateway/Debug')?.route ).toEqual( ['/apps', 'gateways', 'Debug'] );
 		expect( find('Debug') ).toBeUndefined();//same url as the Apps-page entry, which came first
-		expect( find('Alice')?.route ).toBe( '/access/users/alice' );
+		expect( find('Alice')?.route ).toEqual( ['/access', 'users', 'alice'] );
 		expect( find('Lost') ).toBeUndefined();
+	});
+
+	//review3 #7: every Google-provisioned target is '<provider>-<email>'.  Pre-encoding gave the router '%40', which it
+	//encoded again to '%2540', so paramMap yielded '…%40…', targetQuery matched no row and the page bounced.
+	it('hands the router raw segments, so an @ target survives navigation', async () => {
+		stored.set( 'users', [ new RouteItem({title: 'John', path: 'Google-johnmduffy@gmail.com'}) ] );
+		const item = provider.items().find( i=>i.title=='John' )!;
+		expect( item.route ).toEqual( ['/access', 'users', 'Google-johnmduffy@gmail.com'] );
+		const router = TestBed.inject( Router );
+		await router.navigate( item.route as any[] );
+		expect( router.url ).toBe( '/access/users/Google-johnmduffy@gmail.com' );//NOT %2540
+		expect( decodeURIComponent(router.url.split('/').pop()!) ).toBe( 'Google-johnmduffy@gmail.com' );
 	});
 
 	it('ranks title starts-with ahead of contains, ignores scoped queries', async () => {

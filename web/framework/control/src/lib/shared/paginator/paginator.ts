@@ -1,6 +1,5 @@
-import {Component,EventEmitter,OnInit,Input,Output, OnDestroy, ChangeDetectorRef, NgModule, input, model, signal, effect, output, computed} from '@angular/core';
+import {Component,EventEmitter,OnInit,Input,Output, OnDestroy, ChangeDetectorRef, NgModule, input, model, signal, effect, output, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 //import { BrowserModule } from '@angular/platform-browser';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -20,10 +19,11 @@ export class PageEvent{
 	selector: 'paginator',
 	templateUrl: './paginator.html',
 	styleUrls: ['./paginator.scss'],
-	imports:[MatIconModule, MatButtonModule, CommonModule, /*BrowserModule,*/ MatInputModule, FormsModule]
+	imports:[MatIconModule, MatButtonModule, CommonModule, /*BrowserModule,*/ MatInputModule]
 })
 export class Paginator implements OnInit, OnDestroy{
-	constructor( private cdr: ChangeDetectorRef ){
+	private cdr:ChangeDetectorRef = inject( ChangeDetectorRef );
+	constructor(){
 		effect( ()=>{
 			this.previousPageIndex.set( this.pageIndex() );
 		} );
@@ -82,7 +82,7 @@ export class Paginator implements OnInit, OnDestroy{
 		}
 	} get length(){return this._length;} _length: number=0; //The length of the total number of items that are being paginated.
 */
-	lengthTimeout:any;
+	lengthTimeout:ReturnType<typeof setTimeout>|undefined;
 
 	pageSize = model.required<number>();
 	pageIndex = model<number>(0);
@@ -102,7 +102,7 @@ export class Paginator implements OnInit, OnDestroy{
 			}
 		} } get pageLength(){return this._pageLength;} _pageLength:number=50;
 */
-	@Input() showFirstLastButtons: boolean=true;
+	showFirstLastButtons = input<boolean>( true );
 	//@Output() onPageEvent = new EventEmitter<PageEvent>();
 	onPageEvent = output<PageEvent>();
 	settingsIndex!:number;

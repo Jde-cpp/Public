@@ -1,3 +1,4 @@
+import { inject } from '@angular/core';
 import { P } from "@angular/cdk/keycodes";
 import { Component, Inject, OnInit, signal } from "@angular/core";
 import { ActivatedRoute, Router } from "@angular/router";
@@ -9,7 +10,9 @@ import { ComponentCategoryList, RouteItem, IRouteService } from "jde-spa";
 	imports: [ComponentCategoryList]
 })
 export class Home implements OnInit {
-	constructor( private route: ActivatedRoute, private router: Router, @Inject("IRouteService") private routerService: IRouteService ){
+	private route:ActivatedRoute = inject( ActivatedRoute );
+	private router:Router = inject( Router );
+	constructor( @Inject("IRouteService") private routerService: IRouteService ){
 	}
 	async ngOnInit(){
 		let items = new Array<RouteItem>();

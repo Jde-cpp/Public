@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, QueryList, Signal, ViewChild, ViewChildren, WritableSignal, input, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, QueryList, Signal, ViewChild, ViewChildren, WritableSignal, input, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {FormControl, FormsModule, ReactiveFormsModule} from '@angular/forms';
 import { MatButtonModule } from "@angular/material/button";
@@ -27,10 +27,9 @@ type ColumnFilter = {field:Field, filter: Filter, displayName:string};
 		templateUrl: './ql-list-settings-filter.html',
 		host: {class:'main-content.mat-drawer-container.my-content'},
 			imports: [CommonModule, FormsModule, MatAutocompleteModule, MatButtonModule, MatCheckboxModule, MatChipsModule, MatDatepickerModule, MatFormFieldModule, MatIconModule, MatSelectModule, MatTableModule, MatInputModule, ReactiveFormsModule],
-		//changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class QLListSettingsFilter implements OnInit{
-	constructor( private cdr: ChangeDetectorRef ){}
+	private cdr:ChangeDetectorRef = inject( ChangeDetectorRef );
 
 	ngOnInit(){
 		for( let fieldFilter of this.view().fieldFilters ){
