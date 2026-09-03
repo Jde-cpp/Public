@@ -12,8 +12,8 @@ in. Consumed by [`.github/workflows/linux-ci.yml`](../workflows/linux-ci.yml).
 sudo docker build -t jde-ci-runner:latest .github/docker
 ```
 
-The base is pinned in the Dockerfile to `myoung34/github-runner:2.336.0-ubuntu-noble`
-(Ubuntu 24.04, glibc 2.39, runner 2.336.0). Base-tag selection has two traps:
+The base is pinned in the Dockerfile to `myoung34/github-runner:2.337.0-ubuntu-noble`
+(Ubuntu 24.04, glibc 2.39, runner 2.337.0). Base-tag selection has two traps:
 
 - **Distro:** only the `*-ubuntu-noble` tags are noble. The bare version tags
   (`2.336.0`), `latest`, and `ubuntu-focal` are **focal** — glibc 2.31 (< the 2.38
@@ -21,9 +21,17 @@ The base is pinned in the Dockerfile to `myoung34/github-runner:2.336.0-ubuntu-n
   (2.35) also fails the glibc floor. Symptom of getting this wrong: `apt` can't find
   `liburing-dev`, or `GLIBC_x.y not found` when the mounted deps load.
 - **Runner version:** match it to what GitHub currently serves, else the runner
-  self-updates and restarts after *every* job. Check the newest
-  `<version>-ubuntu-noble` tag on
+  self-updates — which in this container is **fatal, not just slow**. PID 1 *is*
+  `bin/Runner.Listener`, so when it exits to be updated, `--restart always`
+  restarts the container and kills the detached updater mid-copy, after it has
+  already moved `bin` aside. Every start after that exits 127 on a missing
+  `./bin/Runner.Listener`, `config.sh` included, so the runner never registers and
+  jobs sit **queued** with no runner (seen 2026-09-03: 631 restarts, run #70
+  waiting). The damage is in the container's writable layer, so `docker restart`
+  cannot fix it — rebuild on the newer base and `docker rm` the container. Check
+  the newest `<version>-ubuntu-noble` tag on
   [Docker Hub](https://hub.docker.com/r/myoung34/github-runner/tags?name=ubuntu-noble)
+  against [`actions/runner`'s latest release](https://github.com/actions/runner/releases/latest)
   and bump the pin (or override without editing):
 
 ```bash

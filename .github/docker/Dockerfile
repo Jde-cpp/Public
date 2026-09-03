@@ -16,9 +16,14 @@
 # rebuild the deps in-container with the `-repos` preset instead of mounting them.
 # Pinned to a runner-versioned noble tag (not the floating `ubuntu-noble`, which
 # upstream re-points, nor a bare version tag like `2.336.0`, which is focal —
-# glibc 2.31, no liburing-dev, too-old cmake). Match the runner version to the
-# repo so GitHub does not force a self-update+restart after every job.
-ARG BASE_IMAGE=myoung34/github-runner:2.336.0-ubuntu-noble
+# glibc 2.31, no liburing-dev, too-old cmake). Match the runner version to what
+# GitHub currently serves, else the runner self-updates. In this container that is
+# fatal, not just slow: PID 1 *is* `bin/Runner.Listener`, so when it exits for the
+# update `--restart always` restarts the container and kills the detached updater
+# mid-copy, after it has already moved `bin` aside -> every later start exits 127
+# on a missing `./bin/Runner.Listener`. Recovery needs a rebuild + `docker rm`, as
+# the damage is in the container's writable layer.
+ARG BASE_IMAGE=myoung34/github-runner:2.337.0-ubuntu-noble
 FROM ${BASE_IMAGE}
 
 ARG LLVM_VERSION=23

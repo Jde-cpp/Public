@@ -19,9 +19,12 @@ namespace Jde::Opc::Server {
 		α Ptr()ι->UA_Server*{ return _ua; }
 		string ServerName;
 	private:
+		α PublishDataTypes()ι->void;
+
 		UAConfig _config;
 		UA_Server* _ua{};
 		optional<std::jthread> _thread;
 		std::atomic<UA_Boolean> _running{};
+		vector<UA_DataTypeArray> _customTypes;
 	};
 }
