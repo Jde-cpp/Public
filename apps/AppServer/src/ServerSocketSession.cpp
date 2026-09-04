@@ -29,7 +29,7 @@ namespace Jde::App::Server{
 			auto& resource = *instance.mutable_auth_resource();
 			if( instance.auth_resource().size() ){
 				try{
-				 	Authorizer()->TestSchemaAdmin( resource, UserPK() );//Administer on each of the schema's active root resources, and an unknown schema is a denial
+				 	Authorizer()->TestSchemaAdmin( resource, UserPK() );//Administer on each of the schema's active root resources;  a schema with no active root is a no-op, not a denial
 					INFOT( ELogTags::Access, "[{}.{}]Instance '{}' authorizor with resource '{}'", hex(Id()), hex(requestId), instance.instance_name(), resource );
 					Authorizer()->AddAdminAuthorizer( resource, std::dynamic_pointer_cast<Access::IAdminAcl>(shared_from_this()), UserPK() );
 					authResult = true;

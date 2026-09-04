@@ -311,11 +311,12 @@ namespace Jde::Access::Tests{
 		EXPECT_NO_THROW( auth->TestAdminLocal(_schema, _target, criteria, _user) ) << "a deleted criteria row falls back to the root";
 	}
 
-	//appserver-review3 #4:  the gate on standing in for a schema (AddAdminAuthorizer) - Administer on every active root resource
-	//of the schema, and an unknown or fully disabled schema is a denial rather than the quiet pass the name-only lookup gave.
+	//The gate on standing in for a schema (AddAdminAuthorizer):  Administer on every active criteria-less resource of the
+	//schema.  A schema with no active root is not enforced - see Authorize.h;  appserver-review3 #4 wanted that to be a
+	//denial and was rejected, so the no-op is asserted here rather than left to drift.
 	TEST( AuthorizeTests, TestSchemaAdmin ){
 		auto auth = createAuthorizer();
-		EXPECT_THROW( auth->TestSchemaAdmin("unknown", _user), Exception );
+		EXPECT_NO_THROW( auth->TestSchemaAdmin("unknown", _user) ) << "no active root - nothing to enforce, as Test does";
 		EXPECT_THROW( auth->TestSchemaAdmin(_schema, _user), Exception ) << "no rights yet";
 		auth->AddAcl( _user.Value, PermissionPK{10}, Administer, None, _resourcePK );
 		EXPECT_NO_THROW( auth->TestSchemaAdmin(_schema, _user) );
@@ -326,8 +327,6 @@ namespace Jde::Access::Tests{
 		EXPECT_THROW( auth->TestSchemaAdmin(_schema, _user), Exception ) << "every active root, not just one";
 		auth->UpdateResourceDeleted( otherPK, _schema, jobject{{"id",otherPK}}, false );
 		EXPECT_NO_THROW( auth->TestSchemaAdmin(_schema, _user) ) << "a disabled root is not enforced";
-		auth->UpdateResourceDeleted( _resourcePK, _schema, jobject{{"id",_resourcePK}}, false );
-		EXPECT_THROW( auth->TestSchemaAdmin(_schema, _user), Exception ) << "nothing active - nothing to delegate";
 	}
 
 	struct StubAdminAcl final : IAdminAcl{

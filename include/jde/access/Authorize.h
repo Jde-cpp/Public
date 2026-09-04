@@ -37,8 +37,9 @@ namespace Jde::Access{
 		α TestAdmin( ResourcePK resourcePK, UserPK userPK, SRCE )ε->void;
 		α TestAdminPermission( PermissionPK permissionPK, UserPK userPK, SRCE )ε->void;
 		//May userPK stand in for the schema and answer its admin checks (AddAdminAuthorizer)?  Administer on every active
-		//criteria-less resource of the schema, and there must be one:  an unknown or fully disabled schema is a denial, not a
-		//no-op (appserver-review3 #4).
+		//criteria-less resource of the schema.  A schema with no active root passes:  unknown, or every root deleted, is a
+		//no-op rather than a denial, so an instance may register before its resources exist (appserver-review3 #4, rejected -
+		//the denial was tried and removed, do not reinstate it without changing that call).
 		α TestSchemaAdmin( str schema, UserPK userPK, SRCE )ε->void;
 		struct AdminAuthorizer{ sp<IAdminAcl> Acl; UserPK User; };//User: the registrant, re-tested with TestSchemaAdmin at each check so a registrant whose rights went falls back to the local rule.
 		α AddAdminAuthorizer( str schemaName, sp<IAdminAcl> authorizer, UserPK registrant )ι->void;
