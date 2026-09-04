@@ -1,5 +1,5 @@
 #pragma once
-#include <jde/app/client/AppClientSocketSession.h>
+#include <jde/web/client/proto/Web.FromServer.pb.h>
 #include "AuthAwait.h"
 
 namespace Jde::Opc::Gateway{
@@ -11,6 +11,6 @@ namespace Jde::Opc::Gateway{
 	private:
 		α OnSuccess()ι->void{ CheckProvider(); }
 		α CheckProvider()ι->TAwait<Access::ProviderPK>::Task;
-		α AddSession( Access::ProviderPK providerPK )ι->Web::Client::ClientSocketAwait<Web::FromServer::SessionInfo>::Task;
+		α AddSession( Access::ProviderPK providerPK )ι->TAwait<Web::FromServer::SessionInfo>::Task;//IAppClient::AddSession's await type - socket or in-process.
 	};
 }

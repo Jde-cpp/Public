@@ -5,6 +5,9 @@ if( Test-Path -Path $Env:Programfiles\Jde-cpp\OpcGateway\Jde.Opc.Gateway.exe ) {
 if( Test-Path -Path $Env:Programfiles\Jde-cpp\AppServer\Jde.App.Server.exe ) {
 	& "$Env:Programfiles\Jde-cpp\AppServer\Jde.App.Server.exe"  -uninstall
 }
+if( Test-Path -Path $Env:Programfiles\Jde-cpp\OpcHub\Jde.Opc.Hub.exe ) {
+	& "$Env:Programfiles\Jde-cpp\OpcHub\Jde.Opc.Hub.exe"  -uninstall
+}
 
 if ( (Get-OdbcDsn -Name "jde" -ErrorAction Ignore) -ne $null){
   Remove-OdbcDsn -Name "jde" -Platform "64-bit" -DsnType "System"

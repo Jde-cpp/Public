@@ -17,6 +17,6 @@ namespace Jde::Access::Client{
 		sp<AccessListener> Listener;
 		string ResourceSchema;//the OpcServer's instance suffix, "" elsewhere - names its `opc.<instance>` resource rows.
 	};
-	α Configure( sp<DB::AppSchema> accessSchema, const Context& context, sp<QL::IQL> appQL, SRCE )ε->ConfigureAwait;
+	α Configure( sp<DB::AppSchema> accessSchema, const Context& context, sp<QL::IQL> appQL, bool syncOnly=false, SRCE )ε->ConfigureAwait;//syncOnly: ConfigureAwait::SyncOnly - an in-process client that shares the server's Authorize.
 	α Reload( const Context& context, sp<QL::IQL> appQL, SRCE )ε->ConfigureAwait;//appQL is the new session's ClientQL - the one Configure was handed died with the old session.
 }

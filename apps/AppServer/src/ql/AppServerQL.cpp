@@ -8,13 +8,14 @@
 #include "InstanceTagLevelAwait.h"
 
 namespace Jde::App{
-	sp<Server::AppServerQL> _ql;
+	sp<QL::LocalQL> _ql;
 	α Server::QLPtr()ι->sp<QL::LocalQL>{ return App::_ql; }
 	α Server::QL()ι->QL::LocalQL&{ return *QLPtr(); }
 	α Server::ConfigureQL( vector<sp<DB::AppSchema>> schemas, sp<Access::Authorize> authorizer )ι->void{
 		QL::Configure( schemas );
 		_ql = ms<AppServerQL>( move(schemas), move(authorizer) );
 	}
+	α Server::SetQL( sp<QL::LocalQL> ql )ι->void{ _ql = move(ql); }
 }
 
 namespace Jde::App::Server{

@@ -26,6 +26,17 @@ namespace Jde::App::Client{
 		SessionPK _credentials;
 	};
 
+	struct ΓAC AddSessionAwait : SocketAwait<Web::FromServer::SessionInfo,Web::FromServer::SessionInfo>{
+		using base = SocketAwait<Web::FromServer::SessionInfo,Web::FromServer::SessionInfo>;
+		AddSessionAwait( string domain, string loginName, Access::ProviderPK providerPK, string userEndPoint, bool isSocket, sp<AppClientSocketSession> session, SL sl )ι:
+			base{move(session), sl}, _domain{move(domain)}, _loginName{move(loginName)}, _userEndPoint{move(userEndPoint)}, _providerPK{providerPK}, _isSocket{isSocket}{}
+	private:
+		α Execute()ι->Web::Client::ClientSocketAwait<Web::FromServer::SessionInfo>::Task override;
+		string _domain, _loginName, _userEndPoint;
+		Access::ProviderPK _providerPK;
+		bool _isSocket;
+	};
+
 	template<class TProto,class TResult>
 	α SocketAwait<TProto,TResult>::await_resume()ε->TResult{
 		base::CheckException();

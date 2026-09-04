@@ -6,6 +6,7 @@ common + {
 	access: {
 		trustedCertDirs: [
 			common.certsDir( "OpcGateway" ),
+			common.certsDir( "OpcHub" ), //Jde.Opc.Hub - the gateway role's OPC client certs live under its own product dir.
 			common.certsDir( common.opcTestsProduct ),
 			common.certsDir( "PlcEmulator" ) //apps/OpcServer/emulator - its UA client cert.
 		]

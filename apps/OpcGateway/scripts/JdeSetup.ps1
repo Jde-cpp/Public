@@ -13,5 +13,8 @@ if ( (Get-OdbcDsn -Name "jde" -ErrorAction Ignore) -eq $null){
 Write-Host "Registering Services..."
 & "$Env:Programfiles\Jde-cpp\OpcGateway\Jde.Opc.Gateway.exe"  -install
 & "$Env:Programfiles\Jde-cpp\AppServer\Jde.App.Server.exe"  -install
+if( Test-Path -Path $Env:Programfiles\Jde-cpp\OpcHub\Jde.Opc.Hub.exe ) { # AppServer + OpcGateway in one service (apps/OpcHub) - instead of the two above, never beside them.
+	& "$Env:Programfiles\Jde-cpp\OpcHub\Jde.Opc.Hub.exe"  -install
+}
 
 Read-Host -Prompt "Press Enter to exit"

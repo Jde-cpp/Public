@@ -35,9 +35,15 @@ namespace Jde::App{
 			log->SetAppPKs( get<0>(x), get<1>(x) );
 	}
 	α Server::StartWebServer( jobject&& settings )ε->void{
-		_requestHandler = ms<RequestHandler>( move(settings) );
+		StartWebServer( ms<RequestHandler>(move(settings)) );
+	}
+	α Server::StartWebServer( sp<RequestHandler> handler )ε->void{
+		_requestHandler = move( handler );
 		Web::Server::Start( _requestHandler );
 		Process::AddShutdownFunction( [](bool terminate, SL sl){Server::StopWebServer(terminate, sl);} );//TODO move to Web::Server
+	}
+	α Server::AddSocketSession( sp<ServerSocketSession> session )ι->void{
+		_sessions.emplace( session->Id(), move(session) );
 	}
 	α Server::RemoveExisting( str host, PortType port )ι->void{
 		if( !port )//web_port 0 (a client with no /http/port, e.g. the test binaries) is not a unique endpoint - matching on it would evict every other portless session on the host.
@@ -72,8 +78,21 @@ namespace Jde::App{
 		Web::Server::Stop( move(_requestHandler), terminate, sl );
 	}
 
+	static mutex _localInstancesMutex;
+	static vector<Proto::FromClient::Instance> _localInstances;
+	α Server::AddLocalInstance( Proto::FromClient::Instance instance )ι->void{
+		lg _{ _localInstancesMutex };
+		_localInstances.push_back( move(instance) );
+	}
 	α Server::FindApplications( str name )ι->vector<Proto::FromClient::Instance>{
 		vector<Proto::FromClient::Instance> y;
+		{
+			lg _{ _localInstancesMutex };
+			for( let& instance : _localInstances ){
+				if( instance.application()==name )
+					y.push_back( instance );
+			}
+		}
 		_sessions.cvisit_all( [&](let& kv){
 			let& session = kv.second;
 			//A registration is only worth serving while the socket that made it is still up: /opcGateways hands its answer
@@ -154,7 +173,7 @@ namespace Jde::App::Server{
 
 	α RequestHandler::WebsocketSession( sp<IRestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<IWebsocketSession>{
 		auto session = ms<ServerSocketSession>( move(stream), move(buffer), move(req), move(userEndpoint), connectionIndex );
-		_sessions.emplace( session->Id(), session );
+		AddSocketSession( session );
 		return session;
 	}
 	α RequestHandler::QLServer()ι->sp<QL::IQL>{

@@ -3,8 +3,10 @@
 
 namespace Jde::Opc::Gateway{
 	α AppClient()ι->sp<App::Client::IAppClient>;
+	//Replace the default socket client before Startup captures it - OpcHub installs its in-process subclass this way.
+	α SetAppClient( sp<App::Client::IAppClient> client )ι->void;
 
-	struct GatewayAppClient final : App::Client::IAppClient{
+	struct GatewayAppClient : App::Client::IAppClient{
 		α ClientQuery( QL::RequestQL&& q, Jde::UserPK executer, SL sl )ε->up<TAwait<jvalue>> override;
 	};
 }

@@ -13,7 +13,8 @@ namespace Jde::Web::Server{
 namespace Internal{
 	α Start( sp<IRequestHandler> handler )ε->void;
 	α Stop( sp<IRequestHandler>&& handler, bool terminate, SL sl )ι->void;
-	α RunSocketSession( sp<IWebsocketSession>&& session )ι->void;
+	α RunSocketSession( sp<IWebsocketSession>&& session, const IRequestHandler* handler )ι->void;//handler: the listener that accepted it - Stop closes only its own.
+	α NextConnectionIndex()ι->uint32;//process-wide: socket ids key _socketSessions across every listener in the process.
 	α RemoveSocketSession( SocketId id )ι->void;
 	α CloseSocketSessions( SessionPK sessionId )ι->uint;
 }
@@ -45,7 +46,7 @@ namespace Jde::Web{
 		for( auto cs = co_await net::this_coro::cancellation_state; cs.cancelled() == net::cancellation_type::none; cs = co_await net::this_coro::cancellation_state ){
 			if( websocket::is_upgrade(parser->get()) ){
 				beast::get_lowest_layer(stream).expires_never();// Disable the timeout. The websocket::stream uses its own timeout settings.
-				Internal::RunSocketSession( reqHandler->WebsocketSession(ms<RestStream<T>>(move(stream)), move(buffer), parser->release(), userEndpoint, connectionIndex) );
+				Internal::RunSocketSession( reqHandler->WebsocketSession(ms<RestStream<T>>(move(stream)), move(buffer), parser->release(), userEndpoint, connectionIndex), reqHandler );
 				co_return;
 			}
 			HttpRequest req{ parser->release(), move(userEndpoint), isSsl, connectionIndex };

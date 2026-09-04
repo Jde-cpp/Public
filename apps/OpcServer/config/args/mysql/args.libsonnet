@@ -7,6 +7,7 @@ common + {
 	access: {
 		trustedCertDirs: [
 			args.certsDir( "OpcGateway" ),
+			args.certsDir( "OpcHub" ), //Jde.Opc.Hub - the gateway role's OPC client certs live under its own product dir.
 			args.certsDir( "Tests.Opc" ), //mysql is the linux default args dir, so the linux ProductName - windows uses args/sqlServer.
 			args.certsDir( "PlcEmulator" ) //apps/OpcServer/emulator - its UA client cert.
 		]

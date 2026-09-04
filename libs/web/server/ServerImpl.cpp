@@ -24,7 +24,7 @@ namespace Server{
 			CodeException{ ec, ELogTags::Server | ELogTags::Http, ELogLevel::Debug };
 			co_return;
 		}
-		let index = handler->NextRequestId();
+		let index = Internal::NextConnectionIndex();
 		if( isSsl ){
 			beast::ssl_stream<StreamType> ssl_stream{ move(stream), handler->Context() };
 			auto [ec, bytes_used] = co_await ssl_stream.async_handshake( ssl::stream_base::server, buffer.data() );
@@ -262,7 +262,15 @@ namespace Server{
 		INFOT( ELogTags::App, "Web Server started:  {}:{}.", address.address().to_string(), address.port() );
 	}
 
-	concurrent_flat_map<SocketId, sp<IWebsocketSession>> _socketSessions;
+	//One map for every listener in the process (OpcHub runs two, Jde.Opc.Tests three): the id comes from NextConnectionIndex,
+	//not a per-handler counter, or the second listener's sockets collided with the first's and emplace silently dropped them -
+	//Sessions::Remove and Stop then never reached them.  The handler is kept so Stop closes only its own listener's sockets.
+	struct SocketEntry{ const IRequestHandler* Handler; sp<IWebsocketSession> Session; };
+	concurrent_flat_map<SocketId, SocketEntry> _socketSessions;
+	α Internal::NextConnectionIndex()ι->uint32{
+		static atomic<uint32> _connectionIndex{};
+		return _connectionIndex.fetch_add( 1, std::memory_order_relaxed );
+	}
 	α Internal::Stop( sp<IRequestHandler>&& handler, bool terminate, SL sl )ι->void{
 		handler->Stop( terminate, sl );
 		//Close each session, don't just drop the refs: a pending async_read holds the session (and io_context work count)
@@ -270,17 +278,18 @@ namespace Server{
 		//wedge shutdown at the executor join. Close hops to the stream's strand, so calling it from this (shutdown) thread
 		//while io threads run the sessions' handlers is safe; async_close completes the read; the close closure keeps the
 		//session alive until then, and OnClose erases it from _socketSessions.
-		_socketSessions.visit_all( []( auto& idSession ){ idSession.second->Close(); } );
-		_socketSessions.clear();//server sessions hold beast streams tied to the io_context; drop them here (still in the shutdown-function phase, io_context alive) so they don't outlive it and UAF at static destruction.
+		let mine = [h=handler.get()]( auto& idEntry ){ return idEntry.second.Handler==h; };
+		_socketSessions.visit_all( [&mine]( auto& idEntry ){ if( mine(idEntry) ) idEntry.second.Session->Close(); } );
+		_socketSessions.erase_if( mine );//server sessions hold beast streams tied to the io_context; drop them here (still in the shutdown-function phase, io_context alive) so they don't outlive it and UAF at static destruction.
 	}
 
-	α Internal::RunSocketSession( sp<IWebsocketSession>&& session )ι->void{
+	α Internal::RunSocketSession( sp<IWebsocketSession>&& session, const IRequestHandler* handler )ι->void{
 		if( !session ){
 			WARNT( ELogTags::Socket | ELogTags::Server, "Request handler declined the websocket upgrade;  connection closed." );
 			return;
 		}
 		let id = session->Id();
-		_socketSessions.emplace( id, session );
+		_socketSessions.emplace( id, SocketEntry{handler, session} );
 		session->Run();
 	}
 
@@ -292,9 +301,9 @@ namespace Server{
 	//IWebsocketSession holds its own sp<SessionInfo>.
 	α Internal::CloseSocketSessions( SessionPK sessionId )ι->uint{
 		vector<sp<IWebsocketSession>> sessions;
-		_socketSessions.cvisit_all( [sessionId, &sessions]( auto& idSession ){
-			if( idSession.second->SessionId()==sessionId )
-				sessions.push_back( idSession.second );
+		_socketSessions.cvisit_all( [sessionId, &sessions]( auto& idEntry ){
+			if( idEntry.second.Session->SessionId()==sessionId )
+				sessions.push_back( idEntry.second.Session );
 		} );
 		for( auto& session : sessions )//outside the visit: Close net::dispatch'es, so it runs inline when the caller is already on the stream's strand, and its OnClose erases from _socketSessions - which would deadlock under the visit.
 			session->Close();

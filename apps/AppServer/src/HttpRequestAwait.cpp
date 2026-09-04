@@ -13,7 +13,17 @@ namespace Jde::App::Server{
 
 	α ValueJson( string&& value )ι->jvalue{ return jobject{{"value", move(value)}}; }//build directly so quotes/backslashes are escaped (Ƒ+Parse threw on unescaped input).
 
-	Ω login( HttpRequest& req, HttpRequestAwait::Handle h )ι->void{
+	α Routes::GoogleAuthClientId()ι->jvalue{
+		return ValueJson( Settings::FindString("/http/clientSettings/googleAuthClientId").value_or("GoogleAuthClientId Not Configured.") );//same pointer SettingQLAwait serves the ql `setting(target:"googleAuthClientId")` from - the old "GoogleAuthClientId" was both unrooted and a key no config defines, so this endpoint always answered "Not Configured".
+	}
+	α Routes::Instances( bool opcServers, bool identified )ι->jvalue{
+		let apps = Server::FindApplications( opcServers ? "Jde.OpcServer" : "Jde.OpcGateway" );
+		jarray japps;
+		for( auto& app : apps )
+			japps.push_back( identified ? ToJson(app) : ToDiscoveryJson(app) );
+		return jobject{ {"servers", japps} };
+	}
+	α Routes::LoginJwt( HttpRequest& req, IHttpRequestAwait::Handle h )ι->void{
 		try{
 			req.LogRead();
 			let authorization = req.Header( "Authorization" );
@@ -28,7 +38,7 @@ namespace Jde::App::Server{
 		h.resume();
 	}
 
-	α Logout( HttpRequest&& req, HttpRequestAwait::Handle h )ι->void{
+	α Routes::Logout( HttpRequest&& req, IHttpRequestAwait::Handle h )ι->void{
 		try{
 			req.LogRead();
 			jobject j{ {"removed", Sessions::Remove(req.SessionInfo->SessionId)} };
@@ -44,16 +54,11 @@ namespace Jde::App::Server{
 		if( _request.Method() == http::verb::get ){
 			if( _request.Target()=="/GoogleAuthClientId" ){
 				_request.LogRead();
-				_readyResult = mu<jvalue>( ValueJson(Settings::FindString("/http/clientSettings/googleAuthClientId").value_or("GoogleAuthClientId Not Configured.")) );//same pointer SettingQLAwait serves the ql `setting(target:"googleAuthClientId")` from - the old "GoogleAuthClientId" was both unrooted and a key no config defines, so this endpoint always answered "Not Configured".
+				_readyResult = mu<jvalue>( Routes::GoogleAuthClientId() );
 			}
 			else if( _request.Target()=="/opcGateways" || _request.Target()=="/opcServers" ){
 				_request.LogRead();
-				let apps = Server::FindApplications( _request.Target()=="/opcServers" ? "Jde.OpcServer" : "Jde.OpcGateway" );
-				let identified = _request.UserPK()!=Jde::UserPK{};//every http caller is minted a session; only a logged-in one has a user.
-				jarray japps;
-				for( auto& app : apps )
-					japps.push_back( identified ? ToJson(app) : ToDiscoveryJson(app) );
-				_readyResult = mu<jvalue>( jobject{{"servers", japps}} );
+				_readyResult = mu<jvalue>( Routes::Instances(_request.Target()=="/opcServers", _request.UserPK()!=Jde::UserPK{}) );//every http caller is minted a session; only a logged-in one has a user.
 			}
 		}
 		return _readyResult!=nullptr;
@@ -62,9 +67,9 @@ namespace Jde::App::Server{
 		bool processed{ _request.Method() == http::verb::post };
 		if( _request.Method() == http::verb::post ){
 			if( _request.Target()=="/login" )
-				login( _request, _h );
+				Routes::LoginJwt( _request, _h );
 			else if( _request.Target()=="/logout" )
-				Logout( move(_request), _h );
+				Routes::Logout( move(_request), _h );
 			else
 				processed = false;
 		}

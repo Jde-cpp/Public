@@ -30,6 +30,7 @@ Rest/Websocket Application on top of [open62541.org](https://www.open62541.org/)
     net start Jde.AppServer
     net start Jde.OpcGateway
 ```
+   or, with both in one process (`apps/OpcHub`, `Jde.Opc.Hub.exe`), `net start Jde.OpcHub` instead of the two.
 2) Browse to http://127.0.0.1:8071.
 3) Setup Opc Server.
 ![](./doc/OpcServer.png)

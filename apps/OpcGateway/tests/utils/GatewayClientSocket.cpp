@@ -15,7 +15,7 @@ namespace Jde::Opc::Gateway{
 		if( !_session ){
 			optional<ssl::context> ctx;
 			_session = ms<Tests::GatewayClientSocket>( Executor(), ctx );
-			BlockVoidAwait( _session->RunSession("localhost", GatewayPort()) );
+			BlockVoidAwait( _session->RunSession("localhost", GatewayPort(), "/opc") );//the gateway protocol's path on a hub; the standalone gateway ignores it.
 			BlockAwait<Web::Client::ClientSocketAwait<uint32>,uint>( _session->Connect(AppClient()->SessionId()) );
 		}
 		return *_session;

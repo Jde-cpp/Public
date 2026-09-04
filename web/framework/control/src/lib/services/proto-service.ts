@@ -587,7 +587,9 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 		if( !this.instances?.length ) throw "no instances";
 		return `${this.instances[0].host}:${this.instances[0].port}`;
 	}
-	protected get socketUrl(){ return `${this.transport==ETransport.Secure ? "wss" : "ws"}://${this.url}`; }
+	//the websocket's request path: "" for the app server (its socket is the root), a service whose protocol a host routes by path overrides it (Gateway: "/opc" on an OpcHub; the standalone gateway ignores it).
+	protected get socketPath():string{ return ""; }
+	protected get socketUrl(){ return `${this.transport==ETransport.Secure ? "wss" : "ws"}://${this.url}${this.socketPath}`; }
 	private get restUrl(){return this.transport==ETransport.Secure ? this.secureRestUrl : `http://${this.url}`;}
 	private get secureRestUrl(){return `https://${this.url}`;}
 
