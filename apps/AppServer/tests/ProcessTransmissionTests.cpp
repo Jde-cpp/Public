@@ -196,18 +196,11 @@ namespace Jde::App::Server::Tests{
 		EXPECT_EQ( _session->CloseCount(), 0u );
 		AssertAlive();
 	}
-
-	//app-review3 M10 turned the auth_resource arm on;  appserver-review3 #4 gates it:  Authorize::TestSchemaAdmin - Administer on
-	//each of the schema's active root resources, and an unknown schema is a denial, where the name-only lookup it replaced passed
-	//anything dotted and let an anonymous socket install itself as a schema's authorizer.  auth_result comes back only when the arm ran.
-	TEST_F( ProcessTransmissionTests, AnUnknownSchemaIsNotDelegated ){
-		let registered = RegisterInstance( *_session, "Tests.AuthResource", "authorizer", "auth-host", 0, 1234, "opc.m10-probe" );
-		EXPECT_FALSE( registered.AuthResult ) << "nothing active in the schema - nothing to delegate";
-
-		auto other = Connect();
-		let none = RegisterInstance( *other, "Tests.AuthResource", "plain", "auth-host", 0, 1234 );
+	//auth_result comes back only when the auth_resource arm ran at all:  an instance that named no resource never reaches
+	//TestSchemaAdmin, so it is not installed as anyone's authorizer.  ASchemaAdminIsDelegated covers the arm itself.
+	TEST_F( ProcessTransmissionTests, AnInstanceThatAuthorizesNothingIsNotDelegated ){
+		let none = RegisterInstance( *_session, "Tests.AuthResource", "plain", "auth-host", 0, 1234 );
 		EXPECT_FALSE( none.AuthResult ) << "an instance that asked to authorize nothing must not be registered";
-		BlockVoidAwait( other->Close(true, SRCE_CUR) );
 	}
 	Ω systemQL( string query, jobject vars={} )->jvalue{
 		return BlockAwait<QL::QLAwait<jvalue>,jvalue>( QL::QLAwait<jvalue>{move(query), move(vars), Jde::UserPK{Jde::UserPK::System}, Server::QLPtr()} );
