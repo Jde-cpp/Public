@@ -6,8 +6,9 @@
 #include <jde/app/client/awaits/SocketAwait.h>
 #include "AppClientSocketSession.h"
 #include "jde/fwk/process/process.h"
+#include <jde/access/client/accessClient.h>
 
-namespace Jde::Access{ struct AccessListener; }
+namespace Jde::Access{ struct AccessListener; struct Authorize; }
 namespace Jde::App::Client{
 	struct AppClientSocketSession;
 	struct IAppClient : IApp, IShutdown{
@@ -16,7 +17,17 @@ namespace Jde::App::Client{
 		α Shutdown( bool terminate, SL sl )ι->void override;
 
 		Τ using await = Web::Client::ClientSocketAwait<T>;
-		α Listener()Ε->sp<Access::AccessListener>;
+		//The client's access state.  These were process-wide statics (App::Client::RemoteAcl/SetAcl, a namespace-scope _listener
+		//in IAppClient.cpp, Access::Client's configure context) - opcserver-review3 #16:  a process hosting several app clients
+		//(Jde.Opc.Tests: AppServer + OpcServer + gateway) had one acl, one listener and the last caller's context, so the gateway's
+		//Configure emptied the resources the OpcServer had mapped its nodes to.  Set during startup, before the socket runs.
+		α Acl()Ι->sp<Access::Authorize>{ return _acl; }//null until Acl(libName)/SetAcl - clients that never authorize (emulator, soak) keep none.
+		α Acl( string libName )ι->sp<Access::Authorize>;//creates on first use;  the name sticks.
+		α SetAcl( sp<Access::Authorize> acl )ι->void{ _acl = move(acl); }//a subclass (OpcAuthorize) - install it before anything takes a reference.
+		α Listener()ε->sp<Access::AccessListener>;//lazily created, so not const.
+		α ConfigureAccess( sp<DB::AppSchema> accessSchema, vector<sp<DB::AppSchema>> localSchemas, Jde::UserPK executer, string resourceSchema, SRCE )ε->Access::ConfigureAwait;//keeps the context for ReloadAccess.
+		α ReloadAccess( SRCE )ε->Access::ConfigureAwait;//the same snapshot on the current session;  throws before ConfigureAccess.
+		α IsAccessConfigured()Ι->bool{ return _accessContext.has_value(); }//the reconnect path asks before reloading - not every app client has a snapshot to refresh.
 		α InitLogging( sp<App::Client::IAppClient> client )ι->void;
 		α LoadLogSettings( SRCE )ι->void;
 		β Connected()Ι->bool{ return LoadSession()!=nullptr; }
@@ -52,6 +63,9 @@ namespace Jde::App::Client{
 		jobject _userName;
 		mutable mutex _sessionMutex;
 		sp<AppClientSocketSession> _session;
+		sp<Access::Authorize> _acl;
+		sp<Access::AccessListener> _listener;
+		optional<Access::Client::Context> _accessContext;
 
 		friend struct AppClientSocketSession; friend struct StartSocketAwait;
 	};

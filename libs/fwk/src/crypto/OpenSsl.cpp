@@ -100,14 +100,24 @@ namespace Jde{
 	}
 
 	α Crypto::EnsureKeyCertificate( const CryptoSettings& settings, SL sl )ε->void{
-		if( !fs::exists(settings.PrivateKey.Path) )
-			CreateKeyCertificate( settings, sl );
-		else if( let reason = reissueReason(settings, sl); reason.size() ){
-			INFO( "Re-issuing '{}': {}.", settings.Certificate.Path.string(), reason );
-			IssueCertificate( settings, sl );
-		}
+		try{
+			if( !fs::exists(settings.PrivateKey.Path) )
+				CreateKeyCertificate( settings, sl );
+			else if( let reason = reissueReason(settings, sl); reason.size() ){
+				INFO( "Re-issuing '{}': {}.", settings.Certificate.Path.string(), reason );
+				IssueCertificate( settings, sl );
+			}
 
-		Certificate{ ReadCertificate(settings.Certificate.Path), sl }.Log( Ƒ("Read Certificate at {}", settings.Certificate.Path.string()), sl );
+			Certificate{ ReadCertificate(settings.Certificate.Path), sl }.Log( Ƒ("Read Certificate at {}", settings.Certificate.Path.string()), sl );
+		}
+		catch( IO::IOException& e ){
+			e.PrependWhat( "Delete the file and restart to re-issue it on the existing key." );
+			throw;
+		}
+		catch( Exception& e ){
+			e.PrependWhat( Ƒ("Delete {} and restart to re-issue it on the existing key - the key is untouched, so the modulus and the enrolled identity survive.", settings.Certificate.Path.string()) );
+			throw;
+		}
 	}
 
 	//https://stackoverflow.com/questions/5927164/how-to-generate-rsa-private-key-using-openssl
@@ -263,7 +273,12 @@ namespace Jde{
 	}
 
 	α Crypto::ReadCertificate( const fs::path& certificate, SL sl )ε->vector<byte>{
-		X509Ptr cert{ PEM_read_bio_X509(Internal::ReadFile(certificate, sl).get(), nullptr, 0, nullptr), ::X509_free };  CHECK_NULL( cert );
+		X509Ptr cert{ PEM_read_bio_X509(Internal::ReadFile(certificate, sl).get(), nullptr, 0, nullptr), ::X509_free };
+		//not CHECK_NULL:  "null returned" names no file, and a process reads several pems - the web cert, the ua server cert,
+		//one per opc target, every trust anchor - so the path is what tells the operator which one is bad.  A *missing* file
+		//already throws IOException(path); this is the parse failure.  The openssl reason ("no start line", "bad base64
+		//decode") rides along from the ERR queue either way.
+		THROW_IFX( !cert, Crypto::OpenSslException(Ƒ("Could not parse certificate '{}'", certificate.string()), sl) );
 
 		auto len = i2d_X509( cert.get(), nullptr ); THROW_IFX( len<=0, OpenSslException("i2d_X509 failed") );
 		vector<byte> y( len );

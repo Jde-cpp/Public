@@ -7,6 +7,7 @@
 #include "utils/GatewayClientSocket.h"
 #include "../src/types/proto/opc.FromServer.h"
 #include "utils/ITest.h"
+#include "../src/auth/OpcServerSession.h"
 
 #define let const auto
 
@@ -82,6 +83,27 @@ namespace Jde::Opc::Gateway::Tests{
 		TRACE( "-------------------------------------------------------------" );
 		//teardown costs the gateway's 1s subscription wait + a 500ms poll tick, so poll rather than fixed-sleep.
 		sw.Reset();
+		while( _client->Processing() )
+			ASSERT_NO_THROW( sw.CheckTimeout(6s, 1ms) );
+	}
+
+	//Unsubscribe looked the client up by the credential cached at connect, so anything that emptied the cache between
+	//Subscribe and Unsubscribe - a logout, or an anonymous session, which is never cached - stranded the subscription as
+	//"Client not found" (soak-findings #5).  It now derives the credential the way Subscribe did (SessionCredential).
+	TEST_F( SubscribeTests, UnsubscribeSurvivesCredentialCacheLoss ){
+		const NodeId nodeId{ 4, 6017 };
+		let expected = read( _client, nodeId );
+		BlockAwait<ClientSocketAwait<FromServer::SubscriptionAck>,FromServer::SubscriptionAck>( _session->Subscribe(OpcServerTarget, {nodeId}, _listener) );
+		Stopwatch sw;//let the initial push land first - the listener writes into this fixture, so nothing may still be in flight when the test returns.
+		while( _value!=expected )
+			ASSERT_NO_THROW( sw.CheckTimeout(6s, 1ms) );
+		let cached = GetCredential( AppClient()->SessionId(), OpcServerTarget );
+		ASSERT_TRUE( cached );//the suite's shared state: later tests connect through this credential, so it goes back below.
+		Logout( AppClient()->SessionId() );//drops the web session's cached credentials; the UA client itself stays connected.
+		auto result = BlockAwait<ClientSocketAwait<FromServer::UnsubscribeAck>,FromServer::UnsubscribeAck>( _session->Unsubscribe(OpcServerTarget, {nodeId}) );
+		EXPECT_EQ( result.successes_size(), 1 );
+		AddSession( AppClient()->SessionId(), OpcServerTarget, *cached );//or the next connect derives the fallback credential and builds a second client beside _client.
+		sw.Reset();//as Basic: the monitored item must be gone before the test returns.
 		while( _client->Processing() )
 			ASSERT_NO_THROW( sw.CheckTimeout(6s, 1ms) );
 	}

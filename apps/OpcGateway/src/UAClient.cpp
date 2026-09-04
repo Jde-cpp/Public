@@ -9,6 +9,7 @@
 #include <open62541/types.h>
 #include <stdexcept>
 #include "GatewayAppClient.h"
+#include "ServerTrust.h"
 #include "async/DataChanges.h"
 #include "jde/fwk/crypto/CryptoSettings.h"
 #include "jde/fwk/settings.h"
@@ -176,6 +177,7 @@ namespace Jde::Opc::Gateway{
 		if( addSecurity && !certAuth )
 			EnsureCertificate( Target(), uri );
 		auto config = UA_Client_getConfig( _ptr );
+		ServerTrust::Install( *config, Handle(), Url() );//before setDefault, which would otherwise install AcceptAll;  applies to every endpoint that carries a certificate, secured or not.
 		const uint size = addSecurity ? 2 : 1; ASSERT( !config->securityPoliciesSize );
 		uint initialized = 0;//policies actually constructed; on an exception before ownership transfers to config, the deleter clears these — UA_free alone would leak each policy's internals (policyUri, contexts, ...).
 		auto clearPolicies = [&initialized]( UA_SecurityPolicy* p )ι{ for(uint i=0; i<initialized; ++i) p[i].clear(&p[i]); UA_free(p); };
@@ -292,7 +294,10 @@ namespace Jde::Opc::Gateway{
 				if( client->UAPointer()!=ua )return false;
 
 				string detail;//the reason handed to the waiting requests, not just the log - empty falls back to "Connection Failed".
-				if( connectStatus == UA_STATUSCODE_BADIDENTITYTOKENREJECTED ){
+				if( auto rejection = connectStatus ? ServerTrust::Rejection(*UA_Client_getConfig(ua)) : string{}; rejection.size() ){
+					detail = move( rejection );//we rejected the server's certificate - already logged by the verifier.  Checked first: the status is BadCertificateUntrusted, the same code the server answers when it rejects ours.
+				}
+				else if( connectStatus == UA_STATUSCODE_BADIDENTITYTOKENREJECTED ){
 					let serverUri = LogServerEndpoints( client->Url(), client->Handle() );
 					client->LogClientEndpoints();
 					//open62541 reports "No suitable endpoint found" as BadIdentityTokenRejected, so the usual cause - our

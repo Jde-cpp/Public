@@ -12,12 +12,13 @@
 #define let const auto
 namespace Jde::Opc{
 	α Server::Startup( jobject webServerSettings, jobject userName )ε->void{
+		auto appClient = AppClient();
 		sp<OpcAuthorize> opcAuthorize;
 		{
 			auto schemaSuffix = Settings::FindString( "/opcServer/resource" );
-			App::Client::SetAcl( opcAuthorize=ms<OpcAuthorize>(schemaSuffix ? "opc." + *move(schemaSuffix) : "opc") );
+			appClient->SetAcl( opcAuthorize=ms<OpcAuthorize>(schemaSuffix ? "opc." + *move(schemaSuffix) : "opc") );
 		}
-		auto remoteAcl = App::Client::RemoteAcl( "opc" );
+		auto remoteAcl = appClient->Acl();
 		auto uaSchema = DB::GetAppSchema( "opc", remoteAcl );
 		uaSchema->Authorizer = opcAuthorize;// GetAppSchema returns a cached schema whose Authorizer is baked in when GetClusters first builds the cache. When another server (e.g. embedded AppServer) built it first with a base Access::Authorize, our SetAcl(OpcAuthorize) above is ignored here. Install it explicitly so UAAccess::GetUserAccessLevel's static_cast<OpcAuthorize&> is valid (and so UserRights reads the same _nodeResources that AssignRights populates).
 		ConfigureQL( uaSchema, remoteAcl );
@@ -28,7 +29,6 @@ namespace Jde::Opc{
 			DB::SyncSchema( *uaSchema, QLPtr() );
 		Crypto::CryptoSettings settings{ Json::FindDefaultObject(webServerSettings,"ssl") };
 		Crypto::EnsureKeyCertificate( settings );
-		auto appClient = AppClient();
 		appClient->SslSettings = settings;
 		StartWebServer( move(webServerSettings) ); //TODO take out.
 		auto accessSchema = DB::GetAppSchema( "access", remoteAcl );
@@ -41,7 +41,7 @@ namespace Jde::Opc{
 		BlockVoidAwait( App::Client::ConnectAwait{appClient, false} );
 		appClient->LoadLogSettings();
 
-		BlockVoidAwait( Access::Client::Configure(accessSchema, {uaSchema}, appClient->QLServer(), UserPK{UserPK::System}, remoteAcl, appClient->Listener(), resourceSchema) );
+		BlockVoidAwait( appClient->ConfigureAccess(accessSchema, {uaSchema}, UserPK{UserPK::System}, resourceSchema) );
 		Process::AddShutdownFunction( [listener=appClient->Listener()](bool terminate, SL sl){ listener->Shutdown(terminate, sl); } ); //as the AppServer does - the subscriptions otherwise outlive everything they reference (access-review3 #25).
 		Initialize( uaSchema );
 		auto& ua = GetUAServer();

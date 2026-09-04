@@ -116,4 +116,54 @@ namespace Jde::App::Server::Tests{
 		EXPECT_EQ( first->CloseCount(), 0u );
 		EXPECT_EQ( Server::FindApplications("Tests.Portless").size(), 2u );
 	}
+
+	//Owner ruling 2026-09-04 "issued token: renew", shape (a):  a registered app instance asking about a session (the
+	//OpcServer's UAAccess renewal, the gateway's lookup) slides it, so an OPC session whose browser reaches the AppServer
+	//through nothing but the gateway outlives /http/socketTimeout.  An unregistered socket gets a read only - it has not
+	//proven possession of the id - and an expired session is not revived.
+	Ω sessionInfo( RawClientSession& session, SessionPK id )->optional<FromServerMessage>{
+		FromClientTrans t;
+		auto& m = *t.add_messages();
+		let requestId = session.NextRequestId();
+		m.set_request_id( requestId );
+		m.set_session_info( id );
+		session.Write( move(t) );
+		return session.WaitFor( [requestId](const FromServerMessage& m){ return m.request_id()==requestId && (m.value_case()==FromServerMessage::kSessionInfo || m.value_case()==FromServerMessage::kException); } );
+	}
+
+	TEST_F( SessionMapTests, SessionInfoSlidesForRegisteredInstance ){
+		let id = MintSession();//socket-backed: NewExpiration is /http/socketTimeout, a day.
+		auto info = Web::Server::Sessions::Find( id ); ASSERT_TRUE( info );
+		info->Expiration = steady_clock::now()+std::chrono::minutes{1};//about to lapse.
+		auto client = Connect();
+		RegisterInstance( *client, "Tests.SessionSlide", "slide-1", "slide-host", 0 );
+		auto reply = sessionInfo( *client, id );
+		ASSERT_TRUE( reply );
+		ASSERT_EQ( reply->value_case(), FromServerMessage::kSessionInfo );
+		EXPECT_GT( info->Expiration, steady_clock::now()+std::chrono::hours{1} );
+	}
+
+	TEST_F( SessionMapTests, SessionInfoIsReadOnlyForUnregisteredSocket ){
+		let id = MintSession();
+		auto info = Web::Server::Sessions::Find( id ); ASSERT_TRUE( info );
+		let soon = steady_clock::now()+std::chrono::minutes{1};
+		info->Expiration = soon;
+		auto client = Connect();//no kInstance - a browser, or anything else that has not registered.
+		auto reply = sessionInfo( *client, id );
+		ASSERT_TRUE( reply );
+		EXPECT_EQ( reply->value_case(), FromServerMessage::kSessionInfo );
+		EXPECT_EQ( info->Expiration, soon );
+	}
+
+	TEST_F( SessionMapTests, SessionInfoDoesNotReviveExpired ){
+		let id = MintSession();
+		auto info = Web::Server::Sessions::Find( id ); ASSERT_TRUE( info );
+		let past = steady_clock::now()-std::chrono::minutes{1};
+		info->Expiration = past;
+		auto client = Connect();
+		RegisterInstance( *client, "Tests.SessionSlide", "slide-2", "slide-host", 0 );
+		auto reply = sessionInfo( *client, id );
+		ASSERT_TRUE( reply );
+		EXPECT_EQ( info->Expiration, past );
+	}
 }

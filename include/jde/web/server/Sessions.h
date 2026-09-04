@@ -33,6 +33,10 @@ namespace Jde::Web::Server{
 	namespace Sessions{
 		Φ Add( UserPK userPK, string&& endpoint, bool isSocket )ι->sp<SessionInfo>;
 		Φ Find( SessionPK sessionId )ι->sp<SessionInfo>;
+		//Find, and slide a still-live session's expiration to NewExpiration() - a day for a socket-backed one.  No endpoint
+		//check:  the caller vouches for the asker (the AppServer's SessionInfo handler, for a registered app instance).  An
+		//expired session is returned as-is, never revived - the same rule as UpdateExpiration.
+		Φ Extend( SessionPK sessionId )ι->sp<SessionInfo>;
 		Φ Remove( SessionPK sessionId )ι->bool;
 		α RestSessionTimeout()ι->steady_clock::duration;
 		α Get()ι->vector<sp<SessionInfo>>;

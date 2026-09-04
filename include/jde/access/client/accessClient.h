@@ -7,7 +7,16 @@ namespace Jde::QL{  struct IQL; }
 namespace Jde::Access{ struct Authorize; struct AccessListener; }
 
 namespace Jde::Access::Client{
-	α Configure( sp<DB::AppSchema> accessSchema, vector<sp<DB::AppSchema>>&& localSchemas, sp<QL::IQL> appQL, UserPK executer, sp<Authorize> authorizer, sp<AccessListener> listener, string resourceSchema, SRCE )ε->ConfigureAwait;
-	α IsConfigured()ι->bool;//whether Configure has run - the reconnect path asks before reloading, since not every app client has an access snapshot to refresh.
-	α Reload( sp<QL::IQL> appQL, SRCE )ε->ConfigureAwait;
+	//What a client's access snapshot was built from, so a reconnect can rebuild it on the new session.  Owned by the client
+	//that owns the authorizer (IAppClient) - it was a file-scope static here, which handed every app client in one process the
+	//last caller's context (opcserver-review3 #16).
+	struct Context final{
+		vector<sp<DB::AppSchema>> Schemas;//the schemas this client follows - its own, not every schema (ConfigureAwait::AllSchemas).
+		sp<Authorize> Authorizer;
+		UserPK Executer;
+		sp<AccessListener> Listener;
+		string ResourceSchema;//the OpcServer's instance suffix, "" elsewhere - names its `opc.<instance>` resource rows.
+	};
+	α Configure( sp<DB::AppSchema> accessSchema, const Context& context, sp<QL::IQL> appQL, SRCE )ε->ConfigureAwait;
+	α Reload( const Context& context, sp<QL::IQL> appQL, SRCE )ε->ConfigureAwait;//appQL is the new session's ClientQL - the one Configure was handed died with the old session.
 }

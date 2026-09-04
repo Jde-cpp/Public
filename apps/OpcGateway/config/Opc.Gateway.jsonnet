@@ -18,7 +18,18 @@ function( sync=false )
 				subjectAltName: "URI:urn:open62541.server.application",
 				commonName: args.instanceName,
 			}
-		}
+		},
+		//Verify every OPC server's certificate against /access/trustedCertDirs before a session is opened (src/ServerTrust.cpp).
+		//open62541 checks the certificate of any endpoint that carries one - None security mode included - so a server whose
+		//certificate is in none of those directories is refused BadCertificateUntrusted, and the connection error says which
+		//server and what to do.  false accepts any certificate (the pre-2026-09 behaviour): a lab setting, never a deployment.
+		verifyServerCertificate: true
+	},
+	//The OPC servers this gateway trusts (gateway.verifyServerCertificate), one .pem/.crt per server, read on every
+	//connect.  A Jde OpcServer on this host publishes its own at certsDir("OpcServer"); for any other server copy its
+	//certificate into one of these directories.  Not the OS root store - OPC server certificates are self-signed.
+	access:{
+		trustedCertDirs: [ args.certsDir("OpcServer") ]
 	},
 	logging:{
 		breakLevel: "Critical",

@@ -27,7 +27,8 @@ namespace Jde::Opc{
 	α Gateway::Startup( jobject webServerSettings, jobject userName )ε->void{
 		if( userName.empty() )
 			userName = jobject{ {"name", Ƒ("OpcGateway-{}", Process::HostName())} };
-		auto authorize = App::Client::RemoteAcl( "gateway" );
+		auto appClient = AppClient();
+		auto authorize = appClient->Acl( "gateway" );
 		auto schema = DB::GetAppSchema( "gateway", authorize );
 		ConfigureQL( {schema}, authorize );
 		for( let& path : Settings::FindPathArray("/ql/introspection") )
@@ -46,7 +47,6 @@ namespace Jde::Opc{
 		Crypto::EnsureKeyCertificate( sslSettings );
 		StartWebServer( move(webServerSettings) );//must follow the _pingInterval/_ttl assignments - requests can hit ProcessingLoop once the server is up.
 		auto accessSchema = DB::GetAppSchema( "access", authorize );
-		auto appClient = AppClient();
 		appClient->SubscriptionSchemas.push_back( accessSchema );
 		appClient->SslSettings = move(sslSettings);
 		appClient->SetUserName( move(userName) );
@@ -54,7 +54,7 @@ namespace Jde::Opc{
 		if( Settings::FindBool("/logging/loadFromServer").value_or(true) )
 			appClient->LoadLogSettings();
 
-		BlockVoidAwait( Access::Client::Configure(accessSchema, {schema}, appClient->QLServer(), UserPK{UserPK::System}, authorize, appClient->Listener(), {}) );
+		BlockVoidAwait( appClient->ConfigureAccess(accessSchema, {schema}, UserPK{UserPK::System}, {}) );
 		Process::AddShutdownFunction( [listener=appClient->Listener()](bool terminate, SL sl){ listener->Shutdown(terminate, sl); } ); //as the AppServer does - the subscriptions otherwise outlive everything they reference (access-review3 #25).
 		Process::AddShutdownFunction( [](bool terminate, SL sl){UAClient::Shutdown(terminate, sl);} );
 		QL::Hook::Add( mu<OpcQLHook>() );

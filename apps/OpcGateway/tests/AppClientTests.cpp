@@ -48,7 +48,7 @@ namespace Jde::Opc::Gateway::Tests{
 		//never closes its end, and the pending read would keep ioc->run() from returning and wedge shutdown at the executor join.
 		static sp<App::Client::AppClientSocketSession> session;
 		if( !session ){
-			session = ms<App::Client::AppClientSocketSession>( Executor(), optional<ssl::context>{}, App::Client::RemoteAcl(""), AppClient() );
+			session = ms<App::Client::AppClientSocketSession>( Executor(), optional<ssl::context>{}, AppClient()->Acl(), AppClient() );
 			Process::AddShutdownFunction( [](bool terminate, SL sl){
 				session->Shutdown( terminate, sl );
 				session = nullptr;

@@ -112,12 +112,27 @@ namespace Jde::Opc::Gateway{
 	α GatewaySocketSession::Unsubscribe( ServerCnnctnNK&& opcId, flat_set<NodeId> nodes, uint32 requestId )ι->void {
 		try{
 			auto self = SharedFromThis();//keep alive
-			auto cred = GetCredential( SessionId(), opcId );
-			LogRead( Ƒ("Unsubscribe: opcId: '{}', user: '{}', nodeCount: {}", opcId, cred ? cred->ToString() : "null", nodes.size()), requestId );
-			if( auto client = cred ? UAClient::Find(move(opcId), *cred) : nullptr; client ){
-				auto [successes,failures] = client->MonitoredNodes().Unsubscribe( move(nodes), self );
-				Write( FromServer::UnsubscribeTrans(requestId, move(successes), move(failures)) );
+			LogRead( Ƒ("Unsubscribe: opcId: '{}', nodeCount: {}", opcId, nodes.size()), requestId );
+			//By what this session monitors, not by the credential Subscribe connected with:  the cached credential can be
+			//gone (a logout) or a different one (a login on the session after the subscribe), and either miss stranded the
+			//subscription as "Client not found" (soak-findings #5).  A session can only ever drop its own items, so every
+			//live client on the target is asked and the nodes none of them held for this session are the failures.
+			flat_set<NodeId> successes, remaining{ nodes };
+			bool anyClient{};
+			for( let& client : UAClient::LiveClients() ){
+				if( client->Target()!=opcId )
+					continue;
+				anyClient = true;
+				if( auto p = remaining.size() ? client->TryMonitoredNodes() : nullptr; p ){
+					auto [dropped, _] = p->Unsubscribe( flat_set<NodeId>{remaining}, self );
+					for( let& node : dropped ){
+						successes.emplace( node );
+						remaining.erase( node );
+					}
+				}
 			}
+			if( anyClient )
+				Write( FromServer::UnsubscribeTrans(requestId, move(successes), move(remaining)) );
 			else
 				WriteException( Ƒ("Client not found: opcId: '{}'", opcId), requestId );
 		}

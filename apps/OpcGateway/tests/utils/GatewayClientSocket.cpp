@@ -48,6 +48,7 @@ namespace Tests{
 			sub->resume();
 		}
 		else if( auto unsub = std::any_cast<await<FromServer::UnsubscribeAck>::Handle>(&h) ){
+			//the _unsubscribeRequests record stays (no request id here) - harmless, and the listeners must stay: the server still pushes.
 			unsub->promise().SetExp( Exception{e.what(), e.code()} );
 			unsub->resume();
 		}
@@ -56,6 +57,7 @@ namespace Tests{
 	}
 
 	α onNodeValues( FromServer::NodeValues&& nodeValues )ι->void;
+	α onUnsubscribeAck( RequestId requestId )ι->void;
 	α onSubscriptionAck( RequestId requestId, const FromServer::SubscriptionAck& result )ι->StatusCode;
 	α GatewayClientSocket::OnRead( FromServer::Transmission&& transmission )ι->void{
 		auto size = transmission.messages_size();
@@ -92,6 +94,7 @@ namespace Tests{
 					h.promise().Resume( move(result), h );
 				break;}
 			case kUnsubscribeAck:{
+				onUnsubscribeAck( requestId );
 				auto h = std::any_cast<await<FromServer::UnsubscribeAck>::Handle>( IClientSocketSession::PopTask(requestId) );
 				h.promise().Resume( move(*m->mutable_unsubscribe_ack()), h );
 				break;}
@@ -111,6 +114,7 @@ namespace Tests{
 	}
 
 	flat_map<RequestId, tuple<ServerCnnctnNK, vector<NodeId>, sp<IListener>>> _subscriptionRequests; shared_mutex _subscriptionRequestMutex;
+	flat_map<RequestId, tuple<ServerCnnctnNK, vector<NodeId>>> _unsubscribeRequests;//under _subscriptionRequestMutex.  The ack prunes the nodes' listeners: they used to stay registered forever, so a later Subscribe on the same node through the same socket dispatched pushes to a listener whose fixture was long destroyed.
 	flat_map<ServerCnnctnNK, flat_map<NodeId, flat_set<sp<IListener>>>> _subscriptions; shared_mutex _subscriptionsMutex;
 	α GatewayClientSocket::Query( string&& query, jobject variables, bool returnRaw, SL sl )ι->await<jvalue>{
 		let requestId = NextRequestId();
@@ -141,7 +145,26 @@ namespace Tests{
 	α GatewayClientSocket::Unsubscribe( ServerCnnctnNK target, const vector<NodeId>& nodeIds, SL sl )ε->await<FromServer::UnsubscribeAck>{
 		let requestId = NextRequestId();
 		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Unsubscribe: '{}'.", requestId, target );
+		{ ul _{ _subscriptionRequestMutex }; _unsubscribeRequests.emplace( requestId, make_tuple(target, nodeIds) ); }
 		return await<FromServer::UnsubscribeAck>{ FromClientUtils::Unsubscription(move(target), nodeIds, requestId), requestId, shared_from_this(), sl };
+	}
+	//the acked nodes' listeners go with the subscription - see _unsubscribeRequests.
+	α onUnsubscribeAck( RequestId requestId )ι->void{
+		ul _{ _subscriptionRequestMutex };
+		auto it = _unsubscribeRequests.find( requestId );
+		if( it==_unsubscribeRequests.end() ){
+			CRITICALT( ELogTags::SocketClientRead, "[{:x}]No unsubscribe request found.", requestId );
+			return;
+		}
+		auto& [target, nodes] = it->second;
+		{
+			ul _2{ _subscriptionsMutex };
+			if( auto targetNodes = _subscriptions.find(target); targetNodes!=_subscriptions.end() ){
+				for( let& nodeId : nodes )
+					targetNodes->second.erase( nodeId );
+			}
+		}
+		_unsubscribeRequests.erase( it );
 	}
 
 	α onSubscriptionAck( RequestId requestId, const FromServer::SubscriptionAck& result )ι->StatusCode{
