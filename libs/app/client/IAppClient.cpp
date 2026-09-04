@@ -4,6 +4,8 @@
 #include <jde/fwk/io/protobuf.h>
 #include <jde/ql/IQL.h>
 #include <jde/access/AccessListener.h>
+#include <jde/access/Authorize.h>
+#include <jde/access/client/accessClient.h>
 #include <jde/app/log/ProtoLog.h>
 #include <jde/app/client/appClient.h>
 #include <jde/app/client/RemoteLog.h>
@@ -43,11 +45,24 @@ namespace Jde::App::Client{
 		}
 	}
 
-	sp<Access::AccessListener> _listener;
-	α IAppClient::Listener()Ε->sp<Access::AccessListener>{
+	α IAppClient::Acl( string libName )ι->sp<Access::Authorize>{
+		if( !_acl )
+			_acl = ms<Access::Authorize>( move(libName) );
+		return _acl;
+	}
+	α IAppClient::Listener()ε->sp<Access::AccessListener>{
 		if( !_listener )
 			_listener = ms<Access::AccessListener>( QLServer() );
 		return _listener;
+	}
+	α IAppClient::ConfigureAccess( sp<DB::AppSchema> accessSchema, vector<sp<DB::AppSchema>> localSchemas, Jde::UserPK executer, string resourceSchema, SL sl )ε->Access::ConfigureAwait{
+		THROW_IFSL( !_acl, "ConfigureAccess before Acl(libName)/SetAcl." );
+		_accessContext = Access::Client::Context{ move(localSchemas), _acl, executer, Listener(), move(resourceSchema) };
+		return Access::Client::Configure( move(accessSchema), *_accessContext, QLServer(), sl );
+	}
+	α IAppClient::ReloadAccess( SL sl )ε->Access::ConfigureAwait{
+		THROW_IFSL( !_accessContext, "ReloadAccess before ConfigureAccess." );
+		return Access::Client::Reload( *_accessContext, QLServer(), sl );
 	}
 
 	α IAppClient::QueryArray( string&& q, jobject variables, bool returnRaw, SL sl )ε->up<TAwait<jarray>>{

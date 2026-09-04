@@ -15,8 +15,6 @@ namespace Jde::App::Client{
 	α IsSsl()ι->bool;
 	α Host()ι->string;
 	α Port()ι->PortType;
-	α RemoteAcl( string libName )ι->sp<Access::Authorize>;
-	α SetAcl( sp<Access::Authorize> acl )ι->void;
 
 	struct ConnectAwait final : VoidAwait{
 		ConnectAwait( sp<IAppClient> appClient, bool retry, SRCE )ι;

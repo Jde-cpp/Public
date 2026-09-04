@@ -20,16 +20,25 @@ The base is pinned in the Dockerfile to `myoung34/github-runner:2.337.0-ubuntu-n
   the mounted host deps need), no `liburing-dev` in apt, and a too-old cmake. Jammy
   (2.35) also fails the glibc floor. Symptom of getting this wrong: `apt` can't find
   `liburing-dev`, or `GLIBC_x.y not found` when the mounted deps load.
-- **Runner version:** match it to what GitHub currently serves, else the runner
-  self-updates — which in this container is **fatal, not just slow**. PID 1 *is*
-  `bin/Runner.Listener`, so when it exits to be updated, `--restart always`
-  restarts the container and kills the detached updater mid-copy, after it has
-  already moved `bin` aside. Every start after that exits 127 on a missing
-  `./bin/Runner.Listener`, `config.sh` included, so the runner never registers and
-  jobs sit **queued** with no runner (seen 2026-09-03: 631 restarts, run #70
-  waiting). The damage is in the container's writable layer, so `docker restart`
-  cannot fix it — rebuild on the newer base and `docker rm` the container. Check
-  the newest `<version>-ubuntu-noble` tag on
+- **Runner version:** keep it at what GitHub currently serves. A stale pin is
+  not fatal — the image's `CMD` runs the listener under the runner's own
+  `run.sh`, whose helper waits for the detached updater's `update.finished` flag
+  and relaunches the new listener in place (verified 2026-09-04: a 2.336.0
+  container updated to 2.337.0 and was back to `Listening for Jobs` in 80 s with
+  no restart) — but every container recreation then self-updates before taking a
+  job, and the image no longer matches what runs. Before that `CMD` the update
+  **bricked** the container: PID 1 was `bin/Runner.Listener` itself, so its exit
+  for the update made `--restart always` restart the container and kill the
+  updater mid-copy, after it had already moved `bin` aside; every later start
+  exited 127 on a missing `./bin/Runner.Listener`, `config.sh` included, so the
+  runner never registered and jobs sat **queued** with no runner (2026-09-03: 631
+  restarts, run #70 waiting three hours; recovery = rebuild + `docker rm`, the
+  damage being in the writable layer).
+  [`runner-version-check.yml`](../workflows/runner-version-check.yml) watches the pin
+  weekly on a GitHub-hosted runner (hosted on purpose, so it reports even when the
+  self-hosted one is down) and fails, with the rebuild commands in its job summary,
+  once GitHub serves a newer runner than the pin. To check by hand, compare the newest
+  `<version>-ubuntu-noble` tag on
   [Docker Hub](https://hub.docker.com/r/myoung34/github-runner/tags?name=ubuntu-noble)
   against [`actions/runner`'s latest release](https://github.com/actions/runner/releases/latest)
   and bump the pin (or override without editing):
@@ -104,6 +113,11 @@ slower — don't keep recreating the container, which only restarts the clock.
   the ephemeral container restarts, so each job is a clean build. For incremental
   builds across jobs (faster, less isolation), drop `--tmpfs` for the disk-backed
   overlay or a named volume (`-v jde-build:/mnt/ram`).
+- **After a self-update** the container's writable layer holds `bin.<new>` /
+  `externals.<new>` beside the image's originals, with `bin` and `externals` as
+  symlinks; `docker logs` shows the running `Current runner version`. A recreate
+  (`docker rm`) starts again from the image's pinned version and updates again on
+  its first start — bump the pin and rebuild to stop paying that.
 - **Public repo safety:** self-hosted + public repo means fork PRs must not run
   here — the workflow triggers on `push`/`workflow_dispatch` only. Also keep repo
   **Settings → Actions → General → Fork pull request workflows** at "require

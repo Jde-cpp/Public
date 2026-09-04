@@ -124,7 +124,17 @@ namespace Jde::App::Server{
 
 	α ServerSocketSession::SessionInfo( SessionPK sessionId, RequestId requestId )ι->void{
 		LogRead( Ƒ("SessionInfo={}", hex(sessionId)), requestId );
-		if( auto info = Web::Server::Sessions::Find(sessionId); info ){
+		//A registered app instance asks about a session because a user is acting through it - the OpcServer's UAAccess
+		//renewal when its expiry snapshot lapses, the gateway's lookup when its local copy has - so the ask slides the
+		//session (Sessions::Extend).  That is what keeps an OPC session alive whose browser reaches this server through
+		//nothing but the gateway:  sessions used to slide only on requests received here, so such a session expired after
+		///http/socketTimeout, the renewal then got NotFound, and the subscription was denied (web-review2 "S2 remainder";
+		//owner ruling 2026-09-04 "issued token: renew", shape (a) in post-mvp.md).  The cost is that a session stays alive as
+		//long as something is still asking about it - a dead browser's, for the life of its OPC subscription.  An
+		//unregistered socket gets a read only:  it has not proven possession of the id (UpdateExpiration's endpoint check,
+		//on the SetSessionId path, is that proof).  An expired session is never revived either way.
+		auto info = InstancePK() ? Web::Server::Sessions::Extend( sessionId ) : Web::Server::Sessions::Find( sessionId );
+		if( info ){
 			LogWrite( Ƒ("SessionInfo userPK: {}, endpoint: {}, hasSocket: {}", info->UserPK.Value, info->UserEndpoint, info->HasSocket), requestId );
 			Write( FromServer::Session(*info, requestId) );
 		}else//NotFound, not the default 500 - the status is the only thing that survives the wire to tell a caller "no such session" from "could not ask", and the gateway caches an anonymous user for the first but must not for the second.

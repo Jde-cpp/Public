@@ -7,11 +7,11 @@ include( ${jdeRoot}/build/dependencies.cmake )
 set( targetName Jde.Opc.GatewayLib )
 add_library( ${targetName} )
 compileOptions( ${targetName} )
-file( GLOB sources *.cpp async/*.cpp auth/*.cpp ql/*.cpp types/*.cpp types/proto/*.cpp uatypes/*.cpp )
+file( GLOB sources CONFIGURE_DEPENDS *.cpp async/*.cpp auth/*.cpp ql/*.cpp types/*.cpp types/proto/*.cpp uatypes/*.cpp )
 file( GLOB protos types/proto/*.proto )
 get_filename_component( main_cpp ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp ABSOLUTE )
 list( REMOVE_ITEM sources ${main_cpp} )
-file( GLOB headers */*.h )
+file( GLOB headers CONFIGURE_DEPENDS */*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
 
 sqliteProcDependencies( ${targetName} Jde.DB.Sqlite.OpcGateway ) #config/args/sqlite + the 'Debug - Sqlite' launch config load these

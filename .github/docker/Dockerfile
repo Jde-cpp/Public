@@ -16,13 +16,12 @@
 # rebuild the deps in-container with the `-repos` preset instead of mounting them.
 # Pinned to a runner-versioned noble tag (not the floating `ubuntu-noble`, which
 # upstream re-points, nor a bare version tag like `2.336.0`, which is focal —
-# glibc 2.31, no liburing-dev, too-old cmake). Match the runner version to what
-# GitHub currently serves, else the runner self-updates. In this container that is
-# fatal, not just slow: PID 1 *is* `bin/Runner.Listener`, so when it exits for the
-# update `--restart always` restarts the container and kills the detached updater
-# mid-copy, after it has already moved `bin` aside -> every later start exits 127
-# on a missing `./bin/Runner.Listener`. Recovery needs a rebuild + `docker rm`, as
-# the damage is in the container's writable layer.
+# glibc 2.31, no liburing-dev, too-old cmake). Keep the runner version at what
+# GitHub currently serves (.github/workflows/runner-version-check.yml watches it
+# weekly). A stale pin is no longer fatal — the CMD at the bottom runs the listener
+# under run.sh, which survives a self-update — but every container recreation then
+# self-updates (~80 s) before it takes a job, and the image no longer matches what
+# is actually running.
 ARG BASE_IMAGE=myoung34/github-runner:2.337.0-ubuntu-noble
 FROM ${BASE_IMAGE}
 
@@ -103,4 +102,23 @@ RUN set -eux; \
     ln -sf /usr/bin/ld.lld-${LLVM_VERSION} /usr/bin/ld.lld; \
     clang++ --version
 
-# Entry point / runner registration are inherited from the base image.
+# Entry point / runner registration are inherited from the base image; only the
+# command is overridden.
+#
+# Run the listener under the runner's own run.sh instead of the base image's
+# `./bin/Runner.Listener run --startuptype service`. The difference is the
+# self-update: the listener exits (code 3, or 4 when ephemeral) while a detached
+# update script swaps `bin`/`externals` for the new version. With the listener as
+# the entrypoint's only child, that exit ends the container, `--restart always`
+# restarts it, and the updater is killed mid-copy after it has already moved `bin`
+# aside — every later start then exits 127 on a missing ./bin/Runner.Listener,
+# config.sh included (2026-09-03: 631 restarts, jobs queued for hours, recovery =
+# rebuild + `docker rm` because the damage is in the writable layer). run.sh's
+# helper instead waits for the updater's `update.finished` flag and relaunches the
+# new listener in place — verified 2026-09-04 on a 2.336.0 base: updated to
+# 2.337.0 and back to "Listening for Jobs" in 80 s, RestartCount 0. The ephemeral
+# flow is unchanged (listener exits 0 after a job -> run.sh exits 0 -> entrypoint
+# deregisters -> `--restart always` re-registers). `--startuptype service` is kept
+# from the base CMD; the runner passes restartInteractiveRunner=false regardless,
+# so run.sh's loop is the only relauncher (no second listener from the updater).
+CMD ["./run.sh", "--startuptype", "service"]

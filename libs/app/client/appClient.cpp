@@ -11,9 +11,6 @@
 
 #define let const auto
 
-namespace Jde::App::Client{
-	static sp<Access::Authorize> _authorize;
-}
 namespace Jde::App{
 	using Web::Client::ClientHttpAwait;
 	α reconnectWait()ι->Duration{ return Settings::FindDuration("/server/reconnectWait").value_or(5s); }
@@ -21,18 +18,9 @@ namespace Jde::App{
 	α Client::Host()ι->string{ return Settings::FindString("/server/host").value_or("localhost"); }
 	α Client::Port()ι->PortType{ return Settings::FindNumber<PortType>("/server/port").value_or(1967); }
 
-	α Client::RemoteAcl( string libName )ι->sp<Access::Authorize>{
-		if( !_authorize )
-			_authorize = ms<Access::Authorize>( move(libName) );
-		return _authorize;
-	}
-	α Client::SetAcl( sp<Access::Authorize> acl )ι->void{
-		_authorize = move(acl);
-	}
-
 	Ω reloadAccess( sp<Client::IAppClient> appClient )ι->VoidTask{
 		try{
-			co_await Access::Client::Reload( appClient->QLServer() );//the new session's ClientQL - the one Configure was handed died with the old session.
+			co_await appClient->ReloadAccess();//on the new session's ClientQL - the one Configure was handed died with the old session.
 			INFOT( ELogTags::App|ELogTags::Access, "Reloaded the access snapshot on the new session." );
 		}
 		catch( runtime_error& e ){
@@ -49,7 +37,7 @@ namespace Jde::App{
 				co_return;
 			}
 			co_await ConnectAwait{ appClient, true };
-			if( Client::Subscriptions::Replay(appClient) && Access::Client::IsConfigured() )
+			if( Client::Subscriptions::Replay(appClient) && appClient->IsAccessConfigured() )
 				reloadAccess( move(appClient) );//a replay means this is a reconnect, so the snapshot has a gap in it the deltas never filled.
 		}
 		catch( runtime_error& )
@@ -111,7 +99,7 @@ namespace Jde::App::Client{
 		try{
 			THROW_IF( Process::ShuttingDown(), "Shutting down." );
 			TRACET( ELogTags::App, "[{}]Creating socket session", hex(sessionId) );
-			auto info = co_await StartSocketAwait{ sessionId, _authorize, _appClient, _sl };
+			auto info = co_await StartSocketAwait{ sessionId, _appClient->Acl(), _appClient, _sl };//null for a client that never authorizes (emulator, soak).
 			if( _appClient->ResourceSchema.size() && !info.auth_result() )//the AppServer's TestSchemaAdmin gate on the auth_resource we sent
 				WARNT( ELogTags::Access, "AppServer declined to delegate '{}' admin checks to this instance - grant its user Administer on the schema's root resources and reconnect;  until then the AppServer applies its flat rule.", _appClient->ResourceSchema );
 			_appClient->SetAppPKs( info.instance_pk(), info.connection_pk() );

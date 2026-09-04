@@ -75,6 +75,16 @@ namespace	Sessions{
 		return y;
 	}
 
+	α Sessions::Extend( SessionPK sessionId )ι->sp<SessionInfo>{
+		sp<SessionInfo> y;
+		_sessions.visit( sessionId, [&y]( auto& kv ){
+			y = kv.second;
+			if( y->Expiration>steady_clock::now() )
+				y->Expiration = y->NewExpiration();
+		} );
+		return y;
+	}
+
 	α Sessions::Get()ι->vector<sp<SessionInfo>>{
 		vector<sp<SessionInfo>> y;
 		_sessions.cvisit_all( [&y](auto& kv){y.emplace_back(kv.second);} );

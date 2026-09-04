@@ -1,0 +1,108 @@
+name: Runner Version Check
+
+# Weekly guard on the runner version pinned in .github/docker/Dockerfile.
+#
+# Why this exists: the self-hosted container is built from a base image pinned to
+# one runner version. Once GitHub serves a newer runner, every container the pin
+# produces self-updates before it takes its first job, and the image no longer
+# matches what runs. Until 2026-09-04 a stale pin was worse than slow: the listener
+# was the entrypoint's only child, so its exit for the update restarted the
+# container and killed the updater mid-copy — 631 restarts, jobs queued for hours,
+# recovery = rebuild + `docker rm`. The image's CMD now runs the listener under
+# run.sh, which relaunches in place, so this check keeps the pin honest rather than
+# preventing a brick. See .github/docker/README.md.
+#
+# Runs on a GitHub-hosted runner ON PURPOSE — the self-hosted one is the thing being
+# checked, and this must report even when that runner is down. Keep it that way.
+#
+# A failure here is the alert (GitHub emails on scheduled-workflow failure); the job
+# summary carries the exact rebuild commands.
+on:
+  schedule:
+    # Mondays 13:00 UTC. Runner releases are roughly monthly, so weekly is ample lead time.
+    - cron: '0 13 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: runner-version-check-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check-pin:
+    name: Runner Pin
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compare pinned runner against the latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          dockerfile=.github/docker/Dockerfile
+
+          pinned=$( sed -n 's|^ARG BASE_IMAGE=myoung34/github-runner:\([0-9][0-9.]*\)-ubuntu-noble.*|\1|p' "$dockerfile" )
+          if [ -z "$pinned" ]; then
+            echo "::error file=$dockerfile::Could not parse ARG BASE_IMAGE — has the pin's shape changed?  This check parses 'myoung34/github-runner:<version>-ubuntu-noble'."
+            exit 1
+          fi
+
+          latest=$( gh api repos/actions/runner/releases/latest --jq .tag_name | sed 's/^v//' )
+          if [ -z "$latest" ]; then
+            echo "::error::Could not read the latest actions/runner release."
+            exit 1
+          fi
+
+          echo "pinned=$pinned  latest=$latest"
+          if [ "$pinned" = "$latest" ]; then
+            echo "Pin is current." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # A pin ahead of the newest release is not a problem — GitHub only forces updates forward.
+          newest=$( printf '%s\n%s\n' "$pinned" "$latest" | sort -V | tail -1 )
+          if [ "$newest" = "$pinned" ]; then
+            echo "Pin ($pinned) is ahead of the latest release ($latest) — nothing to do." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # The bump is only actionable once myoung34 publishes the matching noble tag; until then
+          # the runner will still self-update and brick itself, so say which of the two waits applies.
+          tag="${latest}-ubuntu-noble"
+          code=$( curl -sS -o /dev/null -w '%{http_code}' "https://hub.docker.com/v2/repositories/myoung34/github-runner/tags/${tag}" || echo 000 )
+
+          {
+            echo "## Runner pin is behind"
+            echo
+            echo "| | version |"
+            echo "|---|---|"
+            echo "| pinned in \`$dockerfile\` | \`$pinned\` |"
+            echo "| latest \`actions/runner\` release | \`$latest\` |"
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$code" = "200" ]; then
+            {
+              echo "Base tag \`myoung34/github-runner:$tag\` is published — bump the pin, rebuild, and recreate the container:"
+              echo
+              echo '```bash'
+              echo "sed -i 's|github-runner:$pinned-ubuntu-noble|github-runner:$tag|' $dockerfile"
+              echo "sudo docker build -t jde-ci-runner:latest .github/docker"
+              echo "sudo docker stop gha-runner && sudo docker rm gha-runner"
+              echo "# then re-run the docker run block in .github/docker/README.md"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "Base tag \`myoung34/github-runner:$tag\` is **not published yet** (HTTP $code), so the pin cannot be bumped."
+              echo "Each container recreation will self-update before taking jobs in the meantime."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          echo "::error::Pinned runner $pinned is behind the latest release $latest — every container recreation will self-update before taking jobs.  See this run's summary."
+          exit 1
