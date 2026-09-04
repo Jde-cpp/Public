@@ -12,10 +12,10 @@ namespace Jde::Web::Client{
 	struct IClientSocketSession;
 	struct CreateClientSocketSessionAwait final : VoidAwait{
 		using base = VoidAwait;
-		CreateClientSocketSessionAwait( sp<IClientSocketSession> session, string host, PortType port, SRCE )ι;
+		CreateClientSocketSessionAwait( sp<IClientSocketSession> session, string host, PortType port, string target="/", SRCE )ι;
 		α Suspend()ι->void override;
 	private:
-		sp<IClientSocketSession> _session; string _host; PortType _port;
+		sp<IClientSocketSession> _session; string _host; PortType _port; string _target;
 	};
 
 	struct CloseClientSocketSessionAwait final : VoidAwait{
@@ -38,8 +38,9 @@ namespace Jde::Web::Client{
 		α AddTimeout( RequestId requestId, SRCE )ι->TimerAwait::Task;
 		α PopTask( RequestId requestId )ι->std::any;
 
-		α Run( string host, PortType port, CreateClientSocketSessionAwait::Handle h )ι->void;// Start the asynchronous operation
-		α RunSession( string host, PortType port )ι{ return CreateClientSocketSessionAwait{shared_from_this(), host, port}; }
+		α Run( string host, PortType port, string target, CreateClientSocketSessionAwait::Handle h )ι->void;// Start the asynchronous operation
+		//target: the websocket handshake's request path - "/" for every server but a host that routes protocols by path (OpcHub: "/opc" for the gateway's).
+		α RunSession( string host, PortType port, string target="/" )ι{ return CreateClientSocketSessionAwait{shared_from_this(), host, port, move(target)}; }
 		β Query( string&& query, jobject variables, bool returnRaw, SRCE )ι->ClientSocketAwait<jvalue> = 0;
 		β Subscribe( string&& query, jobject variables, sp<QL::IListener> listener, SRCE )ε->ClientSocketAwait<jarray> = 0;
 		β Unsubscribe( vector<QL::SubscriptionId>&& ids, SRCE )ι->void=0;
@@ -79,6 +80,7 @@ namespace Jde::Web::Client{
 		mutable std::mutex _streamMutex;
 		sp<ClientSocketStream> _stream;
 		string _host;
+		string _target{ "/" };
 		sp<net::io_context> _ioContext;
 		optional<Web::FromServer::SessionInfo> _sessionInfo;
 		CreateClientSocketSessionAwait::Handle _connectHandle;

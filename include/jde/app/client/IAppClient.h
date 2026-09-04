@@ -34,12 +34,14 @@ namespace Jde::App::Client{
 		α IsLocal()Ι->bool override{ return false; }
 		α UserName()Ι->const jobject&{ return _userName; }
 		α SetUserName( jobject&& userName )ι->void{ _userName = move(userName); }
-		α UserPK()Ι->Jde::UserPK{ auto p=LoadSession(); return p ? p->UserPK() : Jde::UserPK{0}; }
-		α QLServer()Ε->sp<QL::IQL>{ auto p=Session(); return p->QLServer(); }
+		//Virtual with QLServer/AddSession so an embedded client (OpcHub: the gateway hosted beside the AppServer) can answer
+		//in-process - the socket bodies stay the default.
+		β UserPK()Ι->Jde::UserPK{ auto p=LoadSession(); return p ? p->UserPK() : Jde::UserPK{0}; }
+		β QLServer()Ε->sp<QL::IQL>{ auto p=Session(); return p->QLServer(); }
 		α PublicKey()Ι->const Crypto::PublicKey& override{ return ServerPublicKey; }
 
 		α SessionInfoAwait( SessionPK sessionPK, SRCE )ι->up<TAwait<Web::FromServer::SessionInfo>> override;
-		α AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, SRCE )ε->await<Web::FromServer::SessionInfo>;
+		β AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, SRCE )ε->up<TAwait<Web::FromServer::SessionInfo>>;//up<TAwait>, as SessionInfoAwait: the socket and the in-process implementations differ in type.
 		α Jwt( SRCE )ε->await<Web::Jwt>;
 		α Login( Web::Jwt&& jwt, SRCE )ε->await<Web::FromServer::SessionInfo> override;
 		α CloseSocketSession( bool terminate, SL sl )ι->void;

@@ -4,20 +4,25 @@
 #include "../UAClient.h"
 
 namespace Jde::Opc{
-	namespace Gateway{ sp<Gateway::GatewayQL> _ql; }
-	α Gateway::QLPtr()ι->sp<GatewayQL>{ ASSERT(_ql); return _ql; }
-	α Gateway::QL()ι->GatewayQL&{ return *QLPtr(); }
+	namespace Gateway{ sp<QL::LocalQL> _ql; }
+	α Gateway::QLPtr()ι->sp<QL::LocalQL>{ ASSERT(_ql); return _ql; }
+	α Gateway::QL()ι->QL::LocalQL&{ return *QLPtr(); }
 	α Gateway::Schemas()ι->const vector<sp<DB::AppSchema>>&{ return QL().Schemas(); }
 	α Gateway::ConfigureQL( sp<DB::AppSchema> schema, sp<Access::Authorize> authorizer )ι->void{
-		QL::Configure( {schema} );
+		QL::Configure( {schema} );//once: the ctor used to repeat it, registering every gateway type's introspection twice.
 		_ql = ms<GatewayQL>( move(schema), move(authorizer) );
+	}
+	α Gateway::SetQL( sp<QL::LocalQL> ql )ι->void{ _ql = move(ql); }
+	α Gateway::AddStatusCounts( jobject& status )ι->void{
+		const auto [clients, monitoredItems] = UAClient::StatusCounts();
+		status["clients"] = clients;
+		status["monitoredItems"] = monitoredItems;
 	}
 }
 namespace Jde::Opc::Gateway{
 	GatewayQL::GatewayQL( sp<DB::AppSchema>&& schema, sp<Access::Authorize> authorizer )ι:
-		App::AppQL{ {schema}, authorizer }{
-		QL::Configure( {move(schema)} );
-	}
+		App::AppQL{ {move(schema)}, authorizer }
+	{}
 	α GatewayQL::CustomQuery( QL::TableQL& q, QL::Creds executer, SL sl )ι->up<TAwait<jvalue>>{
 		up<TAwait<jvalue>> await = GatewayQLAwait::Test( q, executer, sl );
 		return await;
@@ -32,9 +37,7 @@ namespace Jde::Opc::Gateway{
 	}
 	α GatewayQL::StatusQuery( QL::TableQL&& ql, QL::Creds executer, SL sl )ε->jobject{
 		auto y = App::AppQL::StatusQuery( move(ql), executer, sl ); //the base gates it.
-		const auto [clients, monitoredItems] = UAClient::StatusCounts();
-		y["clients"] = clients;
-		y["monitoredItems"] = monitoredItems;
+		AddStatusCounts( y );
 		return y;
 	}
 

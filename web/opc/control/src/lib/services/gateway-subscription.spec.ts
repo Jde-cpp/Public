@@ -102,3 +102,10 @@ describe( 'Gateway subscribe failures', ()=>{
 		expect( (results[0].value as OpcError).sc ).toBe( 0x80340000 );
 	} );
 } );
+
+describe( 'Gateway socket path', ()=>{
+	it( 'upgrades on /opc - the path an OpcHub routes the gateway protocol by', ()=>{
+		const gateway = new TestGateway();
+		expect( (gateway as any).socketUrl ).toBe( 'ws://localhost:1968/opc' );
+	});
+});

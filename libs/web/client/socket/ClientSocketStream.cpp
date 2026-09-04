@@ -56,7 +56,7 @@ namespace Jde::Web::Client{
 			ws.set_option(websocket::stream_base::decorator( [userAgent](websocket::request_type& req){// Set a decorator to change the User-Agent of the handshake
 				req.set( http::field::user_agent, userAgent );
 			}));
-			ws.async_handshake( host, "/", beast::bind_front_handler(&IClientSocketSession::OnHandshake, session) );// Perform the websocket handshake
+			ws.async_handshake( host, session->_target, beast::bind_front_handler(&IClientSocketSession::OnHandshake, session) );// Perform the websocket handshake - the session's target, "/" unless it asked for a path.
 		}, _ws );
 	}
 

@@ -94,15 +94,16 @@ namespace Jde::Web::Client{
 		});
 	}
 
-	CreateClientSocketSessionAwait::CreateClientSocketSessionAwait( sp<IClientSocketSession> session, string host, PortType port, SL sl )ι:
+	CreateClientSocketSessionAwait::CreateClientSocketSessionAwait( sp<IClientSocketSession> session, string host, PortType port, string target, SL sl )ι:
 		base{ sl },
 		_session{ session },
 		_host{ host },
-		_port{ port }
+		_port{ port },
+		_target{ move(target) }
 	{}
 
 	α CreateClientSocketSessionAwait::Suspend()ι->void{
-		_session->Run( _host, _port, _h );
+		_session->Run( _host, _port, move(_target), _h );
 		_session = nullptr;
 	}
 
@@ -115,9 +116,10 @@ namespace Jde::Web::Client{
 		_ioContext{ ioc }
 	{}
 
-	α IClientSocketSession::Run( string host, PortType port, CreateClientSocketSessionAwait::Handle h )ι->void{ // Start the asynchronous operation
+	α IClientSocketSession::Run( string host, PortType port, string target, CreateClientSocketSessionAwait::Handle h )ι->void{ // Start the asynchronous operation
 		_connectHandle = h;
 		_host = host;
+		_target = target.empty() ? "/" : move(target);
 		TRACET( _connectPedanticTag, "[{}:{}]resolve socket.", _host, port );
 		_resolver.async_resolve( _host, std::to_string(port), beast::bind_front_handler(&IClientSocketSession::OnResolve, shared_from_this()) );
 	}

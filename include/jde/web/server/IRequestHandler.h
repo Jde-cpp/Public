@@ -19,7 +19,6 @@ namespace Jde::Web::Server{
 		α AppQueryAwait( string&& q, jobject variables, SL sl )ι->up<TAwait<jvalue>>{ return _appServer->Query<jvalue>( move(q), move(variables), true, sl ); }
 		α CancelSignal()ι->sp<net::cancellation_signal>{ return _cancelSignal; }
 		α Context()ι->ssl::context&{ return _ctx; }
-		α NextRequestId()ι->uint32{ return _requestId.fetch_add(1, std::memory_order_relaxed); }
 		α SessionInfoAwait( SessionPK sessionPK, SL sl )ι->up<TAwait<Web::FromServer::SessionInfo>>{ return _appServer->SessionInfoAwait( sessionPK, sl ); }
 		α Start()ι->void;
 		α FailStart( string&& why )ι->void;
@@ -41,7 +40,6 @@ namespace Jde::Web::Server{
 		sp<App::IApp> _appServer;
 		sp<net::cancellation_signal> _cancelSignal;
 		ssl::context _ctx;
-		atomic<uint32> _requestId;
 		WebServerSettings _settings;
 		enum class EStartState : uint8{ None, Started, Failed };//a flag could not say "failed", which is why BlockTillStarted had no way out.
 		atomic<EStartState> _started{ EStartState::None };

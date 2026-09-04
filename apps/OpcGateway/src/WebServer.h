@@ -6,8 +6,11 @@ namespace Jde::Web::Server{ struct HttpRequest; struct IHttpRequestAwait; struct
 namespace Jde::Opc::Gateway{
 	α StartWebServer( jobject&& settings )ε->void;
 	α StopWebServer( bool terminate, SL sl )ι->void;
+	struct GatewaySocketSession;
 	namespace Server{
+		α AddSession( sp<GatewaySocketSession> session )ι->void;//the opc-protocol socket registry - a host's handler (OpcHub) adds the sockets it accepts on the gateway's path.
 		α RemoveSession( uint socketSessionId )ι->void;
+		α Shutdown( bool terminate, SL sl )ι->void;//close every registered socket - what the gateway's own listener does before stopping; a host without that listener registers this.
 	}
 	struct RequestHandler final : Web::Server::IRequestHandler{
 		RequestHandler( jobject settings, sp<App::IApp> appClient, sp<QL::IQL> ql )ι:Web::Server::IRequestHandler{move(settings), move(appClient)}, _ql{move(ql)}{}

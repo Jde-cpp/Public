@@ -138,6 +138,8 @@ export class GatewayService implements IGraphQL{
 
 
 export class Gateway extends ProtoService<FromClient.Transmission,FromServer.Message>{
+	//an OpcHub serves the app-server and gateway protocols from one port and tells them apart by the upgrade path; a standalone gateway ignores it.
+	protected override get socketPath(){ return "/opc"; }
 	constructor( gateway:Instance, transport:ETransport, http: HttpClient, authStore:AuthStore, private store:OpcStore, googleAuth?:GoogleAuthService ){
 		super( FromClient.Transmission, http, transport, authStore, false, googleAuth );
 		super.instances = [gateway];

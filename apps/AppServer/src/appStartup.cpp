@@ -1,5 +1,6 @@
 #include "appStartup.h"
 #include <jde/fwk/co/Await.h>
+#include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/db/db.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/Row.h>
@@ -65,12 +66,19 @@ namespace Jde::App::Server{
 	}
 	α AppSchema()ι->sp<DB::AppSchema>{ return _appSchema; }
 
-	Ω configureDS()ε->void{
+	Ω configureDS( ConfigureOptions& options )ε->void{
 		auto authorizer = Authorizer();
 		auto accessSchema = DB::GetAppSchema( "access", authorizer );
 		_appSchema = DB::GetAppSchema( "app", authorizer );
+		vector<sp<DB::AppSchema>> schemas{ accessSchema, _appSchema };
+		schemas.insert( schemas.end(), options.ExtraSchemas.begin(), options.ExtraSchemas.end() );
 
-		ConfigureQL( {accessSchema, _appSchema}, authorizer );
+		if( options.MakeQL ){
+			QL::Configure( schemas );
+			SetQL( options.MakeQL(schemas, authorizer) );
+		}
+		else
+			ConfigureQL( schemas, authorizer );
 		_listener = ms<Access::AccessListener>( QLPtr() );
 		Process::AddShutdownFunction( []( bool terminate, SL sl ){
 			_listener->Shutdown( terminate, sl );
@@ -78,20 +86,20 @@ namespace Jde::App::Server{
 		});
 
 		if( Settings::FindBool("/testing/recreateDB").value_or(false) ){
-			DB::NonProd::Recreate( *accessSchema, QLPtr() );
-			DB::NonProd::Recreate( *_appSchema, QLPtr() );
+			for( let& schema : schemas )
+				DB::NonProd::Recreate( *schema, QLPtr() );
 		}
 		else if( Settings::FindBool("/dbServers/sync").value_or(false) || accessSchema->DS()->RequiresSync() ){
-			DB::SyncSchema( *accessSchema, QLPtr() );
-			DB::SyncSchema( *_appSchema, QLPtr() );
+			for( let& schema : schemas )
+				DB::SyncSchema( *schema, QLPtr() );
 		}
-		QL::LoadEnums( {accessSchema, _appSchema} );
-		BlockVoidAwait( Access::Server::Configure({accessSchema, _appSchema}, QLPtr(), UserPK{UserPK::System}, authorizer, _listener) );//the access load is a coroutine chain; this is the sync api over it.
+		QL::LoadEnums( schemas );
+		BlockVoidAwait( Access::Server::Configure(move(schemas), QLPtr(), UserPK{UserPK::System}, authorizer, _listener) );//the access load is a coroutine chain; this is the sync api over it.
 		endAppInstances();
 	}
 
-	α AppStartup( jobject webServerSettings )ε->void{
-		configureDS();
+	α Configure( const jobject& webServerSettings, ConfigureOptions options )ε->void{
+		configureDS( options );
 		str instanceName{ Settings::FindString("/instanceName").value_or(_debug ? "Debug" : "Release") };
 		let pks = AddConnection( Process::AppName(), instanceName, Process::HostName(), Process::ProcessId() );
 		Logging::Add<Web::Server::SubscribeLog>( "subscribe", get<0>(pks), get<1>(pks) );
@@ -99,12 +107,17 @@ namespace Jde::App::Server{
 
 		QL::SetSystemTables( {"apps", "connections", "logSetting"} );
 		auto appClient = AppClient();
-		auto sslSettings = Crypto::CryptoSettings{ Json::FindDefaultObject(webServerSettings, "ssl") };
-		StartWebServer( move(webServerSettings) );
-		appClient->LoadLogSettings();
+		Crypto::CryptoSettings sslSettings{ Json::FindDefaultObject(webServerSettings, "ssl") };
+		Crypto::EnsureKeyCertificate( sslSettings );//the listener used to create the key as a side effect, which is why SetPublicKey had to wait for it.
 		appClient->SetPublicKey( sslSettings.PublicKey.Value(SRCE_CUR) );
 		QL::Hook::Add( mu<AppInstanceHook>(appClient) );
 		QL::Hook::Add( mu<Web::Server::SessionGraphQL>(appClient, Authorizer()) );
+	}
+
+	α AppStartup( jobject webServerSettings )ε->void{
+		Configure( webServerSettings );
+		StartWebServer( move(webServerSettings) );
+		AppClient()->LoadLogSettings();
 		INFOT( ELogTags::App, "--AppServer Started.--" );
 	}
 }

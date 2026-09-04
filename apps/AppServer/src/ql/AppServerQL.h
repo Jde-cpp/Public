@@ -7,6 +7,7 @@ namespace Jde::App::Server{
 	α QLPtr()ι->sp<QL::LocalQL>;
 	α QL()ι->QL::LocalQL&;
 	α ConfigureQL( vector<sp<DB::AppSchema>> schemas, sp<Access::Authorize> authorizer )ι->void;
+	α SetQL( sp<QL::LocalQL> ql )ι->void;//a host's own QL over the app schemas and more (OpcHub's HubQL) - QLPtr() consumers see that one.
 
 	struct AppServerQL final: App::AppQL{
 		AppServerQL( vector<sp<DB::AppSchema>>&& schemas, sp<Access::Authorize>&& authorizer )ι;

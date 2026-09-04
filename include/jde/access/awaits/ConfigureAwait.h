@@ -6,8 +6,8 @@
 namespace Jde::Access{
 	struct AccessListener;
 	struct ConfigureAwait : VoidAwait{
-		ConfigureAwait( sp<QL::IQL> qlServer, vector<sp<DB::AppSchema>> schemas, sp<Authorize> authorizer, UserPK executer, sp<AccessListener> listener, string opcServerInstance, bool reload=false, bool allSchemas=false, SRCE )ι:
-			VoidAwait{sl}, Authorizer{authorizer}, Executer{executer}, Listener{listener}, OpcServerInstance{move(opcServerInstance)}, QlServer{qlServer}, Schemas{schemas}, Reload{reload}, AllSchemas{allSchemas}{
+		ConfigureAwait( sp<QL::IQL> qlServer, vector<sp<DB::AppSchema>> schemas, sp<Authorize> authorizer, UserPK executer, sp<AccessListener> listener, string opcServerInstance, bool reload=false, bool allSchemas=false, bool syncOnly=false, SRCE )ι:
+			VoidAwait{sl}, Authorizer{authorizer}, Executer{executer}, Listener{listener}, OpcServerInstance{move(opcServerInstance)}, QlServer{qlServer}, Schemas{schemas}, Reload{reload}, AllSchemas{allSchemas}, SyncOnly{syncOnly}{
 				ASSERT( listener );
 			};
 		α Suspend()ι->void override{ if( Reload ) LoadUsers(); else SyncResources(); }
@@ -25,5 +25,9 @@ namespace Jde::Access{
 		//registered, so its resource snapshot and its event subscriptions are unfiltered (appserver-review3 #13);  a client -
 		//gateway, OpcServer - follows only the schemas it passes.  Schemas still names what ResourceSync creates rows for.
 		bool AllSchemas;
+		//Create the schemas' resource rows and stop - no snapshot load, no subscriptions.  For a client that shares the server's
+		//Authorize in-process (OpcHub's gateway): the server already holds every schema and its listener picks the new rows up;
+		//the client loader would clear that snapshot down to this client's schemas.
+		bool SyncOnly;
 	};
 }

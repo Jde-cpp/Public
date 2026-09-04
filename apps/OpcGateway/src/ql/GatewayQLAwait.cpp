@@ -36,11 +36,16 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
+	//Every server-bound query names its server with `opc` - GetClient reads that argument, so one without it could only ever
+	//fail there.  Keyed on it (rather than "everything not listed") so a host QL that also serves app/access tables (OpcHub's
+	//HubQL) can ask IsApplicable and keep `users`/`sessions`/`connections` off ConnectAwait.  __type(name:…) stays on the
+	//generic QueryType; __type(opc:…) is an OPC enum DataType whose definition lives on that server (EnumTypeCache).
 	Ω needsClient( const QL::Input& q )ι->bool{
 		let tableName = q.JTableName();
-		if( tableName=="__type" )
-			return q.Args.contains( "opc" );//an OPC enum DataType - its definition lives on that server (EnumTypeCache);  __type(name:…) stays on the generic QueryType.
-		return !tableName.starts_with( "serverConnection" ) && tableName!="status" && tableName!="opcSessions" && tableName!="search";//search must never ConnectAwait - it only reads clients already open.
+		return q.Args.contains( "opc" ) && !tableName.starts_with( "serverConnection" ) && tableName!="status" && tableName!="opcSessions" && tableName!="search";//search must never ConnectAwait - it only reads clients already open.
+	}
+	α GatewayQLAwait::IsApplicable( const QL::TableQL& q )ι->bool{
+		return q.JsonName=="opcSessions" || q.JsonName=="search" || ServerCnnctnSessionsQLAwait::IsApplicable(q) || needsClient(q);
 	}
 	α GatewayQLAwait::Test( QL::TableQL& q, QL::Creds executer, SL sl )->up<TAwait<jvalue>>{
 		up<TAwait<jvalue>> await;
@@ -55,7 +60,7 @@ namespace Jde::Opc::Gateway{
 		return await;
 	}
 	α GatewayQLMAwait::Test( QL::MutationQL& m, QL::Creds executer, SL sl )->up<TAwait<jvalue>>{
-		if( m.JsonTableName=="variable" )
+		if( IsApplicable(m) )
 			return mu<GatewayQLMAwait>( move(m), move(executer), sl );
 		if( App::LogSettingsMAwait::IsApplicable(m) )
 			return mu<App::Client::LogSettingsClientMAwait>( move(m), AppClient(), executer.UserPK(), sl );

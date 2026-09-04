@@ -51,6 +51,11 @@ namespace Jde{
 	};
 
 	α Logging::Init()ι->void{
+		//Once per process: a second call adds a second SpdLog and pops whatever sits at _loggers.front().  A process hosting
+		//two apps (OpcHub) has two InitLogging entry points; its main calls one, this makes a slip harmless.
+		static bool initialized{};
+		if( std::exchange(initialized, true) )
+			return;
 #ifndef NDEBUG
 		SetBreakLevel( Settings::FindEnum<ELogLevel>("/logging/breakLevel", ToLogLevel).value_or(ELogLevel::Warning) );
 #endif

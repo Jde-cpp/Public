@@ -28,7 +28,7 @@ export class AppResolver implements Resolve<Connection[]> {
 		connections.forEach( c=>{
 			c.created = new Date( c.created );
 			c.programName = c.programName.startsWith("Jde.") ? c.programName.substring(4) : c.programName;
-			if( c.programName=="OpcGateway" )
+			if( c.programName=="OpcGateway" || c.programName=="OpcHub" )//the hub (AppServer + gateway in one process) registers once; its page is the gateway's - the connections, logs and levels there are its own
 				c.programName = "Gateway";
 			let childPath = StringUtils.toJson(StringUtils.plural(c.programName));
 			c.urlSegments = [ childPath, c.instanceName];

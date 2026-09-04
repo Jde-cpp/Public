@@ -25,7 +25,7 @@ export class GatewayDetail implements OnInit, OnDestroy{
 			this.componentPageTitle.title = `${instanceName} - Gateway`;
 			this.gateway = await this.gatewayService.gateway( instanceName );
 			this.isLoading.set( false );
-			this.instanceId.set( await this.appService.instancePK(instanceName, "OpcGateway") );
+			this.instanceId.set( await this.appService.instancePK(instanceName, "OpcGateway") ?? await this.appService.instancePK(instanceName, "OpcHub") );//a hub registers under its own program name
 		});
 	}
 	ngOnDestroy(): void {

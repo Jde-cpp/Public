@@ -58,7 +58,9 @@ namespace Jde::App::Client{
 	α IAppClient::ConfigureAccess( sp<DB::AppSchema> accessSchema, vector<sp<DB::AppSchema>> localSchemas, Jde::UserPK executer, string resourceSchema, SL sl )ε->Access::ConfigureAwait{
 		THROW_IFSL( !_acl, "ConfigureAccess before Acl(libName)/SetAcl." );
 		_accessContext = Access::Client::Context{ move(localSchemas), _acl, executer, Listener(), move(resourceSchema) };
-		return Access::Client::Configure( move(accessSchema), *_accessContext, QLServer(), sl );
+		//A local client shares the server's Authorize (OpcHub installs it with SetAcl): only its schemas' resource rows need
+		//creating - the server's own listener then sees them - and the client loader must not replace the server's snapshot.
+		return Access::Client::Configure( move(accessSchema), *_accessContext, QLServer(), IsLocal(), sl );
 	}
 	α IAppClient::ReloadAccess( SL sl )ε->Access::ConfigureAwait{
 		THROW_IFSL( !_accessContext, "ReloadAccess before ConfigureAccess." );
@@ -79,11 +81,8 @@ namespace Jde::App::Client{
 	}
 
 	constexpr ELogTags _tags{ ELogTags::SocketClientWrite };
-	α IAppClient::AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, SL sl )ε->await<Web::FromServer::SessionInfo>{
-		auto p = Session();
-		auto requestId = p->NextRequestId();
-		TRACESL( "AddSession domain: '{}', loginName: '{}', providerPK: {}, userEndPoint: '{}', isSocket: {}.", domain, loginName, providerPK, userEndPoint, isSocket );
-		return await<Web::FromServer::SessionInfo>{ FromClient::AddSession(domain, loginName, providerPK, userEndPoint, isSocket, requestId), requestId, p, sl };
+	α IAppClient::AddSession( str domain, str loginName, Access::ProviderPK providerPK, str userEndPoint, bool isSocket, SL sl )ε->up<TAwait<Web::FromServer::SessionInfo>>{
+		return mu<Client::AddSessionAwait>( domain, loginName, providerPK, userEndPoint, isSocket, LoadSession(), sl );//no session -> await_resume throws "No Connection to AppServer.", as SessionInfoAwait.
 	}
 	α IAppClient::Jwt( SL sl )ε->await<Web::Jwt>{
 		auto p = Session();

@@ -14,10 +14,7 @@ namespace Jde::Opc{
 		_requestHandler = ms<RequestHandler>( move(settings), AppClient(), Gateway::QLPtr() );
 		Web::Server::Start( _requestHandler );
 		Process::AddShutdownFunction( [](bool terminate, SL sl ){
-			_sessions.erase_if( []( auto& s ){
-				s.second->Close();
-				return true;
-			});
+			Server::Shutdown( terminate, sl );
 			StopWebServer(terminate, sl);
 		});//TODO move to Web::Server
 	}
@@ -26,8 +23,17 @@ namespace Jde::Opc{
 		Web::Server::Stop( move(_requestHandler), terminate, sl );
 	}
 namespace Gateway{
+	α Server::AddSession( sp<GatewaySocketSession> session )ι->void{
+		_sessions.emplace( session->Id(), move(session) );
+	}
 	α Server::RemoveSession( uint socketSessionId )ι->void{
 		_sessions.erase( socketSessionId );
+	}
+	α Server::Shutdown( bool, SL )ι->void{
+		_sessions.erase_if( []( auto& s ){
+			s.second->Close();
+			return true;
+		});
 	}
 
 	using namespace Jde::Web::Server;
@@ -37,7 +43,7 @@ namespace Gateway{
 
 	α RequestHandler::WebsocketSession( sp<Web::Server::IRestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<Web::Server::IWebsocketSession>{
 		auto session = ms<Gateway::GatewaySocketSession>( move(stream), move(buffer), move(req), move(userEndpoint), connectionIndex );
-		_sessions.emplace( session->Id(), session );
+		Server::AddSession( session );
 		return session;
 	}
 	α RequestHandler::Schemas()ι->const vector<sp<DB::AppSchema>>&{ return Gateway::Schemas(); }

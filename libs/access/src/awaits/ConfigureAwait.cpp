@@ -92,7 +92,10 @@ namespace Jde::Access{
 	α ConfigureAwait::SyncResources()ι->VoidTask{
 		try{
 			co_await ResourceSyncAwait{ QlServer, Schemas, OpcServerInstance, Executer };
-			LoadUsers();
+			if( SyncOnly )
+				Resume();
+			else
+				LoadUsers();
 		}
 		catch( runtime_error& e ){
 			ResumeExp( move(e) );
