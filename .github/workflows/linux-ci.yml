@@ -11,6 +11,11 @@ name: Linux
 on:
   push:
     branches: [main]
+  # Ad-hoc runs against any branch (the Actions tab's branch picker), for checking a
+  # fix before it lands. Gated to users with write access, so it opens no fork hole.
+  # The button only appears once this trigger is on the default branch, and a branch
+  # is dispatchable only if it carries this file.
+  workflow_dispatch:
 
 # One in-flight run per branch; a newer push cancels the older run.
 concurrency:
