@@ -10,59 +10,14 @@ namespace Jde{
 	//hand-off chain. These awaitables carry their own result/exception and hold a type-erased continuation, so
 	//any coroutine can co_await them regardless of its return type; Any() wraps an existing awaitable for the
 	//same purpose. Prefer these for new cross-type awaits instead of adding another chain.
-	struct AnyVoidAwait{
-		AnyVoidAwait( SRCE )ι:_sl{sl}{}
-		virtual ~AnyVoidAwait()=default;
+	//What the void and typed awaitables share: the erased continuation, the error slot, the source location, and every
+	//method that does not touch a result.  Non-template, so one definition serves AnyAwait<T> for every T.
+	struct AnyAwaitBase{
+		AnyAwaitBase( SRCE )ι:_sl{sl}{}
+		virtual ~AnyAwaitBase()=default;
 		β await_ready()ι->bool{ return false; }
 		α await_suspend( coroutine_handle<> h )ι->void{ _h=h; Suspend(); }	//any promise's handle converts.
-		α await_resume()ε->void{ CheckException(); }
 		//Resume/ResumeExp may run the awaiting coroutine to completion inline, destroying this awaitable - they must be the caller's last use of `this`.
-		α Resume()ι->void{ ASSERT(_h); auto h=_h; _h=nullptr; h.resume(); }
-		α ResumeExp( Exception&& e )ι->void{ _error=e.Move(); Resume(); }	//virtual Move keeps the subclass - await_resume rethrows the dynamic type.
-		α ResumeExp( runtime_error&& e )ι->void{
-			if( auto p = dynamic_cast<Exception*>(&e); p )
-				ResumeExp( move(*p) );
-			else{
-				_error = mu<Exception>( move(e) );
-				Resume();
-			}
-		}
-		α Source()Ι->SL{ return _sl; }
-	protected:
-		β Suspend()ι->void=0;
-		α CheckException()ε->void{
-			if( _error ){
-				auto e = move(_error);
-				e->Throw();
-			}
-		}
-		coroutine_handle<> _h{};
-		up<Exception> _error;
-		SL _sl;
-	};
-
-	//An already-completed void awaitable: co_await returns immediately - throwing `error` if one was given - without suspending.
-	//For synchronous implementations of an interface whose contract is an awaitable (e.g. a local check beside a remote one).
-	struct AnyCompletedAwait final : AnyVoidAwait{
-		AnyCompletedAwait( up<Exception> error={}, SRCE )ι:AnyVoidAwait{sl}{ _error=move(error); }
-		α await_ready()ι->bool override{ return true; }
-	protected:
-		α Suspend()ι->void override{}//unreachable: await_ready is true.
-	};
-
-	template<class TResult>
-	struct AnyAwait{
-		AnyAwait( SRCE )ι:_sl{sl}{}
-		virtual ~AnyAwait()=default;
-		β await_ready()ι->bool{ return false; }
-		α await_suspend( coroutine_handle<> h )ι->void{ _h=h; Suspend(); }
-		α await_resume()ε->TResult{
-			CheckException();
-			if( !_result )
-				throw Exception{ _sl, {ELogLevel::Critical}, "Resumed without a value." };
-			return move( *_result );
-		}
-		α Resume( TResult&& r )ι->void{ _result=move(r); ResumeHandle(); }
 		α ResumeExp( Exception&& e )ι->void{ _error=e.Move(); ResumeHandle(); }	//virtual Move keeps the subclass - await_resume rethrows the dynamic type.
 		α ResumeExp( runtime_error&& e )ι->void{
 			if( auto p = dynamic_cast<Exception*>(&e); p )
@@ -83,9 +38,37 @@ namespace Jde{
 			}
 		}
 		coroutine_handle<> _h{};
-		optional<TResult> _result;
 		up<Exception> _error;
 		SL _sl;
+	};
+
+	struct AnyVoidAwait : AnyAwaitBase{
+		using AnyAwaitBase::AnyAwaitBase;
+		α await_resume()ε->void{ CheckException(); }
+		α Resume()ι->void{ ResumeHandle(); }
+	};
+
+	//An already-completed void awaitable: co_await returns immediately - throwing `error` if one was given - without suspending.
+	//For synchronous implementations of an interface whose contract is an awaitable (e.g. a local check beside a remote one).
+	struct AnyCompletedAwait final : AnyVoidAwait{
+		AnyCompletedAwait( up<Exception> error={}, SRCE )ι:AnyVoidAwait{sl}{ _error=move(error); }
+		α await_ready()ι->bool override{ return true; }
+	protected:
+		α Suspend()ι->void override{}//unreachable: await_ready is true.
+	};
+
+	template<class TResult>
+	struct AnyAwait : AnyAwaitBase{
+		using AnyAwaitBase::AnyAwaitBase;
+		α await_resume()ε->TResult{
+			CheckException();
+			if( !_result )
+				throw Exception{ _sl, {ELogLevel::Critical}, "Resumed without a value." };
+			return move( *_result );
+		}
+		α Resume( TResult&& r )ι->void{ _result=move(r); ResumeHandle(); }
+	protected:
+		optional<TResult> _result;
 	};
 
 	template<class R> using AnyAwaitFor = std::conditional_t<std::is_void_v<R>, AnyVoidAwait, AnyAwait<R>>;

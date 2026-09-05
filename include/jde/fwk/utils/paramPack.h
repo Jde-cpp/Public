@@ -1,5 +1,4 @@
 #pragma once
-#include <numeric>
 
 //https://stackoverflow.com/questions/21806561/concatenating-strings-and-numbers-in-variadic-template-function
 namespace Jde::ParamPack{
@@ -24,17 +23,6 @@ namespace Jde::ParamPack{
 			os << x;
 			return os.str();
 		}
-	}
-
-	Ξ FormatVectorArgs( sv fmt, const vector<string>& args )ε{
-		return std::accumulate(
-			std::begin( args ),
-			std::end( args ),
-			string{ fmt },
-			[](sv toFmt, str arg){
-				return fmt::vformat( toFmt, fmt::make_format_args(arg) );
-			}
-		);
 	}
 
 	template<typename Head, typename... Tail>

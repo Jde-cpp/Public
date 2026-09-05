@@ -11,7 +11,6 @@ namespace Jde{
 	$ operator<( T a, T b )ι->bool{ return underlying(a)<underlying(b); };
 	$ operator~( T a )ι{ return (T)( ~underlying(a) ); }
 	$ operator|=( T& a, T b ){ return a = a | b; }
-	$ operator!( T x ){ return underlying(x)!=0; }
 	$ empty( T a )ι->bool{ return underlying(a)==0; };
 
 	template<IsEnum TEnum, class Collection>

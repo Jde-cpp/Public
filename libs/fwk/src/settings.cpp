@@ -88,14 +88,8 @@ namespace Jde{
 	}
 
 	α Settings::FindPathArray( sv path )ι->vector<fs::path>{
-		vector<fs::path> y;
-		if( let jarray = Json::FindArray(Value(), path); jarray ){
-			for( let& s : *jarray ){
-				if( s.is_string() )
-					y.push_back( expandEnvVariable(string{s.get_string()}) );
-			}
-		}
-		return y;
+		let strings = FindStringArray( path );//same lookup & env expansion - only the element type differs.
+		return { strings.begin(), strings.end() };
 	}
 
 	α Settings::FileStem()ι->string{

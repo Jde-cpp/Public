@@ -19,6 +19,24 @@
 namespace spdlog{ struct source_loc; }
 
 namespace Jde::Logging{
+	Φ GenerateId( sv text )ι->StringMd5;//md5 of the text - the id every log entry, file and function is keyed by.
+
+	//A file or function name as an Entry carries it: a static string from source_location (a view, no copy) or owned text
+	//off the wire, plus its id hashed at most once.  One type for both names - File()/Function(), FileString()/
+	//FunctionString() and FileId()/FunctionId() used to be three copied pairs over two variants and two memos.
+	struct SourceName{
+		SourceName()ι=default;
+		SourceName( sv text )ι:_text{ text }{}
+		SourceName( string&& text )ι:_text{ move(text) }{}
+		SourceName( StringMd5 id )ι:_id{ id }{}//the wire form that carries only the hash.
+		α View()Ι->sv{ return _text.index()==0 ? std::get<sv>(_text) : std::get<string>(_text); }
+		α Str()ι->string&{ if( _text.index()==0 ) _text = string{ std::get<sv>(_text) }; return std::get<string>(_text); }//owned: a view is copied in once, then served in place.
+		α Id()Ι->StringMd5{ if( !_id ) _id = GenerateId( View() ); return *_id; }
+	private:
+		variant<sv,string> _text;
+		mutable optional<StringMd5> _id;
+	};
+
 	struct Γ Entry final{
 		template<class... Args> Entry( SL sl, ELogLevel l, ELogTags tags, string&& m, ARGS... args )ι;
 		template<class... Args> Entry( SL sl, ELogLevel l, ELogTags tags, Jde::UserPK userPK, string&& m, ARGS... args )ι;
@@ -34,17 +52,15 @@ namespace Jde::Logging{
 		Entry( ELogLevel l, ELogTags tags, uint32_t line, TimePoint time, Jde::UserPK userId, uuid messageId, uuid fileId, uuid functionId, vector<string>&& args )ι;
 		Entry( ELogLevel l, ELogTags tags, uint32_t line, TimePoint time, Jde::UserPK userId, string&& text, string&& file, string&& function, vector<string>&& args )ι;
 
-		Ω GenerateId( sv text )ι->StringMd5;
+		Ω GenerateId( sv text )ι->StringMd5{ return Logging::GenerateId( text ); }
 
 		α Id()Ι->StringMd5{ if( !_id )_id = GenerateId(Text); return *_id; }
-		α File()Ι->sv{ return _fileName.index()==0 ? std::get<sv>(_fileName) : std::get<string>(_fileName); }
-		α FileString()ι->string&;
-		α SetFile( sv file ){ _fileName = file; }
-		α FileId()Ι->StringMd5{ return _fileId ? *_fileId : (_fileId = GenerateId(File())).value(); }
-		α Function()Ι->sv{ return _functionName.index()==0 ? std::get<sv>(_functionName) : std::get<string>(_functionName); }
-		α FunctionString()ι->string&;
-		α SetFunction( sv function ){ _functionName = function; }
-		α FunctionId()Ι->StringMd5{ return _functionId ? *_functionId : (_functionId = GenerateId(Function())).value(); }
+		α File()Ι->sv{ return _file.View(); }
+		α FileString()ι->string&{ return _file.Str(); }
+		α FileId()Ι->StringMd5{ return _file.Id(); }
+		α Function()Ι->sv{ return _function.View(); }
+		α FunctionString()ι->string&{ return _function.Str(); }
+		α FunctionId()Ι->StringMd5{ return _function.Id(); }
 		α Message()Ι->string;
 		α SourceLocation()Ι->spdlog::source_loc;
 		string Text; //template string with {} for args
@@ -55,12 +71,10 @@ namespace Jde::Logging{
 		TimePoint Time;
 		Jde::UserPK UserPK;
 	private:
-		variant<sv, string> _fileName;
-		variant<sv, string> _functionName;
+		SourceName _file;
+		SourceName _function;
 		mutable string _message;
 		mutable optional<StringMd5> _id;
-		mutable optional<StringMd5> _fileId;
-		mutable optional<StringMd5> _functionId;
 	};
 
 	template<class... Args>
@@ -88,9 +102,9 @@ namespace Jde::Logging{
 		Line{ sl.source_line() },
 		Time{ Clock::now() },
 		UserPK{ userPK },
-		_message{ fmt::vformat(m, fmt::make_format_args(FWD(args)...)) },
-		_fileName{ sl.source_file() },
-		_functionName{ sl.description() }{
+		_file{ sl.source_file() },
+		_function{ sl.description() },
+		_message{ fmt::vformat(m, fmt::make_format_args(FWD(args)...)) }{
 		ParamPack::Append( Arguments, FWD(args)... );
 	}
 #else
@@ -106,8 +120,8 @@ namespace Jde::Logging{
 		Line{ (uint32_t)sl.source_line() },
 		Time{ Clock::now() },
 		UserPK{ userPK },
-		_fileName{ sl.source_file() },
-		_functionName{ sl.name() },
+		_file{ sl.source_file() },
+		_function{ sl.name() },
 		_message{ fmt::vformat(m, fmt::make_format_args(FWD(args)...)) }{
 		ParamPack::Append( Arguments, FWD(args)... );
 	}

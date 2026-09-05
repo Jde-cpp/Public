@@ -34,8 +34,6 @@ namespace Jde{
 		Φ AsKey( const jobject& o, SRCE )ε->DB::Key;
 		Ŧ AsNumber( const jvalue& v, SRCE )ε->T;
 		Ŧ AsNumber( const jobject& o, sv path, SRCE )ε->T{ return AsNumber<T>( AsValue(o,path,sl), sl ); }
-		Ŧ AsPath( const jobject& o, sv path, SRCE )ε->T;
-		Ξ AsSV( const jvalue& v, sv /*path*/, SRCE )ε->sv{ return $(string); }
 		Ξ AsSV( const jvalue& v, SRCE )ε->sv{ return $(string); }
 		Φ AsSV( const jobject& o, sv key, SRCE )ε->sv;
 		Φ AsSVPath( const jobject& o, sv path, SRCE )ε->sv;
@@ -50,16 +48,15 @@ namespace Jde{
 		Φ AsTimePoint( const jobject& o, sv key, SRCE )ε->TimePoint;
 
 #undef $
-		Ξ FindValue( const jvalue& v, sv path )ι->optional<jvalue>{ auto y = v.try_at_pointer(path); return y.has_value() ? *y : optional<jvalue>{}; }
-		Ξ FindValuePtr( const jvalue& v, sv path )ι->const jvalue*{ auto y = v.try_at_pointer(path); return y.has_value() ? &*y : nullptr; }
+		Ξ FindValue( const jvalue& v, sv path )ι->const jvalue*{ auto y = v.try_at_pointer(path); return y.has_value() ? &*y : nullptr; }//a pointer into v, like the jobject overload - it used to return optional<jvalue>, a deep copy of the subtree.
 		Φ FindValue( jobject& o, sv path )ι->jvalue*;
 		Ξ FindValue( const jobject& o, sv path )ι->const jvalue*{ jvalue* v = FindValue(const_cast<jobject&>(o), path); return v; }
 		Φ FindArray( const jvalue& v, sv path )ι->const jarray*;
 		Φ FindArray( const jobject& o, sv key )ι->const jarray*;
 		Ξ FindBool( const jvalue& v, sv path )ι->optional<bool>{ auto p = FindValue(v,path); return p && p->is_bool() ? p->get_bool() : optional<bool>{}; }
 		Φ FindBool( const jobject& o, sv key )ι->optional<bool>;
-		Ξ FindObject( const jvalue& v, sv path )ι->const jobject*{ auto p = FindValuePtr(v,path); return p ? p->if_object() : nullptr; }
-		Ξ FindSV( const jvalue& v, sv path )ι->optional<sv>{ auto p = FindValuePtr(v,path); return p && p->is_string() ? p->get_string() : optional<sv>{}; }
+		Ξ FindObject( const jvalue& v, sv path )ι->const jobject*{ auto p = FindValue(v,path); return p ? p->if_object() : nullptr; }
+		Ξ FindSV( const jvalue& v, sv path )ι->optional<sv>{ auto p = FindValue(v,path); return p && p->is_string() ? p->get_string() : optional<sv>{}; }
 		Ξ FindSV( const jobject& o, sv key )ι->optional<sv>{ auto p = o.if_contains(key); return p && p->is_string() ? p->get_string() : optional<sv>{}; }
 		α FindSVPath( const jobject& o, sv path )ι->optional<sv>;
 
@@ -94,7 +91,7 @@ namespace Jde{
 		Ξ FindDefaultSV( const jvalue& v, sv path )ι->sv{ auto p = FindSV(v,path); return p ? *p : sv{}; }
 
 		Φ Parse( sv json, SRCE )ε->jobject;
-		Φ ParseValue( string&& json, SRCE )ε->jvalue;
+		Φ ParseValue( sv json, SRCE )ε->jvalue;
 		Ŧ FromArray( const jarray& a, SRCE )ε->vector<T>;
 		Ŧ ToVector( const jvalue& a, SRCE )ε->vector<T>;
 	}
@@ -104,12 +101,8 @@ namespace Jde{
 		return Eval( y, Ƒ("'{}', Could not convert to number.", serialize(v)), sl );
 	}
 
-	Ŧ Json::AsPath( const jobject& o, sv path, SL sl )ε->T{
-		return AsNumber<T>( o, path, sl );
-	}
-
 	Ŧ Json::FindNumber( const jvalue& v, sv path )ι->optional<T>{
-		auto p = path.size() ? FindValue(v,path) : optional<jvalue>{v};
+		const jvalue* p = path.size() ? FindValue(v,path) : &v;
 		optional<T> y;
 		if( p ){
 			if( auto n = p->try_to_number<T>(); n )

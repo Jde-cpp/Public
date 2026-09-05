@@ -23,27 +23,19 @@ namespace Jde{
 			throw IO::IOException{ move(e), sl };
 		}
 	}
-	α IO::Load( const fs::path& path, SL sl )ε->string{
+	//Load and LoadBinary differ only in the container they fill - one body, T = string or vector<char>.
+	Ṫ load( const fs::path& path, SL sl )ε->T{
 		CHECK_PATH( path, sl );
 		let size = fileSize( path );
 		TRACESL( "Opening {} - {} bytes ", path.string(), size );
 		std::ifstream f( path, std::ios::binary ); THROW_IFX( f.fail(), IO::IOException(path, "Could not open file", sl) );
-		string y( size, '\0' );
+		T y( size, '\0' );
 		f.read( y.data(), (std::streamsize)size );
 		THROW_IFX( (uint)f.gcount()!=size, IO::IOException(path, Ƒ("Read {} of {} bytes.", f.gcount(), size), sl) );
 		return y;
 	}
-
-	α IO::LoadBinary( const fs::path& path, SL sl )ε->vector<char>{//fs::filesystem_error
-		CHECK_PATH( path, sl );
-		let size = fileSize( path );
-		TRACESL( "Opening {} - {} bytes ", path.string(), size );
-		std::ifstream f( path, std::ios::binary ); THROW_IFX( f.fail(), IO::IOException(path, "Could not open file", sl) );
-		vector<char> y( size );
-		f.read( y.data(), (std::streamsize)size );
-		THROW_IFX( (uint)f.gcount()!=size, IO::IOException(path, Ƒ("Read {} of {} bytes.", f.gcount(), size), sl) );
-		return y;
-	}
+	α IO::Load( const fs::path& path, SL sl )ε->string{ return load<string>( path, sl ); }
+	α IO::LoadBinary( const fs::path& path, SL sl )ε->vector<char>{ return load<vector<char>>( path, sl ); }
 #ifdef _WIN32
 	α IO::BashToWindows( const fs::path& path )ι->fs::path{
 		auto str = path.string();

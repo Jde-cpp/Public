@@ -48,7 +48,6 @@ namespace Jde::Crypto{
 		string SubjectAltName;
 		string Country;			//subject C, empty if absent.
 		string Company;		//subject O, empty if absent.
-		//string Domain;		//subject CN, empty if absent.
 		string Upn;        //SAN otherName 1.3.6.1.4.1.311.20.2.3 (ms UPN), empty if absent.
 		string Email;      //SAN rfc822Name, empty if absent.
 		TimePoint Expiration; //notAfter.
@@ -71,16 +70,6 @@ namespace Jde::Crypto{
 		PrivateKeySettings PrivateKey;
 		PublicKeyPath PublicKey;
 		fs::path DhPath;
-
-/*		fs::path CertPath;
-		fs::path PrivateKeyPath;
-
-		string Passcode;
-		string AltName;
-		string Company;
-		string Country;
-		string Domain;
-*/
 	};
 }
 #undef Φ

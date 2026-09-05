@@ -34,7 +34,7 @@ namespace Jde::Opc{
 		return ua;
 	}
 	Ξ ToJson( UA_Guid v )ι->jstring{ return jstring{ Jde::ToString(ToGuid(v)) }; }
-	Ξ ByteStringToJson( const UA_ByteString& v )ι->jstring{ return jstring{ Str::ToHex((byte*)v.data, v.length) }; }
+	Ξ ByteStringToJson( const UA_ByteString& v )ι->jstring{ return jstring{ Str::ToHex(std::span{v.data, v.length}) }; }
 	Ξ ByteStringToBase64( const UA_ByteString& v )ι->jstring{
 		if( !v.length )
 			return jstring{};

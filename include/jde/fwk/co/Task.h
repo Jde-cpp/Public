@@ -15,9 +15,14 @@ namespace Jde{
 		β Exp()Ι->const up<Exception>& =0;
 		β MoveExp()ι->up<Exception> =0;
 		β SetExp( Exception&& x )ι->void=0;
-		β SetExp( std::exception&& x )ι->void=0;
+		α SetExp( std::runtime_error&& x )ι->void{
+			if( auto p = dynamic_cast<Exception*>(&x); p )
+				SetExp( move(*p) );
+			else if( auto p = dynamic_cast<runtime_error*>(&x); p )
+				SetExp( Exception{move(*p)} );
+		}
 		α ResumeExp( Exception&& e, coroutine_handle<> h )ι->void{ SetExp( move(e) ); h.resume(); };
-		α ResumeExp( std::exception&& e, coroutine_handle<> h )ι->void{ SetExp( move(e) ); h.resume(); };
+		α ResumeExp( std::runtime_error&& e, coroutine_handle<> h )ι->void{ SetExp( move(e) ); h.resume(); };
 	protected:
 		TResult Expected;
 	};
@@ -34,30 +39,16 @@ namespace Jde{
 //		α SetScaler( TResult x )ι->void{ base::Expected = x; } windows doesn't work.
 		α Resume( TResult&& x, coroutine_handle<> h )ι->void{ SetValue(std::move(x)); h.resume(); };
 //		α ResumeScaler( TResult x, coroutine_handle<> h )ι->void{ SetScaler(x); h.resume(); }; windows doesn't work.
+		using base::SetExp;//the override below would otherwise hide the base's std::exception overload.
 		α SetExp( Exception&& e )ι->void override{ base::Expected = e.Move(); }
-		α SetExp( std::exception&& x )ι->void override{
-			if( auto p = dynamic_cast<Exception*>(&x); p )
-				SetExp( move(*p) );
-			else if( auto p = dynamic_cast<runtime_error*>(&x); p )
-				base::Expected = mu<Exception>( move(*p) );
-			else
-				base::Expected = mu<Exception>( x.what() );
-		}
 	};
 	template<class Task>
 	struct VoidPromise : IPromise<Task,up<Exception>>{
 		using base = IPromise<Task,up<Exception>>;
 		α Exp()Ι->const up<Exception>& override{ return base::Expected; }
 		α MoveExp()ι->up<Exception> override{ return move(base::Expected); }
+		using base::SetExp;
 		α SetExp( Exception&& x )ι->void override{ base::Expected = x.Move(); }
-		α SetExp( std::exception&& x )ι->void override{
-			if( auto p = dynamic_cast<Exception*>(&x); p )
-				SetExp( move(*p) );
-			else if( auto p = dynamic_cast<runtime_error*>(&x); p )
-				base::Expected = mu<Exception>( move(*p) );
-			else
-				base::Expected = mu<Exception>( x.what() );
-		}
 	};
 	struct VoidTask{
 		struct promise_type : VoidPromise<VoidTask>{};

@@ -38,7 +38,7 @@ namespace Jde{
 			return exponent;
 		}
 		α PublicKey::ModulusHex()Ε->string{
-			auto modHex = Str::ToHex( (byte*)Modulus.data(), Modulus.size() );
+			auto modHex = Str::ToHex( Modulus );
 			THROW_IF( modHex.size() > 1024, "modulus {} is too long. max length: {}", modHex.size(), 1024 );
 			return modHex;
 		}
@@ -48,12 +48,12 @@ namespace Jde{
 	α Crypto::Random( unsigned char* p, uint size )ε->void{
 		THROW_IFX( ::RAND_bytes(p, (int)size)!=1, OpenSslException(Ƒ("RAND_bytes({}) failed", size)) );
 	}
-	α Crypto::CalcMd5( byte* data, uint size )ε->MD5{
-		if( size==0 )
+	α Crypto::CalcMd5( std::span<const byte> data )ε->MD5{
+		if( data.empty() )
 			return EmptyStringMd5;
 		auto ctx = NewMDCtx();
 		CALL( EVP_DigestInit_ex(ctx.get(), EVP_md5(), nullptr) );
-		CALL( 	EVP_DigestUpdate(ctx.get(), data, size) );
+		CALL( 	EVP_DigestUpdate(ctx.get(), data.data(), data.size()) );
 		MD5 md5;
 		unsigned int outputSize;
 		CALL( 	EVP_DigestFinal_ex(ctx.get(), md5.data(), &outputSize) );

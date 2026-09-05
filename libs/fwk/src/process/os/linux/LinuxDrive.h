@@ -1,14 +1,7 @@
 #pragma once
-#include <aio.h>
 #include <jde/fwk/io/FileAwait.h>
 #include "../../../io/IDrive.h"
 #include <jde/fwk/io/file.h>
-
-//using namespace Jde::Coroutine;
-namespace Jde::IO{
-	//constexpr int CompletionSignal{ SIGUSR2 };
-	//α AioCompletionHandler( int signo, siginfo_t *info, void *context )ι->void;
-}
 
 namespace Jde::IO::Drive{
 	struct Γ NativeDrive final: public IDrive{

@@ -80,7 +80,7 @@ namespace Jde::Windows{
 			for( auto pp = _workerBuffers.begin(); !used && pp!=_workerBuffers.end(); ++pp )
 				used = (*pp)->SubPush( e );
 			if( !used )
-				_workerBuffers.push_back( make_shared<WindowsWorker>(move(e)) );
+				_workerBuffers.push_back( ms<WindowsWorker>(move(e)) );
 		}
 	}
 

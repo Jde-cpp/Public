@@ -11,7 +11,7 @@ namespace Jde::Web::Client{
 	}
 
 	α ClientSocketVoidAwait::await_resume()ε->void{
-		AwaitResume();
+		CheckException();
 		auto p = Promise(); THROW_IF( !p, "Not Connected" );
 		if( auto e = p->MoveExp(); e )
 			e->Throw();

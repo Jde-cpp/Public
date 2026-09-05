@@ -14,12 +14,11 @@ namespace Jde::Crypto{
 
 	using Signature = vector<unsigned char>;
 	using MD5 = boost::uuids::uuid;
-	Φ CalcMd5( byte* data, uint size )ε->MD5;
-	Ŧ CalcMd5( T content )ε->MD5{ return CalcMd5( (byte*)content.data(), content.size() ); }
+	Φ CalcMd5( std::span<const byte> data )ε->MD5;
+	Ŧ CalcMd5( const T& content )ε->MD5 requires requires{ content.data(); content.size(); }{ return CalcMd5( std::as_bytes(std::span{content.data(), content.size()}) ); }//by reference - the old by-value form copied every Modulus it hashed.
 	Φ Random( unsigned char* p, uint size )ε->void;//throws on entropy failure.
 	Ŧ Random()ε->T{ T y{}; Random( (unsigned char*)&y, sizeof(T) ); return y; }
 	Φ CreateKey( const CryptoSettings& settings, SL sl )ε->void;
-	//Φ IssueCertificate( fs::path outputFile, fs::path privateKeyFile, str passcode, sv altName, sv company, sv country, sv domain, SL sl )ε->void;
 	//validity is a test seam:  production always issues for a year, and the expiry branch of ReissueReason is otherwise untestable (nothing else mints an expired certificate).
 	Φ IssueCertificate( const CryptoSettings& settings, std::chrono::seconds validity = std::chrono::days{365}, SRCE )ε->void;
 	//why the certificate on disk can no longer stand for `settings` - missing, expired or expiring within a day, or a SAN drifted from the configured one - empty if it can.  One predicate for every issuer (EnsureKeyCertificate, the gateway's per-target EnsureCertificate), so the two cannot drift apart again (web-certs3 #17).  An unreadable certificate throws (#3(b)).

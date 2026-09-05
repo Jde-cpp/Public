@@ -41,28 +41,23 @@ namespace Jde{
 		mutable std::shared_mutex Mutex;
 	private:
 		α Base()ι->vector<T>&{ return (vector<T>&)*this; }
+		α drain( bool reverse, function<void(const T& p)> before )ι->void;
 	};
 
 	//erase/rerase drain the whole container, calling `before` on each element. The callback is invoked
 	//*after* releasing the lock (on a moved-out snapshot) so a callback that re-enters this same Vector -
 	//e.g. an IShutdown::Shutdown calling RemoveShutdown - doesn't self-deadlock on the non-recursive mutex.
-	Ŧ	Vector<T>::erase( function<void(const T& p)> before )ι->void{
+	Ŧ	Vector<T>::erase( function<void(const T& p)> before )ι->void{ drain( false, move(before) ); }
+	Ŧ	Vector<T>::rerase( function<void(const T& p)> before )ι->void{ drain( true, move(before) ); }
+	Ŧ	Vector<T>::drain( bool reverse, function<void(const T& p)> before )ι->void{
 		vector<T> snapshot;
 		{
 			ul _( Mutex );
 			snapshot.reserve( base::size() );
-			std::move( base::begin(), base::end(), std::back_inserter(snapshot) );
-			base::clear();
-		}
-		for( auto& p : snapshot )
-			before( p );
-	}
-	Ŧ	Vector<T>::rerase( function<void(const T& p)> before )ι->void{
-		vector<T> snapshot;
-		{
-			ul _( Mutex );
-			snapshot.reserve( base::size() );
-			std::move( base::rbegin(), base::rend(), std::back_inserter(snapshot) );//reverse order preserved.
+			if( reverse )
+				std::move( base::rbegin(), base::rend(), std::back_inserter(snapshot) );//rerase: last registered is called first.
+			else
+				std::move( base::begin(), base::end(), std::back_inserter(snapshot) );
 			base::clear();
 		}
 		for( auto& p : snapshot )

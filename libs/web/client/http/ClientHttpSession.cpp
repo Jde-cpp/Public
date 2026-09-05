@@ -160,7 +160,7 @@ namespace Jde::Web::Client{
 				}
 				Resume( move(res) );
 			}
-			catch( std::exception& e ){
+			catch( runtime_error& e ){//IAwait::ResumeExp takes runtime_error - a Jde/ClientHttp exception keeps its type through it.
 				ResumeExp( move(e) );
 			}
 		}

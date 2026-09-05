@@ -1,6 +1,7 @@
 #include "jde/fwk/process/process.h"
 #include <jde/fwk/log/SpdLog.h>
 #include <iostream>
+#include <numeric>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/pattern_formatter.h>
@@ -72,7 +73,7 @@ namespace Jde::Logging{
 				}
 				catch( const spdlog::spdlog_ex& e ){
 					ERRT( ELogTags::Settings, "Could not create log:  ({}) path='{}' - {}", string{name}, path.string(), string{e.what()} );
-					std::cerr << Ƒ( "Could not create log:  ({}) path='{}' - {}", name, path.string(), path.string(), e.what() ) << std::endl;
+					std::cerr << Ƒ( "Could not create log:  ({}) path='{}' - {}", name, path.string(), e.what() ) << std::endl;
 					continue;
 				}
 				if( !pattern )
