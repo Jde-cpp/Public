@@ -25,7 +25,6 @@ namespace Process{
 	Φ SetConsole( bool isConsole )ι->void;
 	Φ SetConsoleTitle( sv title )ι->void;
 	Φ SetExecutor( up<IShutdown>&& executor )ι->void;
-	Φ SetConsoleTitle( sv title )ι->void;
 	Φ MemorySize()ι->size_t;
 	Φ ProcessId()ι->uint32;
 	constexpr static sv ProductVersion="2026.02.01";

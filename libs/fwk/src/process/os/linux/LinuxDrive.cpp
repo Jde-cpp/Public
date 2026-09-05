@@ -67,26 +67,25 @@ namespace Jde::IO::Drive{
 
 		return { Clock::to_time_t(time), total };
 	}
+	//stamps the entry's modified/accessed times onto `path` when it carries one; an unset accessed time follows modified.
+	//Shared by CreateFolder and Save - it used to be pasted into each.
+	Ω applyTimes( const fs::path& path, const IDirEntry& dirEntry )ι->void{
+		if( dirEntry.ModifiedTime.time_since_epoch()==Duration::zero() )
+			return;
+		let modifiedTime = to_timespec( dirEntry.ModifiedTime );
+		let accessedTime = dirEntry.AccessedTime.time_since_epoch()==Duration::zero() ? modifiedTime : to_timespec( dirEntry.AccessedTime );
+		timespec values[] = {accessedTime, modifiedTime};
+		if( utimensat(AT_FDCWD, path.string().c_str(), values, 0) )
+			WARN( "utimensat returned {} on {}", errno, path.string() );
+	}
 	α NativeDrive::CreateFolder( const fs::path& dir, const IDirEntry& dirEntry )ε->up<IDirEntry>{
 		fs::create_directory( dir );
-		if( dirEntry.ModifiedTime.time_since_epoch()!=Duration::zero() ){
-			let modifiedTime = to_timespec( dirEntry.ModifiedTime );
-			let accessedTime = dirEntry.AccessedTime.time_since_epoch()==Duration::zero() ? modifiedTime : to_timespec( dirEntry.AccessedTime );
-			timespec values[] = {accessedTime, modifiedTime};
-			if( utimensat(AT_FDCWD, dir.string().c_str(), values, 0) )
-				WARN( "utimensat returned {} on {}", errno, dir.string() );
-		}
+		applyTimes( dir, dirEntry );
 		return mu<DirEntry>( dir );
 	}
 	α NativeDrive::Save( const fs::path& path, const vector<char>& bytes, const IDirEntry& dirEntry )ε->up<IDirEntry>{
 		IO::SaveBinary<char>( path, std::span<char>((char*)bytes.data(), bytes.size()) );
-		if( dirEntry.ModifiedTime.time_since_epoch()!=Duration::zero() ){
-			let modifiedTime = to_timespec( dirEntry.ModifiedTime );
-			let accessedTime = dirEntry.AccessedTime.time_since_epoch()==Duration::zero() ? modifiedTime : to_timespec( dirEntry.AccessedTime );
-			timespec values[] = {accessedTime, modifiedTime};
-			if( utimensat(AT_FDCWD, path.string().c_str(), values, 0) )
-				WARN( "utimensat returned {} on {}", errno, path.string() );
-		}
+		applyTimes( path, dirEntry );
 		return mu<DirEntry>( path );
 	}
 

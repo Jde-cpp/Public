@@ -18,8 +18,8 @@ namespace Jde::Logging{
 		Line{ sl.line() },
 		Time{ Clock::now() },
 		UserPK{ userPK },
-		_fileName{ sv{sl.file_name()} },//static storage - copying into strings costs 2 allocations per log call.
-		_functionName{ sv{sl.function_name()} }
+		_file{ sv{sl.file_name()} },//static storage - copying into strings costs 2 allocations per log call.
+		_function{ sv{sl.function_name()} }
 	{}
 	Entry::Entry( ELogLevel l, ELogTags tags, uint32_t line, TimePoint time, Jde::UserPK userId, uuid messageId, uuid fileId, uuid functionId, vector<string>&& args )ι:
 		Arguments{ move(args) },
@@ -28,9 +28,9 @@ namespace Jde::Logging{
 		Line{ line },
 		Time{ time },
 		UserPK{ userId },
-		_id{ messageId },
-		_fileId{ fileId },
-		_functionId{ functionId }
+		_file{ fileId },
+		_function{ functionId },
+		_id{ messageId }
 	{}
 	Entry::Entry( ELogLevel l, ELogTags tags, uint32_t line, TimePoint time, Jde::UserPK userId, string&& text, string&& file, string&& function, vector<string>&& args )ι:
 		Text{ move(text) },
@@ -40,18 +40,17 @@ namespace Jde::Logging{
 		Line{ line },
 		Time{ time },
 		UserPK{ userId },
-		_fileName{ move(file) },
-		_functionName{ move(function) }
+		_file{ move(file) },
+		_function{ move(function) }
 	{}
 
-	function<StringMd5(sv)> _generateId;
-	α Entry::GenerateId( sv text )ι->StringMd5{ return Crypto::CalcMd5(text); }
+	α GenerateId( sv text )ι->StringMd5{ return Crypto::CalcMd5(text); }
 
 	α Entry::SourceLocation()Ι->spdlog::source_loc{
 		return spdlog::source_loc{
-			_fileName.index()==0 ? std::get<sv>(_fileName).data() : std::get<string>(_fileName).c_str(),
+			_file.View().data(),//NUL-terminated either way: a source_location literal, or the owned string's buffer.
 			(int)Line,
-			_functionName.index()==0 ? std::get<sv>(_functionName).data() : std::get<string>(_functionName).c_str()
+			_function.View().data()
 		};
 	}
 	α Entry::Message()Ι->string{
@@ -69,16 +68,6 @@ namespace Jde::Logging{
 			_message = Ƒ( "{}, args: '{}'", Text, Str::Join(Arguments, ", ", true) );
 		}
     return _message;
-	}
-	α Entry::FileString()ι->string&{
-		if( _fileName.index()==0 )
-			_fileName = string{ get<sv>(_fileName) };
-		return get<string>( _fileName );
-	}
-	α Entry::FunctionString()ι->string&{
-		if( _functionName.index()==0 )
-			_functionName = string{ get<sv>(_functionName) };
-		return get<string>( _functionName );
 	}
 }
 

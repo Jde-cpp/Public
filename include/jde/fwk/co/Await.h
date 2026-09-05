@@ -5,23 +5,26 @@
 #include "Task.h"
 
 namespace Jde{
-	struct VoidAwait{
-		using TPromise = VoidTask::promise_type;
-		using Task=VoidTask;
+	//What VoidAwait and IAwait share - the task-typed handle, the diagnostic await_suspend, the promise-routed
+	//ResumeExp/SetError, Resume, Source and the rethrow.  Templated on the task because the handle type is the whole
+	//point: an awaitable dictates its caller's return type (CLAUDE.md 'Coroutines').
+	template<class TTask>
+	struct AwaitBase{
+		using TPromise = TTask::promise_type;
+		using Task=TTask;
 		using Handle=coroutine_handle<TPromise>;
-		VoidAwait( SRCE )ι:_sl{sl}{}
+		AwaitBase( SRCE )ι:_sl{sl}{}
 		β await_ready()ι->bool{ return false; }
 		α await_suspend( Handle h )ι->void{ _h=h; Suspend(); }
 		//Diagnostic only - a matching caller selects the non-template overload above; a mismatched one lands here and the static_assert names the rule instead of 'no viable conversion from coroutine_handle<...>'.
 		Τ α await_suspend( coroutine_handle<T> )ι->void{
 			static_assert( std::is_same_v<T,TPromise>, "An awaitable dictates its caller's return type: a coroutine may only co_await awaitables whose ::Task is its own return type (CLAUDE.md 'Coroutines'). Split into a hand-off chain, or co_await Any(awaitable) from co/AnyAwait.h." );
 		}
-		β await_resume()ε->void{ AwaitResume(); }
 		α ResumeExp( Exception&& e )ι{
 			ASSERT( Promise() );
 			Promise()->ResumeExp( move(e), _h );
 		}
-		α ResumeExp( runtime_error&& e )ι{
+		α ResumeExp( std::runtime_error&& e )ι{//runtime_error, matching IPromise - a logic_error (stoi/stod) is a caller bug, not a result.
 			ASSERT( Promise() );
 			Promise()->ResumeExp( move(e), _h );
 		}
@@ -30,53 +33,29 @@ namespace Jde{
 	protected:
 		α SetError( Exception&& e )ι{ ASSERT(Promise()); Promise()->SetExp( move(e) ); }
 		β Suspend()ι->void=0;
-		α AwaitResume()ε->void{
+		α CheckException()ε->void{//rethrows the promise's stored exception, if any - the awaited value is read afterwards by the subclass.
 			if( up<Exception> e = Promise() ? Promise()->MoveExp() : nullptr; e ){
 				_h = nullptr;
 				e->Throw();
 			}
 		}
-		Handle _h{};
 		α Promise()->TPromise*{ return _h ? &_h.promise() : nullptr; }
+		Handle _h{};
 		SL _sl;
 	};
 
+	struct VoidAwait : AwaitBase<VoidTask>{
+		using AwaitBase<VoidTask>::AwaitBase;
+		β await_resume()ε->void{ CheckException(); }
+	};
 
 	template<class TResult,class TTask>
-	struct IAwait{
-		using TPromise = TTask::promise_type;
-		using Task=TTask;
-		using Handle=coroutine_handle<TPromise>;
-		IAwait( SRCE )ι:_sl{sl}{}
-		β await_ready()ι->bool{ return false; }
-		Ξ await_suspend( Handle h )ι->void{ _h=h; Suspend(); }
-		//Diagnostic only - a matching caller selects the non-template overload above; a mismatched one lands here and the static_assert names the rule instead of 'no viable conversion from coroutine_handle<...>'.
-		Τ Ξ await_suspend( coroutine_handle<T> )ι->void{
-			static_assert( std::is_same_v<T,TPromise>, "An awaitable dictates its caller's return type: a coroutine may only co_await awaitables whose ::Task is its own return type (CLAUDE.md 'Coroutines'). Split into a hand-off chain, or co_await Any(awaitable) from co/AnyAwait.h." );
-		}
+	struct IAwait : AwaitBase<TTask>{
+		using base = AwaitBase<TTask>;
+		using base::base;
 		β await_resume()ε->TResult = 0;
-		α ResumeExp( Exception&& e )ι{
-			ASSERT(Promise());
-			Promise()->ResumeExp( move(e), _h );
-		}
-		α ResumeExp( std::exception&& e )ι{
-			ASSERT( Promise() );
-			Promise()->ResumeExp( move(e), _h );
-		}
-		α Resume()ι{ ASSERT(_h); auto h=_h; _h=nullptr; h.resume(); }
-		α Source()ι->SL{ return _sl; }
 	protected:
-		α SetError( Exception&& e )ι{ ASSERT(Promise()); Promise()->SetExp( move(e) ); }
-		β Suspend()ι->void{};
-		α CheckException()ε->void{
-			if( up<Exception> e = Promise() ? Promise()->MoveExp() : nullptr; e ){
-				_h = nullptr;
-				e->Throw();
-			}
-		}
-		Handle _h{};
-		α Promise()->TPromise*{ return _h ? &_h.promise() : nullptr; }
-		SL _sl;
+		α Suspend()ι->void override{}//a default here, none in VoidAwait: typed awaitables may complete from await_ready and never suspend.
 	};
 
 	template<class Result,class TTask=Jde::TTask<Result>>
@@ -145,29 +124,15 @@ namespace Jde{
 		up<Exception> Error;
 	};
 
-	Ξ BlockVoidAwaitExecute( VoidAwait&& a, sp<BlockAwaitState<std::monostate>> s )ι->VoidAwait::Task{
-		try{
-			co_await a;
-		}
-		catch( Exception& e2 ){
-			s->Error = e2.Move();
-		}
-		s->Signal();
-	}
-
-	Ξ BlockVoidAwait( VoidAwait&& a )ε->void{
-		auto s = ms<BlockAwaitState<std::monostate>>();
-		const auto sl = a.Source();//copied before the move - the awaitable is the caller's only clue to what a stalled wait is waiting on.
-		BlockVoidAwaitExecute( move(a), s );
-		s->Wait( sl );
-		if( s->Error )
-			s->Error->Throw();
-	}
-
+	//One bridge for both kinds.  A void awaitable parks a monostate state - there is no value to store - and BlockVoidAwait
+	//is that instantiation; it used to be a second copy of these two functions.
 	template<class TAwait, class TResult>
 	α BlockAwaitExecute( TAwait& a, sp<BlockAwaitState<TResult>> s )ι->TAwait::Task{
 		try{
-			s->Result = co_await a;
+			if constexpr( std::is_same_v<TResult,std::monostate> )
+				co_await a;
+			else
+				s->Result = co_await a;
 		}
 		catch( Exception& e2 ){
 			s->Error = e2.Move();
@@ -178,13 +143,18 @@ namespace Jde{
 	template<class TAwait, class TResult>
 	α BlockAwait( TAwait&& a )ε->TResult{
 		auto s = ms<BlockAwaitState<TResult>>();
-		const auto sl = a.Source();
+		const auto sl = a.Source();//copied before the co_await - the awaitable is the caller's only clue to what a stalled wait is waiting on.
 		BlockAwaitExecute<TAwait,TResult>( a, s );
 		s->Wait( sl );
 		if( s->Error )
 			s->Error->Throw();
-		return move( *s->Result );
+		if constexpr( std::is_same_v<TResult,std::monostate> )
+			return {};
+		else
+			return move( *s->Result );
 	}
+
+	Ξ BlockVoidAwait( VoidAwait&& a )ε->void{ BlockAwait<VoidAwait,std::monostate>( move(a) ); }
 
 	Ŧ BlockTAwait( TAwait<T>&& a )ε->T{
 		return BlockAwait<TAwait<T>,T>( move(a) );

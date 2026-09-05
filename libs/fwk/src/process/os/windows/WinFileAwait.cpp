@@ -67,25 +67,7 @@ namespace Jde::IO{
 		h->close( ec );//before the resume posts: the sharing mode may not admit a reader the coroutine opens right after. Safe inline - the queue is empty, so no initiation can race the close.
 		if( ec )
 			WARN( "[{}]close failed: {}", op->Path.string(), ec.message() );
-		if( op->IsRead ){
-			if( auto h2 = op->ReadCoHandle(); h2 ){//ReadCoHandle already nulled _coHandle under _coHandleMutex.
-#ifdef __cpp_lib_move_only_function
-				Post( get<string>(move(op->Buffer)), move(h2) );
-#else
-				auto p = new string{ get<string>(move(op->Buffer)) };
-				Post( [=](){
-					h2.promise().Resume( move(*p), h2 );
-					delete p;
-				} );
-#endif
-			}
-		}
-		else{
-			if( auto h2 = op->WriteCoHandle(); h2 )//WriteCoHandle already nulled _coHandle under _coHandleMutex.
-				Post( move(h2) );
-			else
-				CRITICAL( "[{}]no handle.", op->Path.string() );
-		}
+		op->ResumeComplete();
 	}
 
 	Ω onChunk( const sp<RandomAccessHandle>& h, const sp<IFileChunkArg>& chunk, const boost::system::error_code& ec, uint bytes )ι->void{
@@ -142,21 +124,7 @@ namespace Jde::IO{
 		TRACE( "[{}] chunks = {}", Path.string(), ChunksToSend );
 		if( ChunksToSend==0 ){//empty file - no completions will arrive; resume immediately.
 			TRACE( "[{}]Empty file - resuming without io.", Path.string() );
-			if( IsRead ){
-				if( auto h2 = ReadCoHandle(); h2 ){
-#ifdef __cpp_lib_move_only_function
-					Post( get<string>(move(Buffer)), move(h2) );
-#else
-					auto p = new string{ get<string>(move(Buffer)) };
-					Post( [=](){
-						h2.promise().Resume( move(*p), h2 );
-						delete p;
-					} );
-#endif
-				}
-			}
-			else if( auto h2 = WriteCoHandle(); h2 )
-				Post( move(h2) );
+			ResumeComplete();
 			return;
 		}
 		auto executor = Executor();

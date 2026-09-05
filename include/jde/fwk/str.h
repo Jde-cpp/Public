@@ -41,7 +41,8 @@ namespace Jde::Str{
 	Φ RTrim( sv s )->sv;
 	Φ LTrim( string&& s )->string;
 	Φ RTrim( string&& s )->string;
-	Φ ToHex( byte* p, uint size )ι->string; //binary to hex string, TODO span<byte>
+	Φ ToHex( std::span<const byte> bytes )ι->string;
+	Ŧ ToHex( const T& x )ι->string requires requires{ x.data(); x.size(); }{ return ToHex( std::as_bytes(std::span{x.data(), x.size()}) ); }//any contiguous container or span of any byte-sized element.
 	Φ ToLower( sv source )ι->string;
 	Φ ToUpper( sv source )ι->string;
 	template<class T=uint> α TryTo( str s, uint* pos = nullptr, int base = 10 )ι->optional<T>;

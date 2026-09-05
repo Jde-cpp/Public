@@ -100,14 +100,10 @@ namespace Jde{
 	}
 
 	α Json::Parse( sv json, SL sl )ε->jobject{
-		std::error_code ec;
-		auto value = boost::json::parse( json, ec );
-		if( ec )
-			throw CodeException{ ec, ELogTags::Parsing, Ƒ("Failed to parse '{}'.", json), ELogLevel::Debug, sl };
-		return AsObject( value );
+		return AsObject( ParseValue(json, sl), sl );
 	}
 
-	α Json::ParseValue( string&& json, SL sl )ε->jvalue{
+	α Json::ParseValue( sv json, SL sl )ε->jvalue{
 		std::error_code ec;
 		auto value = boost::json::parse( json, ec );
 		if( ec )
@@ -144,7 +140,7 @@ namespace Jde{
 		return v.get_object();
 	}
 	α Json::AsObject( const jvalue& v, sv path, SL sl )ε->const jobject&{
-		auto p = FindValuePtr( v, path ); THROW_IFSL( !p, "Path '{}' not found in '{}'", path, serialize(v) );
+		auto p = FindValue( v, path ); THROW_IFSL( !p, "Path '{}' not found in '{}'", path, serialize(v) );
 		return AsObject( *p, sl );
 	}
 	α Json::AsObject( jobject& o, sv key, SL sl )ε->jobject&{
@@ -164,14 +160,12 @@ namespace Jde{
 		return Chrono::ToTimePoint( string{p->get_string()} );
 	}
 
-	α Json::FindDefaultObject( const jobject& o, sv key )ι->const jobject&{
-		let v = o.if_contains( key );
-		return v && v->is_object() ? v->get_object() : _emptyObject;
-	}
-	α Json::FindDefaultObjectPath( const jobject& o, sv path )ι->const jobject&{
-		let v = FindValue( o, path );
-		return v && v->is_object() ? v->get_object() : _emptyObject;
-	}
+	//the three FindDefaultObject spellings differ only in how they address the value - a key, a path on an object, a path on a
+	//value - so the object-or-empty answer is written once.
+	Ω objectOrEmpty( const jvalue* v )ι->const jobject&{ return v && v->is_object() ? v->get_object() : _emptyObject; }
+	α Json::FindDefaultObject( const jobject& o, sv key )ι->const jobject&{ return objectOrEmpty( o.if_contains(key) ); }
+	α Json::FindDefaultObjectPath( const jobject& o, sv path )ι->const jobject&{ return objectOrEmpty( FindValue(o, path) ); }
+	α Json::FindDefaultObject( const jvalue& v, sv path )ι->const jobject&{ return objectOrEmpty( FindValue(v, path) ); }
 	α Json::AsValue( const jobject& o, sv path, SL sl )ε->const jvalue&{
 		auto p = FindValue( o, path ); THROW_IFSL( !p, "Path '{}' not found in '{}'.", path, serialize(o) );
 		return *p;
@@ -246,11 +240,6 @@ namespace Jde{
 		let value = o.if_contains( key );
 		return value && value->is_bool() ? value->get_bool() : optional<bool>{};
 	}
-	α Json::FindDefaultObject( const jvalue& v, sv path )ι->const jobject&{
-		auto p = Json::FindObject(v, path);
-		return p ? *p : _emptyObject;
-	};
-
 	α Json::Kind( boost::json::kind kind )ι->string{
 		string y;
 		switch( kind ){

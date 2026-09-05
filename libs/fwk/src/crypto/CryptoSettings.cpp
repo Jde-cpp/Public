@@ -10,9 +10,6 @@
 #define let const auto
 namespace Jde::Crypto{
 	using namespace Jde::Crypto::Internal;
-/*	Ω defaultDomain()ι->string{//the cert CN doubles as the enrollment identity target, so it must be unique per client - never "localhost".
-		return Settings::FindString( "/instanceName" ).value_or( Ƒ("{}{}.{}", Process::AppName(), _debug ? ".Debug" : "", Process::HostName()) );
-	}*/
 
 	Ω defaultCommonName()ι->string{
 		string cn = Settings::FindString("/instanceName").value_or( string{Process::ProductName()} );
@@ -34,7 +31,7 @@ namespace Jde::Crypto{
 	}
 
 	Ω getPath( const jobject& settings, str jpath, fs::path subDir, sv fileName, sv certInstance={} )ι->fs::path{
-		auto fqFileName = [certInstance]( fs::path base )ι->fs::path{
+		auto fqFileName = [certInstance]( fs::path base )ι->fs::path {
 			if( certInstance.size() )
 				base += Ƒ( ".{}.pem", safeComponent(certInstance) );
 			return base;
@@ -70,11 +67,6 @@ namespace Jde::Crypto{
 		SubjectAltName{ Json::FindString(settings, "subjectAltName").value_or("DNS:localhost,IP:127.0.0.1") },
 		Country{ Json::FindString(settings, "country").value_or("") },
 		Company{ Json::FindString(settings, "company").value_or("Jde-Cpp") }{
-		//Issuer{ Json::FindString(settings, "issuer").value_or("") },
-		//Subject{ Json::FindString(settings, "subject").value_or("") },
-		//Upn{ Json::FindString(settings, "upn").value_or("") },
-		//Email{ Json::FindString(settings, "email").value_or("") },
-		//Expiration{ Json::FindTimePoint(settings, "expiration").value_or(TimePoint{}) }
 		ASSERT( CommonName.size() && CommonName!="localhost" );
 	}
 	Ω asn1String( const ASN1_STRING* s )ι->string{ return {(const char*)::ASN1_STRING_get0_data(s), (uint)::ASN1_STRING_length(s)}; }
@@ -190,11 +182,6 @@ namespace Jde::Crypto{
 		PrivateKey{ withDefaultProductName(Json::FindDefaultObject(settings, "privateKey"), settings), Certificate.FileStem },
 		PublicKey{ withDefaultProductName(Json::FindDefaultObject(settings, "publicKey"), settings), Certificate.FileStem },
 		DhPath{ getPath(settings, "dh", "", "dh") }
-/*		AltName{ Json::FindSVPath(settings, "cert/altName").value_or("DNS:localhost,IP:127.0.0.1") },
-		Company{ Json::FindSVPath(settings, "cert/company").value_or("Jde-Cpp") },
-		Country{ Json::FindSVPath(settings, "cert/country").value_or("US") },
-		Domain{ [&]{const auto d = Json::FindSVPath(settings, "cert/domain"); return d ? string{*d} : defaultDomain();}() }//value_or on the optional<sv> would dangle off defaultDomain()'s temporary.
-*/
 	{}
 
 	α CryptoSettings::CreateDirectories()Ε->void{

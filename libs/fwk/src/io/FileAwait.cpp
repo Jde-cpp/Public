@@ -42,17 +42,37 @@ namespace IO{
 			while( Chunks.size() )
 				Chunks.pop();
 		}
-		if( IsRead ){
-			if( auto h = ReadCoHandle(); h ){//ReadCoHandle already nulled _coHandle under _coHandleMutex.
-				Post( [path=move(Path),sl=_sl, m=move(m), code, h](){h.promise().ResumeExp(IO::IOException{path, code, move(m), sl}, h);} );
-			}
-		}
-		else{
-			if( auto h = WriteCoHandle(); h ){//WriteCoHandle already nulled _coHandle under _coHandleMutex.
-				Post( [path=move(Path),sl=_sl, m=move(m), code, h](){h.promise().ResumeExp(IO::IOException{path, code, move(m), sl}, h);} );
-			}
-		}
+		//one arm for both handle types - the read/write promises share ResumeExp(Exception&&, h).  CoHandle already
+		//nulled _coHandle under _coHandleMutex; a null handle means the awaiter was already resumed, nothing to post.
+		visit( [&]( auto h ){
+			if( h )
+				Post( [path=move(Path), sl=_sl, m=move(m), code, h](){ h.promise().ResumeExp( IO::IOException{path, code, move(m), sl}, h ); } );
+		}, CoHandle() );
 		chunk=nullptr;
+	}
+
+	α FileIOArg::ResumeComplete()ι->void{
+		visit( [this]( auto h ){
+			constexpr bool isRead = std::is_same_v<decltype(h), StringAwait::Handle>;
+			if( !h ){//a read loses its handle to PostExp when an earlier chunk failed while a later one was still in flight - that
+				if constexpr( !isRead )//completion is expected & silent.  A write has one chunk in flight, so a missing handle is a bug.
+					CRITICAL( "[{}]no handle.", Path.string() );
+				return;
+			}
+			if constexpr( isRead ){
+#ifdef __cpp_lib_move_only_function
+				Post( get<string>(move(Buffer)), move(h) );
+#else
+				auto p = new string{ get<string>(move(Buffer)) };
+				Post( [=](){
+					h.promise().Resume( move(*p), h );
+					delete p;
+				} );
+#endif
+			}
+			else
+				Post( move(h) );
+		}, CoHandle() );
 	}
 
 	α FileIOArg::ResumeExp( uint32 code, string&& m )ι->void{
@@ -61,14 +81,7 @@ namespace IO{
 	}
 	α FileIOArg::ResumeExp( uint32 code, string&& m, lg& /*chunkLock*/ )ι->void{
 		IOException e{ Path, code, move(m), _sl };
-		if( IsRead ){
-			auto h = ReadCoHandle();
-			h.promise().ResumeExp( move(e), h );
-		}
-		else{
-			auto h = WriteCoHandle();
-			h.promise().ResumeExp( move(e), h );
-		}
+		visit( [&e]( auto h ){ h.promise().ResumeExp( move(e), h ); }, CoHandle() );//same contract as before: the caller holds a live handle.
 	}
 
 	α ReadAwait::await_ready()ι->bool{

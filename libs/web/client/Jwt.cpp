@@ -78,7 +78,7 @@ namespace Jde::Web{
 		THROW_IFX( exp && *exp<now, Exception(sl, {EHttpStatus::Unauthorized}, "Invalid jwt.  Expired at '{}'.", ToIsoString(Clock::from_time_t(*exp))) );
 		THROW_IFX( !exp && std::abs(now-Iat)>MaxAgeWithoutExpiration, Exception(sl, {EHttpStatus::Unauthorized}, "Invalid jwt.  No 'exp' claim and 'iat' '{}' is not within {}s of '{}'.", Iat, MaxAgeWithoutExpiration, ToIsoString(Clock::from_time_t(now))) );
 		UserPK = { Json::FindNumber<UserPK::Type>(Body, "sub").value_or(0) };
-		UserName = Json::FindString( Body, "name" ).value_or( fpKey ? Str::ToHex((byte*)fpKey->data(), fpKey->size()) : "" );
+		UserName = Json::FindString( Body, "name" ).value_or( fpKey ? Str::ToHex(*fpKey) : "" );
 		UserTarget = Json::FindString( Body, "target" ).value_or( UserName );
 		Host = Json::FindString( Body, "host" ).value_or( "" );
 		SessionId = Json::FindDefaultSV( Body, "sid" );

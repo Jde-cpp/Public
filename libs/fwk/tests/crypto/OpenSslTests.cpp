@@ -162,7 +162,7 @@ namespace Jde::Crypto{
 		auto key = Crypto::ReadPublicKey( PublicKeyFile );
 		EXPECT_EQ( key.Modulus.size(), 256u ) << "CreateKey issues 2048-bit keys";
 		EXPECT_EQ( key.ExponentInt(), 65537u ) << "the exponent bytes fold big-endian";
-		EXPECT_EQ( key.ModulusHex(), Str::ToHex((byte*)key.Modulus.data(), key.Modulus.size()) );
+		EXPECT_EQ( key.ModulusHex(), Str::ToHex(key.Modulus) );
 		EXPECT_EQ( key.ModulusHex().size(), 512u ) << "two hex chars per byte - the enrollment column's width";
 		EXPECT_EQ( key.Hash32(), key.Hash32() ) << "OpcServerSession displays this per session";
 		//deliberately a mirror of the implementation: what matters is that the displayed id stays the big-endian

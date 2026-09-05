@@ -1,6 +1,5 @@
 ﻿#include <jde/fwk/str.h>
 #include <algorithm>
-#include <functional>
 #include <boost/algorithm/hex.hpp>
 #include <boost/uuid/string_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -105,10 +104,10 @@ namespace Jde{
 		}
 		return y;
 	}
-	α Str::ToHex( byte* p, uint size )ι->string{
+	α Str::ToHex( std::span<const byte> bytes )ι->string{
 		string hex;
-		hex.reserve( size*2 );
-		boost::algorithm::hex_lower( (char*)p, (char*)p+size, std::back_inserter(hex) );
+		hex.reserve( bytes.size()*2 );
+		boost::algorithm::hex_lower( (const char*)bytes.data(), (const char*)bytes.data()+bytes.size(), std::back_inserter(hex) );
 		return hex;
 	}
 
@@ -121,20 +120,29 @@ namespace Jde{
 	α Str::ToUpper( sv source )ι->string{ return transform(source, ::toupper); }
 
 
-	//decode one code point at x[i]. Bytes read unsigned - a signed char sign-extends into a negative
-	//wchar_t, which is UB in the space check. Only ASCII and the UTF-8 3-byte block led by 0xE2
-	//(U+2000..U+2FFF, general punctuation - where Unicode spaces live) are decoded; else the raw byte 0..255.
-	α GetChar( sv x, uint& i )ι->char32_t{
-		if( i>=x.size() )
-			return 0;
+	//Reads the code point that starts at x[i] into ch and returns the index just past it.  Bytes are read unsigned - a
+	//signed char sign-extends into a negative code point, ub in the space check.  Only ASCII and the UTF-8 3-byte block
+	//led by 0xE2 (U+2000..U+2FFF, general punctuation - where the Unicode spaces live) are decoded; any other byte is
+	//returned raw, 0..255, and never matches a space.
+	Ω isContinuation( unsigned char b )ι->bool{ return (b & 0xC0)==0x80; }
+	Ω decodeAt( sv x, uint i, char32_t& ch )ι->uint{
 		let b = (unsigned char)x[i];
-		if( b==0xE2 && i+2<x.size() ){
-			let hi = (unsigned char)x[i+1] & 0x3Fu, lo = (unsigned char)x[i+2] & 0x3Fu;
-			i += 2;
-			return 0x2000u | (hi << 6) | lo;
+		if( b==0xE2 && i+2<x.size() && isContinuation((unsigned char)x[i+1]) && isContinuation((unsigned char)x[i+2]) ){
+			ch = 0x2000u | (((unsigned char)x[i+1] & 0x3Fu) << 6) | ((unsigned char)x[i+2] & 0x3Fu);
+			return i+3;
 		}
-		return b;
-	};
+		ch = b;
+		return i+1;
+	}
+	//The same reading backwards: the code point that ends at x[i-1], returning where it starts.
+	Ω decodeBefore( sv x, uint i, char32_t& ch )ι->uint{
+		if( i>=3 && (unsigned char)x[i-3]==0xE2 && isContinuation((unsigned char)x[i-2]) && isContinuation((unsigned char)x[i-1]) ){
+			ch = 0x2000u | (((unsigned char)x[i-2] & 0x3Fu) << 6) | ((unsigned char)x[i-1] & 0x3Fu);
+			return i-3;
+		}
+		ch = (unsigned char)x[i-1];
+		return i-1;
+	}
 
 	Ω isSpace( char32_t ch )->bool{
 		if( ch<0x80 )
@@ -142,27 +150,33 @@ namespace Jde{
 		return (ch>=0x2000 && ch<=0x200A) || ch==0x2028 || ch==0x2029 || ch==0x202F || ch==0x205F;//Unicode spaces in the general-punctuation block.
 	}
 
-	Ṫ ltrim( T&& s, function<bool(char32_t)> f )->T{
+	//Both ends decode code points, so a U+2003 trims from the right exactly as it does from the left - it used to be
+	//byte-wise on the right and in the string&& overloads.  The predicate is a template parameter, not a std::function.
+	Ṫ ltrim( sv s, T&& isTrimmed )ι->sv{
 		uint i=0;
-		for( ; i<s.size() && f((unsigned char)*(std::begin(s)+i)); ++i );//unsigned: byte-wise paths must not sign-extend into f.
-		return i==0 ? s : T{ std::begin(s)+i, std::end(s) };
+		for( char32_t ch; i<s.size(); ){
+			let next = decodeAt( s, i, ch );
+			if( !isTrimmed(ch) )
+				break;
+			i = next;
+		}
+		return s.substr( i );
 	}
-	Ṫ rtrim( T&& s, function<bool(char32_t)> f )->T{
+	Ṫ rtrim( sv s, T&& isTrimmed )ι->sv{
 		uint i=s.size();
-		for( ; i>0 && f((unsigned char)*(std::begin(s)+i-1)); --i );
-		return i==s.size() ? s : T{ std::begin(s), std::begin(s)+i };
+		for( char32_t ch; i>0; ){
+			let start = decodeBefore( s, i, ch );
+			if( !isTrimmed(ch) )
+				break;
+			i = start;
+		}
+		return s.substr( 0, i );
 	}
 
-	α Str::LTrim( string&& s )->string{
-		return ltrim( move(s), isSpace );
-	}
-	α Str::LTrim( sv s )->sv{
-		uint i=0; char32_t ch;
-		for( ch = GetChar(s, i); isSpace(ch); ch = GetChar(s, ++i) );
-		if( ch>0xff && i>1 )
-			i-=2;
-		return i ? sv{ s.data()+i, s.size()-i } : s;
-	}
+	α Str::LTrim( sv s )->sv{ return ltrim( s, isSpace ); }
+	α Str::RTrim( sv s )->sv{ return rtrim( s, isSpace ); }
+	α Str::LTrim( string&& s )->string{ let t = LTrim( sv{s} ); return t.size()==s.size() ? move(s) : string{t}; }//untrimmed: hand the caller's string back, no copy.
+	α Str::RTrim( string&& s )->string{ let t = RTrim( sv{s} ); return t.size()==s.size() ? move(s) : string{t}; }
 	α Str::TrimFirstLast( string&& s, char first, char last )ι->string{
 		bool found{};
 		auto f = [&found]( char bracket, char32_t ch ){
@@ -171,20 +185,14 @@ namespace Jde{
 				found = true;
 			return skip || isSpace( ch );
 		};
-		auto trim = ltrim( move(s), [&f, first](char32_t ch){return f(first, ch);} );
-		if( !found )
-			return RTrim( move(trim) );
-		found = false;
-		return rtrim( move(trim), [&f, last](char32_t ch){return f(last, ch);} );
-	}
-
-	α Str::RTrim( string&& s )->string{
-		auto y = move( s );
-		let trimmed = RTrim( y );
-		return trimmed.size()==y.size() ? y : string{ trimmed };
-	}
-	α Str::RTrim( sv s )->sv{
-		return rtrim( sv{s}, [](char32_t ch){return isSpace(ch);} );
+		sv trimmed = ltrim( s, [&](char32_t ch){return f(first, ch);} );//spaces and at most one `first`.
+		if( found ){//only strip a `last` when a `first` was taken - an unmatched closing bracket is content.
+			found = false;
+			trimmed = rtrim( trimmed, [&](char32_t ch){return f(last, ch);} );
+		}
+		else
+			trimmed = RTrim( trimmed );
+		return trimmed.size()==s.size() ? move(s) : string{trimmed};
 	}
 
 	α Str::StartsWithInsensitive( sv value, sv starting )ι->bool{

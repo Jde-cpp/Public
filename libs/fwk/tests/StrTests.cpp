@@ -18,6 +18,15 @@ namespace Jde::Tests{
 		EXPECT_EQ( Str::LTrim(sv{"\xe2\x80\xaf" "abc"}), "abc" );//U+202F narrow no-break space.
 		EXPECT_EQ( Str::LTrim(sv{"\xe2\x82\xac" "x"}), "\xe2\x82\xac" "x" );//U+20AC euro (not a space) preserved intact.
 		EXPECT_EQ( Str::LTrim(sv{"\xe9" "x"}), "\xe9" "x" );//lone 0xE9 (invalid UTF-8 lead) - left as-is, no UB.
+		//fwk-refactor B1: the right side and the string&& overloads were byte-wise, so a Unicode space trimmed from the left survived on the right.
+		EXPECT_EQ( Str::RTrim(sv{"abc" "\xe2\x80\x83"}), "abc" );//U+2003 em space.
+		EXPECT_EQ( Str::Trim(sv{"\xe2\x80\x89" "abc" "\xe2\x80\x83"}), "abc" );
+		EXPECT_EQ( Str::Trim(string{"\xe2\x80\x89" " abc " "\xe2\x80\xaf"}), "abc" );//string&& overload decodes too.
+		EXPECT_EQ( Str::RTrim(sv{"x" "\xe2\x82\xac"}), "x" "\xe2\x82\xac" );//euro on the right - not a space, kept whole, not split mid-sequence.
+		EXPECT_EQ( Str::RTrim(sv{"x" "\xe9"}), "x" "\xe9" );//lone trailing 0xE9 kept.
+		EXPECT_EQ( Str::RTrim(sv{"\xe2\x80\x83"}), "" );//a string that is only a Unicode space empties, both directions.
+		EXPECT_EQ( Str::LTrim(sv{"\xe2\x80\x83"}), "" );
+		EXPECT_EQ( Str::TrimFirstLast(string{"\xe2\x80\x83" "[abc]" "\xe2\x80\x83"}, '[', ']'), "abc" );//brackets inside Unicode padding.
 	}
 
 	//Decode64 used to strip every trailing 0x00 byte (confusing them with padding), corrupting binary payloads such as RSA signatures ending in zero.
@@ -100,8 +109,10 @@ namespace Jde::Tests{
 	//the modulus spelling every enrolled identity is keyed by - see OpenSslTests.PublicKeyIdentity.
 	TEST( StrTests, ToHex ){
 		let bytes = vector<byte>{ byte{0x00}, byte{0x0f}, byte{0xff}, byte{0xa5} };
-		EXPECT_EQ( Str::ToHex((byte*)bytes.data(), bytes.size()), "000fffa5" ) << "lower case, two chars per byte, leading zeros kept";
-		EXPECT_EQ( Str::ToHex((byte*)bytes.data(), 0), "" );
+		EXPECT_EQ( Str::ToHex(bytes), "000fffa5" ) << "lower case, two chars per byte, leading zeros kept";
+		EXPECT_EQ( Str::ToHex(vector<byte>{}), "" );
+		EXPECT_EQ( Str::ToHex(std::span<const byte>{bytes}), "000fffa5" ) << "the span form the container overload forwards to";
+		EXPECT_EQ( Str::ToHex(string{"\x00\x0f", 2}), "000f" ) << "any byte-sized element type";
 	}
 
 	TEST( StrTests, TryTo ){

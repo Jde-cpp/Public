@@ -1,5 +1,3 @@
-//#include <unistd.h>
-#include <aio.h>
 #include <liburing.h>
 #include <sys/eventfd.h>
 #include <boost/asio.hpp>
@@ -163,26 +161,7 @@ namespace Jde::IO{
 		}
 		for( auto& completed : completedOps ){
 			markFinished( completed );
-			if( completed->IsRead ){
-				if( auto h = completed->ReadCoHandle(); h ){//ReadCoHandle already nulled _coHandle under _coHandleMutex.
-#ifdef __cpp_lib_move_only_function
-					Post( get<string>(move(completed->Buffer)), move(h) );
-#else
-					auto p = new string{ get<string>(move(completed->Buffer)) };
-					Post( [=](){
-						h.promise().Resume( move(*p), h );
-						delete p;
-					} );
-#endif
-				}
-			}
-			else{
-				if( auto h = completed->WriteCoHandle(); h ){//WriteCoHandle already nulled _coHandle under _coHandleMutex.
-					Post( move(h) );
-				}
-				else
-					CRITICAL( "[{}]no handle.", completed->Path.string() );
-			}
+			completed->ResumeComplete();
 		}
 		return submitOps;
 	}
@@ -280,21 +259,7 @@ namespace Jde::IO{
 		}
 		if( ChunksToSend==0 ){//empty file - no completions will arrive; resume immediately.
 			TRACE( "[{}]Empty file - resuming without io.", Path.string() );
-			if( IsRead ){
-				if( auto h2 = ReadCoHandle(); h2 ){
-#ifdef __cpp_lib_move_only_function
-					Post( get<string>(move(Buffer)), move(h2) );
-#else
-					auto p = new string{ get<string>(move(Buffer)) };
-					Post( [=](){
-						h2.promise().Resume( move(*p), h2 );
-						delete p;
-					} );
-#endif
-				}
-			}
-			else if( auto h2 = WriteCoHandle(); h2 )
-				Post( move(h2) );
+			ResumeComplete();
 			return;
 		}
 		++_requestCount;

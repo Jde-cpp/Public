@@ -26,12 +26,6 @@ namespace Jde::Math{
 		return engine();
 	}
 
-	template<typename T=double> struct Point{
-		α Distance( Point<T> o )Ι->T{ return std::pow( std::pow(o.X-X,2.0)+std::pow(o.Y-Y,2) ,.5); }
-		T X{0.0};
-		T Y{0.0};
-	};
-
 #define let const auto
 	Ŧ Statistics( const T& values, bool calcVariance=true )ι->StatResult<typename T::value_type>{
 		typedef typename T::value_type TValue;

@@ -92,4 +92,18 @@ namespace Jde::Tests{
 		jvalue notAnObject = 1;
 		EXPECT_THROW( Json::Visit(notAnObject, [](jobject&){}), Exception );
 	}
+	//fwk-refactor B2: FindValue(const jvalue&, path) returned optional<jvalue> - a deep copy of the addressed subtree on
+	//every Settings::FindNumber/FindBool - while the jobject overload returned a pointer.  Now both point into the source.
+	TEST_F( JsonTests, FindValueOnAValuePointsIntoIt ){
+		const jvalue v = jobject{ {"a", jobject{{"b", 7}, {"flag", true}}}, {"arr", jarray{1,2}} };
+		let p = Json::FindValue( v, "/a/b" );
+		ASSERT_NE( p, nullptr );
+		EXPECT_EQ( p, &v.as_object().at("a").as_object().at("b") ) << "a pointer into v, not a copy";
+		EXPECT_EQ( Json::FindValue(v, "/missing"), nullptr );
+		EXPECT_EQ( Json::FindNumber<int>(v, "/a/b"), 7 );
+		EXPECT_EQ( Json::FindNumber<int>(v.as_object().at("a").as_object().at("b"), {}), 7 ) << "empty path = the value itself";
+		EXPECT_EQ( Json::FindBool(v, "/a/flag"), true );
+		EXPECT_FALSE( Json::FindBool(v, "/a/b").has_value() ) << "wrong kind is nullopt, not a throw";
+		EXPECT_EQ( Json::FindObject(v, "/a"), &v.as_object().at("a").as_object() );
+	}
 }

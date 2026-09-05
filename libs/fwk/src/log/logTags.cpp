@@ -324,23 +324,19 @@ namespace Jde{
 	}
 
 	α LogTags::ToString()ι->string{
-		flat_map<ELogLevel, vector<string>> levels;
-		_configuredTags.cvisit_all( [&](let& kv){
-			levels.try_emplace( kv.second, vector<string>{} ).first->second.push_back( Jde::ToString(kv.first) );
-		});
 		string y = Ƒ( "default: {}\n", Jde::ToString(_defaultLevel) ); y.reserve( 1024 );
-		for( let& [level, tags] : levels )
-			y += Ƒ( "{}: {}\n", FromEnum(LogLevelStrings(), level), Str::Join(tags, ",") );
-
-		levels.clear();
-		ExtrapolatedTags.cvisit_all( [&](let& kv){
-			levels.try_emplace( kv.second, vector<string>{} ).first->second.push_back( Jde::ToString(kv.first) );
-		} );
-		for( let& [level, tags] : levels )
-			y += Ƒ( "{}: {}\n", FromEnum(LogLevelStrings(), level), Str::Join(tags, ",") );
+		auto appendLevels = [&y]( const concurrent_flat_map<ELogTags,ELogLevel>& tags ){//one line per level, its tags joined - configured first, then the memoized composites.
+			flat_map<ELogLevel, vector<string>> levels;
+			tags.cvisit_all( [&](let& kv){
+				levels.try_emplace( kv.second, vector<string>{} ).first->second.push_back( Jde::ToString(kv.first) );
+			});
+			for( let& [level, names] : levels )
+				y += Ƒ( "{}: {}\n", FromEnum(LogLevelStrings(), level), Str::Join(names, ",") );
+		};
+		appendLevels( _configuredTags );
+		appendLevels( ExtrapolatedTags );
 		if( y.size() )
 			y.pop_back();
-
 		return y;
 	}
 }

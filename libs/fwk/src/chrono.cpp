@@ -75,12 +75,29 @@ namespace Jde{
 		return {};
 	}
 
+	//Where the optional numeric zone - "+hh[:mm]" / "-hh[:mm]" - starts, or npos.  Searched from 19 so the date's own
+	//'-' separators are skipped; anything shorter has no room for one.
+	Ω zoneOffsetPos( str iso )ι->string::size_type{ return iso.size()>19 ? iso.find_first_of("+-", 19) : string::npos; }
+	//Both ToTimePoint branches read the date/time fields as UTC, so a numeric offset is subtracted explicitly to
+	//normalize (local = UTC + offset).  One body for both - it used to be written once per #if branch.
+	Ω applyZoneOffset( TimePoint& tp, str off, SL sl )ε->void{
+		let sign = off[0]=='-' ? -1 : 1;
+		string digits; for( char ch : off.substr(1) ) if( ch!=':' ) digits += ch;
+		try{
+			let oh = digits.size()>=2 ? std::stoi(digits.substr(0,2)) : 0;
+			let om = digits.size()>=4 ? std::stoi(digits.substr(2,2)) : 0;
+			tp -= sign*( hours{oh}+minutes{om} );
+		}
+		catch( std::logic_error& e ){
+			throw Exception{ sl, ExceptionArgs{}, move(e), "Could not parse ISO time zone offset:  {}", off };
+		}
+	}
+
 	α Chrono::ToTimePoint( string iso, SL sl )ε->TimePoint{
 		#if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
 			TimePoint tp;
-			//an optional zone follows the seconds: 'Z' (UTC) or a numeric ±hh[:mm] offset. %FT%T reads the
-			//date/time fields as UTC; a numeric offset is subtracted explicitly to normalize (local = UTC + offset).
-			let zonePos = iso.size()>19 ? iso.find_first_of("+-", 19) : string::npos;
+			//an optional zone follows the seconds: 'Z' (UTC) or a numeric ±hh[:mm] offset - see applyZoneOffset.
+			let zonePos = zoneOffsetPos( iso );
 			if( !iso.empty() && iso.back()=='Z' ){
 				std::istringstream is{ iso.substr(0, iso.size()-1) };
 				is >> std::chrono::parse( "%FT%T", tp );
@@ -90,17 +107,7 @@ namespace Jde{
 				std::istringstream is{ iso.substr(0, zonePos) };
 				is >> std::chrono::parse( "%FT%T", tp );
 				THROW_IFSL( is.fail(), "Could not parse ISO time:  {}", iso );
-				let off = iso.substr( zonePos );
-				let sign = off[0]=='-' ? -1 : 1;
-				string digits; for( char ch : off.substr(1) ) if( ch!=':' ) digits += ch;
-				try{
-					let oh = digits.size()>=2 ? std::stoi(digits.substr(0,2)) : 0;
-					let om = digits.size()>=4 ? std::stoi(digits.substr(2,2)) : 0;
-					tp -= sign*( hours{oh}+minutes{om} );
-				}
-				catch( std::logic_error& e ){
-					throw Exception{ sl, ExceptionArgs{}, move(e), "Could not parse ISO time zone offset:  {}", off };
-				}
+				applyZoneOffset( tp, iso.substr(zonePos), sl );
 			}
 			else{
 				std::istringstream is{ iso };
@@ -141,20 +148,8 @@ namespace Jde{
 				}
 				tp += Duration{ ticks };
 			}
-			if( let zonePos = iso.size()>19 ? iso.find_first_of("+-", 19) : string::npos; zonePos!=string::npos ){//numeric offset: local = UTC + offset, so subtract it to normalize.
-				let off = iso.substr( zonePos );
-				let sign = off[0]=='-' ? -1 : 1;
-				string digits; for( char ch : off.substr(1) ) if( ch!=':' ) digits += ch;
-				try{
-					let oh = digits.size()>=2 ? std::stoi(digits.substr(0,2)) : 0;
-					let om = digits.size()>=4 ? std::stoi(digits.substr(2,2)) : 0;
-					tp -= sign*( hours{oh}+minutes{om} );
-
-				}
-				catch( std::logic_error& e ){
-					throw Exception{ sl, ExceptionArgs{}, move(e), "Could not parse ISO time zone offset:  {}", off };
-				}
-			}
+			if( let zonePos = zoneOffsetPos(iso); zonePos!=string::npos )
+				applyZoneOffset( tp, iso.substr(zonePos), sl );
 			return tp;
 		#endif
 	}

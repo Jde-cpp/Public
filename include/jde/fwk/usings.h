@@ -31,7 +31,6 @@ namespace Jde{
 	using std::function;
 	using namespace std::literals;
 	using lg = std::lock_guard<std::mutex>;
-	using std::make_shared;//refactor remove
 	using std::mutex;
 	Τ using sp = std::shared_ptr<T>;
 	Τ using wp = std::weak_ptr<T>;
@@ -40,7 +39,6 @@ namespace Jde{
 	template <typename T, typename D = std::default_delete<T>> using up = std::unique_ptr<T,D>;
 	using std::get;
 	using std::static_pointer_cast;
-	using std::unique_lock;//refactor remove
 	using ul=std::unique_lock<std::shared_mutex>;
 	using sl=std::shared_lock<std::shared_mutex>;
 	using std::shared_mutex;
