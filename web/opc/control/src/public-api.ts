@@ -5,7 +5,7 @@ export {OpcServerDetail} from './lib/pages/opc-server-detail/opc-server-detail';
 export {NodeDetail} from './lib/pages/node-detail/node-detail';
 export {NodeChildren} from './lib/pages/node-detail/node-children/node-children';
 export {OpcAuthService} from './lib/services/opc-auth-service';
-export {GatewayService} from './lib/services/gateway-service';
+export {GATEWAY_SERVICE, GatewayService} from './lib/services/gateway-service';
 export {OpcServer, OpcServerService} from './lib/services/opc-server-service';
 export {GatewayResolver} from './lib/services/resolvers/gateway-resolver';
 export {NodeResolver} from './lib/services/resolvers/node-resolver';
@@ -15,6 +15,6 @@ export {GatewayRouteService, GatewayCnnctnRouteService} from './lib/services/rou
 export {OpcServerRouteService} from './lib/services/routes/opc-server-route-service';
 export {OpcNodeRouteService} from './lib/services/routes/opc-node-route-service';
 export {SettingsRouteService} from './lib/services/routes/settings-route-service';
-export {OpcStore} from './lib/services/opc-store';
+export {OPC_STORE, OpcStore} from './lib/services/opc-store';
 export {NodeSearchProvider} from './lib/services/node-search-provider';
 export type {NodeSearchRow} from './lib/services/node-search-provider';

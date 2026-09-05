@@ -42,7 +42,7 @@ export class RouteStore{
 		let storage = localStorage.getItem( key );
 		let children:RouteItem[] = [];
 		if( storage ){
-			children = JSON.parse(storage).map( (s:any)=>new RouteItem(s) );
+			children = JSON.parse(storage).map( (s:Partial<RouteItem>)=>new RouteItem(s) );
 			this.#children.set( key, children );
 			this.#rememberKey( key );//written before the key list existed - entries() sees it from now on
 		}

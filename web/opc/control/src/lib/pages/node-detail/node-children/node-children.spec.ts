@@ -12,7 +12,7 @@ import { ActivatedRoute } from '@angular/router';
 import { config, NEVER, Subject } from 'rxjs';
 import { ComponentPageTitle } from 'jde-spa';
 import { SnackbarService } from 'jde-framework';
-import { GatewayService, SubscriptionResult } from '../../../services/gateway-service';
+import { GATEWAY_SERVICE, GatewayService, SubscriptionResult } from '../../../services/gateway-service';
 import { NodeId } from '../../../model/node-id';
 import { Variable } from '../../../model/node';
 import { NodeChildren } from './node-children';
@@ -37,7 +37,7 @@ describe( 'NodeChildren subscription values', ()=>{
 		};
 		TestBed.configureTestingModule({ providers: [
 			{ provide: ActivatedRoute, useValue: {data: NEVER} },//no ngOnInit load - the state is set by hand below
-			{ provide: 'GatewayService', useValue: {} },
+			{ provide: GATEWAY_SERVICE, useValue: {} },
 			{ provide: SnackbarService, useValue: {exception: ()=>{}} },
 			{ provide: ComponentPageTitle, useValue: {} }
 		]});

@@ -23,7 +23,7 @@ export class NodeDetail implements OnDestroy, OnInit{
 		ProfileStore.setTabIndex( `nodeDetail/${JSON.stringify(this.node().toJson())}`, this.tabIndex );
   }
 	ngOnInit(){
-		this.activatedRoute.data.subscribe( (data:any)=>{
+		this.activatedRoute.data.subscribe( (data)=>{
 			this.pageData.set( data["pageData"] );
 			this.sideNav.set( this.pageData().route );
 			this.componentPageTitle.title = this.server().connection.name + (this.node().id==85 ? '' : `/${this.node().name}`);

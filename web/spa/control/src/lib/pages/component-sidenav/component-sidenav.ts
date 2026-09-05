@@ -43,7 +43,7 @@ export class ComponentSidenav implements OnInit, OnDestroy {
   private _route:ActivatedRoute = inject( ActivatedRoute );
   private _navigationFocusService:NavigationFocusService = inject( NavigationFocusService );
   private router:Router = inject( Router );
-  constructor( /*@Optional() @Inject('IRouteService') private routeService:IRouteService*/ ) {
+  constructor(){
     const breakpoints:BreakpointObserver = inject( BreakpointObserver );//local, not a field: nothing else reads it
     this.isScreenSmall = breakpoints.observe(`(max-width: ${SMALL_WIDTH_BREAKPOINT}px)`).pipe(map(breakpoint => breakpoint.matches));
   }
@@ -63,7 +63,7 @@ export class ComponentSidenav implements OnInit, OnDestroy {
         }
     ));
   }
-  onRouterOutletActivate( event : any ){//
+  onRouterOutletActivate( event:object ){//the activated component; `in` narrows it to one carrying a sideNav slot
 		if( 'sideNav' in event ){
 			event.sideNav = this.item;
 		}

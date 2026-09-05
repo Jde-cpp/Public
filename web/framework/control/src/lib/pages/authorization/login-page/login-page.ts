@@ -1,9 +1,9 @@
-import {Component, computed, effect, Inject, inject, OnDestroy, Resource, resource} from '@angular/core';
+import { Component, computed, effect, inject, OnDestroy, Resource, resource } from '@angular/core';
 import {Router, RouterLink} from "@angular/router";
 import { MatButtonModule } from '@angular/material/button'
 import { MatInputModule } from '@angular/material/input';
 import {MatFormFieldModule} from '@angular/material/form-field';
-import { EProvider, IAuth, IEnvironment, User } from 'jde-spa';
+import { EProvider, IAUTH, IENVIRONMENT, IAuth, IEnvironment, User } from 'jde-spa';
 import {FormBuilder, ReactiveFormsModule} from "@angular/forms";
 import {SnackbarService} from '../../../shared/snackbar/snackbar-service';
 import {GoogleAuthService, googleLoginHintKey} from '../../../services/google-auth-service';
@@ -14,7 +14,9 @@ import {GoogleAuthService, googleLoginHintKey} from '../../../services/google-au
 })
 export class LoginPage implements OnDestroy{
 	private snackbar:SnackbarService = inject( SnackbarService );
-	constructor( @Inject('IAuth') private authService: IAuth, @Inject('IEnvironment') private envService: IEnvironment ){
+	private authService:IAuth = inject( IAUTH );
+	private envService:IEnvironment = inject( IENVIRONMENT );
+	constructor(){
 		effect( async ()=>{
 			if( this.providers?.value()?.includes(EProvider.Google) && !this.showedGoogleLogin ){
 				this.showedGoogleLogin = true;

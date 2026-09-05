@@ -12,8 +12,9 @@ if( typeof globalThis.localStorage=="undefined" ){
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router, Routes } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
-import { AppService, AuthStore, ETransport } from 'jde-framework';
+import { AppService, AUTH_STORE, AuthStore, ETransport } from 'jde-framework';
 import { GatewayService } from './gateway-service';
+import { OPC_STORE } from './opc-store';
 
 class Dummy{}
 //the routes GatewayService has to read a gateway out of - app.routes.ts carries both forms, and 'apps/gateways/:instance'
@@ -34,8 +35,8 @@ describe('GatewayService.defaultGateway', () => {
 		TestBed.configureTestingModule({ providers: [
 			provideRouter( routes ),
 			provideHttpClient(),
-			{ provide: 'AuthStore', useValue: {user: ()=>undefined, logout: ()=>{}} as unknown as AuthStore },
-			{ provide: 'OpcStore', useValue: {} },
+			{ provide: AUTH_STORE, useValue: {user: ()=>undefined, logout: ()=>{}} as unknown as AuthStore },
+			{ provide: OPC_STORE, useValue: {} },
 			{ provide: AppService, useValue: {transport: ETransport.Unsecure, gatewayInstances: ()=>Promise.resolve(instances)} }
 		]});
 		router = TestBed.inject( Router );
@@ -84,8 +85,8 @@ describe('GatewayService.gateway', () => {
 		TestBed.configureTestingModule({ providers: [
 			provideRouter( routes ),
 			provideHttpClient(),
-			{ provide: 'AuthStore', useValue: {user: ()=>undefined, logout: ()=>{}} as unknown as AuthStore },
-			{ provide: 'OpcStore', useValue: {} },
+			{ provide: AUTH_STORE, useValue: {user: ()=>undefined, logout: ()=>{}} as unknown as AuthStore },
+			{ provide: OPC_STORE, useValue: {} },
 			{ provide: AppService, useValue: {transport: ETransport.Unsecure, gatewayInstances} }
 		]});
 		return TestBed.inject( GatewayService );

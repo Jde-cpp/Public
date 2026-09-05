@@ -1,4 +1,4 @@
-import { Signal } from '@angular/core';
+import { Signal, InjectionToken } from '@angular/core';
 
 export enum EProvider{
 	None = 0,
@@ -80,3 +80,5 @@ export interface IAuth{
 	googleAuthClientId( log:Log ):Promise<string>;
 	user:Signal<User | undefined>;
 }
+//angular-review3 C13: a typed token in place of the string one - a typo now fails the build instead of resolving to nothing at runtime, and inject() can take it.
+export const IAUTH = new InjectionToken<IAuth>( 'IAuth' );

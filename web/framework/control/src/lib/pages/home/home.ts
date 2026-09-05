@@ -1,8 +1,8 @@
 import { inject } from '@angular/core';
 import { P } from "@angular/cdk/keycodes";
-import { Component, Inject, OnInit, signal } from "@angular/core";
+import { Component, OnInit, signal } from "@angular/core";
 import { ActivatedRoute, Router } from "@angular/router";
-import { ComponentCategoryList, RouteItem, IRouteService } from "jde-spa";
+import { ComponentCategoryList, RouteItem, IROUTE_SERVICE, IRouteService } from "jde-spa";
 
 @Component( {
 	templateUrl: './home.html',
@@ -12,8 +12,7 @@ import { ComponentCategoryList, RouteItem, IRouteService } from "jde-spa";
 export class Home implements OnInit {
 	private route:ActivatedRoute = inject( ActivatedRoute );
 	private router:Router = inject( Router );
-	constructor( @Inject("IRouteService") private routerService: IRouteService ){
-	}
+	private routerService:IRouteService = inject( IROUTE_SERVICE );
 	async ngOnInit(){
 		let items = new Array<RouteItem>();
 		for( let config of this.router.config.filter(x=> x.data && x.path!.length && x.path!="login") )

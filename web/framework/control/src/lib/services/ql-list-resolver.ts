@@ -1,8 +1,8 @@
 import {ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnapshot} from '@angular/router';
-import {inject, Inject, Injectable} from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import {SnackbarService} from '../shared/snackbar/snackbar-service';
 import { TableSchema} from '../model/ql/schema/table-schema';
-import { IGraphQL } from './graphql';
+import { IGRAPHQL, IGraphQL } from './graphql';
 import { PageProfile, PageSettings } from '../pages/graphql/model/page-settings';
 import { StringUtils } from '../utils/string-utils';
 import { MetaObject } from '../model/ql/schema/meta-object';
@@ -48,7 +48,7 @@ export class QLListResolver implements Resolve<QLListData> {
 	private route:ActivatedRoute = inject( ActivatedRoute );
 	private router:Router = inject( Router );
 	private cnsl:SnackbarService = inject( SnackbarService );
-	constructor( @Inject('IGraphQL') private ql: IGraphQL ){}
+	private ql:IGraphQL = inject( IGRAPHQL );
 
 	resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<QLListData>{
 		const collectionDisplay = route.paramMap.get( "collectionDisplay" );
