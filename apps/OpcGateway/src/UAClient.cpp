@@ -148,26 +148,21 @@ namespace Jde::Opc::Gateway{
 
 	//the file name keys on the target but the SAN on the certificateUri, so an existing file is not proof it is the
 	//cert this config describes; a changed uri would otherwise be rejected as BadCertificateUriInvalid forever with
-	//nothing naming the file to delete.  SanUri only, never the whole SubjectAltName: the der ctor rebuilds that by
-	//joining sanEntry() renderings, and any lossy round-trip would mismatch on every connect and re-issue in a loop.
-	Ω certificateMatches( const Crypto::CryptoSettings& settings, SL sl )ε->bool{
-		if( !fs::exists(settings.Certificate.Path) )
-			return false;
-		let onDisk = Crypto::Certificate{ Crypto::ReadCertificate(settings.Certificate.Path), sl };//an unreadable cert throws, as it does in EnsureKeyCertificate - keep the two policies together.
-		let matches = onDisk.SanUri()==settings.Certificate.SanUri();
-		if( !matches )
-			INFO( "Re-issuing '{}': certificateUri '{}' -> '{}'.", settings.Certificate.Path.string(), onDisk.SanUri(), settings.Certificate.SanUri() );
-		return matches;
-	}
-
+	//nothing naming the file to delete.  ReissueReason compares only the SAN entry types that round-trip byte-for-byte
+	//through the der ctor (URI among them; otherName is excluded on both sides), so a lossy rendering cannot re-issue in a loop.
 	α UAClient::EnsureCertificate( const ServerCnnctnNK& target, sv uri, SL sl )ε->void{
 		let& settings = CryptoSettings( target, uri );
-		if( certificateMatches(settings, sl) )
+		//the same predicate EnsureKeyCertificate uses for the web certificates - missing, expired or expiring, or the SAN (here the
+		//certificateUri the server matches against our applicationUri) drifted - so the two paths cannot diverge again:  this
+		//one compared the SAN uri alone and let an issued certificate run until the peer rejected it as expired (web-certs3 #17).
+		let reason = Crypto::ReissueReason( settings, sl );
+		if( reason.empty() )
 			return;
+		INFO( "Re-issuing '{}': {}.", settings.Certificate.Path.string(), reason );
 		settings.CreateDirectories();
 		if( !fs::exists(settings.PrivateKey.Path) )
 			Crypto::CreateKey( settings, sl );
-		Crypto::IssueCertificate( settings, sl );
+		Crypto::IssueCertificate( settings, std::chrono::days{365}, sl );
 	}
 	α UAClient::Configuration()ε->UA_ClientConfig*{
 		let uri = Str::Replace( _opcServer.CertificateUri, " ", "%20" );

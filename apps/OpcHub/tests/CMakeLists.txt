@@ -20,7 +20,7 @@ set( targetName Jde.Opc.Hub.Tests )
 add_executable( ${targetName} )
 compileOptions( ${targetName} )
 
-file( GLOB sources *.cpp )
+file( GLOB sources CONFIGURE_DEPENDS *.cpp )
 list( APPEND sources ${CMAKE_CURRENT_SOURCE_DIR}/../../OpcGateway/tests/utils/GatewayClientSocket.cpp ${CMAKE_CURRENT_SOURCE_DIR}/../../OpcGateway/tests/utils/helpers.cpp ) #the gateway suite's socket client and server-connection helpers, as the soak target reuses them.
 add_dependencies( ${targetName} Jde.DB.MySql ) #built on every platform; odbc only exists on windows.
 if( WIN32 )
@@ -28,7 +28,7 @@ if( WIN32 )
 	add_dependencies( ${targetName} Jde.DB.Odbc )
 endif()
 sqliteProcDependencies( ${targetName} Jde.DB.Sqlite.AppServer Jde.DB.Sqlite.OpcGateway ) #the ctest run below dlopens these via config/args/sqlite
-file( GLOB headers *.h )
+file( GLOB headers CONFIGURE_DEPENDS *.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 target_include_directories( ${targetName} PRIVATE ${jdeRoot}/include/jde/app/proto )

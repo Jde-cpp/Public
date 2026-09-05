@@ -62,7 +62,7 @@ namespace Jde{
 
 	α Crypto::CreateKeyCertificate( const CryptoSettings& settings, SL sl )ε->void{
 		CreateKey( settings, sl );
-		IssueCertificate( settings, sl );
+		IssueCertificate( settings, std::chrono::days{365}, sl );
 	}
 
 	//SAN entry types a re-issue comparison can trust: sanEntry() renders these back byte-for-byte.  otherName is excluded
@@ -88,12 +88,14 @@ namespace Jde{
 	//the pems.  A re-issue keeps the key pair, so modulus-keyed enrollment and public-key trust survive; only anchors
 	//holding the exact bytes have to re-read the file.  Configs sharing one path with differing SANs re-issue on every
 	//start - the caller's log line names both sides, making that visible.
-	Ω reissueReason( const Crypto::CryptoSettings& settings, SL sl )ε->string{
+	α Crypto::ReissueReason( const Crypto::CryptoSettings& settings, SL sl )ε->string{
 		if( !fs::exists(settings.Certificate.Path) )
 			return "no certificate";
 		let onDisk = Crypto::Certificate{ Crypto::ReadCertificate(settings.Certificate.Path, sl), sl };//unreadable throws - a damaged install, not something to paper over by minting a replacement.
-		if( onDisk.Expiration<=Clock::now() )
-			return Ƒ( "expired {}", ToIsoString<std::chrono::days>(onDisk.Expiration) );
+		//a day's margin:  a certificate that outlives the check by an hour is presented, trusted, and then rejected mid-session
+		//by the peer's own clock - re-issuing at the last start that sees it coming costs nothing, the key pair survives.
+		if( let now = Clock::now(); onDisk.Expiration<=now+24h )
+			return Ƒ( "{} {}", onDisk.Expiration<=now ? "expired" : "expires", ToIsoString<std::chrono::days>(onDisk.Expiration) );
 		if( comparableSanEntries(settings.Certificate.SubjectAltName)!=comparableSanEntries(onDisk.SubjectAltName) )
 			return Ƒ( "subjectAltName '{}' -> '{}'", onDisk.SubjectAltName, settings.Certificate.SubjectAltName );
 		return {};
@@ -103,9 +105,9 @@ namespace Jde{
 		try{
 			if( !fs::exists(settings.PrivateKey.Path) )
 				CreateKeyCertificate( settings, sl );
-			else if( let reason = reissueReason(settings, sl); reason.size() ){
+			else if( let reason = ReissueReason(settings, sl); reason.size() ){
 				INFO( "Re-issuing '{}': {}.", settings.Certificate.Path.string(), reason );
-				IssueCertificate( settings, sl );
+				IssueCertificate( settings, std::chrono::days{365}, sl );
 			}
 
 			Certificate{ ReadCertificate(settings.Certificate.Path), sl }.Log( Ƒ("Read Certificate at {}", settings.Certificate.Path.string()), sl );
@@ -136,9 +138,10 @@ namespace Jde{
 		INFO( "Created public key at {}", settings.PublicKey.Path.string() );
 		CALL( PEM_write_bio_PUBKEY(publicBio.get(), pKey.get()) );
 		Internal::WritePrivateKey( settings.PrivateKey.Path, move(pKey), settings.PrivateKey.Passcode );
+		INFO( "Created private key at {} ({}).", settings.PrivateKey.Path.string(), settings.PrivateKey.Passcode.empty() ? "unencrypted - privateKey.passcode is empty" : "encrypted at rest" );
 	}
 
-	α Crypto::IssueCertificate( const CryptoSettings& settings, SL sl )ε->void{
+	α Crypto::IssueCertificate( const CryptoSettings& settings, std::chrono::seconds validity, SL sl )ε->void{
 		X509Ptr cert{ ::X509_new(), ::X509_free };
 		auto pCert = cert.get();
 
@@ -151,7 +154,7 @@ namespace Jde{
 		CHECK_NULL( ::BN_to_ASN1_INTEGER(serialBN.get(), ::X509_get_serialNumber(pCert)) );
 		::X509_set_version( pCert, 2 );//X509v3
 		::X509_gmtime_adj( ::X509_get_notBefore(pCert), 0 );
-		::X509_gmtime_adj( ::X509_get_notAfter(pCert), 365 * 24 * 60 * 60 );
+		::X509_gmtime_adj( ::X509_get_notAfter(pCert), (long)validity.count() );
 		let privateKey{ Internal::ReadPrivateKey(settings.PrivateKey.Path, settings.PrivateKey.Passcode, sl) };
 		::X509_set_pubkey( pCert, privateKey.get() );
 

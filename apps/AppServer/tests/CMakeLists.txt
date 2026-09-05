@@ -19,8 +19,8 @@ set( targetName Jde.App.Server.Tests )
 add_executable( ${targetName} )
 compileOptions( ${targetName} )
 
-file( GLOB sources *.cpp )
-file( GLOB_RECURSE headers *.h )
+file( GLOB sources CONFIGURE_DEPENDS *.cpp )
+file( GLOB_RECURSE headers CONFIGURE_DEPENDS *.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 add_dependencies( ${targetName} Jde.DB.MySql ) #built on every platform; odbc only exists on windows.

@@ -64,8 +64,7 @@ local logsDir = std.extVar("logsDir");
 			},
 			privateKey:: "{ApplicationDataFolder}/ssl/private/server.pem",
 			publicKey:: "{ApplicationDataFolder}/ssl/public/server.pem",
-			dh:: "{ApplicationDataFolder}/ssl/dh.pem",
-			passcode:: "$(JDE_PASSCODE)"
+			dh:: "{ApplicationDataFolder}/ssl/dh.pem"
 		}
 	},
 	web:{

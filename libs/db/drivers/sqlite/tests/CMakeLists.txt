@@ -20,7 +20,7 @@ endif()
 
 add_executable( ${targetName} )
 compileOptions( ${targetName} )
-file( GLOB sources *.cpp )
+file( GLOB sources CONFIGURE_DEPENDS *.cpp )
 #SqliteProcs/SqliteRow are compiled in, not linked: the driver is loaded at runtime, so the registry inside it is
 #unreachable from here.  This gives the tests their own instance of it - isolated from the driver's, which is what
 #lets ProcRegistryTests register throwaway names without disturbing the real twins.
