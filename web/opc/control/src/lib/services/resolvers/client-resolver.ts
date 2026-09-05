@@ -1,7 +1,7 @@
 import { ActivatedRouteSnapshot, createUrlTreeFromSnapshot, Resolve, Router, RouterStateSnapshot } from '@angular/router';
-import { inject, Inject, Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { RouteItem, RouteStore } from 'jde-spa';
-import { DetailResolver, DetailResolverData, DetailRoute, SnackbarService, TargetNotFoundError} from 'jde-framework'
+import { DetailResolver, DetailResolverData, DetailRoute, IGRAPHQL, SnackbarService, TargetNotFoundError} from 'jde-framework'
 import { Gateway, GatewayService } from '../gateway-service';
 import { ServerCnnctn } from '../../model/server-cnnctn';
 import { OpcStore } from '../opc-store';
@@ -9,8 +9,7 @@ import { OpcStore } from '../opc-store';
 @Injectable()
 export class ClientResolver implements Resolve<DetailResolverData<ServerCnnctn>> {
 	private router:Router = inject( Router );
-	//still constructor injection: 'IGraphQL' is a STRING token, which inject() cannot take (review3 C5)
-	constructor( @Inject('IGraphQL') private gatewayService: GatewayService ){}
+	private gatewayService = inject( IGRAPHQL ) as GatewayService;//the gateway routes alias IGRAPHQL to the one GatewayService instance (app.routes.ts gatewayProvider)
 
 	resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<DetailResolverData<ServerCnnctn>>{
 		let collectionDisplay = "Server Connections";

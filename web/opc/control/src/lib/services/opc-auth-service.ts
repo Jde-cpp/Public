@@ -1,13 +1,12 @@
-import { Inject, Injectable, computed, signal, inject } from '@angular/core';
+import { Injectable, computed, signal, inject } from '@angular/core';
 import { AppService, Log } from 'jde-framework';
-import { GatewayService } from './gateway-service';
+import { GATEWAY_SERVICE, GatewayService } from './gateway-service';
 import { EProvider, IAuth, User } from 'jde-spa';
 
 @Injectable()
 export class OpcAuthService implements IAuth{
 	private app:AppService = inject( AppService );
-	constructor( @Inject('GatewayService') private gatewayService: GatewayService )
-	{}
+	private gatewayService:GatewayService = inject( GATEWAY_SERVICE );
 
 	googleAuthClientId(): Promise<string> {
 		return this.app.googleAuthClientId( (m)=>console.log(m) );

@@ -11,7 +11,7 @@ if( typeof globalThis.localStorage=="undefined" ){
 }
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { AppService, AuthStore, ETransport } from 'jde-framework';
+import { AppService, AUTH_STORE, AuthStore, ETransport } from 'jde-framework';
 import { OpcServerService } from './opc-server-service';
 
 const instances = [ {host:'localhost', port:1970, instanceName:'opc1'} ];
@@ -23,7 +23,7 @@ describe( 'OpcServerService.servers', ()=>{
 		TestBed.resetTestingModule();
 		TestBed.configureTestingModule({ providers: [
 			provideHttpClient(),
-			{ provide: 'AuthStore', useValue: {user: ()=>undefined, logout: ()=>{}} as unknown as AuthStore },
+			{ provide: AUTH_STORE, useValue: {user: ()=>undefined, logout: ()=>{}} as unknown as AuthStore },
 			{ provide: AppService, useValue: {transport: ETransport.Unsecure, opcServerInstances} }
 		]});
 		return TestBed.inject( OpcServerService );

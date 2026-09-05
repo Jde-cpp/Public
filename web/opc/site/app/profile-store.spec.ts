@@ -16,8 +16,11 @@ if( typeof globalThis.localStorage=="undefined" ){
 	(window as any).localStorage = storage;
 }
 
-import { signal } from '@angular/core';
-import { IProfileService, ProfileStore } from 'jde-spa';
+import { Injector, runInInjectionContext, signal } from '@angular/core';
+import { IPROFILE_SERVICE, IProfileService, ProfileStore } from 'jde-spa';
+
+//ProfileStore reads its service through inject() (review3 C5/C13), so a bare `new` needs an injection context carrying the token.
+const createStore = ( service:IProfileService|null=null )=>runInInjectionContext( Injector.create({providers: [{provide: IPROFILE_SERVICE, useValue: service}]}), ()=>new ProfileStore() );
 
 class MockProfileService implements IProfileService{
 	constructor( user:string|undefined='u1' ){ this.#user.set( user ); }
@@ -35,7 +38,7 @@ describe( 'ProfileStore', ()=>{
 	it( 'logged out: load falls back to localStorage and save is a no-op', async ()=>{
 		const service = new MockProfileService();
 		service.setUser( undefined );//logged out
-		const store = new ProfileStore( service );
+		const store = createStore( service );
 		localStorage.setItem( 'k', JSON.stringify({a:1}) );
 		await expect( store.load('k', {a:0}) ).resolves.toEqual( {a:1} );
 		await store.save( 'k', {a:2} );
@@ -45,7 +48,7 @@ describe( 'ProfileStore', ()=>{
 	});
 
 	it( 'no provider: load reads localStorage, set writes it, save has nowhere to go', async ()=>{
-		const store = new ProfileStore( null );
+		const store = createStore( null );
 		await expect( store.load('k', 'd') ).resolves.toBe( 'd' );
 		await store.save( 'k', 'v' );
 		expect( localStorage.getItem('k') ).toBeNull();
@@ -55,7 +58,7 @@ describe( 'ProfileStore', ()=>{
 
 	it( 'set writes localStorage only, never the server', ()=>{
 		const service = new MockProfileService();
-		const store = new ProfileStore( service );
+		const store = createStore( service );
 		store.set( 'k', {a:1} );
 		expect( localStorage.getItem('k') ).toBe( JSON.stringify({a:1}) );
 		expect( service.save ).not.toHaveBeenCalled();
@@ -64,7 +67,7 @@ describe( 'ProfileStore', ()=>{
 	it( 'logged in: one fetch per key, later loads served from the cache with a fresh parse each time', async ()=>{
 		const service = new MockProfileService();
 		service.rows.set( 'k', JSON.stringify({a:1}) );
-		const store = new ProfileStore( service );
+		const store = createStore( service );
 		const first = await store.load( 'k', {} );
 		const second = await store.load( 'k', {} );
 		expect( service.load ).toHaveBeenCalledTimes( 1 );
@@ -74,7 +77,7 @@ describe( 'ProfileStore', ()=>{
 
 	it( 'no server row + local value: migrates the local value up', async ()=>{
 		const service = new MockProfileService();
-		const store = new ProfileStore( service );
+		const store = createStore( service );
 		localStorage.setItem( 'k', JSON.stringify(['local']) );
 		await expect( store.load('k', []) ).resolves.toEqual( ['local'] );
 		await vi.waitFor( ()=>expect(service.save).toHaveBeenCalledWith('k', JSON.stringify(['local'])) );
@@ -82,7 +85,7 @@ describe( 'ProfileStore', ()=>{
 
 	it( 'no server row + no local value: default returned and the absence is cached', async ()=>{
 		const service = new MockProfileService();
-		const store = new ProfileStore( service );
+		const store = createStore( service );
 		await expect( store.load('k', 'd') ).resolves.toBe( 'd' );
 		await expect( store.load('k', 'd2') ).resolves.toBe( 'd2' );
 		expect( service.load ).toHaveBeenCalledTimes( 1 );//negative-cached
@@ -90,7 +93,7 @@ describe( 'ProfileStore', ()=>{
 
 	it( 'save skips the mutation when the value is unchanged, and never touches localStorage', async ()=>{
 		const service = new MockProfileService();
-		const store = new ProfileStore( service );
+		const store = createStore( service );
 		await store.save( 'k', {a:1} );
 		await store.save( 'k', {a:1} );//unchanged ngOnDestroy-style save
 		expect( localStorage.getItem('k') ).toBeNull();
@@ -102,7 +105,7 @@ describe( 'ProfileStore', ()=>{
 	it( 'load failure falls back to localStorage and is not cached', async ()=>{
 		const service = new MockProfileService();
 		service.load.mockRejectedValue( new Error('down') );
-		const store = new ProfileStore( service );
+		const store = createStore( service );
 		localStorage.setItem( 'k', JSON.stringify('local') );
 		const warn = vi.spyOn( console, 'warn' ).mockImplementation( ()=>{} );
 		try{
@@ -118,20 +121,20 @@ describe( 'ProfileStore', ()=>{
 	it( 'save failure REJECTS, and is not cached: the next save retries instead of being deduped away', async ()=>{
 		const service = new MockProfileService();
 		service.save.mockRejectedValue( new Error('down') );
-		const store = new ProfileStore( service );
+		const store = createStore( service );
 		await expect( store.save('k', 'v') ).rejects.toThrow( 'down' );
 		await expect( store.save('k', 'v') ).rejects.toThrow( 'down' );//same value, but the failed write left nothing cached to compare against
 		expect( service.save ).toHaveBeenCalledTimes( 2 );
 	});
 
 	it( 'a successful save resolves', async ()=>{
-		const store = new ProfileStore( new MockProfileService() );
+		const store = createStore( new MockProfileService( ) );
 		await expect( store.save('k', 'v') ).resolves.toBeUndefined();
 	});
 
 	it( 'the 11th key evicts the least-recently-used entry', async ()=>{
 		const service = new MockProfileService();
-		const store = new ProfileStore( service );
+		const store = createStore( service );
 		for( let i=0; i<11; ++i )
 			await store.load( `k${i}`, 'd' );
 		expect( service.load ).toHaveBeenCalledTimes( 11 );
@@ -144,7 +147,7 @@ describe( 'ProfileStore', ()=>{
 	it( 'cache entries are user-scoped: a different login cannot hit them', async ()=>{
 		const service = new MockProfileService();
 		service.rows.set( 'k', JSON.stringify('a-data') );
-		const store = new ProfileStore( service );
+		const store = createStore( service );
 		await expect( store.load('k', 'd') ).resolves.toBe( 'a-data' );
 		service.setUser( 'u2' );
 		service.rows.set( 'k', JSON.stringify('b-data') );
@@ -158,7 +161,7 @@ describe( 'ProfileStore', ()=>{
 		}
 		const service = new MockProfileService();
 		service.rows.set( 'k', JSON.stringify([{n:1},{n:2}]) );
-		const store = new ProfileStore( service );
+		const store = createStore( service );
 		const items = await store.loadClassArray( 'k', Item, 'x' );
 		expect( items ).toHaveLength( 2 );
 		expect( items[0] ).toBeInstanceOf( Item );

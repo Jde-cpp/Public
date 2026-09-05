@@ -1,11 +1,11 @@
-import { Inject, inject, Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { ActivatedRouteSnapshot, createUrlTreeFromSnapshot, Params, Resolve, Router, RouterStateSnapshot } from '@angular/router';
 import { SnackbarService } from 'jde-framework';
 import { ProfileStore } from 'jde-spa';
-import { Gateway, GatewayService } from '../gateway-service';
+import { Gateway, GATEWAY_SERVICE, GatewayService } from '../gateway-service';
 import { OpcObject, UaNode } from '../../model/node';
 import { NodeRoute } from '../../model/node-route';
-import { OpcStore } from '../opc-store';
+import { OPC_STORE, OpcStore } from '../opc-store';
 import { Server } from '../../model/server';
 import { NodeView } from '../../model/node-view';
 
@@ -17,12 +17,10 @@ export type NodePageData = {
 };
 @Injectable()
 export class NodeResolver implements Resolve<NodePageData> {
-	constructor(
-		private router:Router,
-		private snackbar: SnackbarService,
-		@Inject('GatewayService') private gatewayService: GatewayService,
-		@Inject('OpcStore') private opcStore:OpcStore
-	){}
+	private router = inject( Router );
+	private snackbar = inject( SnackbarService );
+	private gatewayService:GatewayService = inject( GATEWAY_SERVICE );
+	private opcStore:OpcStore = inject( OPC_STORE );
 	private profileStore = inject( ProfileStore );
 
 	async load( route:NodeRoute ):Promise<NodePageData>{
