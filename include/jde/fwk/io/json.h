@@ -72,7 +72,7 @@ namespace Jde{
 
 		Φ Find( const jvalue& container, const jvalue& item )ι->const jvalue*;
 
-		α FindDefaultArray( const jvalue& v, sv path )ι->const jarray&;
+		Φ FindDefaultArray( const jvalue& v, sv path )ι->const jarray&;
 		Φ FindDefaultArray( const jobject& o, sv key )ι->const jarray&;
 		Φ FindDefaultObject( const jvalue& v, sv path )ι->const jobject&;
 		Φ FindDefaultObject( const jobject& o, sv key )ι->const jobject&;

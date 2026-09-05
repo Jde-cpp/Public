@@ -45,8 +45,9 @@ namespace Jde::Tests{
 
 	//and the parsed rules really are what this process is running under - the two forms every suite passes.
 	TEST( ProcessTests, ThisSuiteArgsParsed ){
-		EXPECT_TRUE( Process::FindArg("-tests").has_value() ) << "-tests is how the config binds its ext vars; without it settings evaluation fails";
-		EXPECT_EQ( *Process::FindArg("-tests"), "" );
+		let testFlag = Process::FindArg("-tests") ? Process::FindArg("-tests") : Process::FindArg("-ctest");//direct runs pass -tests, addJdeTest passes -ctest; settings.cpp binds the ext vars on either.
+		ASSERT_TRUE( testFlag.has_value() ) << "-tests/-ctest is how the config binds its ext vars; without one settings evaluation fails";
+		EXPECT_EQ( *testFlag, "" );
 		let settings = Process::FindArg( "-settings" );
 		ASSERT_TRUE( settings.has_value() );
 		EXPECT_TRUE( settings->ends_with("Framework.Tests.jsonnet") ) << *settings;
