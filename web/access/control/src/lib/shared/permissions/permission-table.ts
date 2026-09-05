@@ -1,12 +1,12 @@
 import { CommonModule } from "@angular/common";
-import { AfterViewInit, Component, inject, Inject, model, OnDestroy, OnInit, signal, ViewChild } from "@angular/core";
+import { AfterViewInit, Component, inject, model, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
 import { MatCheckbox, MatCheckboxChange } from "@angular/material/checkbox";
 import { MatSortModule, Sort } from "@angular/material/sort";
 import { MatTable, MatTableModule } from "@angular/material/table";
 import { ProfileStore } from "jde-spa";
 import { verify, EnumKeysPipe, SnackbarService } from "jde-framework";
 import { Permission, Rights } from "../../model/permission";
-import { AccessService } from "../../services/access-service";
+import { ACCESS_SERVICE, AccessService } from "../../services/access-service";
 import { Resource } from "../../model/resource";
 
 @Component({
@@ -17,8 +17,7 @@ import { Resource } from "../../model/resource";
 })
 export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
 	private cnsle:SnackbarService = inject( SnackbarService );
-	constructor( @Inject('AccessService') private accessService: AccessService )
-	{}
+	private accessService:AccessService = inject( ACCESS_SERVICE );
 
 	async ngOnInit(){
 		this.profile = await this.profileStore.load<Profile>( 'permissionTable', PermissionTable.defaultProfile );

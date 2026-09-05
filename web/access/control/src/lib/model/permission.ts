@@ -76,7 +76,7 @@ export class Permission{
 		return mutations;
 	}
 	mutation( original:Permission ):Mutation|null{
-		let args:any = {};
+		const args:Record<string,unknown> = {};
 		if( this.allowed!=original?.allowed )
 			args["allowed"] = this.allowed;
 		if( this.denied!=original?.denied )

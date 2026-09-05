@@ -47,23 +47,23 @@ export class QLListSettingsDisplay implements OnInit{
 	updatePageSize( value:number ){
 		this.pageSize.set( value>0 ? Math.floor(value) : 1 );//the box is free text: a cleared or negative one would save as `limit:0`, which query() reads as "no limit"
 	}
-	cellClick( row:any ){
+	cellClick( row:SelectorField|ViewField ){
 		this.selection.set( row );
 	}
-	isSelected( row:any ){
+	isSelected( row:SelectorField|ViewField ){
 		return this.selection() === row;
 	}
 	drop( event: CdkDragDrop<string> ){
 		moveItemInArray( this.dataSource, event.previousIndex, event.currentIndex || 1 );
     this.table.renderRows();
 	}
-	columnName(col:any): string{
+	columnName( col:SelectorField|ViewField|undefined ): string{
 		return col ? StringUtils.idToDisplay(col.name) : "Selector";
 	}
 
 	get columnNames(){ return ["position", "select", "name"] };
 	dataSource:(SelectorField|ViewField)[] = [];
-	selection = signal<ViewField>( null as any );
+	selection = signal<SelectorField|ViewField|null>( null );//only ever compared by identity in isSelected
 	pageSize = signal<number>( 25 );//ngOnInit seeds it from view().limit; ql-list-settings.getView reads it back
 
 	view = input.required<View>();

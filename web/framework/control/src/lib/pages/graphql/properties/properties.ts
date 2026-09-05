@@ -1,10 +1,10 @@
-import {Component, effect, Inject, input, output, AfterViewInit, EventEmitter, ViewChild, ViewChildren, ElementRef, OnInit, OnDestroy, QueryList, ChangeDetectorRef, computed, viewChildren, model, signal, CUSTOM_ELEMENTS_SCHEMA, inject } from '@angular/core';
+import { Component, effect, input, output, AfterViewInit, EventEmitter, ViewChild, ViewChildren, ElementRef, OnInit, OnDestroy, QueryList, ChangeDetectorRef, computed, viewChildren, model, signal, CUSTOM_ELEMENTS_SCHEMA, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatFormFieldModule, MatLabel } from '@angular/material/form-field';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SnackbarService } from '../../../shared/snackbar/snackbar-service';
 import { ComponentPageTitle } from 'jde-spa';
-import { EnumValue, IGraphQL } from '../../../services/graphql';
+import { EnumValue, IGRAPHQL, IGraphQL } from '../../../services/graphql';
 import { TableSchema } from '../../../model/ql/schema/table-schema';
 import { Field, FieldKind } from '../../../model/ql/schema/field';
 import { StringUtils } from '../../../utils/string-utils';
@@ -25,7 +25,8 @@ export class Properties implements OnInit{
 	private componentPageTitle:ComponentPageTitle = inject( ComponentPageTitle );
 	private cdr:ChangeDetectorRef = inject( ChangeDetectorRef );
 	private cnsl:SnackbarService = inject( SnackbarService );
-	constructor( @Inject('IGraphQL') private graphQL: IGraphQL ){
+	private graphQL:IGraphQL = inject( IGRAPHQL );
+	constructor(){
 		effect( ()=>{
 			this.componentPageTitle.detail = this.record()["name"] ?? `New ${this.schema().type}`;
 		});

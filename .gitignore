@@ -102,3 +102,4 @@ web/proto/google/
 *.binpb
 **/CTestCostData.txt
 *.output
+apps/OpcServer/config/common-meta.libsonnet

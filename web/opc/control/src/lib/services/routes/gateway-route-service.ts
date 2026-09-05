@@ -1,12 +1,12 @@
-import { inject, Inject, Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { ActivatedRoute, Routes, UrlSegment } from "@angular/router";
 import { RouteItem, IRouteService, RouteStore } from "jde-spa";
 import { subscribe } from "jde-framework";
-import { GatewayService } from '../gateway-service';
+import { GATEWAY_SERVICE, GatewayService } from '../gateway-service';
 
 @Injectable( {providedIn: 'root'} )
 export class GatewayRouteService implements IRouteService{
-	constructor( @Inject('GatewayService') private _gatewayService:GatewayService ){}
+	private _gatewayService:GatewayService = inject( GATEWAY_SERVICE );
 	async children():Promise<Routes>{
 		throw new Error("Not implemented");
 	}
@@ -27,8 +27,7 @@ export class GatewayRouteService implements IRouteService{
 @Injectable( {providedIn: 'root'} )
 export class GatewayCnnctnRouteService implements IRouteService{
 	private _route:ActivatedRoute = inject( ActivatedRoute );
-	constructor( @Inject('GatewayService') private _gatewayService:GatewayService ){
-	}
+	private _gatewayService:GatewayService = inject( GATEWAY_SERVICE );
 	async children():Promise<Routes>{
 		throw new Error("Not implemented");
 	}

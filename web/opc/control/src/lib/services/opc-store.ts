@@ -1,4 +1,4 @@
-import { Injectable, signal } from "@angular/core";
+import { Injectable, InjectionToken, signal } from "@angular/core";
 import { CnnctnTarget, ServerCnnctn } from "../model/server-cnnctn";
 import { browseEq, ETypes, Ns, toBrowse } from '../model/types';
 import { NodeRoute } from "../model/node-route";
@@ -197,3 +197,5 @@ export class OpcStore{
 	#nodes = new Map<GatewayTarget,Map<CnnctnTarget, Map<NodeKey,StoreNode>>>();
 	#connections = new Map<GatewayTarget,Map<CnnctnTarget, Server>>();
 }
+//angular-review3 C13: a typed token in place of the string one - a typo now fails the build instead of resolving to nothing at runtime, and inject() can take it.
+export const OPC_STORE = new InjectionToken<OpcStore>( 'OpcStore' );

@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, InjectionToken } from '@angular/core';
 import { ActivatedRoute, Router, Routes, UrlSegment } from "@angular/router";
 import { RouteItem } from '../pages/component-sidenav/route-item';
 
@@ -28,3 +28,5 @@ export class RouteService implements IRouteService{
 		return items;
 	}
 }
+//angular-review3 C13: a typed token in place of the string one - a typo now fails the build instead of resolving to nothing at runtime, and inject() can take it.
+export const IROUTE_SERVICE = new InjectionToken<IRouteService>( 'IRouteService' );

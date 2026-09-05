@@ -1,5 +1,5 @@
 import { SelectionModel, SelectionChange } from '@angular/cdk/collections';
-import {ChangeDetectorRef, Component, computed, effect, inject, Inject, model, OnDestroy, OnInit, signal} from '@angular/core';
+import { ChangeDetectorRef, Component, computed, effect, inject, model, OnDestroy, OnInit, signal } from '@angular/core';
 import {MatButtonModule} from '@angular/material/button';
 import {MatButtonToggleModule} from '@angular/material/button-toggle';
 import {MatCheckboxChange, MatCheckboxModule} from '@angular/material/checkbox';
@@ -10,7 +10,7 @@ import {MatSelectChange, MatSelectModule} from '@angular/material/select';
 import { MatSortModule, Sort } from "@angular/material/sort";
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {RouterModule, ActivatedRoute, Router} from '@angular/router';
-import { Gateway, GatewayService, SubscriptionResult } from '../../../services/gateway-service';
+import { Gateway, GATEWAY_SERVICE, GatewayService, SubscriptionResult } from '../../../services/gateway-service';
 import { ProfileStore } from 'jde-spa';
 import { DateUtils, QLListSettings, SnackbarService, ProtoUtils, Timestamp, View, ViewType} from 'jde-framework'
 import { EAccess, ETypes } from '../../../model/types';
@@ -37,13 +37,12 @@ import { NodeId } from '../../../model/node-id';
   imports: [RouterModule,MatButtonModule,MatButtonToggleModule,MatCheckboxModule,MatChipsModule,MatDatepickerModule,MatFormFieldModule,MatIconModule,MatInputModule,MatProgressBarModule,MatSortModule,MatTableModule,MatToolbarModule,MatTooltipModule,MatSelectModule,QLListSettings]
 })
 export class NodeChildren implements OnInit, OnDestroy {
-	constructor(
-		@Inject('GatewayService') private gatewayService:GatewayService,
-		private route: ActivatedRoute,
-		private snackbar: SnackbarService,
-		private componentPageTitle:ComponentPageTitle,
-		private cdRef:ChangeDetectorRef)
-	{
+	private gatewayService:GatewayService = inject( GATEWAY_SERVICE );
+	private route = inject( ActivatedRoute );
+	private snackbar = inject( SnackbarService );
+	private componentPageTitle = inject( ComponentPageTitle );
+	private cdRef = inject( ChangeDetectorRef );
+	constructor(){
 		//the sidenav siblings sort by the active view (OpcStore.setRoute), and a node switch is resolved before this component hears
 		//of it - so the store learns of every view change here, header sorts included, ahead of the next navigation.
 		effect( ()=>{ if( this.view() ) this.#opcStore.nodeView.set( this.view() ); } );

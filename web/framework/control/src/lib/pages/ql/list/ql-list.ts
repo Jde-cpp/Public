@@ -1,11 +1,11 @@
-import { Component, OnInit, OnDestroy, Inject, ViewChild, input, signal, model, computed, Injectable, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, input, signal, model, computed, Injectable, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {ActivatedRoute, Route, Router, Routes, UrlSegment} from '@angular/router';
 import {Sort} from '@angular/material/sort';
 import { MatTable } from '@angular/material/table';
 import { QLListSettings } from './ql-list-settings/ql-list-settings';
 import {SnackbarService} from '../../../shared/snackbar/snackbar-service'
-import {IGraphQL, EnumValue } from '../../../services/graphql';
+import {IGRAPHQL, IGraphQL, EnumValue } from '../../../services/graphql';
 import {Field} from '../../../model/ql/schema/field';
 import {TableSchema}  from '../../../model/ql/schema/table-schema';
 import {MetaObject}  from '../../../model/ql/schema/meta-object';
@@ -23,6 +23,7 @@ import { GraphQLTable } from '../../graphql/table/graphql-table';
 import { QLListData, QLListResolver, TableSettings } from '../../../services/ql-list-resolver';
 import { SelectionModel } from '@angular/cdk/collections';
 import { View, ViewField, ViewType } from '../../../model/ql/view';
+import { QLRow } from '../../../model/ql/target-row';
 import { PageProfile } from '../../graphql/model/page-settings';
 import { verify } from '../../../utils/utils';
 
@@ -34,13 +35,11 @@ import { verify } from '../../../utils/utils';
 	imports: [CommonModule, GraphQLTable, MatButton, MatButtonToggle, MatButtonToggleGroup, MatCheckbox, MatIcon, MatIconButton, MatProgressBar, MatToolbar, MatTooltip, QLListSettings]
 })
 export class QLList implements OnInit, OnDestroy{
-	constructor(
-		private route: ActivatedRoute,
-		private router:Router,
-		private componentPageTitle:ComponentPageTitle,
-		@Inject('IGraphQL') private ql: IGraphQL,
-		private snackbar: SnackbarService)
-	{}
+	private route = inject( ActivatedRoute );
+	private router = inject( Router );
+	private componentPageTitle = inject( ComponentPageTitle );
+	private ql:IGraphQL = inject( IGRAPHQL );
+	private snackbar = inject( SnackbarService );
 
 	ngOnDestroy(){
 		//this.profileStore.save(this.collectionName(), this.profile);
@@ -54,7 +53,7 @@ export class QLList implements OnInit, OnDestroy{
 		else
 			this.route.data.subscribe( (data)=>{ this.init( data ); } );
 	}
-	async init( resolvedValue:any ){
+	async init( resolvedValue:Record<string,unknown> ){
 		let data = resolvedValue["data"] as QLListData;
 		verify( data.profile.view );
 		const priorIds = this.selections()?.selected.map( r=>r?.id ).filter( id=>id!=null ) ?? [];//a reload builds new row objects, so carry the selection over by id
@@ -66,10 +65,10 @@ export class QLList implements OnInit, OnDestroy{
 
 		const rows = data.results[collectionName];
 		const multiple = this.selector() || data.profile.view.showSelector;
-		let selected = rows.filter( (r:any)=>priorIds.includes(r.id) );
+		let selected = rows.filter( (r:QLRow)=>priorIds.includes(r.id) );
 		if( !multiple )
 			selected = selected.slice( 0, 1 );//SelectionModel throws on multiple values in single-select mode
-		this.selections.set( new SelectionModel<any>(multiple, selected) );
+		this.selections.set( new SelectionModel<QLRow>(multiple, selected) );
 		this.data.set( rows );
 		this.sideNav.set( data.routing );
 		let paths = [];
@@ -100,7 +99,7 @@ export class QLList implements OnInit, OnDestroy{
 	//block has returned.  /access/resources has no 'resources/:target' route, so every row click there dead-ended in a
 	//NavigationError the user never saw - hence both halves here:  don't offer the click where there is nowhere to go, and
 	//report it through the returned promise where the navigation still fails.
-	onRowActivate( row:any ){
+	onRowActivate( row:QLRow ){
 		if( this.selector() || !this.canNavigate() )//ql-table already toggled the row; a selector has nowhere to navigate to
 			return;
 		this.router.navigate( [row.target], {relativeTo: this.route} )
@@ -139,7 +138,7 @@ export class QLList implements OnInit, OnDestroy{
 				const values = this.data().slice();
 				const index = values.findIndex( (x)=>x["id"]==this.selection()["id"] );
 				values.splice( index, 1 );
-				this.selections.set( new SelectionModel<any>(false, []) );
+				this.selections.set( new SelectionModel<QLRow>(false, []) );
 				this.data.set( values );
 			}
 		}
@@ -251,7 +250,7 @@ export class QLList implements OnInit, OnDestroy{
 	isLoading = signal<boolean>( true );
 	isRefreshing = signal<boolean>( false );
 	isSettings = signal<boolean>( false );
-	selections = model<SelectionModel<any>>( null as any );//rows, not ids - QLSelector maps them to its callers' id selection
+	selections = model<SelectionModel<QLRow>>( null as any );//rows, not ids - QLSelector maps them to its callers' id selection
 
 	displayedFields = computed<ViewField[]>( ()=>{
 		return this.view().fields.filter( v=>v.displayed );

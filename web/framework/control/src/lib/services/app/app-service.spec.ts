@@ -12,7 +12,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpClient } from '@angular/common/http';
 import * as FromClient from 'jde-proto/App.FromClient';
 import * as App from 'jde-proto/App';
-import { AuthStore } from '../auth-store';
+import { AUTH_STORE, AuthStore } from '../auth-store';
+import { IENVIRONMENT } from 'jde-spa';
 import { ETransport, RequestId } from '../proto-service';
 import { AppService } from './app-service';
 
@@ -31,13 +32,13 @@ class TestAppService extends AppService{
 
 const create = ( env:Record<string,any> = {} )=>{
 	TestBed.resetTestingModule();
-	TestBed.configureTestingModule({ providers: [ provideHttpClient() ]});
 	const values = { applicationServer: {host:'localhost', port:1967}, ...env };
-	return TestBed.runInInjectionContext( ()=>new TestAppService(
-		TestBed.inject( HttpClient ),
-		{ get: ( key:string )=>(<any>values)[key] } as any,
-		{ user: ()=>undefined, logout: ()=>{} } as unknown as AuthStore
-	) );
+	TestBed.configureTestingModule({ providers: [
+		provideHttpClient(),
+		{ provide: IENVIRONMENT, useValue: { get: ( key:string )=>(<any>values)[key] } },
+		{ provide: AUTH_STORE, useValue: { user: ()=>undefined, logout: ()=>{} } as unknown as AuthStore }
+	]});
+	return TestBed.runInInjectionContext( ()=>new TestAppService() );
 };
 
 describe( 'AppService socket message field names', ()=>{
@@ -52,12 +53,45 @@ describe( 'AppService socket message field names', ()=>{
 		expect( message.requestStrings?.userPKs ).toEqual( [42] );
 	} );
 
-	it( 'puts the unsubscribe request type on the wire', ()=>{
+	//review3 C11: `graphQl`/`graphQL` were not proto fields either, and `requestType:UnsubscribeLogs` is one the server answers
+	//with "not implemented".  The three now travel as the proto's subscription/unsubscription/query.
+	it( 'puts a log subscription on the wire as a Query', ()=>{
+		const service = create();
+		service.logs( 3, 2, new Date('2026-09-05T00:00:00Z'), 10 );
+		const message = service.wire();
+		expect( message.subscription?.text ).toContain( 'subscribe logs(applicationId:3' );
+		expect( message.subscription?.returnRaw ).toBe( false );
+		expect( message.requestType ).toBeUndefined();
+	} );
+
+	it( 'puts the unsubscription, carrying the subscription id, on the wire', ()=>{
 		const service = create();
 		service.logsUnsubscribe( 9 );
 		const message = service.wire();
-		expect( message.requestType ).toBe( FromClient.ERequestType.UnsubscribeLogs );
-		expect( message.requestId ).toBe( 9 );
+		expect( message.unsubscription?.requestIds ).toEqual( [9] );
+		expect( message.requestType ).toBeUndefined();
+	} );
+
+	it( 'puts the log-level mutation on the wire as a Query', ()=>{
+		const service = create();
+		service.updateLogLevel( 5, 2, 3 );
+		const message = service.wire();
+		expect( message.query?.text ).toContain( 'LogApplicationInstances( id:5' );
+	} );
+} );
+
+//review3 C12/L8: a logout whose round trip fails still has to drop the local session - the user was left logged in with
+//no feedback and no way out, and GatewayService.logout already swallowed the same failure.
+describe( 'AppService.logout', ()=>{
+	it( 'clears the local session even when the server round trip rejects', async ()=>{
+		const service = create();
+		let cleared = 0;
+		(service as any).authStore = { user: ()=>undefined, logout: ()=>{ ++cleared; } };
+		(service as any).postRaw = ()=>Promise.reject( new Error('502') );
+		const logged:string[] = [];
+		await expect( service.logout( m=>logged.push(m) ) ).resolves.toBeUndefined();
+		expect( cleared ).toBe( 1 );
+		expect( logged.some( m=>m.includes('logout failed') && m.includes('502') ) ).toBe( true );
 	} );
 } );
 

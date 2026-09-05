@@ -1,7 +1,7 @@
-import {Component, Inject, Signal, inject, resource} from '@angular/core';
+import { Component, Signal, inject, resource } from '@angular/core';
 import {Router, RouterLink, RouterLinkActive} from '@angular/router';
 import {MatButtonModule} from '@angular/material/button';
-import { EProvider, IAuth, User } from '../../services/authorization/auth';
+import { EProvider, IAUTH, IAuth, User } from '../../services/authorization/auth';
 import { MatIconModule } from '@angular/material/icon';
 
 declare const gapi: any;
@@ -9,7 +9,8 @@ declare const gapi: any;
 	selector: "authorization", templateUrl: "./authorization.html", styleUrls: ["./authorization.scss"],
 	imports: [MatButtonModule, MatIconModule, RouterLink, RouterLinkActive]} )
 export class Authorization{
-	constructor( @Inject("IAuth") private authService: IAuth ){
+	private authService:IAuth = inject( IAUTH );
+	constructor(){
 		this.user = this.authService.user;
 	}
 	async onLogout() {
