@@ -70,7 +70,8 @@ function( sync=false )
 		ssl:{
 			certificate:{
 				commonName: args.instanceName + ".web"
-			}
+			},
+			privateKey:{ passcode: "$(JDE_PASSCODE)" }
 		}
 	},
 	opcServer:{
@@ -86,7 +87,7 @@ function( sync=false )
 			},
 			privateKey: {
 				path:: "{ApplicationDataFolder}/ssl/private/OpcServer.pem",
-				passcode:: "OpcServer"
+				passcode: "$(JDE_PASSCODE)" //encrypts the key at rest; empty/unset = cleartext (the startup log says which). Change only with the key deleted.
 			},
 			publicKey:{
 				path:: "{ApplicationDataFolder}/ssl/public/OpcServer.pem"

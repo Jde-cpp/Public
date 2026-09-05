@@ -29,7 +29,7 @@ export type Favorite={
 	folderName?:string;
 	name:string;
 	route:string;
-	queryParams?:any;
+	queryParams?:Record<string,unknown>;
 }
 export type Folder = { folderName:string, items:Favorite[] };
 @Component({

@@ -334,6 +334,37 @@ namespace Jde::Crypto{
 	//SAN-less web cert failing host_name_verification until its config dir was hand-wiped.  The key pair must survive
 	//the re-issue, and an equivalent config must leave the cert untouched - including conf-syntax slack and the msUPN
 	//OID→short-name round-trip, either of which would otherwise re-issue on every start.
+	//the expiry branch of ReissueReason, reachable only through IssueCertificate's validity seam - production can't mint an
+	//expired certificate.  A day's margin: "expires tomorrow" re-issues as "expired" does; a fresh one stands.
+	TEST_F( OpenSslTests, EnsureKeyCertificate_ReissuesExpired ){
+		let dir = ScratchDir( "reissueExpired" );
+		let publicFile = (dir/"public.pem").string(), privateFile = (dir/"private.pem").string(), certFile = (dir/"cert.pem").string();
+		let settings = SslSettings( publicFile, privateFile, certFile, "reissue-expired", "DNS:localhost" );
+		settings.CreateDirectories();
+		Crypto::CreateKey( settings, SRCE_CUR );
+		let key = Crypto::ReadPublicKey( publicFile );
+		let expiration = [&]{ return Crypto::Certificate{ ReadCertificate(certFile) }.Expiration; };
+
+		Crypto::IssueCertificate( settings, std::chrono::hours{-24} );//already expired
+		ASSERT_LT( expiration(), Clock::now() );
+		EXPECT_EQ( Crypto::ReissueReason(settings).substr(0, 7), "expired" );
+		Crypto::EnsureKeyCertificate( settings );
+		EXPECT_GT( expiration(), Clock::now()+std::chrono::days{364} );
+		auto healedDer = ReadCertificate( certFile );
+		EXPECT_TRUE( Crypto::ExtractPublicKey(healedDer, SRCE_CUR)==key );//same key pair - enrollment by modulus survives.
+
+		Crypto::IssueCertificate( settings, std::chrono::hours{1} );//inside the day's margin
+		EXPECT_EQ( Crypto::ReissueReason(settings).substr(0, 7), "expires" );
+		Crypto::EnsureKeyCertificate( settings );
+		EXPECT_GT( expiration(), Clock::now()+std::chrono::days{364} );
+
+		let fresh = ReadCertificate( certFile );
+		EXPECT_TRUE( Crypto::ReissueReason(settings).empty() );
+		Crypto::EnsureKeyCertificate( settings );
+		EXPECT_TRUE( ReadCertificate(certFile)==fresh );//a year out - no churn.
+		fs::remove_all( dir );
+	}
+
 	TEST_F( OpenSslTests, EnsureKeyCertificate_ReconcilesSan ){
 		let dir = ScratchDir( "reconcileSan" );
 		let publicFile = (dir/"public.pem").string(), privateFile = (dir/"private.pem").string(), certFile = (dir/"cert.pem").string();

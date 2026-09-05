@@ -1,8 +1,8 @@
-import { inject, Inject, Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { ISearchProvider, SearchResult } from 'jde-spa';
 import { ENodeClass } from '../model/node';
-import { Gateway, GatewayService } from './gateway-service';
+import { Gateway, GATEWAY_SERVICE, GatewayService } from './gateway-service';
 
 export type NodeSearchRow = { connection:{ target:string; name:string }; path:string; name:string; nodeClass:number; depth:number };
 
@@ -14,7 +14,7 @@ export class NodeSearchProvider implements ISearchProvider{
 	readonly name = 'nodes';
 	readonly prefixes = [ 'node' ];
 	#router = inject( Router );
-	constructor( @Inject('GatewayService') private gatewayService:GatewayService ){}
+	private gatewayService:GatewayService = inject( GATEWAY_SERVICE );
 
 	static readonly columns = '{ connection{ target name } path name nodeClass depth }';
 	static readonly currentConnection = /^\/gateways\/([^/?#]+)\/([^/?#]+)/;//app.routes.ts: gateways/:gateway/:connection/**

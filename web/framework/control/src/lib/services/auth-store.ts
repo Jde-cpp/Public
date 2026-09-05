@@ -1,4 +1,4 @@
-import { Injectable, Signal, inject, signal } from '@angular/core';
+import { Injectable, Signal, inject, signal, InjectionToken } from '@angular/core';
 import { RouteStore, User, UserJson } from 'jde-spa';
 import { clone } from '../utils/utils'
 
@@ -66,3 +66,5 @@ export class AuthStore{
 	#userSignal = signal<User | undefined>( undefined );
 	get user():Signal<User | undefined>{ return this.#userSignal.asReadonly(); }
 }
+//angular-review3 C13: a typed token in place of the string one - a typo now fails the build instead of resolving to nothing at runtime, and inject() can take it.
+export const AUTH_STORE = new InjectionToken<AuthStore>( 'AuthStore' );

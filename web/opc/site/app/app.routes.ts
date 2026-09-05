@@ -1,13 +1,14 @@
 import {Routes} from '@angular/router';
 
-import{ DetailResolver, QLListResolver, QLListRouteService, HomeRouteService, AppResolver } from 'jde-framework';
+import{ DetailResolver, IGRAPHQL, QLListResolver, QLListRouteService, HomeRouteService, AppResolver } from 'jde-framework';
+import { IROUTE_SERVICE } from 'jde-spa';
 import { AccessService, AuthGuard, Group, groupTableSettings, resourceTableSettings, Role, roleTableSettings, User, userTableSettings } from 'jde-access';
 import{ ClientResolver, GatewayRouteService, gatewayTableSettings, GatewayCnnctnRouteService,GatewayService, NodeResolver, OpcNodeRouteService, GatewayResolver } from 'jde-opc';
 
-const accessProvider = { provide: 'IGraphQL', useExisting: AccessService };//route-scoped token, but aliases the single providedIn:'root' instance instead of constructing a per-route one
-const gatewayProvider = { provide: 'IGraphQL', useExisting: GatewayService };//route-scoped token, but aliases the single providedIn:'root' instance instead of constructing a per-route one
-const qlListProvider = { provide: 'IRouteService', useClass: QLListRouteService };
-const opcNodeRouteProvider = { provide: 'IRouteService', useExisting: OpcNodeRouteService };//NodeChildren injects the class token, so the route binding must alias that instance rather than build a second one
+const accessProvider = { provide: IGRAPHQL, useExisting: AccessService };//route-scoped token, but aliases the single providedIn:'root' instance instead of constructing a per-route one
+const gatewayProvider = { provide: IGRAPHQL, useExisting: GatewayService };//route-scoped token, but aliases the single providedIn:'root' instance instead of constructing a per-route one
+const qlListProvider = { provide: IROUTE_SERVICE, useClass: QLListRouteService };
+const opcNodeRouteProvider = { provide: IROUTE_SERVICE, useExisting: OpcNodeRouteService };//NodeChildren injects the class token, so the route binding must alias that instance rather than build a second one
 
 //pages are loadComponent, not component:  an eager reference drags the page and its Material deps into the initial bundle, which blew the 2mb size budget
 const sidenav = ()=>import('jde-spa').then( m=>m.ComponentSidenav );
@@ -16,14 +17,14 @@ const cards = ()=>import('jde-framework').then( m=>m.Cards );
 export const routes: Routes = [
 	{ path: '', title: "Home", loadComponent: cards, data: {summary: "Welcome" },
 		canActivate: [AuthGuard],
-		providers: [  {provide: 'IRouteService', useClass: HomeRouteService} ]},
+		providers: [  {provide: IROUTE_SERVICE, useClass: HomeRouteService} ]},
 	{ path: 'login', loadComponent: ()=>import('jde-framework').then( m=>m.LoginPage ), data: {name: "Login", summary: "Login to Site"} },
 	{ path: 'gateways', title: "Gateways", canActivate: [AuthGuard], loadComponent: cards,
-		providers: [{provide: 'IRouteService', useClass: GatewayRouteService}],
+		providers: [{provide: IROUTE_SERVICE, useClass: GatewayRouteService}],
 		data: {summary: "Available Gateways", icon: "hub"}
 	},
 	{ path: 'gateways/:gateway', title: ":gateway", canActivate: [AuthGuard], loadComponent: cards,
-		providers: [{provide: 'IRouteService', useClass: GatewayCnnctnRouteService}],
+		providers: [{provide: IROUTE_SERVICE, useClass: GatewayCnnctnRouteService}],
 		data: {summary: "Available Connections",}
 	},
 	{

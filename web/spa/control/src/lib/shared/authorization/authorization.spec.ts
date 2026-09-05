@@ -11,7 +11,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { signal } from '@angular/core';
 import { vi } from 'vitest';
-import { EProvider, IAuth, User } from '../../services/authorization/auth';
+import { EProvider, IAUTH, IAuth, User } from '../../services/authorization/auth';
 import { Authorization } from './authorization';
 
 //review3 L8: `gapi` is a `declare const` over index.html's `async defer` platform.js.  A bare `gapi.auth2` is a
@@ -27,7 +27,7 @@ describe( 'Authorization.onLogout', ()=>{
 		TestBed.resetTestingModule();
 		TestBed.configureTestingModule({ providers: [
 			{ provide: Router, useValue: {navigate} },
-			{ provide: 'IAuth', useValue: {
+			{ provide: IAUTH, useValue: {
 				user: signal<User|undefined>( {provider} as User ),
 				logout,
 				providers: ()=>Promise.resolve([])

@@ -20,7 +20,10 @@ namespace Jde::Crypto{
 	Ŧ Random()ε->T{ T y{}; Random( (unsigned char*)&y, sizeof(T) ); return y; }
 	Φ CreateKey( const CryptoSettings& settings, SL sl )ε->void;
 	//Φ IssueCertificate( fs::path outputFile, fs::path privateKeyFile, str passcode, sv altName, sv company, sv country, sv domain, SL sl )ε->void;
-	Φ IssueCertificate( const CryptoSettings& settings, SRCE )ε->void;
+	//validity is a test seam:  production always issues for a year, and the expiry branch of ReissueReason is otherwise untestable (nothing else mints an expired certificate).
+	Φ IssueCertificate( const CryptoSettings& settings, std::chrono::seconds validity = std::chrono::days{365}, SRCE )ε->void;
+	//why the certificate on disk can no longer stand for `settings` - missing, expired or expiring within a day, or a SAN drifted from the configured one - empty if it can.  One predicate for every issuer (EnsureKeyCertificate, the gateway's per-target EnsureCertificate), so the two cannot drift apart again (web-certs3 #17).  An unreadable certificate throws (#3(b)).
+	Φ ReissueReason( const CryptoSettings& settings, SRCE )ε->string;
 	Φ CreateKeyCertificate( const CryptoSettings& settings, SRCE )ε->void;
 	Φ EnsureKeyCertificate( const CryptoSettings& settings, SRCE )ε->void;
 	Φ ExtractPublicKey( std::span<byte> certificate, SL sl )ε->PublicKey;

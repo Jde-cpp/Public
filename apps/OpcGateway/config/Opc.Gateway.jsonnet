@@ -17,7 +17,8 @@ function( sync=false )
 			certificate:{
 				subjectAltName: "URI:urn:open62541.server.application",
 				commonName: args.instanceName,
-			}
+			},
+			privateKey:{ passcode: "$(JDE_PASSCODE)" }
 		},
 		//Verify every OPC server's certificate against /access/trustedCertDirs before a session is opened (src/ServerTrust.cpp).
 		//open62541 checks the certificate of any endpoint that carries one - None security mode included - so a server whose
@@ -130,10 +131,9 @@ function( sync=false )
 				commonName: args.instanceName + ".web.$(HostName)",
 				country:: "US",
 			},
-			privateKey:: "{AppDataFolder}/ssl/private/private.pem",
+			privateKey:{ passcode: "$(JDE_PASSCODE)" }, //the web key; same rule as gateway.issuedCerts.privateKey below.
 			publicKey:: "{AppDataFolder}/ssl/public/public.pem",
-			dh:: "{AppDataFolder}/certs/dh.pem",
-			passcode:: "$(JDE_PASSCODE)"
+			dh:: "{AppDataFolder}/certs/dh.pem"
 		},
 		clientSettings:{
 			googleAuthClientId: "445012155442-1v8ntaa22konm0boge6hj5mfs15o9lvd.apps.googleusercontent.com"

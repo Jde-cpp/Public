@@ -1,7 +1,7 @@
-import {inject, Inject, Injectable} from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import {ActivatedRouteSnapshot, Resolve, RouterStateSnapshot} from '@angular/router';
 import { RouteItem, RouteStore } from 'jde-spa';
-import { AppService } from '../app/app-service';
+import { APP_SERVICE, AppService } from '../app/app-service';
 import { StringUtils } from '../../utils/string-utils';
 import { TableSettings } from '../ql-list-resolver';
 
@@ -20,8 +20,7 @@ export class AppInstanceRoute extends RouteItem{
 
 @Injectable()
 export class AppResolver implements Resolve<Connection[]> {
-	constructor( @Inject("AppService") private appService: AppService )
-	{}
+	private appService:AppService = inject( APP_SERVICE );
 	async resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<Connection[]>{
 		let connections = await this.appService.queryArray<Connection>( "connections{id instanceId programName instanceName hostName created status{memory values}}", null, (m)=>console.log(m) );
 		let urlMap:any = {};

@@ -1,8 +1,8 @@
 import { inject } from '@angular/core';
-import { Component, Inject, Injectable, OnInit, signal } from "@angular/core";
+import { Component, Injectable, OnInit, signal } from "@angular/core";
 import { ActivatedRoute, Router, RouterLink, Routes, UrlSegment } from "@angular/router";
 import { MatIconModule } from "@angular/material/icon";
-import { RouteItem, IRouteService, RouteService } from "jde-spa";
+import { RouteItem, IROUTE_SERVICE, IRouteService, RouteService } from "jde-spa";
 
 
 @Injectable( {providedIn: 'root'} )
@@ -35,8 +35,7 @@ export function pageHeading( route:ActivatedRoute ):string{
 export class Cards implements OnInit {
 	private route:ActivatedRoute = inject( ActivatedRoute );
 	private router:Router = inject( Router );
-	constructor( @Inject("IRouteService") private routerService: IRouteService )
-	{}
+	private routerService:IRouteService = inject( IROUTE_SERVICE );
 	ngOnInit(){
 		this.route.url.subscribe( async (urlSegments)=>{
 			this.heading.set( pageHeading(this.route) );

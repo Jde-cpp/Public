@@ -18,7 +18,7 @@ endif()
 
 add_executable( ${targetName} )
 compileOptions( ${targetName} )
-file( GLOB sources *.cpp )
+file( GLOB sources CONFIGURE_DEPENDS *.cpp )
 target_sources( ${targetName} PRIVATE ${sources} ${CMAKE_CURRENT_LIST_DIR}/../src/MySqlStatements.cpp ${CMAKE_CURRENT_LIST_DIR}/../src/MySqlServerMeta.cpp )
 target_compile_definitions( ${targetName} PRIVATE TESTS )
 target_link_libraries( ${targetName} GTest::gtest Threads::Threads )

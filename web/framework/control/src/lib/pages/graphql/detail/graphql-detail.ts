@@ -1,5 +1,5 @@
 import { Subject } from 'rxjs';
-import { Component, ViewEncapsulation, OnInit, OnDestroy, Inject, inject } from '@angular/core';
+import { Component, ViewEncapsulation, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {ActivatedRoute, NavigationEnd, Params, Router, RouterModule, Routes} from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
@@ -7,7 +7,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { ProfileStore, ComponentPageTitle } from 'jde-spa';
 
 import {SnackbarService} from '../../../shared/snackbar/snackbar-service';
-import {IGraphQL}  from '../../../services/graphql';
+import {IGRAPHQL, IGraphQL}  from '../../../services/graphql';
 import {TableSchema} from '../../../model/ql/schema/table-schema'
 import { MetaObject } from '../../../model/ql/schema/meta-object';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -28,7 +28,8 @@ export class GraphQLDetail implements OnDestroy, OnInit{
 	private dialog:MatDialog = inject( MatDialog );
 	private componentPageTitle:ComponentPageTitle = inject( ComponentPageTitle );
 	private cnsle:SnackbarService = inject( SnackbarService );
-	constructor( @Inject('IGraphQL') private graphQL: IGraphQL ){
+	private graphQL:IGraphQL = inject( IGRAPHQL );
+	constructor(){
 		this.target = this.router.url.substring( this.router.url.lastIndexOf('/')+1 );
 	}
 

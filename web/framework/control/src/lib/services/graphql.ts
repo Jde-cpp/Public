@@ -1,3 +1,4 @@
+import { InjectionToken } from '@angular/core';
 import { Mutation } from '../model/ql/mutation';
 import { Field, FieldKind } from '../model/ql/schema/field';
 import { MutationSchema } from '../model/ql/schema/mutation-schema';
@@ -39,3 +40,5 @@ export type Type = {
 export interface IQueryResult<T>{
 	__type:Array<T>;
 }
+//angular-review3 C13: a typed token in place of the string one - a typo now fails the build instead of resolving to nothing at runtime, and inject() can take it.
+export const IGRAPHQL = new InjectionToken<IGraphQL>( 'IGraphQL' );

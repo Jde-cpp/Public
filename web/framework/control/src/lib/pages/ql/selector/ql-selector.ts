@@ -7,6 +7,7 @@ import { IGraphQL } from '../../../services/graphql';
 import { CollectionItem, ListRoute, QLListData, QLListResolver } from '../../../services/ql-list-resolver';
 import { MetaObject } from '../../../model/ql/schema/meta-object';
 import { Operator } from '../../../model/ql/view';
+import { QLRow } from '../../../model/ql/target-row';
 import { arraysEqual } from '../../../utils/utils';
 import { QLList } from '../list/ql-list';
 
@@ -48,7 +49,7 @@ export class QLSelector implements OnInit{
 				data.fixedFilters = [{ field: data.schema.fields.find(f=>f.name=="id")!, filter: {operator: Operator.NotIn, value: this.excludedIds()} }];
 			data = await QLListResolver.load( this.ql(), data, null );
 			const ids = this.selections().selected;
-			this.rowSelections.set( new SelectionModel<any>(true, data.results[collectionName].filter( (r:any)=>ids.includes(r.id) )) );
+			this.rowSelections.set( new SelectionModel<QLRow>(true, data.results[collectionName].filter( (r:QLRow)=>r.id!=undefined && ids.includes(r.id) )) );
 			this.listData.set( data );
 		}
 		catch( e ){
@@ -63,7 +64,7 @@ export class QLSelector implements OnInit{
 
 	collectionName = computed<string>( ()=> MetaObject.toCollectionName(this.type()) );
 	listData = signal<QLListData|undefined>( undefined );
-	rowSelections = signal<SelectionModel<any>>( null as any );
+	rowSelections = signal<SelectionModel<QLRow>>( null as any );
 	list = viewChild( QLList );
 
 	private route = inject( ActivatedRoute );

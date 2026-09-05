@@ -3,12 +3,12 @@ import { ApplicationConfig } from '@angular/core';
 import { MAT_TABS_CONFIG } from '@angular/material/tabs';
 import { MAT_NATIVE_DATE_FORMATS, MatDateFormats, provideNativeDateAdapter } from '@angular/material/core';
 import { provideRouter } from '@angular/router';
-import { AppService, AuthStore, ProfileService } from 'jde-framework'
-import { GatewayService, NodeSearchProvider, OpcAuthService, OpcStore} from 'jde-opc';
-import { RouteSearchProvider, SEARCH_PROVIDERS } from 'jde-spa';
+import { APP_SERVICE, AppService, AUTH_STORE, AuthStore, ProfileService } from 'jde-framework'
+import { GATEWAY_SERVICE, GatewayService, NodeSearchProvider, OPC_STORE, OpcAuthService, OpcStore} from 'jde-opc';
+import { IAUTH, IENVIRONMENT, IPROFILE_SERVICE, RouteSearchProvider, SEARCH_PROVIDERS } from 'jde-spa';
 import {EnvironmentService} from './services/environment-service';
 import { routes } from './app.routes';
-import { AccessSearchProvider, AccessService } from "jde-access";
+import { ACCESS_SERVICE, AccessSearchProvider, AccessService } from "jde-access";
 
 //2-digit rather than the native numeric:  it zero-pads the datepicker input ("08/27/2026", not "8/27/2026"), so a column
 //of dates is one width and lines up when right-aligned.  These are Intl.DateTimeFormat OPTIONS, not a pattern string, so
@@ -31,14 +31,14 @@ export const appConfig: ApplicationConfig = {
 		provideNativeDateAdapter( dateFormats ),
 		//0ms kills both tab animations at once:  MatTabGroup feeds animationDuration to --mat-tab-body-animation-duration (the body slide) and --mat-tab-header-animation-duration (the ink bar), and flags the group noopable.  dynamicHeight (the wrapper-height transition) is off by default and must stay off in the templates - an attribute there overrides this.
 		{provide: MAT_TABS_CONFIG, useValue: {animationDuration: '0ms'}},
-		{provide: "AccessService", useExisting: AccessService},
-		{provide: 'AppService', useExisting: AppService},
-		{provide: 'IAuth', useClass: OpcAuthService},
-		{provide: "AuthStore", useClass: AuthStore},
-		{provide: 'IEnvironment', useClass: EnvironmentService},
-		{provide: 'GatewayService', useExisting: GatewayService},//useExisting, not useClass:  useClass is a construction recipe, so each token would build its own GatewayService (and its own sockets/queries)
-		{provide: 'OpcStore', useExisting: OpcStore},//string-token writers (GatewayService, NodeResolver, NodeRoute) and class-token readers (ClientResolver) must share one store
-		{provide: 'IProfileService', useExisting: ProfileService},//ProfileStore (jde-spa) persists via this token; jde-spa can't import the framework implementation
+		{provide: ACCESS_SERVICE, useExisting: AccessService},
+		{provide: APP_SERVICE, useExisting: AppService},
+		{provide: IAUTH, useClass: OpcAuthService},
+		{provide: AUTH_STORE, useClass: AuthStore},
+		{provide: IENVIRONMENT, useClass: EnvironmentService},
+		{provide: GATEWAY_SERVICE, useExisting: GatewayService},//useExisting, not useClass:  useClass is a construction recipe, so each token would build its own GatewayService (and its own sockets/queries)
+		{provide: OPC_STORE, useExisting: OpcStore},//string-token writers (GatewayService, NodeResolver, NodeRoute) and class-token readers (ClientResolver) must share one store
+		{provide: IPROFILE_SERVICE, useExisting: ProfileService},//ProfileStore (jde-spa) persists via this token; jde-spa can't import the framework implementation
 		//the navbar search (jde-spa) fans out through this multi token, same reason;  registration order is result precedence.
 		{provide: SEARCH_PROVIDERS, useExisting: RouteSearchProvider, multi: true},
 		{provide: SEARCH_PROVIDERS, useExisting: AccessSearchProvider, multi: true},

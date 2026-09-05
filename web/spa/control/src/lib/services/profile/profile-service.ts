@@ -1,4 +1,4 @@
-import { Signal } from '@angular/core';
+import { Signal, InjectionToken } from '@angular/core';
 
 //Server-side persistence for ProfileStore, provided under the 'IProfileService' token (implemented in jde-framework over AppService).
 export interface IProfileService{
@@ -6,3 +6,5 @@ export interface IProfileService{
 	load( key:string ):Promise<string|null>; //raw JSON string; null ⇒ no server row
 	save( key:string, value:string|null ):Promise<void>; //null deletes the row
 }
+//angular-review3 C13: a typed token in place of the string one - a typo now fails the build instead of resolving to nothing at runtime, and inject() can take it.
+export const IPROFILE_SERVICE = new InjectionToken<IProfileService>( 'IProfileService' );

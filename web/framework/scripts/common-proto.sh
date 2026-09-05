@@ -54,9 +54,16 @@ function generateProtos {
 	local plugin=$wsFolder/node_modules/.bin/protoc-gen-ts_proto;
 	#do not use npx - these dirs are symlinked out of the workspace, so npm resolves its local prefix outside it and fetches unrelated registry packages.
 	if [ ! -x $buf ] || [ ! -x $plugin ]; then echo $PS4 buf/ts-proto not found in $wsFolder/node_modules; exit 1; fi;
+	#buf is a native binary.  On windows it cannot exec the bash shim behind that /c/... path, and CreateProcess will not run the
+	#.cmd shim beside it either, so hand it node plus ts-proto's own entry point as a command list (a v2 template accepts one)
+	#on windows-native paths - cygpath -m, since the list goes through JSON and toWinDir's backslashes would need escaping.
+	local pluginSpec="\"$plugin\"";
+	if windows; then
+		pluginSpec="[\"$(cygpath -m "$(which node)")\",\"$(cygpath -m "$wsFolder/node_modules/ts-proto/protoc-gen-ts_proto")\"]";
+	fi;
 	#forceLong=long keeps 64-bit fields as Long, which ProtoUtils.toNumber and every uint64 tag field already expect;
 	#the default (string) would silently change every one of those comparisons.
-	local template="{\"version\":\"v2\",\"plugins\":[{\"local\":\"$plugin\",\"out\":\".\",\"opt\":[\"esModuleInterop=true\",\"forceLong=long\",\"outputJsonMethods=false\",\"useOptionals=messages\"]}]}";
+	local template="{\"version\":\"v2\",\"plugins\":[{\"local\":$pluginSpec,\"out\":\".\",\"opt\":[\"esModuleInterop=true\",\"forceLong=long\",\"outputJsonMethods=false\",\"useOptionals=messages\"]}]}";
 	echo generateProtos pwd=`pwd`;
 	$buf generate --template "$template" . || { echo `pwd`; echo $buf generate failed; exit 1; };
 }

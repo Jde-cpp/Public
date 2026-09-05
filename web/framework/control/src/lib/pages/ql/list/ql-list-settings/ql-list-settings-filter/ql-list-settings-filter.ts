@@ -51,7 +51,7 @@ export class QLListSettingsFilter implements OnInit{
 		col.filter.value.splice( col.filter.value.indexOf(item), 1 );
 		this.autoCompleteSubjects.get(col.field.name)!.next(this.colSuggestions(col, ""));
 	}
-	onAddValue( value:any, col: ColumnFilter ){
+	onAddValue( value:Filter['value'][number], col: ColumnFilter ){
 		col.filter.value.push( value );
 		let index = 0;
 		for( let input of this.autoCompleteInputs.keys() ){
@@ -139,10 +139,10 @@ export class QLListSettingsFilter implements OnInit{
 		subject.next( this.colSuggestions(col, "") );
 		return input;
 	}
-	cellClick( row:any ){
+	cellClick( row:ColumnFilter ){
 		this.selection.set( row );
 	}
-	isSelected( row:any ){
+	isSelected( row:ColumnFilter ){
 		return this.selection() === row;
 	}
 	operatorSignal(col:ColumnFilter):WritableSignal<Operator>{
@@ -202,7 +202,7 @@ export class QLListSettingsFilter implements OnInit{
 		return columns;
 	}
 	dataSource:ColumnFilter[] = [];
-	selection = signal<ViewField>( null as any );
+	selection = signal<ColumnFilter|null>( null );//a ColumnFilter, not a ViewField - the `any` on cellClick hid that; only ever compared by identity
 	view = input.required<View>();
 	columns = input.required<Record<string,string>>();
 	schema = input.required<TableSchema>();

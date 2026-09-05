@@ -1,12 +1,12 @@
-import { inject, Inject, Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { ActivatedRoute, Routes, UrlSegment } from "@angular/router";
 import { RouteItem, IRouteService, RouteStore } from "jde-spa";
-import { AppService, subscribe } from "jde-framework";
+import { APP_SERVICE, AppService, subscribe } from "jde-framework";
 import { GatewayService } from '../gateway-service';
 
 @Injectable( {providedIn: 'root'} )
 export class OpcServerRouteService implements IRouteService{
-	constructor( @Inject('AppService') private _app:AppService ){}
+	private _app:AppService = inject( APP_SERVICE );
 	async children():Promise<Routes>{
 		throw new Error("Not implemented");
 	}

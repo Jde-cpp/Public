@@ -1,4 +1,5 @@
 #include <jde/fwk/io/json.h>
+#include <jde/fwk/io/file.h>
 #include <jde/fwk/crypto/OpenSsl.h>
 #include "Auth.h"
 #include "../../src/auth/CertAwait.h"
@@ -35,6 +36,53 @@ namespace Jde::Opc::Gateway::Tests{
 		let before = Crypto::ReadCertificate( path );
 		UAClient::EnsureCertificate( ServerCnnctnNK{Target}, "urn:second.application" );
 		EXPECT_EQ( Crypto::ReadCertificate(path), before );
+	}
+
+	//web-certs3 #17: an issued OPC client certificate used to be presented until the peer rejected it as expired, with
+	//deleting the PEM the only remedy.  The per-target path now shares ReissueReason with the web certificates.
+	TEST_F( CertFileTests, ReissuesWhenExpired ){
+		constexpr sv target{ "certExpiryTest" };
+		constexpr sv uri{ "urn:expiry.application" };
+		let settings = UAClient::CryptoSettings( ServerCnnctnNK{target}, uri );
+		let expiration = [&]{ return Crypto::Certificate{ Crypto::ReadCertificate(settings.Certificate.Path) }.Expiration; };
+
+		UAClient::EnsureCertificate( ServerCnnctnNK{target}, uri );
+		Crypto::IssueCertificate( settings, std::chrono::hours{-24} );//what a year of uptime leaves on disk.
+		ASSERT_LT( expiration(), Clock::now() );
+
+		UAClient::EnsureCertificate( ServerCnnctnNK{target}, uri );
+		EXPECT_GT( expiration(), Clock::now()+std::chrono::days{364} );
+		EXPECT_EQ( Crypto::Certificate{ Crypto::ReadCertificate(settings.Certificate.Path) }.SanUri(), uri );//re-issued for the same target.
+
+		std::error_code ec;
+		fs::remove( settings.Certificate.Path, ec );//the key is per CN and shared with the rest of the suite - leave it.
+	}
+
+	//web-certs3 #9: the passcode has to travel from /gateway/issuedCerts/privateKey/passcode into the key file.  It once sat a
+	//level up and jsonnet-hidden, so every issued OPC client key silently went to disk in cleartext while the config read as
+	//encrypted - this pins the plumbing, not openssl (OpenSslTests already proves CreateKey encrypts when asked).
+	TEST_F( CertFileTests, PasscodeEncryptsTheIssuedKey ){
+		constexpr sv target{ "passcodeTest" };
+		let saved = Settings::FindDefaultObject( "/gateway/issuedCerts" );
+		Settings::Set( "/gateway/issuedCerts/privateKey/passcode", "test-passcode" );
+		Settings::Set( "/gateway/issuedCerts/certificate/commonName", "passcodeTest" );//its own key pair:  the key file is per CN and shared by every target, and the rest of the suite opens it without a passcode.
+		let settings = UAClient::CryptoSettings( ServerCnnctnNK{target} );
+		try{
+			UAClient::EnsureCertificate( ServerCnnctnNK{target}, "urn:passcode.test" );
+		}
+		catch( ... ){
+			Settings::Set( "/gateway/issuedCerts", saved );
+			throw;
+		}
+		Settings::Set( "/gateway/issuedCerts", saved );
+
+		EXPECT_NE( IO::Load(settings.PrivateKey.Path).find("ENCRYPTED"), string::npos ) << settings.PrivateKey.Path.string();
+		EXPECT_NO_THROW( Crypto::ReadPrivateKey(settings.PrivateKey) );//opens with the configured passcode - what UAClient::Configuration does.
+		EXPECT_THROW( Crypto::ReadPrivateKey(Crypto::PrivateKeySettings{settings.PrivateKey.Path, ""}), std::exception );//and not without it.
+
+		std::error_code ec;
+		for( let& path : {settings.Certificate.Path, settings.PrivateKey.Path, settings.PublicKey.Path} )
+			fs::remove( path, ec );
 	}
 
 	//server-side counterpart to ReissuesWhenCertificateUriChanges: the OpcServer must trust a transport cert re-issued
@@ -77,8 +125,12 @@ namespace Jde::Opc::Gateway::Tests{
 		ASSERT_TRUE( _client );
 		UAClient::RemoveClient( move(_client) );//the next connect builds a fresh UAClient => full OPN handshake.
 
-		//in-place re-issue: same SAN+key, new serial/validity => a DER the server's snapshot has never seen.
-		Crypto::IssueCertificate( UAClient::CryptoSettings(Connection->Target, Connection->CertificateUri) );
+		//in-place re-issue: same SAN+key, new serial/validity => a DER the server's snapshot has never seen.  The SAN uri comes
+		//from the certificate on disk - Connection->CertificateUri is empty here, and an empty uri keeps the config block's
+		//whole SAN, which ReissueReason would read as drift and re-issue again on the next connect (a different DER than the
+		//one this test means the server to reload).
+		let settings = UAClient::CryptoSettings( Connection->Target );
+		Crypto::IssueCertificate( UAClient::CryptoSettings(Connection->Target, Crypto::Certificate{Crypto::ReadCertificate(settings.Certificate.Path)}.SanUri()) );
 
 		atomic_flag second;
 		Connect( second );//no server restart - the verify shim must rescan trustedCertDirs and trust the new file.

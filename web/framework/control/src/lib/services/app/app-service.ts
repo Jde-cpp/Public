@@ -1,5 +1,5 @@
 import { Subject,Observable, tap } from 'rxjs';
-import { Injectable, Inject, inject } from '@angular/core';
+import { Injectable, InjectionToken, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import {Instance} from './app-service-types'
 
@@ -9,19 +9,21 @@ import * as FromClient from 'jde-proto/App.FromClient';
 import * as App from 'jde-proto/App';
 import { ELogLevel } from 'jde-proto/Log';
 import { Exception as IException } from 'jde-proto/Common';
-import { IAuth, IEnvironment, User } from 'jde-spa';
+import { IAuth, IENVIRONMENT, IEnvironment, User } from 'jde-spa';
 import { IGraphQL, Log } from '../graphql';
-import { AuthStore } from '../auth-store';
+import { AUTH_STORE, AuthStore } from '../auth-store';
 import { GoogleAuthService } from '../google-auth-service';
 import { StringUtils } from '../../utils/string-utils';
+import { errorText } from '../../utils/errors';
 
 @Injectable( {providedIn: 'root'} )
 export class AppService extends ProtoService<FromClient.Transmission,FromServer.Message> implements IGraphQL, IAuth{
-	constructor( http: HttpClient, @Inject('IEnvironment') private environment: IEnvironment, @Inject("AuthStore") authStore:AuthStore ){
+	constructor(){
+		const environment:IEnvironment = inject( IENVIRONMENT );
 		//?? Unsecure:  the key was missing from both environment files, so this passed `undefined` as the transport.  Every
 		//test in ProtoService is `==Secure`/`==Hybrid`, which undefined fails, so it behaved as Unsecure by accident - but
 		//`transport==ETransport.Unsecure` was FALSE too, since that enumerator is 0.  Default it to a real enumerator.
-		super( FromClient.Transmission, http, environment.get<ETransport>("httpTransport") ?? ETransport.Unsecure, authStore, true, inject(GoogleAuthService) );
+		super( FromClient.Transmission, inject(HttpClient), environment.get<ETransport>("httpTransport") ?? ETransport.Unsecure, inject(AUTH_STORE), true, inject(GoogleAuthService) );
 		let appServer = environment.get<Instance>( 'applicationServer' );
 		if( !appServer ){
 			console.log( "No Application Server set in environment" );
@@ -65,14 +67,18 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 		return match?.instanceId ?? match?.id;//servers whose connections view predates the instanceId column emit the instance pk under 'id'
 	}
 
-	//BROKEN, same class as requestStrings below (angular-review3 L10):  App.FromClient.proto has no `graph_ql` field, so both
-	//`{graphQl:…}` here and `{graphQL:…}` in updateLogLevel encode to a requestId-only message.  Unlike the two renames
-	//nearby the fix is not a rename - it is `subscription`/`query`, whose type is a Jde.Proto.Query {text variables
-	//returnRaw} - and neither method has an in-repo caller to verify the choice against, so they are left flagged.
+	//The wire half of angular-review3 L10/C11:  App.FromClient.proto has no `graph_ql` field, so the old `{graphQl:…}` here,
+	//`{graphQL:…}` in updateLogLevel and `requestType:UnsubscribeLogs` in logsUnsubscribe all encoded to requestId-only messages
+	//(and the server answers UnsubscribeLogs with "not implemented" anyway).  They are the proto's `subscription`/`query`
+	//(a Jde.Proto.Query {text variables returnRaw}) and `unsubscription` {requestIds} now, which ServerSocketSession routes
+	//to AddSubscription/GraphQL/RemoveSubscription.  Still open on the RESPONSE side:  the rows are read below out of
+	//`message.traces`, and nothing on the AppServer ever writes a FromServer.Traces - subscription results arrive as the
+	//`subscription` json string - so the live log stream does not complete end to end.  No in-repo caller since C3 parked
+	//log-detail's toolbar; the shapes are pinned by app-service.spec.ts.
 	logs( applicationId:number, level:ELogLevel, start:Date, limit:number ):Observable<FromServer.Trace>{
 		const columns = "id instance_id time level message_id file_id function_id line user_pk thread_id args";
 		const q = `subscribe logs(applicationId:${applicationId}, limit:${limit}, filter:{ level:{gte:${level}}, {time:{gte:${start.toISOString()}}} }){ ${columns} }`;
-		const requestId = this.send( {graphQl:q}, q );
+		const requestId = this.send( {subscription:{text:q, variables:"", returnRaw:false}}, q );
 		let callback:Subject<FromServer.Trace> = new Subject<FromServer.Trace>();
 		this.logsSubscriptions.set( requestId, callback );
 		return callback.pipe(
@@ -82,12 +88,12 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 	logsUnsubscribe( requestId:RequestId ){
 		if( this.log.subRequest ) console.log( `[${requestId}]UnSubscribe: logs()` );
 		this.logsSubscriptions.delete( requestId );
-		this.sendWithId( {requestType:FromClient.ERequestType.UnsubscribeLogs}, requestId, "UnSubscribe: logs" );//`requestType`, per App.FromClient.proto's `ERequestType request_type = 14` - see requestStrings below
+		this.send( {unsubscription:{requestIds:[requestId]}}, "UnSubscribe: logs" );//its own request; the subscription's id travels inside, per App.FromClient.proto's `Unsubscription unsubscription = 16`
 	};
 
 	updateLogLevel( instanceId:number, defaultFileLevel:ELogLevel, defaultDBLevel:ELogLevel ):void{
 		const q = `{ mutation  LogApplicationInstances( id:${instanceId} dbLogLevel:${defaultDBLevel}, fileLogLevel:${defaultFileLevel} ){}`;
-		this.send( {graphQL:q}, q );
+		this.send( {query:{text:q, variables:"", returnRaw:false}}, q );
 	}
 
 	//`requestStrings`, not `strings`:  App.FromClient.proto declares `StringMD5s request_strings = 10` and there is no
@@ -112,12 +118,16 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 		throw "noImpl";
 	}
 	async logout( log:Log ):Promise<void>{
-		let self = this;
 		if( this.log.restRequests )	log( `logout()` );
 		const options = { observe: "response", headers:{"Authorization":this.user()?.authorization} };
-		let result = await this.postRaw<string>( 'logout', {}, false, options );
-		self.authStore.logout();
-		if( this.log.restResults ) log( `logout=>${result}` );
+		try{
+			const result = await this.postRaw<string>( 'logout', {}, false, options );
+			if( this.log.restResults ) log( `logout=>${result}` );
+		}
+		catch( e:unknown ){
+			log( `logout failed:  ${errorText(e) ?? "Unknown error"}` );//angular-review3 C12/L8: the local session goes regardless, as GatewayService.logout already does - a failed round trip must not leave the user logged in with no way out.
+		}
+		this.authStore.logout();
 	}
 
 	async googleAuthClientId( log:Log ):Promise<string>{
@@ -220,6 +230,8 @@ export class AppService extends ProtoService<FromClient.Transmission,FromServer.
 			processed = false;
 		return processed;
 	}
-	private stringRequests = new Map<number,{resolve:any,reject:any}>();
-	private customCallbacks = new Map<number,{resolve:any,reject:any}>();
+	private stringRequests = new Map<number,{resolve:(strings:FromServer.Strings)=>void, reject:(e:unknown)=>void}>();
+	private customCallbacks = new Map<number,{resolve:(bytes:Uint8Array)=>void, reject:(e:unknown)=>void}>();
 }
+//angular-review3 C13: a typed token in place of the string one - a typo now fails the build instead of resolving to nothing at runtime, and inject() can take it.
+export const APP_SERVICE = new InjectionToken<AppService>( 'AppService' );

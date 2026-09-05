@@ -1,4 +1,4 @@
-import { Injectable, Inject, signal, OnDestroy } from '@angular/core';
+import { Injectable, InjectionToken, signal, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { IEnvironment } from 'jde-spa';
 import { AppService, AuthStore, IGraphQL, StringUtils, TableSchema } from 'jde-framework';
@@ -8,9 +8,6 @@ import { Resource } from '../model/resource';
 
 @Injectable( {providedIn: 'root'} )
 export class AccessService extends AppService implements OnDestroy{
-	constructor( http: HttpClient, @Inject('IEnvironment') environment: IEnvironment, @Inject("AuthStore") authStore:AuthStore ){
-		super( http, environment, authStore );
-	}
 	ngOnDestroy(): void {
 		console.log( 'AccessService.ngOnDestroy' );
 	}
@@ -83,3 +80,5 @@ export class AccessService extends AppService implements OnDestroy{
 	#resourceSignal = signal<Resource[]>(new Array<Resource>());
   resources = this.#resourceSignal.asReadonly();
 };
+//angular-review3 C13: a typed token in place of the string one - a typo now fails the build instead of resolving to nothing at runtime, and inject() can take it.
+export const ACCESS_SERVICE = new InjectionToken<AccessService>( 'AccessService' );

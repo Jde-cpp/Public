@@ -12,6 +12,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { NEVER } from 'rxjs';
 import { vi } from 'vitest';
 import { ComponentPageTitle } from 'jde-spa';
+import { IGRAPHQL } from '../../../services/graphql';
 import { SnackbarService } from '../../../shared/snackbar/snackbar-service';
 import { ListRoute, QLListData, QLListResolver, TableSettings } from '../../../services/ql-list-resolver';
 import { TableSchema } from '../../../model/ql/schema/table-schema';
@@ -35,7 +36,7 @@ describe( 'QLList.onRowActivate', ()=>{
 			{ provide: ActivatedRoute, useValue: {data: NEVER, routeConfig: {}} },
 			{ provide: Router, useValue: {navigate} },
 			{ provide: ComponentPageTitle, useValue: {} },
-			{ provide: 'IGraphQL', useValue: {} },
+			{ provide: IGRAPHQL, useValue: {} },
 			{ provide: SnackbarService, useValue: {error, exception} }
 		]});
 		const page = TestBed.createComponent( QLList ).componentInstance;
@@ -97,7 +98,7 @@ describe( 'QLList re-query failures reach the user', ()=>{
 			{ provide: ActivatedRoute, useValue: {data: NEVER, routeConfig: {}} },
 			{ provide: Router, useValue: {navigate: vi.fn().mockResolvedValue(true)} },
 			{ provide: ComponentPageTitle, useValue: {} },
-			{ provide: 'IGraphQL', useValue: {} },
+			{ provide: IGRAPHQL, useValue: {} },
 			{ provide: SnackbarService, useValue: {error: vi.fn(), exception} }
 		]});
 		const page = TestBed.createComponent( QLList ).componentInstance;

@@ -18,8 +18,8 @@ add_executable( ${targetName} )
 compileOptions( ${targetName} )
 
 
-file( GLOB sources *.cpp */*.cpp )
-file( GLOB headers *.h */*.h )
+file( GLOB sources CONFIGURE_DEPENDS *.cpp */*.cpp )
+file( GLOB headers CONFIGURE_DEPENDS *.h */*.h )
 file( GLOB protos */*.proto )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
 

@@ -202,25 +202,28 @@ export class LogDataSource extends DataSource<Entry>{
 			|| entry.level<filter.level
 			|| ( filter.message!=undefined && this.message(entry).toLowerCase().indexOf(filter.message)==-1 );
 	}
-	/*
+	/**
+	* Re-applies the row filter and pages to wherever the selected entry landed - the first page when nothing visible is
+	* selected.  angular-review #44: the old body took the selected index off an array it never pushed to and compared it
+	* with -1 after seeding it with 0, so it paged to 0 every time and the selection scrolled out of view.
 	* @returns true if end of data is reached
 	*/
 	filterData( filter: Filter ):boolean{
 		this.filter = filter;
-		let currentVisibleIndex = 0, nextSelectedIndex = 0;
-		let entries = [];
-		for( let [i, entry] of this.allEntries.entries() ){
-			if( entry.selected )
-				nextSelectedIndex = entries.length;
-			if( !entry.hidden )
-				++currentVisibleIndex;
+		let visibleIndex = 0, selectedVisibleIndex = -1;
+		for( const entry of this.allEntries ){
 			entry.hidden = this.isHidden( entry );
 			if( entry.hidden )
 				entry.selected = false;
+			else{
+				if( entry.selected && selectedVisibleIndex==-1 )
+					selectedVisibleIndex = visibleIndex;
+				++visibleIndex;
+			}
 		}
-		if( nextSelectedIndex==-1 )
-			nextSelectedIndex = 0;
-		return this.setPage( nextSelectedIndex );
+		const pageSize = this.view().limit;
+		const start = selectedVisibleIndex==-1 || !pageSize ? 0 : Math.floor( selectedVisibleIndex/pageSize )*pageSize;
+		return this.setPage( start );
 	}
 	autoScroll:boolean=true;
 	get paused(){return this._paused;} set paused(value){this._paused=value;}_paused=false;

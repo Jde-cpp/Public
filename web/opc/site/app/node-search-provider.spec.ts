@@ -11,7 +11,7 @@ if( typeof globalThis.localStorage=="undefined" ){
 }
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { NodeSearchProvider, NodeSearchRow } from 'jde-opc';
+import { GATEWAY_SERVICE, NodeSearchProvider, NodeSearchRow } from 'jde-opc';
 
 type Call = { ql:string; vars:any };
 function gateway( target:string, rows:NodeSearchRow[]|Error ){
@@ -25,7 +25,7 @@ describe('NodeSearchProvider', () => {
 	function setup( url:string, gateways:ReturnType<typeof gateway>[] ){
 		TestBed.configureTestingModule({ providers: [
 			{ provide: Router, useValue: {url} },
-			{ provide: 'GatewayService', useValue: { gateway: async (t:string)=>gateways.find(g=>g.target==t), gateways: async ()=>gateways } },
+			{ provide: GATEWAY_SERVICE, useValue: { gateway: async (t:string)=>gateways.find(g=>g.target==t), gateways: async ()=>gateways } },
 		]});
 		return TestBed.inject( NodeSearchProvider );
 	}

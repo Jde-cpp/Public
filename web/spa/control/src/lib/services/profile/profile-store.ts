@@ -1,5 +1,5 @@
-import { Inject, Injectable, Optional } from '@angular/core';
-import { IProfileService } from './profile-service';
+import { Injectable, inject } from '@angular/core';
+import { IPROFILE_SERVICE, IProfileService } from './profile-service';
 
 type Constructor<T = object> = new (...args: any[]) => T;
 
@@ -9,9 +9,8 @@ function factory<T>(ctor: Constructor<T>, ...args: any[]): T {
 
 @Injectable( { providedIn: 'root' } )
 export class ProfileStore{
-	//string tokens can't go through inject(); optional so tests/apps without the provider stay on localStorage.
-	constructor( @Optional() @Inject('IProfileService') private profileService: IProfileService|null ) {
-	}
+	//optional so tests/apps without the provider stay on localStorage.
+	private profileService:IProfileService|null = inject( IPROFILE_SERVICE, {optional: true} );
 	static showDeleted( collectionName:string ):boolean{
 		const item = localStorage.getItem( `${collectionName}.showDeleted` );
 		let value = item ? item=="Y" : false;

@@ -1,8 +1,8 @@
-import { Injectable, Inject, inject } from '@angular/core';
+import { Injectable, InjectionToken, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Subject,Observable, finalize } from 'rxjs';
-import { AppService, AuthStore, describeFetchError, Duration, ETransport, GoogleAuthService, Guid, IGraphQL, Instance, Log, Mutation, MutationSchema, ProtoService, ProtoUtils, Query, StringUtils, TableSchema, Timestamp, Type } from 'jde-framework';
+import { AppService, AUTH_STORE, AuthStore, describeFetchError, Duration, ETransport, GoogleAuthService, Guid, IGraphQL, Instance, Log, Mutation, MutationSchema, ProtoService, ProtoUtils, Query, StringUtils, TableSchema, Timestamp, Type } from 'jde-framework';
 import { EProvider, User } from 'jde-spa';
 import { errorText } from 'jde-framework';
 
@@ -12,7 +12,7 @@ import { OpcError } from '../model/opc-error';
 import * as Common from 'jde-proto/Opc.Common';
 import * as FromClient from 'jde-proto/Opc.FromClient';
 import * as FromServer from 'jde-proto/Opc.FromServer';
-import { OpcStore } from './opc-store';
+import { OPC_STORE, OpcStore } from './opc-store';
 import { NodeRoute } from '../model/node-route';
 import { CnnctnTarget, ServerCnnctn } from "../model/server-cnnctn";
 import { NodeKey, NodeId } from '../model/node-id';
@@ -32,10 +32,9 @@ export type GatewayTarget = string;
 const gatewayUrl = /^\/(?:apps\/)?gateways\/([^/?#]+)/;
 @Injectable( {providedIn: 'root'} )
 export class GatewayService implements IGraphQL{
-	constructor(
-		@Inject("AuthStore") authStore:AuthStore,
-		private router: Router,
-		@Inject("OpcStore") opcStore:OpcStore ){
+	private router = inject( Router );
+	constructor(){
+		const authStore:AuthStore = inject( AUTH_STORE ), opcStore:OpcStore = inject( OPC_STORE );
 		this.appService.gatewayInstances().then(
 			(instances)=>this.onGatewaySuccess( instances, this.appService.transport, this.http, authStore, opcStore ),
 			(e)=>this.onInstancesError( e )//wrap so `this` is bound (bare method reference would run with this===undefined)
@@ -232,7 +231,7 @@ export class Gateway extends ProtoService<FromClient.Transmission,FromServer.Mes
 				console.error( e );
 		}
 	}
-	private static toParams( obj:any ){
+	private static toParams( obj:Record<string,unknown> ){
 		let params="";
 		Object.keys(obj).forEach( m=>{if(params.length)params+="&"; params+=`${m}=${obj[m]}`;} );
 		return params;
@@ -548,3 +547,5 @@ export class Gateway extends ProtoService<FromClient.Transmission,FromServer.Mes
 	#connections = new Map<CnnctnTarget, ServerCnnctn>();
 }
 export type SubscriptionResult = {opcId:string, node:NodeId, value:Value, sc?:StatusCode};//sc: the reading's quality; 0/undefined = Good.  Bad already arrives as an OpcError in `value`; sc mainly distinguishes Uncertain.
+//angular-review3 C13: a typed token in place of the string one - a typo now fails the build instead of resolving to nothing at runtime, and inject() can take it.
+export const GATEWAY_SERVICE = new InjectionToken<GatewayService>( 'GatewayService' );

@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
-import { Inject, Injectable, inject } from '@angular/core';
-import { AppService, AuthStore, ETransport, GoogleAuthService, Instance, ProtoService } from 'jde-framework';
+import { Injectable, inject } from '@angular/core';
+import { AppService, AUTH_STORE, AuthStore, ETransport, GoogleAuthService, Instance, ProtoService } from 'jde-framework';
 
 import * as FromClient from 'jde-proto/Opc.FromClient';
 import * as FromServer from 'jde-proto/Opc.FromServer';
@@ -10,7 +10,7 @@ import * as FromServer from 'jde-proto/Opc.FromServer';
 //answered out of the process's own archive (App::LogQLAwait), so the AppServer cannot serve it on the server's behalf.
 @Injectable( {providedIn: 'root'} )
 export class OpcServerService{
-	constructor( @Inject("AuthStore") private authStore:AuthStore ){}
+	private authStore:AuthStore = inject( AUTH_STORE );
 
 	//the promise is the cache, so concurrent callers share one round trip instead of racing to build duplicate services.
 	servers():Promise<OpcServer[]>{

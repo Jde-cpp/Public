@@ -4,12 +4,11 @@ import {NodeId} from './node-id';
 import { ActivatedRouteSnapshot, Params } from "@angular/router";
 import { OpcStore } from "../services/opc-store";
 import { OpcObject, UaNode } from "./node";
-import { Inject } from "@angular/core";
 import { GatewayTarget } from "../services/gateway-service";
 import { Browse, Ns } from "./types";
 
 export class NodeRoute extends RouteItem{
-	constructor( activatedRoute:ActivatedRouteSnapshot, @Inject("OpcStore") opcStore:OpcStore ){
+	constructor( activatedRoute:ActivatedRouteSnapshot, opcStore:OpcStore ){//built with `new` by NodeResolver, never by the injector - the @Inject that used to sit on opcStore did nothing (angular-review3 C5)
 		super();
 		let paramsRoute = activatedRoute.pathFromRoot.find( (r)=>r.paramMap.get("gateway") );
 		this.gatewayTarget = paramsRoute?.paramMap.get("gateway")!;

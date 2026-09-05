@@ -21,14 +21,14 @@ if( WIN32 )
 	target_compile_definitions( ${targetName} PRIVATE NOMINMAX )
 endif()
 
-file( GLOB sources *.cpp */*.cpp )
+file( GLOB sources CONFIGURE_DEPENDS *.cpp */*.cpp )
 add_dependencies( ${targetName} Jde.DB.MySql ) #built on every platform; odbc only exists on windows.
 if( WIN32 )
 	list( APPEND sources Opc.Server.Tests.rc )
 	add_dependencies( ${targetName} Jde.DB.Odbc )
 endif()
 sqliteProcDependencies( ${targetName} Jde.DB.Sqlite.AppServer ) #the ctest run below dlopens this via config/args/sqlite
-file( GLOB headers *.h */*.h )
+file( GLOB headers CONFIGURE_DEPENDS *.h */*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 if( NOT jde_Superbuild )

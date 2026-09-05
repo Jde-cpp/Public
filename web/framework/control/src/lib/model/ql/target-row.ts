@@ -19,8 +19,8 @@ export abstract class ITargetRow extends Row{
 		}
 	}
 
-	static idArray( from:ITargetRow[] ):any{
-		let clone = [];
+	static idArray( from:ITargetRow[] ):number[]{
+		const clone:number[] = [];
 		for( let item of from ?? [] )
 			clone.push( item.id );
 		return clone;
@@ -72,6 +72,9 @@ export abstract class ITargetRow extends Row{
 	description:string|undefined;
 }
 export type TargetRowProps = { id:number; target:Target; name:string; created:Date; updated:Date; deleted:Date; description:string; };
+//A row as a ql query returns it - the target-row props it may carry plus whatever other columns the view asked for.  The
+//resolvers hand the tables plain objects, not ITargetRow instances, which is why the model classes do not fit there.
+export type QLRow = Partial<TargetRowProps> & Record<string, unknown>;
 
 export abstract class TargetRow<T extends TargetRow<T>> extends ITargetRow{
 	constructor(type:string,obj:any){

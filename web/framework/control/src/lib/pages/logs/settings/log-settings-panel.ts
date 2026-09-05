@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, Inject, OnDestroy, OnInit, ViewChild, computed, input, output, signal, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, computed, input, output, signal, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatToolbar } from '@angular/material/toolbar';
-import { IEnvironment, ProfileStore } from 'jde-spa';
+import { IENVIRONMENT, IEnvironment, ProfileStore } from 'jde-spa';
 import { LogEntries } from '../log-entry';
 import { LogTags } from '../tags/log-tags';
 import { IGraphQL } from '../../../services/graphql';
@@ -36,7 +36,7 @@ const flatten = ( group:LevelTags|undefined ):TagLevels=>{
 })
 export class LogSettingsPanel implements OnInit, OnDestroy{
 	private snackBar:SnackbarService = inject( SnackbarService );
-	constructor( @Inject('IEnvironment') private environment: IEnvironment ){}
+	private environment:IEnvironment = inject( IENVIRONMENT );
 
 	async ngOnInit(){ await this.load(); }
 	ngOnDestroy(){ ProfileStore.setTabIndex( 'log-settings', this.tabIndex() ); }
@@ -62,7 +62,7 @@ export class LogSettingsPanel implements OnInit, OnDestroy{
 	}
 	async save(){
 		try{
-			const args:any = {};
+			const args:Record<string,unknown> = {};
 			for( const [type, child] of <[string,LogTags][]>[ ["text", this.text], ["binary", this.binary], ["appServer", this.remote] ] ){
 				const current = child.entries();
 				const previous = this.snapshot[type];

@@ -1,8 +1,8 @@
 import { ActivatedRouteSnapshot, createUrlTreeFromSnapshot, Resolve, Router, RouterStateSnapshot } from '@angular/router';
-import { inject, Inject, Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { SnackbarService } from '../shared/snackbar/snackbar-service';
 import { TableSchema } from '../model/ql/schema/table-schema';
-import { IGraphQL } from './graphql';
+import { IGRAPHQL, IGraphQL } from './graphql';
 import { ListRoute, TableSettings } from './ql-list-resolver';
 import { MetaObject } from '../model/ql/schema/meta-object';
 import { RouteItem, RouteStore } from 'jde-spa';
@@ -39,10 +39,9 @@ export class TargetNotFoundError extends Error{
 
 @Injectable()
 export class DetailResolver<T> implements Resolve<DetailResolverData<T>> {
-	constructor( private router:Router,
-		private snackbar: SnackbarService,
-		@Inject('IGraphQL') private ql: IGraphQL
-	){}
+	private router = inject( Router );
+	private snackbar = inject( SnackbarService );
+	private ql:IGraphQL = inject( IGRAPHQL );
 
 	resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<DetailResolverData<T>>{
 		let collectionDisplay = route.url.length>1 ? route.url[route.url.length-2].path : route.data["collectionName"]; //users

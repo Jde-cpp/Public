@@ -1,7 +1,7 @@
-import {inject, Inject, Injectable} from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import {ActivatedRoute, ActivatedRouteSnapshot, Resolve, Router, RouterStateSnapshot, UrlSegment} from '@angular/router';
 import { AppInstanceRoute, SnackbarService, PageProfile, PageSettings, QLListResolver, TableSchema, View } from 'jde-framework';
-import { Gateway, GatewayService } from '../gateway-service';
+import { Gateway, GATEWAY_SERVICE, GatewayService } from '../gateway-service';
 import { RouteItem, ProfileStore, RouteStore } from 'jde-spa';
 
 export type GatewayData = {
@@ -18,8 +18,7 @@ export class GatewayResolver implements Resolve<GatewayData> {
 	private route:ActivatedRoute = inject( ActivatedRoute );
 	private router:Router = inject( Router );
 	private cnsl:SnackbarService = inject( SnackbarService );
-	constructor( @Inject('GatewayService') private gatewayService: GatewayService )
-	{}
+	private gatewayService:GatewayService = inject( GATEWAY_SERVICE );
 
 	resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<GatewayData>{
 		const routing = new AppInstanceRoute( "gateways", route.params["instance"], route.data["tableSettings"] );
