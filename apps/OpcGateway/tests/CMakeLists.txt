@@ -18,14 +18,14 @@ set( targetName Jde.Opc.Tests )
 add_executable( ${targetName} )
 compileOptions( ${targetName} )
 
-file( GLOB sources *.cpp */*.cpp )
+file( GLOB sources CONFIGURE_DEPENDS *.cpp */*.cpp )
 add_dependencies( ${targetName} Jde.DB.MySql ) #built on every platform; odbc only exists on windows.
 if( WIN32 )
 	list( APPEND sources OpcTests.rc )
 	add_dependencies( ${targetName} Jde.DB.Odbc )
 endif()
 sqliteProcDependencies( ${targetName} Jde.DB.Sqlite.AppServer Jde.DB.Sqlite.OpcGateway ) #the ctest run below dlopens these via config/args/sqlite
-file( GLOB headers *.h */*.h )
+file( GLOB headers CONFIGURE_DEPENDS *.h */*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 target_include_directories( ${targetName} PRIVATE ${jdeRoot}/include/jde/app/proto )

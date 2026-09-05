@@ -6,9 +6,11 @@ common + {
 	instanceName: "OpcServer."+args.sqlType+"."+args.buildTarget,
 	access: {
 		trustedCertDirs: [
+			//Production products only - never a test product's dir.  Every cert under these dirs opens a secured UA session,
+			//and wherever this list is also the enrollment anchor (the test hosts, Jde.Opc.Hub) enrolls a user named by its
+			//CN; the test binaries anchor their own dirs in their own configs (Opc.Server.Tests.jsonnet, Opc.Tests.jsonnet).
 			args.certsDir( "OpcGateway" ),
 			args.certsDir( "OpcHub" ), //Jde.Opc.Hub - the gateway role's OPC client certs live under its own product dir.
-			args.certsDir( "Tests.Opc" ), //mysql is the linux default args dir, so the linux ProductName - windows uses args/sqlServer.
 			args.certsDir( "PlcEmulator" ) //apps/OpcServer/emulator - its UA client cert.
 		]
 	},

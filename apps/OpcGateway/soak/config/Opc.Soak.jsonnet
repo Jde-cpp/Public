@@ -8,8 +8,8 @@ local gatewayProduct = "OpcGateway"; //must match the gateway process's ProductN
 {
 	//-createCert pre-creates the gateway's per-leg client certs through UAClient's own helpers, so this block has to
 	//resolve to the same files the gateway process would: its product (not the soak exe's "Opc.Soak") and the CN
-	//Opc.Gateway.jsonnet configures, `args.instanceName` = <product>.<buildTarget>.  No passcode, likewise matching -
-	//an encrypted key here would be unreadable to the gateway, which configures none.
+	//Opc.Gateway.jsonnet configures, `args.instanceName` = <product>.<buildTarget>.  The passcode likewise matches - both
+	//sides read $(JDE_PASSCODE), so a key -createCert writes here is one the gateway can open, encrypted or not.
 	//getPath reads productName from each key's own sub-object; a block-level one is now inherited by all three
 	//(withDefaultProductName), so these lines are redundant rather than required - kept explicit because the point of
 	//the block is to write into another process's cert tree, which is worth stating on each key it moves.
@@ -20,7 +20,7 @@ local gatewayProduct = "OpcGateway"; //must match the gateway process's ProductN
 				commonName: gatewayProduct+"."+std.extVar("buildTarget"),
 				subjectAltName: "URI:urn:open62541.server.application" //per-leg certificateUri overrides this at issue time.
 			},
-			privateKey:{ productName: gatewayProduct },
+			privateKey:{ productName: gatewayProduct, passcode: "$(JDE_PASSCODE)" },
 			publicKey:{ productName: gatewayProduct }
 		}
 	},

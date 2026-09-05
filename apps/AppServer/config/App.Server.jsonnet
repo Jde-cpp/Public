@@ -28,7 +28,7 @@ function( sync=false )
 			},
 			privateKey:{
 				path:: "{ApplicationDataFolder}/ssl/private/AppServer.http.pem",
-				passcode:: "$(JDE_PASSCODE)"
+				passcode: "$(JDE_PASSCODE)"
 			},
 			publicKey:{
 				path:: "{ApplicationDataFolder}/ssl/public/AppServer.http.pem"

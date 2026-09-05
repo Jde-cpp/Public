@@ -19,11 +19,14 @@ namespace Jde::Crypto{
 	}
 	α Internal::ReadFile( const fs::path& path, SL sl )ε->BioPtr{ return File( path, false, sl ); }
 	α Internal::ReadPublicKey( const fs::path& path, SL sl )ε->KeyPtr{
-		EVP_PKEY* pkey = ::PEM_read_bio_PUBKEY( ReadFile(path, sl).get(), nullptr, nullptr, nullptr ); CHECK_NULL( pkey );
+		EVP_PKEY* pkey = ::PEM_read_bio_PUBKEY( ReadFile(path, sl).get(), nullptr, nullptr, nullptr );
+		THROW_IFX( !pkey, Crypto::OpenSslException(Ƒ("Could not parse public key '{}'", path.string()), sl) );//not CHECK_NULL - name the file, as ReadCertificate does.
 		return { pkey, ::EVP_PKEY_free };
 	}
 	α Internal::ReadPrivateKey( const fs::path& path, str passcode, SL sl )ε->KeyPtr{
-		return ReadPrivateKey( ReadFile(path, sl), passcode, sl );
+		EVP_PKEY* pkey = ::PEM_read_bio_PrivateKey( ReadFile(path, sl).get(), nullptr, nullptr, (void*)passcode.c_str() );
+		THROW_IFX( !pkey, Crypto::OpenSslException(Ƒ("Could not read private key '{}'{}", path.string(), passcode.empty() ? " (no passcode configured - an encrypted key needs privateKey.passcode)" : " (wrong passcode, or the key is not encrypted with this one)"), sl) );
+		return { pkey, ::EVP_PKEY_free };
 	}
 	α Internal::ReadPrivateKey( BioPtr&& p, str passcode, SL sl )ε->KeyPtr{
 		EVP_PKEY* pkey = ::PEM_read_bio_PrivateKey( p.get(), nullptr, nullptr, (void*)passcode.c_str() ); CHECK_NULL( pkey );

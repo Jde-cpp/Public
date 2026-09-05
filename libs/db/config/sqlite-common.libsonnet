@@ -23,7 +23,6 @@ paths + {
 	//old cwd+"/../bin" relied on), but the soak harness runs each app from a per-run dir outside the build tree.
 	binDir:: common.repoBuildDir+"/bin",
 	lib( name, linuxDir ):: if common.windows then common.binDir+"/"+name+".dll" else common.repoBuildDir+linuxDir+"/lib"+name+".so",
-	opcTestsProduct:: if common.windows then "OpcTests" else "Tests.Opc", //the opc test client's ProductName: windows takes the .rc value, linux the hardcoded one.
 
 	// Paths named once.  The proc MODULEs are dlopen'd by the driver from these (see IProcs/sqlite_api.h).
 	accessMeta:: common.repoSourceDir+"/libs/access/config/access-meta.jsonnet",

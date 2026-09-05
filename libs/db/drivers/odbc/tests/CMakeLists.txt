@@ -11,7 +11,7 @@ find_package( Threads REQUIRED )
 
 add_executable( ${targetName} )
 compileOptions( ${targetName} )
-file( GLOB sources *.cpp )
+file( GLOB sources CONFIGURE_DEPENDS *.cpp )
 target_sources( ${targetName} PRIVATE ${sources} )
 target_compile_definitions( ${targetName} PRIVATE TESTS )
 #The SQL Server dialect is the base DB::Syntax in Jde.DB - no driver link, no connection, no DSN.

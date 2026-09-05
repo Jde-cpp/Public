@@ -54,7 +54,7 @@ function( sync=false )
 				country: "US",
 				commonName: "OpcHub" //-> $(ProgramData)/Jde-Cpp/OpcHub/ssl/certs/OpcHub.pem: what the OpcServer/PlcEmulator hub overlays anchor (web.client.ssl.caFile).
 			},
-			privateKey:{ passcode:: "$(JDE_PASSCODE)" }
+			privateKey:{ passcode: "$(JDE_PASSCODE)" }
 		}
 	},
 	workers:{
