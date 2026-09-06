@@ -8,6 +8,7 @@
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
 #include <jde/ql/ql.h>
+#include "../qlInternal.h"
 
 #define let const auto
 
@@ -132,7 +133,7 @@ namespace QL{
 
 
 	using namespace DB::Names;
-	Ω introspectFields( sv /*typeName*/, const DB::Table& mainTable, const TableQL& fieldTable )ε->jobject{
+	Ω introspectFields( const DB::Table& mainTable, const TableQL& fieldTable )ε->jobject{
 		jarray fields;
 		let haveName = fieldTable.FindColumn( "name" )!=nullptr;
 		let typeTable = fieldTable.FindTable( "type" );
@@ -230,7 +231,7 @@ namespace QL{
 		};
 		addColumns( mainTable, mainTable.Map.has_value(), {} );
 		for( let& [name,pTable] : mainTable.Schema->Tables ){
-			auto fnctn = [addField,pTable,&mainTable]( let& c1Name, let& c2Name ){
+			auto addMapField = [addField,pTable,&mainTable]( let& c1Name, let& c2Name ){//a map table whose c1 points here contributes a list field of the other side.
 				if( let pColumn1=pTable->FindColumn(c1Name), pColumn2=pTable->FindColumn(c2Name) ; pColumn1 && pColumn2 /*&& pColumn->PKTable==n*/ ){
 					if( pColumn1->PKTable->Name==mainTable.Name ){
 						let pTable2 = pColumn2->PKTable;
@@ -242,8 +243,8 @@ namespace QL{
 			let child = pTable->Map ? pTable->Map->Child : nullptr;
 			let parent = pTable->Map ? pTable->Map->Parent : nullptr;
 			if( child && parent ){
-				fnctn( child->Name, parent->Name );
-				fnctn( parent->Name, child->Name );
+				addMapField( child->Name, parent->Name );
+				addMapField( parent->Name, child->Name );
 			}
 		}
 		jTable["fields"] = fields;
@@ -292,7 +293,7 @@ namespace QL{
 				y = preDefined->ToJson( qlTable );
 			else if( qlTable.JsonName=="fields" ){
 				THROW_IF( !dbTable, "__type '{}' has no table and no introspection entry.", typeName );
-				y = introspectFields( typeName, *dbTable, qlTable );
+				y = introspectFields( *dbTable, qlTable );
 				if( extend ){
 					auto& fields = y["fields"].as_array();
 					for( let& field : preDefined->Fields )
@@ -359,7 +360,7 @@ namespace QL{
 					fields.push_back( field );
 				};
 				if( !childColumn ){
-					addField( "create", true, false );//#41: `create` is the verb MutationQLStrings has;  `insert` was rejected by the parser it advertised itself to.
+					addField( "create", true, false );//#41: `create` is the verb MutationQLNames has;  `insert` was rejected by the parser it advertised itself to.
 					addField( "update", true );
 
 					addField( "delete" );

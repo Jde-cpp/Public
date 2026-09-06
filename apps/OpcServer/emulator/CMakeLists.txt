@@ -34,6 +34,7 @@ endif()
 target_link_libraries( ${targetName} Jde Jde.QL Jde.App.Shared Jde.App.Client Jde.Web.Client Jde.Opc open62541::open62541 NodesetLoader LibXml2::LibXml2 )
 if( WIN32 )
 	target_link_libraries( ${targetName} Iphlpapi.lib )
+	target_link_libraries( ${targetName} ${CMAKE_INSTALL_PREFIX}/protobuf/lib/utf8_range.lib ) #protobufd.lib comes in through Jde.App.Shared as a plain path, so nothing carries its utf8_range dependency; the other exes inherit it from Jde.Web.Server, which a client-only device does not link.
 	copyCommonDlls()
 	target_compile_definitions( ${targetName} PRIVATE NOMINMAX )
 	add_custom_command( TARGET ${targetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_INSTALL_PREFIX}/libxml2/bin/libxml2.dll" $<TARGET_FILE_DIR:${targetName}>  COMMENT "libxml2.dll" )

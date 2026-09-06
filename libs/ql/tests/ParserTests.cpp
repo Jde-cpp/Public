@@ -240,6 +240,18 @@ namespace Jde::QL::Tests{
 		EXPECT_THROW( Parser::ParseArgs("{id: @}"), Exception );      //unexpected character.
 	}
 
+	//ql-refactor A7: the four literals go through one parseLiteral.  false round-trips (true and null already do, above); a
+	//misspelling names the literal it expected and what it found; a truncation is "Unexpected end".  NaN is checked through its
+	//errors only - the pre-scan admits it, Json::Parse (boost defaults) does not.  And a literal left as the last thing in the
+	//text is now the *object's* complaint: the old per-literal length checks were literal+1, so they reported it first.
+	TEST( ParserTests, ParseArgsLiterals ){
+		EXPECT_EQ( Parser::ParseArgs("{a: false}").at("a").as_bool(), false );
+		let what = []( string text )->string{ try{ Parser::ParseArgs( move(text) ); }catch( const Exception& e ){ return e.what(); } return {}; };
+		for( let& [text, expected] : vector<std::pair<string,string>>{ {"{a: fals3}", "Expected 'false' vs 'fals3'"}, {"{a: nul1}", "Expected 'null' vs 'nul1'"}, {"{a: NaX}", "Expected 'NaN' vs 'NaX'"}, {"{a: tru3}", "Expected 'true' vs 'tru3'"}, {"{a: fal", "Unexpected end"}, {"{a: Na", "Unexpected end"} } )
+			EXPECT_NE( what(text).find(expected), string::npos ) << text << " -> '" << what(text) << "'";
+		EXPECT_NE( what("{a: true").find("Expected '}'"), string::npos ) << what( "{a: true" ); //the literal parsed; the object is what is unterminated.
+	}
+
 	TEST( MutationQLTests, IsMutation ){
 		EXPECT_TRUE( MutationQL::IsMutation("mutation") );
 		EXPECT_TRUE( MutationQL::IsMutation("createUser") );
@@ -266,6 +278,23 @@ namespace Jde::QL::Tests{
 		EXPECT_EQ( type, EMutationQL::Create );
 		EXPECT_EQ( get<1>(MutationQL::ParseCommand("removeGroupMember")), EMutationQL::Remove );
 		EXPECT_THROW( MutationQL::ParseCommand("frobnicateUser"), Exception );
+	}
+
+	//ql-refactor B6: the verb a command starts with and the participle a subscription ends with are one row of MutationQLNames, so a
+	//subscription resolves to the EMutationQL its mutation does - for every row with a participle (execute has none).  `logs` is a
+	//system table, so no schema is needed to load the subscription's fields.
+	TEST( MutationQLTests, SubscriptionParticipleMatchesTheMutationVerb ){
+		static const vector<sp<DB::AppSchema>> noSchemas;
+		for( uint i=0; i<MutationQLNames.size(); ++i ){
+			let& [verb, participle] = MutationQLNames[i];
+			EXPECT_EQ( get<1>(MutationQL::ParseCommand(string{verb}+"Log")), (EMutationQL)i ) << verb;
+			if( participle.empty() )
+				continue;
+			auto subs = QL::ParseSubscriptions( Ƒ("subscription Log{0}{{ log{0}{{ id }} }}", participle), jobject{}, noSchemas );
+			ASSERT_EQ( subs.size(), 1u ) << participle;
+			EXPECT_EQ( subs[0].Type, (EMutationQL)i ) << participle;
+			EXPECT_EQ( subs[0].TableName, "logs" ) << participle;
+		}
 	}
 
 	TEST( MutationQLTests, ToStringRoundTripsArgs ){

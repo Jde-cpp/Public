@@ -5,7 +5,8 @@
 #include <jde/ql/IQL.h>
 
 namespace Jde::QL::Tests{
-	struct NullQL final : IQL{
+	struct NullQL : IQL{
+		virtual ~NullQL()=default;//derivable (MutationsAwaitTests answers mutations through it), and IQL itself declares no virtual dtor.
 		α Authorizer()ε->Access::Authorize& override{ throw Exception{"No authorizer."}; }
 		α AuthorizerPtr()ε->sp<Access::Authorize> override{ return {}; }
 		α CustomQuery( TableQL&, Creds, SL )ι->up<TAwait<jvalue>> override{ ++CustomQueryCount; return nullptr; }

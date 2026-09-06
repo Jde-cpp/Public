@@ -4,7 +4,7 @@
 #include <jde/ql/IQL.h>
 #include <jde/ql/types/RequestQL.h>
 #include <jde/db/generators/Statement.h>
-#include "ops/MutationAwait.h"
+#include "ops/MutationsAwait.h"
 #include "ops/TablesAwait.h"
 
 namespace Jde::QL{
@@ -34,23 +34,22 @@ namespace Jde::QL{
 		sp<IQL> _ql;
 	};
 
-	template<> α QLAwait<jvalue>::Execute()ι->TAwait<jvalue>::Task;//the engine: dispatches _request to Tables/Mutation awaits (defined in QLAwait.cpp). Must be declared before the adapters below co_await a QLAwait<jvalue>.
-	template<> Ξ QLAwait<jobject>::Execute()ι->TAwait<jvalue>::Task{
+	template<> α QLAwait<jvalue>::Execute()ι->TAwait<jvalue>::Task;//the engine: dispatches _request to the Tables/Mutations awaits (QLAwait.cpp). Declared before the adapter below, which co_awaits a QLAwait<jvalue>.
+	//The adapter:  the engine's jvalue, shaped as T.  One body for jobject and jarray - the two used to differ in a Json::As* call.
+	Ŧ QLAwait<T>::Execute()ι->TAwait<jvalue>::Task{
+		static_assert( std::is_same_v<T,jobject> || std::is_same_v<T,jarray>, "QLAwait<T>: T is jvalue (the engine), jobject or jarray." );
+		T y;
 		try{
-			jvalue v = co_await QLAwait<jvalue>{move(_request), move(_statement), _executer, _ql, base::_sl};
-			Resume( v.is_null() ? jobject{} : move(Json::AsObject(v)) );
+			jvalue v = co_await QLAwait<jvalue>{ move(_request), move(_statement), _executer, _ql, base::_sl };
+			if constexpr( std::is_same_v<T,jobject> )
+				y = v.is_null() ? jobject{} : move( Json::AsObject(v) );
+			else
+				y = move( Json::AsArray(v) );//AsArray returns jarray& - binding it to `auto` copied the whole result first.
 		}
 		catch( runtime_error& e ){
-			ResumeExp( move(e) );
+			base::ResumeExp( move(e) );
+			co_return;
 		}
-	}
-	template<> Ξ QLAwait<jarray>::Execute()ι->TAwait<jvalue>::Task{
-		try{
-			jvalue v = co_await QLAwait<jvalue>{move(_request), move(_statement), _executer, _ql, base::_sl};
-			Resume( move(Json::AsArray(v)) );//AsArray returns jarray& - binding it to `auto` copied the whole result first.
-		}
-		catch( runtime_error& e ){
-			ResumeExp( move(e) );
-		}
+		base::Resume( move(y) );
 	}
 }

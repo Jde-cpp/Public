@@ -32,7 +32,7 @@ namespace Jde::Access::Tests{
 		}
 	}
 
-	//ql-review3 #41: the document advertised `insert{Type}`, which is not one of MutationQLStrings' ten verbs - and because
+	//ql-review3 #41: the document advertised `insert{Type}`, which is not one of MutationQLNames' ten verbs - and because
 	//IsMutation("insertUser") is false, such a call was not even routed to LoadMutations;  it went to LoadTables as a query.
 	//The `field["name"] = Ƒ("create{}")` above the lambda was the intended spelling and was never pushed.  Everything the
 	//schema advertises has to be something the parser it advertises itself to will accept.

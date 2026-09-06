@@ -8,6 +8,7 @@
 #include <jde/ql/LocalQL.h>
 #include <jde/ql/LocalSubscriptions.h>
 #include "NullQL.h"
+#include "RecordingListener.h"
 #include "UnitSchema.h"
 
 #define let const auto
@@ -23,11 +24,6 @@ namespace Jde::QL::Tests{
 		α Rights( str, str, UserPK )ι->Access::ERights override{ return Access::ERights::All; }
 		α UserName( UserPK )ι->string override{ return {}; }
 		vector<std::pair<string,Access::ERights>> Tested;
-	};
-	struct SilentListener final : IListener{
-		SilentListener()ι:IListener{"SubscribeAuthorizeTests"}{}
-		α OnChange( const jvalue&, SubscriptionId )ε->void override{}
-		α OnTraces( App::Proto::FromServer::Traces&& )ι->void override{}
 	};
 	//LocalQL leaves the custom/log/status hooks pure; nothing here calls them.
 	struct TestQL final : LocalQL{
@@ -45,7 +41,7 @@ namespace Jde::QL::Tests{
 			auto schema = schemas();
 			schema[0]->Authorizer = Acl;
 			Ql = ms<TestQL>( schema );
-			Listener = ms<SilentListener>();
+			Listener = ms<RecordingListener>( "SubscribeAuthorizeTests" );
 		}
 		α TearDown()->void override{ Subscriptions::StopListen( Listener ); }
 		α subscribe( sv text, UserPK executer )ε->vector<SubscriptionId>{
@@ -54,7 +50,7 @@ namespace Jde::QL::Tests{
 		}
 		sp<AclStub> Acl;
 		sp<TestQL> Ql;
-		sp<SilentListener> Listener;
+		sp<RecordingListener> Listener;
 	};
 
 	//the finding's shape:  the un-logged-in socket's `userCreated` equivalent.
@@ -89,14 +85,14 @@ namespace Jde::QL::Tests{
 	TEST_F( SubscribeAuthorizeTests, UnsubscribeDropsTheRegistration ){
 		let ids = subscribe( "subscription ProviderCreated{ providerCreated(subscriptionId:1){ id name } }", UserPK{7} );
 		ASSERT_EQ( ids.size(), 1u );
-		Ql->Unsubscribe( Listener, flat_set<SubscriptionId>{ids.begin(), ids.end()} );
+		Ql->Unsubscribe( Listener, ids );
 		EXPECT_TRUE( Subscriptions::StopListen(Listener).empty() ) << "the subscription was still registered";
 	}
 	//and an id the listener does not hold leaves its other subscriptions alone.
 	TEST_F( SubscribeAuthorizeTests, UnsubscribeOfAnUnknownIdKeepsTheRest ){
 		let ids = subscribe( "subscription ProviderCreated{ providerCreated(subscriptionId:1){ id name } }", UserPK{7} );
 		ASSERT_EQ( ids.size(), 1u );
-		Ql->Unsubscribe( Listener, flat_set<SubscriptionId>{SubscriptionId{999999}} );
+		Ql->Unsubscribe( Listener, {SubscriptionId{999999}} );
 		EXPECT_EQ( Subscriptions::StopListen(Listener).size(), 1u );
 	}
 

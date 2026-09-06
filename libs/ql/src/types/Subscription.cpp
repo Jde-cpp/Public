@@ -5,7 +5,7 @@ namespace Jde::QL{
 	α Subscription::NextId()ι->SubscriptionId{ return _nextId++; }
 
 	Subscription::Subscription( string tableName, EMutationQL type, TableQL fields )ι:
-		Fields{fields}, TableName{tableName}, Type{type}{
+		Fields{move(fields)}, TableName{move(tableName)}, Type{type}{
 		if( auto subscriptionId = Fields.TryNumber<SubscriptionId>("subscriptionId"); subscriptionId ){
 			Id = *subscriptionId;
 			Fields.Args.erase( "subscriptionId" );

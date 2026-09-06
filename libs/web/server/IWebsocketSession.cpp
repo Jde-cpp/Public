@@ -14,7 +14,6 @@ namespace Jde::Web::Server{
 	struct SocketServerListener final: QL::IListener{
 		SocketServerListener( sp<IWebsocketSession> session )ι: QL::IListener{ Ƒ("[{}]Socket", session->Id()) }, _session{ session }{}
 		α OnChange( const jvalue& j, QL::SubscriptionId clientId )ε->void{ _session->WriteSubscription(j, clientId); }
-		α OnTraces( App::Proto::FromServer::Traces&& /*traces*/ )ι->void{ ASSERT(false); }
 		sp<IWebsocketSession> _session;
 	};
 

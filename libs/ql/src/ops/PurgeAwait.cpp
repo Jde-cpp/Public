@@ -1,22 +1,17 @@
 #include "PurgeAwait.h"
+#include <jde/fwk/co/AnyAwait.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/generators/Functions.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/AppSchema.h>
-#include <jde/ql/LocalSubscriptions.h>
+#include <jde/db/meta/Table.h>
+#include <jde/ql/QLHook.h>
 #include <jde/ql/types/MutationQL.h>
 
 #define let const auto
 
 namespace Jde::QL{
-	PurgeAwait::PurgeAwait( sp<DB::Table> table, MutationQL mutation, UserPK userPK, SL sl )ι:
-		base{ sl },
-		_mutation{ move(mutation) },
-		_table{ table },
-		_userPK{ userPK }
-	{}
-
-	//#25: authorize before the hook, not after it.  Before() co_awaits Hook::PurgeBefore first and the only Authorize was
+	//#25: authorize before the hook, not after it.  Execute() co_awaits Hook::PurgeBefore first and the only Authorize was
 	//inside Statements(), which runs after - so on the gateway a purge hook had already removed the access provider (and its
 	//PurgeFailure counterpart re-created it under a new id) before the caller was refused.  Mirrors UpdateAwait::await_ready:
 	//an in-memory acl check needs no suspension, so an unauthorized purge never starts.
@@ -26,29 +21,9 @@ namespace Jde::QL{
 			_table->Authorize( Access::ERights::Purge, _userPK, _sl );
 		}
 		catch( Exception& e ){
-			_exception = e.Move();
+			Refuse( move(e) );
 		}
-		return _exception!=nullptr;
-	}
-	α PurgeAwait::await_resume()ε->jvalue{
-		if( _exception )
-			_exception->Throw();
-		return Promise() ? base::await_resume() : jvalue{};
-	}
-	α PurgeAwait::Before()ι->MutationAwaits::Task{
-		try{
-			optional<jarray> result = co_await Hook::PurgeBefore( _mutation, _userPK );
-			auto result0 = result ? result->if_contains( 0 ) : nullptr;
-			if( result0 && result0->is_object() && Json::FindDefaultBool(result0->get_object(), "complete") ){
-				result0->get_object().erase( "complete" );
-				Resume( jarray{move(*result0)} );
-			}
-			else
-				Execute();
-		}
-		catch( runtime_error& e ){
-			ResumeExp( move(e) );
-		}
+		return Refused();
 	}
 	α PurgeAwait::Statements( const DB::Table& table )ε->vector<DB::Sql>{
 		table.Authorize( Access::ERights::Purge, _userPK, _sl );
@@ -68,46 +43,41 @@ namespace Jde::QL{
 		return statements;
 	}
 
-	α PurgeAwait::Execute()ι->DB::ExecuteAwait::Task{
+	//One coroutine - see InsertAwait::Execute for the shape and why:  the db failure is parked, its hook awaited after the
+	//handler, and the failure rethrown through the up<runtime_error> so its dynamic type survives (#28).
+	α PurgeAwait::Execute()ι->TAwait<jvalue>::Task{
+		jvalue y; up<runtime_error> failure;
 		try{
-			auto statements = Statements( *_table );
-			//TODO for mysql allow CLIENT_MULTI_STATEMENTS return ds->Execute( Str::AddSeparators(statements, ";"), parameters, sl );
-			uint y{};
-			DB::IDataSource& ds = *_table->Schema->DS();
-			for( auto& statement : statements )
-				y += co_await ds.Execute( move(statement), _sl );
-			After( y );
-		}
-		catch( runtime_error& e ){
-			After( ToExceptionPtr(move(e)) );
-		}
-	}
-	α PurgeAwait::After( uint y )ι->MutationAwaits::Task{
-		try{
-			co_await Hook::PurgeAfter( _mutation, _userPK );
-			Resume( jvalue{y} );
+			auto before = co_await Hook::PurgeBefore( _mutation, _userPK );
+			auto result0 = before ? before->if_contains( 0 ) : nullptr;
+			if( result0 && result0->is_object() && Json::FindDefaultBool(result0->get_object(), "complete") ){//the hook did the purge.
+				result0->get_object().erase( "complete" );
+				y = jarray{ move(*result0) };
+			}
+			else{
+				try{
+					uint rowCount{};
+					auto& ds = *_table->Schema->DS();
+					for( auto& statement : Statements(*_table) )//TODO for mysql allow CLIENT_MULTI_STATEMENTS return ds->Execute( Str::AddSeparators(statements, ";"), parameters, sl );
+						rowCount += co_await Any( ds.Execute(move(statement), _sl) );
+					y = rowCount;
+				}
+				catch( runtime_error& e ){
+					failure = ToExceptionPtr( move(e) );
+				}
+				if( failure )
+					co_await Hook::PurgeFailure( _mutation, _userPK );//the db error is the one reported; a failure hook that itself throws replaces it.
+				else
+					co_await Hook::PurgeAfter( _mutation, _userPK );
+			}
 		}
 		catch( runtime_error& e ){
 			ResumeExp( move(e) );
+			co_return;
 		}
-	}
-	α PurgeAwait::After( up<runtime_error> e )ι->MutationAwaits::Task{
-		try{
-			co_await Hook::PurgeFailure( _mutation, _userPK );
-			ResumeExp( move(*e) );
-		}
-		catch( runtime_error& inner ){
-			//e->_pInner TODO
-			ResumeExp( move(inner) );
-		}
-	}
-	α PurgeAwait::Resume( jvalue&& v )ι->void{
-		//#47: a statement that matched nothing is not an event.  OnMutation never looked at the result - an integer rowCount is not
-		//an object, so `available` was the args alone and the id the client sent went straight to the listeners.  `deleteUser( id:5,
-		//name:"nomatch" )` ands the extra arg into the where clause, updates 0 rows, and still had AccessListener mark user 5
-		//deleted in memory - "User is deleted" for every later request by 5, until restart, with the row untouched.
-		if( !v.is_number() || v.to_number<uint>() )
-			Subscriptions::OnMutation( _mutation, v );
-		base::Resume( move(v) );
+		if( failure )
+			ResumeExp( move(*failure) );
+		else
+			Resume( move(y) );
 	}
 }

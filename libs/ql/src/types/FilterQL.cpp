@@ -7,6 +7,7 @@
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
 #include <jde/ql/types/TableQL.h>
+#include "../qlInternal.h"
 
 #define let const auto
 
@@ -277,8 +278,6 @@ namespace Jde{
 	α QL::ToQLOperator( string op )ι->DB::EOperator{
 		return ToEnum<DB::EOperator>( QLOperatorStrings, op ).value_or( DB::EOperator::Equal );
 	}
-
-	namespace QL{ α GetEnumValues( const DB::View& table, SRCE )ε->flat_map<uint,string>; }//ops/SelectAwait.cpp - cached, but blocking.
 
 	α QL::FilterColumn( const DB::View& dbTable, sv jsonName, SL sl )ε->sp<DB::Column>{
 		if( jsonName=="id" )

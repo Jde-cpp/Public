@@ -30,37 +30,32 @@ namespace Jde::QL{
 		return *_filter;
 	}
 
-	α Input::ExtrapolateVariables()Ι->jobject{
-		auto extrapolateString = [this]( const jstring& s )ι->jvalue {
-			let varName = sv{ s }.substr( 2 );
-			let varValue = Variables->if_contains( varName );
-			return varValue ? *varValue : jvalue{};
-		};
-		function<jobject( const jobject& )> extrapolate = [&]( const jobject& o )ι->jobject {
-			jobject y;
-			for( let& [key, value] : o ){
-				if( value.is_string() && value.get_string().starts_with(Escape) )
-					y.emplace( key, extrapolateString(value.get_string()) );
-				else if( value.is_object() )
-					y.emplace( key, extrapolate(Json::AsObject(value)) );
-				else if( value.is_array() ){
-					jarray newArray;
-					for( auto&& item : value.get_array() ){
-						if( item.is_string() && item.get_string().starts_with(Escape) )
-							newArray.emplace_back( extrapolateString(item.get_string()) );
-						else if( item.is_object() )
-							newArray.emplace_back( extrapolate(item.get_object()) );
-						else
-							newArray.emplace_back( item );
-					}
-					y.emplace( key, newArray );
-				}
-				else
-					y.emplace( key, value );
+	//One walk over Args for both callers below:  every `\b$name` marker - a member, an array element, at any depth - is handed to
+	//`variable( name )` and its answer takes the marker's place; everything else is copied as is.
+	template<class F> Ω substitute( const jobject& o, const F& variable )ι->jobject{
+		auto value = [&]( const jvalue& v, auto& self )ι->jvalue {
+			if( v.is_string() && v.get_string().starts_with(Input::Escape) )
+				return variable( sv{v.get_string()}.substr(Input::Escape.size()) );
+			if( v.is_object() )
+				return substitute( v.get_object(), variable );
+			if( let a = v.if_array(); a ){
+				jarray y;
+				for( let& item : *a )
+					y.emplace_back( self(item, self) );
+				return y;
 			}
-			return y;
+			return v;
 		};
-		return extrapolate( Args );
+		jobject y;
+		for( let& [key, v] : o )
+			y.emplace( key, value(v, value) );
+		return y;
+	}
+	α Input::ExtrapolateVariables()Ι->jobject{
+		return substitute( Args, [this]( sv name )ι->jvalue {
+			let p = Variables ? Variables->if_contains(name) : nullptr;
+			return p ? *p : jvalue{};
+		});
 	}
 	//#36: an unbound $name extrapolated to json null, and null is a value - `users(target:$targt)` became `target is null` and
 	//returned 0 rows with nothing said, while `updateGroup(name:$typo)` wrote one.  The name itself is only knowable before the
@@ -68,28 +63,7 @@ namespace Jde::QL{
 	//is bound.
 	α Input::UnboundVariables()Ι->vector<string>{
 		vector<string> y;
-		function<void( const jobject& )> walk = [&]( const jobject& o )ι->void{
-			auto check = [&]( const jstring& s ){
-				auto name = string{ sv{s}.substr(2) };
-				if( !Variables || !Variables->if_contains(name) )
-					y.push_back( move(name) );
-			};
-			for( let& [key, value] : o ){
-				if( value.is_string() && value.get_string().starts_with(Escape) )
-					check( value.get_string() );
-				else if( value.is_object() )
-					walk( value.get_object() );
-				else if( value.is_array() ){
-					for( let& item : value.get_array() ){
-						if( item.is_string() && item.get_string().starts_with(Escape) )
-							check( item.get_string() );
-						else if( item.is_object() )
-							walk( item.get_object() );
-					}
-				}
-			}
-		};
-		walk( Args );
+		substitute( Args, [&]( sv name )ι->jvalue{ if( !Variables || !Variables->if_contains(name) ) y.emplace_back( name ); return {}; } );
 		return y;
 	}
 	α Input::CheckVariables( SL sl )Ε->void{

@@ -1,35 +1,22 @@
 #pragma once
-#include <jde/ql/types/MutationQL.h>
-#include <jde/fwk/co/Await.h>
-#include <jde/db/awaits/ExecuteAwait.h>
+#include "IMutationAwait.h"
 #include <jde/db/meta/Column.h>
 #include <jde/db/generators/InsertClause.h>
-#include <jde/ql/QLHook.h>
 
-namespace Jde::DB{ struct Criteria; struct IDataSource; struct InsertClause; struct Table; }
+namespace Jde::DB{ struct Criteria; struct Table; }
 namespace Jde::QL{
-	struct InsertAwait final: TAwait<jvalue>{
-		using base=TAwait<jvalue>;
-		InsertAwait( sp<DB::Table> table, MutationQL m, UserPK executer, SRCE )ι;
-		InsertAwait( sp<DB::Table> table, MutationQL&& m, bool identityInsert, UserPK executer, SRCE )ι;
+	struct InsertAwait final: IMutationAwait{
+		using base=IMutationAwait;
+		InsertAwait( sp<DB::Table> table, MutationQL m, UserPK executer, bool identityInsert=false, SRCE )ι;//identityInsert: true only from LocalQL::Upsert, which places a row at a caller-chosen pk.
 		α await_ready()ι->bool override;
-		α Suspend()ι->void override{ InsertBefore(); }
-		α await_resume()ε->jvalue override;
+		α Suspend()ι->void override{ Execute(); }
 	private:
 		α CreateQuery( const DB::Table& table, jobject input, bool nested=false )ε->void;
 		α AddStatement( const DB::Table& table, const jobject& input, optional<DB::Criteria> criteria=nullopt )ε->void;
-		α InsertBefore()ι->MutationAwaits::Task;
-		α Execute()ι->DB::QueryAwait::Task;
-		α InsertAfter( jarray result )ι->MutationAwaits::Task;
-		α InsertFailure( up<runtime_error> e )ι->MutationAwaits::Task;//#28: up, not a by-value runtime_error - the copy sliced the DB detail (and the 409) off.
-		α Resume( jarray&& v )ι->void;
+		α Execute()ι->TAwait<jvalue>::Task;//InsertBefore, the statements, then InsertAfter - or InsertFailure - in one coroutine.
 
-		UserPK _executer;
 		bool _identityInsert;
-		const MutationQL _mutation;
-		sp<DB::Table> _table;
-
-		up<Exception> _exception;
+		//built by await_ready (CreateQuery), which decides from them whether there is anything to suspend for - so they are members, not Execute's locals.
 		vector<vector<sp<DB::Column>>> _missingColumns;
 		flat_map<string,DB::Value> _nestedIds;
 		vector<DB::InsertClause> _statements;

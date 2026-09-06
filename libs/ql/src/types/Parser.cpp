@@ -51,18 +51,18 @@ namespace Jde{
 }
 namespace Jde::QL{
 	α Parser::SkipWhitespace()ι->void{
-		while( i<_text.size() && isspace(_text[i]) )
-			++i;
+		while( _i<_text.size() && isspace(_text[_i]) )
+			++_i;
 	}
 
 	α Parser::Next()ι->string{
 		string result = move( _peekValue );
 		if( result.empty() ){
 			SkipWhitespace();
-			if( i<_text.size() ){
-				uint start=i;
-				i = start+std::distance( _text.begin()+i, std::find_if(_text.begin()+i, _text.end(), [this]( char ch )ι{ return isspace(ch) || Delimiters.find(ch)!=sv::npos;}) );
-				result = i==start ? _text.substr( i++, 1 ) : _text.substr( start, i-start );
+			if( _i<_text.size() ){
+				let start = _i;
+				_i = std::distance( _text.begin(), std::find_if(_text.begin()+_i, _text.end(), [this]( char ch )ι{ return isspace(ch) || _delimiters.find(ch)!=sv::npos;}) );
+				result = _i==start ? _text.substr( _i++, 1 ) : _text.substr( start, _i-start );
 			}
 		}
 		else
@@ -74,22 +74,22 @@ namespace Jde::QL{
 	α Parser::Next( char end )ε->string{
 		string result;
 		if( _peekValue.size() ){
-			i = i-_peekValue.size();
+			_i = _i-_peekValue.size();
 			_peekValue.clear();
 		}
 		SkipWhitespace();
-		if( i<_text.size() ){
-			uint start = i;
-			for( auto ch = _text[i]; i<_text.size()-1 && ch!=end; ch = _text[++i] ){
+		if( _i<_text.size() ){
+			uint start = _i;
+			for( auto ch = _text[_i]; _i<_text.size()-1 && ch!=end; ch = _text[++_i] ){
 				if( ch=='"' ){//string
 					bool escape{};
-					for( ch = _text[++i]; i<_text.size() && !(ch=='"' && !escape); ch = _text[++i] )
+					for( ch = _text[++_i]; _i<_text.size() && !(ch=='"' && !escape); ch = _text[++_i] )
 						escape = ch=='\\' && !escape;
-					THROW_IF( i>=_text.size(), "Expected ending quote '{}' @ '{}'.", _text, i );
+					THROW_IF( _i>=_text.size(), "Expected ending quote '{}' @ '{}'.", _text, _i );
 				}
 			}
-			++i;
-			result = _text.substr( start, i-start );
+			++_i;
+			result = _text.substr( start, _i-start );
 		}
 		return result;
 	};
@@ -195,6 +195,16 @@ namespace Jde::QL{
 		return i;
 	}
 
+	//The literal at json[i] - false/null/true, and NaN - appended to y, its length returned.  One spelling for the four: each
+	//used to carry its own length check, substr, compare and advance, and the length checks had drifted to literal+1, which
+	//reported an unterminated *object* as "Unexpected end" at the literal instead of letting parseObject say what was missing.
+	Ω parseLiteral( sv json, uint i, sv literal, string& y )ε->uint{
+		THROW_IF( json.size()-i<literal.size(), "Unexpected end vs '{}' @ '{}'.", json, i );
+		let found = json.substr( i, literal.size() );
+		THROW_IF( found!=literal, "Expected '{}' vs '{}' in '{}' @ '{}'.", literal, found, json, i );
+		y += found;
+		return literal.size();
+	}
 	Ω parseObject( sv json, string& y )ε->uint;
 	Ω parseValue( sv json, string& y )ε->uint{
 		uint i=0;
@@ -209,32 +219,14 @@ namespace Jde::QL{
 			i += parseString( json.substr(i), y );
 		else if ( ch=='$' )
 			i += parseVariable( json.substr(i), y );
-		else if( ch=='f' ){
-			THROW_IF( json.size()-i<6, "Unexpected end vs '{}' @ '{}'.", json, i );
-			let false_ = json.substr( i, 5 );
-			THROW_IF( false_!="false", "Expected 'false' vs '{}' in '{}' @ '{}'.", false_, json, i );
-			y += false_;
-			i += 5;
-		}
-		else if( ch=='n' ){
-			THROW_IF( json.size()-i<5, "Unexpected end vs '{}' @ '{}'.", json, i );
-			let null = json.substr( i, 4 );
-			THROW_IF( null!="null", "Expected 'null' vs '{}' in '{}' @ '{}'.", null, json, i );
-			y += null;
-			i += 4;
-		}else if( ch=='N' ){
-			THROW_IF( json.size()-i<4, "Unexpected end vs '{}' @ '{}'.", json, i );
-			let nan = json.substr( i, 3 );
-			THROW_IF( nan!="NaN", "Expected 'NaN' vs '{}' in '{}' @ '{}'.", nan, json, i );
-			y += nan;
-			i += 3;
-		}else if( ch=='t' ){
-			THROW_IF( json.size()-i<5, "Unexpected end vs '{}' @ '{}'.", json, i );
-			let true_ = json.substr( i, 4 );
-			THROW_IF( true_!="true", "Expected 'true' vs '{}' in '{}' @ '{}'.", true_, json, i );
-			y += true_;
-			i += 4;
-		}
+		else if( ch=='f' )
+			i += parseLiteral( json, i, "false", y );
+		else if( ch=='n' )
+			i += parseLiteral( json, i, "null", y );
+		else if( ch=='N' )
+			i += parseLiteral( json, i, "NaN", y );
+		else if( ch=='t' )
+			i += parseLiteral( json, i, "true", y );
 		else if( isdigit(ch) || ch=='-' || ch=='.' ) //'.' can't start a json number, but landing in parseNumber names it better than "unexpected character".
 			i += parseNumber( json.substr(i), y );
 		else if( ch!=',' )
@@ -395,13 +387,12 @@ namespace Jde::QL{
 	}
 	α Parser::LoadSubscription( sp<jobject> vars, const vector<sp<DB::AppSchema>>& schemas )ε->Subscription{
 		let name = Next();
-		//Sync with MutationQL::EMutationQL
-		constexpr array<sv,9> SubscriptionSuffexes{ "Created", "Updated", "Deleted", "Restored", "Purged", "Added", "Removed", "Started", "Stopped" };
 		optional<EMutationQL> type; string tableName;
-		for( uint iSuffix=0; !type && iSuffix<SubscriptionSuffexes.size(); ++iSuffix ){
-			if( name.ends_with(SubscriptionSuffexes[iSuffix]) && name.size()>SubscriptionSuffexes[iSuffix].size() ){
-				tableName = DB::Names::ToPlural(DB::Names::FromJson( name.substr(0, name.size()-SubscriptionSuffexes[iSuffix].size())) );
-				type = (EMutationQL)iSuffix;
+		for( uint i=0; !type && i<MutationQLNames.size(); ++i ){//the participle of the verb the mutation starts with - one table, see usings.h.
+			let& participle = MutationQLNames[i].Participle;
+			if( participle.size() && name.ends_with(participle) && name.size()>participle.size() ){
+				tableName = DB::Names::ToPlural(DB::Names::FromJson( name.substr(0, name.size()-participle.size())) );
+				type = (EMutationQL)i;
 			}
 		}
 		THROW_IF( !type, "Could not find subscription type for '{}'", name );
@@ -436,7 +427,7 @@ namespace Jde::QL{
 		let trimmed = Peek()==token;
 		if( trimmed ){
 			_peekValue = {};
-			i = 0;
+			_i = 0;
 			_text = _text.substr(token.size() );
 			_text = Str::TrimFirstLast( move(_text), '{', '}' );
 		}

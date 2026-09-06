@@ -105,4 +105,28 @@ namespace Jde::QL::Tests{
 		ASSERT_TRUE( many.is_array() ); //plural never indexes, so a junk element is the caller's business.
 		EXPECT_EQ( many.as_array().size(), 2u );
 	}
+
+	//ql-refactor A6: ExtractTable carried its own copy of FindTable's plural-then-singular search; it delegates now.  Pins what
+	//both must do - the exact name first, the singular second, a miss is null/nullopt - and that Extract removes only the one it
+	//hands back.  Schema-free: system tables resolve no view and neither method looks at one.
+	TEST( TableQLTests, FindAndExtractTableFallBackToTheSingular ){
+		auto ql = qlTable( "status" );
+		subTable( ql, "groups" ).Columns.push_back( ColumnQL{"id"} );
+		subTable( ql, "role" ).Columns.push_back( ColumnQL{"name"} ); //nested as its singular, asked for as its plural below.
+
+		ASSERT_TRUE( ql.FindTable("groups") ); EXPECT_EQ( ql.FindTable("groups")->JsonName, "groups" );
+		ASSERT_TRUE( ql.FindTable("roles") ); EXPECT_EQ( ql.FindTable("roles")->JsonName, "role" ); //the singular fallback.
+		ASSERT_TRUE( ql.FindTable("role") );
+		EXPECT_EQ( ql.FindTable("users"), nullptr );
+		EXPECT_FALSE( ql.ExtractTable("users") );
+		ASSERT_EQ( ql.Tables.size(), 2u ); //a miss removes nothing.
+
+		auto role = ql.ExtractTable( "roles" );
+		ASSERT_TRUE( role );
+		EXPECT_EQ( role->JsonName, "role" );
+		ASSERT_EQ( role->Columns.size(), 1u ); EXPECT_EQ( role->Columns[0].JsonName, "name" ); //moved out intact.
+		ASSERT_EQ( ql.Tables.size(), 1u );
+		EXPECT_EQ( ql.Tables[0].JsonName, "groups" ); //the sibling stays…
+		EXPECT_EQ( ql.FindTable("roles"), nullptr ); //…and the extracted one is gone.
+	}
 }

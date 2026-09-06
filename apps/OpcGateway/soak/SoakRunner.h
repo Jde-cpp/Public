@@ -11,7 +11,7 @@ namespace Jde::Opc::Gateway::Soak{
 		sp<Tests::GatewayClientSocket> Socket;//legs without a User share the main session's socket; a User leg gets its own logged-in socket.
 		SessionPK SessionId{};
 		uint Counter{}, WriteIndex{}, ConsecutiveFailures{};
-		uint Writes{}, WriteFailures{}, Pushes{}, Misses{};
+		uint Writes{}, WriteFailures{}, WriteRetries{}, Pushes{}, Misses{}, MissRetries{};//WriteRetries/MissRetries: attempts beyond the first that a write / a push needed - a PASS shows how often it leaned on them.
 		vector<uint32> LatenciesMs;
 		flat_map<NodeId,uint> Latest;//guarded by SoakRunner::_mutex.
 	};

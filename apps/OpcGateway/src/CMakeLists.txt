@@ -16,7 +16,7 @@ target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
 
 sqliteProcDependencies( ${targetName} Jde.DB.Sqlite.OpcGateway ) #config/args/sqlite + the 'Debug - Sqlite' launch config load these
 
-target_include_directories( ${targetName} PRIVATE ${jdeRoot}/include/jde/app/proto )
+target_include_directories( ${targetName} PRIVATE ${jdeGeneratedIncludeDir}/jde/app/proto ) #the generated Opc.*.pb.h import Common.proto and include Jde.App.Shared's Common.pb.h by bare name.
 target_link_libraries( ${targetName} Jde.Web.Server Jde.App.Client Jde.Opc )
 
 target_precompile_headers(${targetName}
@@ -40,9 +40,3 @@ protobuf_generate(
 suppressProtoWarnings( "${protos}" ${protoOutDir} )
 #PUBLIC: the tests and soak targets link this lib and include its generated headers by bare name.
 target_include_directories( ${targetName} PUBLIC ${CMAKE_CURRENT_BINARY_DIR} ${protoOutDir} )
-
-#for intellisense; created once at configure time since recreating it as a PRE_BUILD/PRE_LINK step on every build
-#bumps its mtime, which is newer than the PCH's, forcing a full PCH rebuild (and thus a full target rebuild) every time
-if( NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/types/proto/Common.pb.h" )
-	file( CREATE_LINK "${jdeRoot}/include/jde/app/proto/Common.pb.h" "${CMAKE_CURRENT_SOURCE_DIR}/types/proto/Common.pb.h" SYMBOLIC )
-endif()
