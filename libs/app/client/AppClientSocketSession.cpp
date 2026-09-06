@@ -136,18 +136,6 @@ namespace Client{
 		let kv = _subs.find( id );
 		return kv==_subs.end() ? flat_set<sp<QL::IListener>>{} : kv->second;//_subs never holds an empty set - StopListenRemote erases the key when the last listener goes - so empty means absent.
 	}
-	α AppClientSocketSession::OnTraces( App::Proto::FromServer::Traces&& traces, QL::SubscriptionId requestId )ι->void{
-		auto listeners = ListenersFor( requestId );
-		if( listeners.empty() ){
-			WARNT( ELogTags::QL, "[{}]Could not find trace subscription.", requestId );
-			return;
-		}
-		for( auto listener = listeners.begin(); listener!=listeners.end(); ){
-			let& p = *listener;
-			let isLast = ++listener==listeners.end();
-			p->OnTraces( isLast ? move(traces) : App::Proto::FromServer::Traces{traces} );//the last one gets the original; the rest a copy.
-		}
-	}
 	α AppClientSocketSession::OnSubscription( const jobject& m, QL::SubscriptionId clientId )ι->void{
 		let listeners = ListenersFor( clientId );
 		if( listeners.empty() ){
@@ -359,11 +347,9 @@ namespace Client{
 			case kStringPks://strings already saved in db, no need to send.  not being requested by client yet.
 				CRITICAL( "[{}]No use case has been implemented on client app '{}'.", hex(Id()), underlying(m->value_case()) );
 				break;
-			[[likely]]case kTraces:{
-				auto& traces = *m->mutable_traces();
-				DBG( "[{}]Traces: count='{}'.", hex(Id()), traces.values_size() );
-				OnTraces( move(traces), requestId );
-				break;}
+			case kTraces://a log subscription made from a C++ client.  Nothing consumes one since IListener::OnTraces went (ql-refactor B2) - the browser's logs page is the stream's consumer.
+				WARN( "[{}]Dropped {} log trace(s) for request {}: a C++ client has no trace listener.", hex(Id()), m->traces().values_size(), requestId );
+				break;
 			//[[unlikely]]
 			// case kStatus:
 			// 	CRITICAL( "[{:x}]Web only call not implemented on client app '{}'.", Id(), (uint)m->value_case() );

@@ -40,7 +40,6 @@ namespace Jde::App::Client{
 		α StopListenRemote( sp<QL::IListener> listener, vector<QL::SubscriptionId> ids )ι->flat_set<QL::SubscriptionId>;//returns the ids removed - the caller unsubscribes server side, e.g. IQL::Unsubscribe.
 		α ClearSubscriptions()ι->void;//what the close does: the ids died with the socket.  Remembered requests are untouched - that is what a reconnect replays.
 		α OnSubscription( const jobject& m, QL::SubscriptionId clientId )ι->void;
-		α OnTraces( App::Proto::FromServer::Traces&& traces, QL::SubscriptionId requestId )ι->void;
 	private:
 		α ListenersFor( QL::SubscriptionId id )Ι->flat_set<sp<QL::IListener>>;
 		α ClientQuery( Proto::FromServer::ClientQuery proto, Jde::UserPK executer, RequestId requestId )ι->TAwait<jvalue>::Task;

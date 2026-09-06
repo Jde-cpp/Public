@@ -1,41 +1,37 @@
 #include "InsertAwait.h"
+#include <jde/fwk/co/AnyAwait.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/generators/Functions.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/names.h>
 #include <jde/db/meta/Table.h>
-#include <jde/ql/LocalSubscriptions.h>
-#include "../types/QLColumn.h"
+#include <jde/ql/QLHook.h>
+#include "../types/JsonColumn.h"
+#include "../qlInternal.h"
 
 #define let const auto
 
 namespace Jde::QL{
 	using DB::Value;
 	constexpr ELogTags _tags{ ELogTags::QL };
-	Ω getEnumValue( const DB::Column& c, const QLColumn& qlCol, const jvalue& v )->Value;
-	α GetEnumValues( const DB::View& table, SRCE )ε->flat_map<uint,string>;
-	α ToFlags( const flat_map<uint,string>& values, const jarray& flags, sv memberName, SRCE )ε->uint;//ops/SelectAwait.cpp - shared with UpdateAwait (#48).
+	Ω getEnumValue( const DB::Column& c, const JsonColumn& qlCol, const jvalue& v )->Value;
 
-	InsertAwait::InsertAwait( sp<DB::Table> table, MutationQL m, UserPK executer, SL sl )ι:
-		InsertAwait( table, move(m), false, executer, sl )
-	{}
-	InsertAwait::InsertAwait( sp<DB::Table> table, MutationQL&& m, bool identityInsert, UserPK executer, SL sl )ι:
-		base{sl},
-		_executer{ executer },
-		_identityInsert{ identityInsert },
-		_mutation{ move(m) },
-		_table{ table }
+	InsertAwait::InsertAwait( sp<DB::Table> table, MutationQL m, UserPK executer, bool identityInsert, SL sl )ι:
+		base{ move(table), move(m), executer, sl },
+		_identityInsert{ identityInsert }
 	{}
 
 	α InsertAwait::await_ready()ι->bool{
 		try{
-			_table->Authorize( Access::ERights::Create, _executer, _sl );
+			_table->Authorize( Access::ERights::Create, _userPK, _sl );
 			CreateQuery( *_table, _mutation.ExtrapolateVariables() );
+			if( _statements.empty() && !_table->HasCustomInsertProc )
+				_result = jvalue{};//nothing to insert - finished here, and nothing is published.
 		}
 		catch( Exception& e ){
-			_exception = e.Move();
+			Refuse( move(e) );
 		}
-		return _exception || ( _statements.empty() && !_table->HasCustomInsertProc );
+		return Refused() || _result.has_value();
 	}
 
 	α InsertAwait::CreateQuery( const DB::Table& table, jobject input, bool nested )ε->void{
@@ -43,7 +39,7 @@ namespace Jde::QL{
 			if( auto nestedTable = value.is_object() ? table.Schema->FindTable(DB::Names::FromJson(DB::Names::ToPlural(key))) : nullptr; nestedTable ){
 				let& o = value.get_object();
 				if( o.size()==1 && o.contains("id") && nestedTable->SurrogateKeys.size() ){
-					nestedTable->Authorize( Access::ERights::Read, _executer, _sl );
+					nestedTable->Authorize( Access::ERights::Read, _userPK, _sl );
 					//#24: the same rule as the pk branch in AddStatement - `identity:{id:N}` on a table that *extends* identities
 					//would pre-seed the back-fill and bind the new row to N, so the id this insert is about to create is dropped.
 					let extends = table.IsView() ? nullptr : AsTable(table).Extends;
@@ -54,7 +50,7 @@ namespace Jde::QL{
 						_nestedIds.emplace( nestedTable->SurrogateKeys[0]->Name, DB::Value{Json::AsNumber<uint>(o, "id")} );
 				}
 				else{
-					nestedTable->Authorize( Access::ERights::Create, _executer, _sl );
+					nestedTable->Authorize( Access::ERights::Create, _userPK, _sl );
 					CreateQuery( *nestedTable, o, true );
 				}
 			}
@@ -72,7 +68,7 @@ namespace Jde::QL{
 		for( let& c : table.Columns ){
 			if( !c->Insertable && (!_identityInsert || !c->IsPK()) )
 				continue;
-			const QLColumn qlCol{ c };
+			const JsonColumn qlCol{ c };
 			Value value;
 			let memberName = qlCol.MemberName();
 			//#24: an extension's pk is the parent row's id - it comes from the insert a few lines up, never from the client.
@@ -115,101 +111,76 @@ namespace Jde::QL{
 		}
 	}
 
-	α InsertAwait::InsertBefore()ι->MutationAwaits::Task{
+	//One coroutine.  The hooks are MutationAwaits and the data source a QueryAwait, and an awaitable dictates its caller's return
+	//type - which is what used to split this into InsertBefore → Execute → InsertAfter | InsertFailure, handing off through members
+	//(ql-review3 #50 bound a reference into the frame Execute had already left).  The hooks are AnyAwaits, awaitable from any frame,
+	//and Any() wraps the db awaitable, so one frame awaits both.  A db
+	//failure is parked and its hook awaited *after* the handler - co_await is not allowed inside one - then rethrown through the
+	//up<runtime_error>, whose dynamic type ResumeExp keeps (#28: a duplicate key stays a DBException, and a 409).
+	α InsertAwait::Execute()ι->TAwait<jvalue>::Task{
+		jarray y; up<runtime_error> failure;
 		try{
-			optional<jarray> result = co_await Hook::InsertBefore( _mutation, _executer );
-			auto result0 = result ? result->if_contains(0) : nullptr;
-			if( result0 && result0->is_object() && Json::FindDefaultBool(result0->get_object(), "complete") ){
+			auto before = co_await Hook::InsertBefore( _mutation, _userPK );
+			auto result0 = before ? before->if_contains(0) : nullptr;
+			if( result0 && result0->is_object() && Json::FindDefaultBool(result0->get_object(), "complete") ){//the hook did the insert.
 				result0->get_object().erase( "complete" );
-				Resume( jarray{ move(*result0) } );
-				co_return;
+				y.push_back( move(*result0) );
+			}
+			else{
+				try{
+					auto& ds = *_table->Schema->DS();
+					for( uint i=0; i<_statements.size(); ++i ){
+						auto& statement = _statements[i];
+						for( auto&& missingCol : _missingColumns[i] ){
+							if( auto missingValue = _nestedIds.find(missingCol->Name); missingValue!=_nestedIds.end() )
+								statement.SetValue( missingCol, move(missingValue->second) );
+						}
+
+						uint id{};
+						if( _identityInsert )
+							statement.IsStoredProc = false;
+						auto sql = statement.Move();
+						if( statement.IsStoredProc ){
+							let result = co_await Any( ds.Query(move(sql), true, _sl) );
+							for( let& row : result.Rows ){
+								ASSERT( row.Size() );
+								id = row.Size() ? row.GetInt32( 0 ) : 0;
+							}
+							y.push_back( jobject{ {"id", id}, {"rowCount",result.RowsAffected} } );
+						}else{
+							if( _identityInsert && ds.Syntax().NeedsIdentityInsert() )
+								sql.Text = Ƒ("SET IDENTITY_INSERT {0} ON;{1};SET IDENTITY_INSERT {0} OFF;", _table->SqlName(), sql.Text );
+							let rowCount = ( co_await Any(ds.Query(move(sql), false, _sl)) ).RowsAffected;
+							y.push_back( jobject{ {"rowCount",rowCount} } );
+						}
+
+						auto table = statement.Values.size() ? statement.Values.begin()->first->Table : nullptr;
+						if( auto sequence = statement.Values.size() && table->SurrogateKeys.size() ? table->SurrogateKeys[0] : nullptr; sequence )
+							_nestedIds.emplace( sequence->Name, id );
+					}
+					TRACE( "InsertAwait::Execute: {}", serialize(y) );
+				}
+				catch( runtime_error& e ){
+					failure = ToExceptionPtr( move(e) );
+				}
+				if( failure )
+					co_await Hook::InsertFailure( _mutation, _userPK );//the db error is the one reported; a failure hook that itself throws replaces it.
+				else{
+					let id = y.size() ? Json::FindNumber<uint>(y[0], "id").value_or(0) : 0;
+					co_await Hook::InsertAfter( id, _mutation, _userPK );
+				}
 			}
 		}
 		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 			co_return;
 		}
-		Execute();
+		if( failure )
+			ResumeExp( move(*failure) );
+		else
+			Resume( move(y) );
 	}
-
-	α InsertAwait::Execute()ι->DB::QueryAwait::Task{
-		jarray y;
-		auto& ds = *_table->Schema->DS();
-		try{
-			for( uint i=0; i<_statements.size(); ++i ){
-				auto& statement = _statements[i];
-				for( auto&& missingCol : _missingColumns[i] ){
-					if( auto missingValue = _nestedIds.find(missingCol->Name); missingValue!=_nestedIds.end() )
-						statement.SetValue( missingCol, move(missingValue->second) );
-				}
-
-				uint id{};
-				if( _identityInsert )
-					statement.IsStoredProc = false;
-				auto sql = statement.Move();
-				if( statement.IsStoredProc ){
-					let result = co_await ds.Query( move(sql), true, _sl );
-					for( let& row : result.Rows ){
-						ASSERT( row.Size() );
-						id = row.Size() ? row.GetInt32( 0 ) : 0;
-					}
-					y.push_back( jobject{ {"id", id}, {"rowCount",result.RowsAffected} } );
-				}else{
-					if( _identityInsert && ds.Syntax().NeedsIdentityInsert() )
-						sql.Text = Ƒ("SET IDENTITY_INSERT {0} ON;{1};SET IDENTITY_INSERT {0} OFF;", _table->SqlName(), sql.Text );
-					let rowCount = ( co_await ds.Query(move(sql), false, _sl) ).RowsAffected;
-					y.push_back( jobject{ {"rowCount",rowCount} } );
-				}
-
-				auto table = statement.Values.size() ? statement.Values.begin()->first->Table : nullptr;
-				if( auto sequence = statement.Values.size() && table->SurrogateKeys.size() ? table->SurrogateKeys[0] : nullptr; sequence )
-					_nestedIds.emplace( sequence->Name, id );
-			}
-			TRACE( "InsertAwait::Execute: {}", serialize(y) );
-			InsertAfter( move(y) );
-		}
-		catch( runtime_error& e ){
-			InsertFailure( ToExceptionPtr(move(e)) );
-		}
-	}
-	α InsertAwait::InsertAfter( jarray result )ι->MutationAwaits::Task{
-		try{
-			let id = result.size() ? Json::FindNumber<uint>(result[0], "id").value_or(0) : 0;
-			co_await Hook::InsertAfter( id, _mutation, _executer );
-			Resume( move(result) );
-		}
-		catch( runtime_error& e ){
-			ResumeExp( move(e) );
-		}
-	}
-	//#28: by value, because the coroutine outlives the catch block that built it - but as up<Exception>, so the dynamic type
-	//survives.  ResumeExp( Exception&& ) hands the referent to SetExp, which calls the virtual Move().
-	α InsertAwait::InsertFailure( up<runtime_error> e )ι->MutationAwaits::Task{
-		try{
-			co_await Hook::InsertFailure( _mutation, _executer );
-			ResumeExp( move(*e) );
-		}
-		catch( runtime_error& e2 ){
-			ResumeExp( move(e2) );
-		}
-	}
-	α InsertAwait::Resume( jarray&& v )ι->void{
-		//#47: the insert half - no row means no statement inserted one, and publishing `null` told subscribers a row they could
-		//not identify had appeared.
-		if( v.size() )
-			Subscriptions::OnMutation( _mutation, v[0] );
-		base::Resume( move(v) );
-	}
-
-	α InsertAwait::await_resume()ε->jvalue{
-		if( _exception )
-			_exception->Throw();
-		return Promise()
-			? TAwait<jvalue>::await_resume()
-			: jvalue{};
-	}
-
-	α getEnumValue( const DB::Column& c, const QLColumn& qlCol, const jvalue& v )->Value{
+	α getEnumValue( const DB::Column& c, const JsonColumn& qlCol, const jvalue& v )->Value{
 		Value y;
 		let values = GetEnumValues( qlCol.Table() );
 		if( v.is_string() ){

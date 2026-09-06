@@ -8,16 +8,14 @@
 
 #define let const auto
 
-namespace Jde{
-}
 namespace Jde::QL{
 	α MutationQL::ParseCommand( sv commandName, SL _sl )ε->tuple<string,EMutationQL>{
 		uint iType=0;
-		for( ;iType<MutationQLStrings.size() && !commandName.starts_with(MutationQLStrings[iType]); ++iType );
-		if( iType==MutationQLStrings.size() )
+		for( ;iType<MutationQLNames.size() && !commandName.starts_with(MutationQLNames[iType].Verb); ++iType );
+		if( iType==MutationQLNames.size() )
 			throw Exception{ _sl, {ELogTags::QL}, "Could not find mutation {}", commandName };
 
-		auto tableJsonName = string{ commandName.substr(MutationQLStrings[iType].size()) };
+		auto tableJsonName = string{ commandName.substr(MutationQLNames[iType].Verb.size()) };
 		tableJsonName[0] = (char)tolower( tableJsonName[0] );
 
 		return { move(tableJsonName), (EMutationQL)iType };
@@ -27,11 +25,6 @@ namespace Jde::QL{
 		Input{ move(args), move(variables) }, CommandName{move(commandName)}, ResultRequest{move(resultRequest)}, ReturnRaw{returnRaw}{
 		std::tie(JsonTableName,Type) = ParseCommand( CommandName );
 		DBTable = system || JsonTableName.empty() ? nullptr : DB::AppSchema::GetTablePtr( schemas, DB::Names::ToPlural(DB::Names::FromJson(JsonTableName)) );
-	}
-	MutationQL::MutationQL( string commandName, jobject&& args, sp<jobject> variables, optional<TableQL>&& resultRequest, bool returnRaw, const sp<DB::AppSchema>& schema )ε:
-		Input{ move(args), move(variables) }, CommandName{move(commandName)}, ResultRequest{move(resultRequest)}, ReturnRaw{returnRaw}{
-		std::tie(JsonTableName,Type) = ParseCommand( CommandName );
-		DBTable = schema->GetTablePtr( DB::Names::ToPlural(DB::Names::FromJson(JsonTableName)) );
 	}
 
 	//System mutations (updateLogSetting, ...) resolve no table, and the ASSERT this used to make did not stop the null
@@ -47,8 +40,8 @@ namespace Jde::QL{
 
 	α MutationQL::IsMutation( sv name )ι->bool{
 		bool isMutation{ name=="mutation" };
-		for( uint i=0; !isMutation && i<MutationQLStrings.size(); ++i ){
-			let& verb = MutationQLStrings[i];
+		for( uint i=0; !isMutation && i<MutationQLNames.size(); ++i ){
+			let& verb = MutationQLNames[i].Verb;
 			isMutation = name.size()>verb.size() && name.starts_with( verb ) && isupper( (unsigned char)name[verb.size()] );
 		}
 		return isMutation;

@@ -14,7 +14,6 @@
 
 #define let const auto
 
-namespace Jde::Access{ struct Authorize; }
 namespace Jde{
 	α QL::LoadEnum( const DB::View& table, SL sl )ι->bool{
 		try{

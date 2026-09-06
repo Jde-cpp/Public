@@ -34,9 +34,9 @@ namespace Jde::QL{
 				}
 				if( !result ){
 					if( _statement )
-						result = co_await SelectAwait{ table, *_statement, _creds.UserPK(), true, _sl };
+						result = co_await SelectAwait{ move(table), *_statement, _creds.UserPK(), true, _sl };
 					else
-						result = co_await SelectAwait{ table, _creds.UserPK(), true, _sl };
+						result = co_await SelectAwait{ move(table), _creds.UserPK(), true, _sl };
 				}
 				if( returnRaw )
 					y = move( *result );

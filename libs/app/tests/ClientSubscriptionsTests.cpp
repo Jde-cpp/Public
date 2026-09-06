@@ -19,7 +19,6 @@ namespace Jde::App::Tests{
 	struct Listener final : QL::IListener{
 		Listener( str name )ι:IListener{name}{}
 		α OnChange( const jvalue&, QL::SubscriptionId )ε->void override{ ++Changes; }
-		α OnTraces( App::Proto::FromServer::Traces&& )ι->void override{}
 		atomic<uint> Changes{};
 	};
 
@@ -119,7 +118,7 @@ namespace Jde::App::Tests{
 		EXPECT_TRUE( Client::Subscriptions::Remembered().empty() );
 	}
 
-	//M8: OnSubscription/OnTraces invoked their listeners while holding the shared_lock, so a listener that unsubscribes
+	//M8: OnSubscription (and OnTraces, since removed) invoked their listeners while holding the shared_lock, so a listener that unsubscribes
 	//in response to an event re-entered StopListenRemote - which takes the same mutex exclusively - and hung.
 	//The re-entrant call runs on another thread, not this one, for two reasons: a same-thread relock of a shared_mutex is
 	//UB rather than a guaranteed hang, and this way a regression fails on the deadline instead of wedging the suite.
@@ -139,7 +138,6 @@ namespace Jde::App::Tests{
 				std::this_thread::sleep_for( 10ms );
 			SawUnsubscribe = Unsubscribed.load();
 		}
-		α OnTraces( App::Proto::FromServer::Traces&& )ι->void override{}
 		wp<QL::IListener> Self;//what StopListenRemote matches on.
 		sp<Client::AppClientSocketSession> Session;//the session carrying the id - the map is per socket since M1.
 		atomic<bool> Unsubscribed{};

@@ -120,7 +120,7 @@ namespace Jde::App::Client{
 		auto session = LoadSession();//not Session(): the live ids are the socket's now, and with no socket there are none to stop - the same no-op this was when _subs was process-wide and already cleared by the close.
 		auto removed = session ? session->StopListenRemote( listener, move(ids) ) : flat_set<QL::SubscriptionId>{};
 		Subscriptions::Forget( listener, removed );//or the next reconnect would put back what was just unsubscribed.
-		QLServer()->Unsubscribe( listener, move(removed), sl );
+		QLServer()->Unsubscribe( listener, vector<QL::SubscriptionId>( removed.begin(), removed.end() ), sl );
 	}
 
 	α IAppClient::Write( vector<Logging::Entry>&& entries )ι->bool{

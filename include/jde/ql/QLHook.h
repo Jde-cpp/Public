@@ -1,15 +1,13 @@
 #pragma once
 #include <jde/db/usings.h>
-#include <jde/fwk/co/Await.h>
+#include <jde/fwk/co/AnyAwait.h>
 #include <jde/ql/types/MutationQL.h>
 
-#pragma warning(push)
-#pragma warning( disable : 4100 )
 namespace Jde::QL{
-	struct IMutationAwait; struct MutationQL; struct TableQL;
+	struct MutationQL; struct TableQL;
 	struct IQLHook{
 		using HookResult=up<TAwait<jvalue>>;
-	  virtual ~IQLHook() = default;
+		virtual ~IQLHook() = default;
 
 		β Select( const TableQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }
 		β InsertBefore( const MutationQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }
@@ -21,64 +19,85 @@ namespace Jde::QL{
 		β PurgeAfter( const MutationQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }
 		β PurgeFailure( const MutationQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }
 
-		β AddBefore( const MutationQL&, UserPK, std::source_location=SRCE_CUR )ι->HookResult{ return {}; }
+		β AddBefore( const MutationQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }
 		β Add( const MutationQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }
 		β AddAfter( const MutationQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }
-//		β RemoveBefore( const MutationQL& mutation, UserPK executer, SL )ι->HookResult{ return {}; }
 		β Remove( const MutationQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }
 		β RemoveAfter( const MutationQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }
 
 		β Start( const MutationQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }
 		β Stop( const MutationQL&, UserPK, SL=SRCE_CUR )ι->HookResult{ return {}; }
 	};
-#pragma warning(pop)
 
 	namespace Hook{
 		α Add( up<IQLHook>&& hook )ι->void;
-		enum class Operation : uint16{ Before=0x1, After=0x2, Failure=0x4, Insert=0x8, Update=0x10, Purge=0x20, Select=0x40, Start=0x80, Stop=0x100, Add=0x200, Remove=0x400 };
+		enum class Operation : uint16{ Before=0x1, After=0x2, Failure=0x4, Insert=0x8, Update=0x10, Purge=0x20, Start=0x80, Stop=0x100, Add=0x200, Remove=0x400 };//not the dispatch key any more - a tag OpcQLHook keeps for what it was asked.
+		//#13: the hooks are ι by declaration, but that is a promise this loop used to take on faith - a hook that threw took the
+		//process down from a noexcept frame, past every try/catch on the way in.  Now it fails the request instead: the refusal is
+		//returned (and asking stops there), parked by the caller and rethrown from its await_resume, which is what the awaiter is
+		//already prepared for.  Everything the hooks handed back is in `awaitables`.
+		α Collect( const function<IQLHook::HookResult(IQLHook&)>& ask, vector<up<TAwait<jvalue>>>& awaitables )ι->up<Exception>;
 	}
 
-	struct QueryHookAwaits final: TAwait<optional<jvalue>>{
-		//GraphQLHookAwait( const MutationQL& _mutation, UserPK executer, Hook::Operation op, SRCE )ι;
-		QueryHookAwaits( const TableQL& table_, UserPK executer, SRCE )ι;
+	//What asking every registered hook has in common:  the collection in await_ready, the refusal parked there, and the coroutine
+	//that awaits whatever the hooks returned.  Ask() names the virtual asked; Fold() shapes the answers.  An AnyAwait, so an op
+	//awaits it from its own frame, and "nothing claimed it" or a refusal completes it inside await_ready - the base's await_resume
+	//hands back the nullopt or rethrows.
+	template<class TResult>
+	struct HookAwaits : AnyAwait<TResult>{
+		using base=AnyAwait<TResult>;
+		HookAwaits( UserPK userPK, SRCE )ι:base{ sl }, _userPK{ userPK }{}
 		α await_ready()ι->bool override;
-		α await_resume()ε->optional<jvalue> override;//null=not handled.
-	private:
-		//α CollectAwaits( const MutationQL& mutation, UserPK executer, Hook::Operation op )ι->optional<AwaitResult>;
+	protected:
+		β Ask( IQLHook& hook )ε->IQLHook::HookResult=0;//ε, not ι: a hook that lies about its specification must reach Collect's catch, not terminate.
+		β Fold( jarray&& results )ι->TResult=0;
 		α Suspend()ι->void override{ Execute(); }
 		α Execute()ι->TAwait<jvalue>::Task;
-		//α AwaitMutation()ι->TAwait<jvalue>::Task;
-		optional<jvalue> _readyResult;
-		vector<up<TAwait<jvalue>>> _awaitables;
-		up<Exception> _exception;//a hook that throws from the ι collection loop - rethrown from await_resume (#13).
-		const TableQL& _ql;
 		UserPK _userPK;
-	};
-
-	struct IMutationAwait : TAwait<jvalue>{
-		using base=TAwait<jvalue>;
-		IMutationAwait( MutationQL mutation, UserPK executer, SRCE )ι:base{sl}, _mutation{move(mutation)}, _userPK{executer}{};
-		virtual ~IMutationAwait()=0;
-	protected:
-		MutationQL _mutation;
-		UserPK _userPK;
-	};
-	inline IMutationAwait::~IMutationAwait(){}
-
-	struct MutationAwaits : TAwait<optional<jarray>>{
-		using base=TAwait<optional<jarray>>;
-		MutationAwaits( MutationQL mutation, UserPK executer, Hook::Operation op, uint pk, SRCE )ι;
-		α await_ready()ι->bool override;
-		α Suspend()ι->void override;
-		α Execute()ι->IMutationAwait::Task;
-		α await_resume()ε->optional<jarray> override;
 	private:
 		vector<up<TAwait<jvalue>>> _awaitables;
-		up<Exception> _exception;//a hook that throws from the ι collection loop - rethrown from await_resume (#13).
+	};
+
+	Ŧ HookAwaits<T>::await_ready()ι->bool{
+		if( auto refusal = Hook::Collect( [this](IQLHook& h){ return Ask(h); }, _awaitables ); refusal )
+			base::_error = move( refusal );//#13: rethrown by the awaiter's co_await.
+		else if( _awaitables.empty() )
+			base::_result = T{};//nullopt: nothing claimed it.
+		return base::_error || base::_result;
+	}
+	Ŧ HookAwaits<T>::Execute()ι->TAwait<jvalue>::Task{
+		jarray results;
+		try{
+			for( auto& awaitable : _awaitables )
+				results.push_back( co_await *awaitable );
+		}
+		catch( runtime_error& e ){
+			base::ResumeExp( move(e) );
+			co_return;
+		}
+		base::Resume( Fold(move(results)) );
+	}
+
+	struct QueryHookAwaits final: HookAwaits<optional<jvalue>>{
+		using base=HookAwaits<optional<jvalue>>;
+		QueryHookAwaits( const TableQL& table, UserPK executer, SRCE )ι:base{ executer, sl }, _ql{ table }{}
+	private:
+		α Ask( IQLHook& hook )ε->IQLHook::HookResult override{ return hook.Select( _ql, _userPK, _sl ); }
+		α Fold( jarray&& results )ι->optional<jvalue> override{ return results.size()==1 ? move(results[0]) : jvalue{ move(results) }; }//one answer is the answer; several are a list.
+		const TableQL& _ql;
+	};
+
+	//The IQLHook virtual a MutationAwaits asks - a member pointer for the fifteen that take (mutation, executer, sl), a lambda for
+	//InsertAfter, which also takes the pk.  This is what the Operation bitmask used to be switched back into, case by case.
+	using MutationHook = function<IQLHook::HookResult( IQLHook&, const MutationQL&, UserPK, SL )>;
+	struct MutationAwaits final: HookAwaits<optional<jarray>>{
+		using base=HookAwaits<optional<jarray>>;
+		MutationAwaits( MutationQL mutation, UserPK executer, MutationHook hook, SRCE )ι;
+	private:
+		α Ask( IQLHook& h )ε->IQLHook::HookResult override{ return _hook( h, _mutation, _userPK, _sl ); }
+		α Fold( jarray&& results )ι->optional<jarray> override{ return move( results ); }
 		MutationQL _mutation;
-		Hook::Operation _op;
-		uint _pk;
-		UserPK _userPK;
+		MutationHook _hook;
 	};
 
 	namespace Hook{
@@ -92,24 +111,13 @@ namespace Jde::QL{
 		α PurgeAfter( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
 		α PurgeFailure( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
 
-
 		α AddBefore( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
 		α Add( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
 		α AddAfter( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
-		//α RemoveBefore( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
 		α Remove( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
 		α RemoveAfter( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
 
 		α Start( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
 		α Stop( const MutationQL& m, UserPK executer, SRCE )ι->MutationAwaits;
-	};
-
-	//need awaitable to throw an exception
-	struct ExceptionAwait final : TAwait<jvalue>{
-		ExceptionAwait( up<Exception>&& e, SRCE )ι:TAwait<jvalue>{ sl }, _exception{ move(e) }{}
-		α await_ready()ι->bool override{ return true; }
-		α Suspend()ι->void override{}
-		α await_resume()ε->jvalue override{ _exception->Throw(); return {}; }
-		up<Exception> _exception;
 	};
 }

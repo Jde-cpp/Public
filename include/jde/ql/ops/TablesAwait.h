@@ -8,9 +8,8 @@ namespace Jde::QL{
 	struct IQL;
 	struct TablesAwait final: TAwaitEx<jvalue, TAwait<jvalue>::Task>{
 		using base = TAwaitEx<jvalue, TAwait<jvalue>::Task>;
-		TablesAwait( vector<TableQL>&& tables, optional<DB::Statement>&& statement, QL::Creds creds, sp<IQL>&& ql, SL sl ): base{ sl }, _creds{move(creds)}, _ql{move(ql)}, _statement{move(statement)}, _tables{move(tables)}{}
+		TablesAwait( vector<TableQL>&& tables, optional<DB::Statement>&& statement, QL::Creds creds, sp<IQL>&& ql, SL sl )ι: base{ sl }, _creds{move(creds)}, _ql{move(ql)}, _statement{move(statement)}, _tables{move(tables)}{}
 	private:
-		α UserPK()ι->UserPK;
 		α Execute()ι->TAwait<jvalue>::Task override;
 		QL::Creds _creds;
 		sp<IQL> _ql;

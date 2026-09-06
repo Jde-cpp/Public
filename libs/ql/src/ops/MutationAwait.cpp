@@ -1,6 +1,9 @@
 #include <jde/ql/ops/MutationAwait.h>
 #include <jde/ql/IQL.h>
+#include <jde/ql/QLHook.h>
+#include <jde/fwk/co/AnyAwait.h>
 #include <jde/fwk/io/Cache.h>
+#include <jde/db/meta/Table.h>
 #include "AddRemoveAwait.h"
 #include "InsertAwait.h"
 #include "PurgeAwait.h"
@@ -43,17 +46,18 @@ namespace Jde::QL{
 					y = co_await AddRemoveAwait{ move(table), move(_mutation), _creds.UserPK(), _sl };
 					break;
 				case Create:
-					y = co_await InsertAwait( move(table), move(_mutation), _creds.UserPK(), _sl );
+					y = co_await InsertAwait( move(table), move(_mutation), _creds.UserPK(), false, _sl );
 					break;
 				case Purge:
 					y = co_await PurgeAwait{ move(table), move(_mutation), _creds.UserPK(), _sl };
 					break;
 				case Start:
-					MutationAwait::Start();
-					co_return;
-				case Stop:
-					MutationAwait::Stop();
-					co_return;
+				case Stop:{//hook-implemented, no table; the MutationAwaits is awaitable from this frame, so the two twin coroutines are a pointer pick.
+					auto ask = _mutation.Type==Start ? &Hook::Start : &Hook::Stop;
+					auto result = co_await ask( _mutation, _creds.UserPK(), _sl );
+					y = result ? jvalue{ move(*result) } : jvalue{};
+					break;
+				}
 				case Execute:
 					throw Exception{ "Execute mutation not implemented.", {ELogTags::QL}, _sl };
 				}
@@ -61,26 +65,6 @@ namespace Jde::QL{
 					Cache::Clear( enumCache );
 			}
 			Resume( move(y) );
-		}
-		catch( runtime_error& e ){
-			ResumeExp( move(e) );
-		}
-	}
-
-	α MutationAwait::Start()ι->MutationAwaits::Task{
-		try{
-			optional<jvalue> y = co_await Hook::Start( _mutation, _creds.UserPK() );
-			Resume( y ? move(*y) : jvalue{} );
-		}
-		catch( runtime_error& e ){
-			ResumeExp( move(e) );
-		}
-	}
-
-	α MutationAwait::Stop()ι->MutationAwaits::Task{
-		try{
-			optional<jvalue> y = co_await Hook::Stop( _mutation, _creds.UserPK() );
-			Resume( y ? move(*y) : jvalue{} );
 		}
 		catch( runtime_error& e ){
 			ResumeExp( move(e) );

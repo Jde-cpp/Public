@@ -5,13 +5,12 @@
 #include <jde/db/meta/Table.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/QLHook.h>
+#include "../qlInternal.h"
 
 #define let const auto
 
 namespace Jde::QL{
 	using namespace DB::Names;
-	α QueryType( const TableQL& typeTable )ε->jobject;
-	α QuerySchema( const TableQL& schemaTable )ε->jobject;
 
 	//#48: the one flags-array parser.  Insert had its own, which `continue`d past a non-string element instead of refusing it -
 	//so `allowed:[1,2]`, which no name lookup could ever match, produced flags==0 and a silently unusable row, while the same
@@ -25,7 +24,7 @@ namespace Jde::QL{
 		}
 		return y;
 	}
-	α GetEnumValues( const DB::View& table, SRCE )ε->flat_map<uint,string>{
+	α GetEnumValues( const DB::View& table, SL sl )ε->flat_map<uint,string>{
 		return table.Schema->DS()->SelectEnumSync<uint,string>( table, Cache::DefaultDuration(), sl );
 	}
 	α numberToJson( const DB::Value& dbValue, const DB::Column& c )ι->jvalue{
@@ -39,8 +38,9 @@ namespace Jde::QL{
 			try{
 				values = GetEnumValues( *c.PKTable );
 			}
-			catch( const runtime_error& )
-			{}
+			catch( const runtime_error& e ){
+				WARNT( ELogTags::QL, "[{}]enum values could not be loaded - rendering the numeric id: {}", c.PKTable->Name, e.what() );
+			}
 			let value = dbValue.Get<uint>();
 			if( c.IsFlags() ){
 				jarray flags;
@@ -66,7 +66,7 @@ namespace Jde::QL{
 		return y;
 	}
 
-	α ValueToJson( DB::Value&& dbValue, const ColumnQL* pMember=nullptr )ι->jvalue {
+	α ValueToJson( DB::Value&& dbValue, const ColumnQL* pMember )ι->jvalue{
 		using enum DB::EValue;
 		jvalue json;
 		switch( dbValue.Type() ){
@@ -85,12 +85,11 @@ namespace Jde::QL{
 			else if( _qlTable.JsonName=="__schema" )
 				_result = QuerySchema( _qlTable );
 		}
-		catch( runtime_error& e ){
-			_result = ToExceptionPtr( move(e) );
-		}
-		return _result.index() != 0;
+		catch( Exception& e ){ _error = e.Move(); }//#28: the dynamic type, for the awaiter's rethrow.
+		catch( runtime_error& e ){ _error = mu<Exception>( move(e) ); }
+		return _result || _error;
 	}
-	α SelectAwait::Execute()ι->TAwait<optional<jvalue>>::Task{
+	α SelectAwait::Execute()ι->VoidTask{
 		try{
 			if( auto j = _statement ? optional<jvalue>{} : co_await QL::Hook::Select( _qlTable, _executer, _sl ); j.has_value() )
 			  Resume( move(*j) );
@@ -223,24 +222,12 @@ namespace Jde::QL{
 					jobject jSubRow;
 					let rowToJson2 = [&row]( const vector<ColumnQL>& columns, jobject& toRow ){
 						int i = 1;//first should be pk of parent table.
-						for( let& c : columns ){
-							//auto i = checkId && c.DBColumn->IsPK() ? 1 : (index2++)+2;
-	/*						if( c.DBColumn->QLAppend.size() ){
-								let pk = row[i++].ToUInt(); ++index2;
-								let pColumn = c.DBColumn->Table->FindColumn( FromJson(c.DBColumn->QLAppend) );  CHECK( pColumn && pColumn->IsEnum() );
-								let pEnum = parentTable.Schema->DS()->SelectEnumSync<uint,string>( pColumn->PKTable->Name ); CHECK( pEnum->find(pk)!=pEnum->end() );
-								//jRow[c.JsonName] = ValueToJson( row, i, subFlagValues, &c );
-								let name = Json::FindDefaultSV( jRow, c.JsonName );
-								jRow[c.JsonName] = name.empty() ? pEnum->find(pk)->second : Ƒ( "{}\\{}", pEnum->find(pk)->second, name );
-							}
-							else*/
-								toRow[c.JsonName] = ValueToJson( move(row[i++]), &c );
-						}
+						for( let& c : columns )
+							toRow[c.JsonName] = ValueToJson( move(row[i++]), &c );
 					};
 					rowToJson2( qlTable.Columns, jSubRow );
-					for( let& childTable : qlTable.Tables ){
-						let pkTable = childTable.DBTable();
-						if( fk ){
+					if( fk ){
+						for( let& childTable : qlTable.Tables ){
 							jobject jChildTable;
 							rowToJson2( childTable.Columns, jChildTable );
 							jSubRow[childTable.JsonName] = jChildTable;
@@ -317,9 +304,7 @@ namespace Jde::QL{
 	}
 
 	α SelectAwait::await_resume()ε->jvalue{
-		if( _result.index()==2 )
-			Jde::Throw( move(*get<up<runtime_error>>(move(_result))) );
-		auto y = _result.index()==0 ? base::await_resume() : get<jvalue>( move(_result) );
+		auto y = base::await_resume();
 		if( _log )
 			LOGSL( ELogLevel::Trace, _sl, ELogTags::QL, "SelectAwaitResult: {}", serialize(y) );
 		return y;

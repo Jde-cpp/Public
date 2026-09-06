@@ -22,6 +22,8 @@ namespace Jde::QL{
 		return *GetTablePtr( tableName, sl );
 	}
 
+	//Always finished in await_ready, so it parks its own result:  IQL::Subscribe's contract is a up<TAwait<…>>, and that family
+	//cannot pre-complete with a value (the promise is the mailbox) - the one place ql still parks one by hand.
 	struct SubscribeQueryAwait : TAwait<vector<SubscriptionId>>{
 		using Await = TAwait<jobject>;
 		using base = TAwait<vector<SubscriptionId>>;
@@ -44,7 +46,7 @@ namespace Jde::QL{
 		α Suspend()ι->void override{}
 		α await_resume()ε->vector<SubscriptionId> override{
 			if( _exception )
-				throw move(*_exception);
+				_exception->Throw();//not `throw move(*_exception)`, which slices to the base (#28).
 			return _result;
 		}
 	private:
@@ -73,12 +75,10 @@ namespace Jde::QL{
 				: "target:\""+move(key->NK())+'"';
 			auto ql = Ƒ( "{}({}){{ id }}", DB::Names::ToSingular(m.JsonTableName), move(input) );
 			if( auto existing = BlockAwait<TAwait<jobject>,jobject>(move(*QueryObject(move(ql), variables, executer))); existing.empty() ){
-				if( auto name = m.Args.contains("name") ? nullptr : m.Args.if_contains("target"); name ){
-					string name2 = Json::AsString(*name);
-					m.Args["name"] = name2;
-				}
+				if( auto name = m.Args.contains("name") ? nullptr : m.Args.if_contains("target"); name )
+					m.Args["name"] = Json::AsString( *name );
 				if( auto t = key->IsPK() ? GetTablePtr(m.TableName()) : nullptr; t && t->SequenceColumn() )
-					y.push_back( BlockAwait<InsertAwait,jvalue>({DB::AsTable(t), move(m), true, executer}) );
+					y.push_back( BlockAny<InsertAwait>({DB::AsTable(t), move(m), executer, true}) );
 				else
 					y.push_back( BlockAwait<QLAwait<jvalue>,jvalue>(QLAwait<jvalue>{move(m), executer}) );
 			}else

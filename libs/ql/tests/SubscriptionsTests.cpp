@@ -8,6 +8,7 @@
 #include <jde/fwk/log/MemoryLog.h>
 #include <jde/ql/LocalSubscriptions.h>
 #include "NullQL.h"
+#include "RecordingListener.h"
 #include <jde/ql/types/MutationQL.h>
 #include <jde/ql/types/Parser.h>
 
@@ -15,20 +16,6 @@
 
 namespace Jde::QL::Tests{
 	static const vector<sp<DB::AppSchema>> _noSubSchemas;
-
-	struct RecordingListener final : IListener{
-		RecordingListener( str name )ι:IListener{name}{}
-		α OnChange( const jvalue& j, SubscriptionId clientId )ε->void override{
-			Changes.emplace_back( clientId, j );
-			if( Throws )
-				throw Exception{ Ƒ("{} refuses", Name) };
-		}
-		α OnTraces( App::Proto::FromServer::Traces&& )ι->void override{}
-		α Payload( uint index )Ι->const jobject&{ return Changes.at(index).second.as_object().at("status").as_object(); }
-
-		vector<std::pair<SubscriptionId,jvalue>> Changes;
-		bool Throws{};
-	};
 
 	//`status` is a system name, so TableQL leaves _dbTable null and the subscription's key is the mutation's: {"",Type}.
 	Ω fields( std::initializer_list<sv> columns, jobject args={} )ε->TableQL{
@@ -98,7 +85,12 @@ namespace Jde::QL::Tests{
 
 	//#55: OnChange is ε and a subscriber is arbitrary downstream code, so one that throws must cost only its own notification.
 	//The catch is per listener, inside the loop - not the outer one, which would have taken the rest of the fan-out with it.
+	//And it is not silent (ql-refactor B7): the listener's name and what it threw are logged.
 	TEST_F( SubscriptionsTests, AThrowingListenerDoesNotCostTheNextOneItsNotification ){
+		if( !Logging::FindLogger<Logging::MemoryLog>() )
+			Logging::AddLogger( mu<Logging::MemoryLog>() ); //captures every level; self-contained, no shared-config change.
+		auto& logger = Logging::GetLogger<Logging::MemoryLog>();
+		Logging::ClearMemory();
 		auto bad = Listener( "bad" );
 		auto good = Listener( "good" );
 		bad->Throws = true;
@@ -109,6 +101,9 @@ namespace Jde::QL::Tests{
 
 		EXPECT_EQ( bad->Changes.size(), 1u ); //it was called, and it threw.
 		EXPECT_EQ( good->Changes.size(), 1u ); //and the next one still heard about it.
+		let warnings = logger.Find( [](let& entry){ return entry.Message().find("listener threw")!=string::npos; } );
+		ASSERT_EQ( warnings.size(), 1u ) << "the refusal was swallowed";
+		EXPECT_EQ( warnings[0].Level, ELogLevel::Warning );
 	}
 
 	//The 3-arg overload's predicate - the caller's scoping, alongside the subscriber's own args since #53.  It is handed the

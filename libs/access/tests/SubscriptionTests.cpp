@@ -23,7 +23,6 @@ namespace Jde::Access::Tests{
 	struct TestListener final : QL::IListener{
 		TestListener()ι: QL::IListener{"SubscriptionTests"}{}
 		α OnChange( const jvalue& j, QL::SubscriptionId )ε->void override{ Changes.push_back( Json::AsObject(j) ); }
-		α OnTraces( App::Proto::FromServer::Traces&& )ι->void override{ ASSERT(false); }
 		α Resource( uint i )Ι->const jobject&{ return Json::AsObject( Changes[i].begin()->value() ); } //{"resources":{…}} - the fields the subscription asked for.
 		vector<jobject> Changes;
 	};
