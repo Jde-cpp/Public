@@ -1,4 +1,11 @@
 cmake_path( SET jdeRoot NORMALIZE ${CMAKE_CURRENT_LIST_DIR}/.. )
+#Build-tree root for generated headers (protoc output).  Each protobuf_generate caller emits into
+#${jdeGeneratedIncludeDir}/jde/<lib>/proto and exports this root PUBLIC, so consumers keep the <jde/app/proto/X.pb.h>
+#spelling and every build tree resolves it from its own output.  Nothing generated is written into, or linked from, the
+#source tree: the former linkGeneratedHeader symlinks under include/ pointed at whichever tree built last, so deleting
+#(or not mounting) that tree broke every other one - and a dangling link looks up to date to ninja on windows, so the
+#build could not repair it.
+cmake_path( SET jdeGeneratedIncludeDir NORMALIZE ${CMAKE_BINARY_DIR}/include )
 #Note: file(GLOB) calls repo-wide deliberately omit CONFIGURE_DEPENDS - adding a new source file requires a manual reconfigure.
 #Two exceptions.  sqliteProcModule (below): its targets are MODULEs, where a source missing from a stale glob still links -
 #undefined symbols are legal - and only fails at dlopen.  And gtest executables (libs/access/tests, libs/app/tests): a new
@@ -67,19 +74,6 @@ function( suppressProtoWarnings protos outDir )
 		endforeach()
 		set_source_files_properties( ${_protoSources} PROPERTIES COMPILE_OPTIONS "-Wno-nullability-extension;-Wno-invalid-offsetof" )
 	endif()
-endfunction()
-
-# Symlinks src->dst as a proper build dependency (DEPENDS+OUTPUT) so it only
-# reruns when src actually changes, instead of on every build like a
-# TARGET-level PRE_BUILD/POST_BUILD custom command would.
-function( linkGeneratedHeader targetName src dst )
-	add_custom_command(
-		OUTPUT ${dst}
-		COMMAND ${CMAKE_COMMAND} -E create_symlink ${src} ${dst}
-		DEPENDS ${src}
-		COMMENT "mklink ${dst}"
-	)
-	target_sources( ${targetName} PRIVATE ${dst} )
 endfunction()
 
 #Configure-time symlink for static config files - idempotent; replaces the old POST_BUILD create_symlink steps that reran every build.

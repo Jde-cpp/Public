@@ -10,6 +10,12 @@
 #include "break.h"
 #include "ILogger.h"
 #include "Entry.h"
+#ifdef _MSC_VER
+	#ifndef NOMINMAX
+		#define NOMINMAX
+	#endif
+	#include <windows.h>
+#endif
 
 #define FormatString const fmt::format_string<Args const&...>
 #define ARGS const Args&

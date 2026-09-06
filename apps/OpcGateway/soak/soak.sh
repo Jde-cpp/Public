@@ -32,7 +32,9 @@
 #   --quiet-period    how long each idle window lasts (client default PT10M)
 #
 # Verdict criteria (verdict.json + exit code):
-#   - soak client exit 0 (completed, zero misses/writeFailures/socketDrops/statusFailures)
+#   - soak client exit 0 (completed, zero misses/writeFailures/socketDrops/statusFailures; a failed write is re-sent up to
+#     /soak/writeRetries times and a missed push re-tried with a fresh value up to /soak/missRetries times (both default 2)
+#     before they count, and both retry counts are reported so a PASS still shows them)
 #   - all three servers alive the whole run and stopped within the 60s grace on request (a SIGINT-stopped app
 #     exits 255 - ::pause() returns -1 - so the exit CODE is informational; a hard kill is the failure)
 #   - no crash events since start (journalctl+coredumpctl / Application event log)

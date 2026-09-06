@@ -8,4 +8,4 @@
 #include <jde/fwk/settings.h>
 #include <jde/fwk/io/json.h>
 #include <jde/web/client/exports.h>
-#include "proto/Web.FromServer.pb.h"
+#include <jde/web/client/proto/Web.FromServer.pb.h>

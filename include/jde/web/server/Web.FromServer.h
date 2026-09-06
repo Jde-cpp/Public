@@ -1,7 +1,7 @@
 #pragma once
 #include <jde/fwk/chrono.h>
 #include <jde/web/server/Sessions.h>
-#include "../client/proto/Web.FromServer.pb.h"
+#include <jde/web/client/proto/Web.FromServer.pb.h>
 
 namespace Jde::Web::Server{
 	Ξ ToProto( const Web::Server::SessionInfo& session )ι->FromServer::SessionInfo{
