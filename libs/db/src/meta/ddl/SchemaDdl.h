@@ -6,7 +6,7 @@
 
 namespace Jde::QL{ struct IQL; }
 namespace Jde::DB{
-	struct AppSchema; struct Catalog; struct ForeignKey; struct IServerMeta; struct Procedure; struct Syntax; struct View;
+	struct AppSchema; struct Catalog; struct ForeignKey; struct IServerMeta; struct Procedure; struct Syntax; struct Table;
 
 	//Cluster > Catalog > Schema > Table > Columns & Rows
 	struct SchemaDdl : DBSchema, std::enable_shared_from_this<SchemaDdl>{
@@ -15,7 +15,7 @@ namespace Jde::DB{
 		Ω Create( const DBSchema& config )ε->void;
 		α IsPhysical()Ι->bool { return true; }
 		α Tables()ι->flat_map<string,sp<Table>>&{ return Meta()->Tables; }
-		α Views()ι->flat_map<string,sp<View>>&{ return Meta()->Views; }
+		α Views()ι->flat_map<string,sp<Table>>&{ return Meta()->Views; }
 
 		flat_map<string,Procedure> Procs;
 		flat_map<string,ForeignKey> FKs;//fk name, fk

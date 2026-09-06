@@ -17,7 +17,6 @@
 
 namespace Jde::DB{
 	vector<sp<Cluster>> _clusters;
-	fs::path _scriptPath;
 	Ω buildClusters( const jobject& dbServers, sp<Access::IAcl> authorize )ε->vector<sp<Cluster>>{
 		vector<sp<Cluster>> y;
 		for( auto&& [name, value] : dbServers ){
@@ -71,10 +70,8 @@ namespace Jde{
 		//Supplied dbSettings bypass the cache both ways - clusters built from exactly these settings, no cache pollution.
 		let adHoc = dbSettings ? buildClusters( *dbSettings, authorize ) : vector<sp<Cluster>>{};
 		for( auto& cluster : dbSettings ? adHoc : getClusters(authorize) ){
-			for( auto& catalog : cluster->Catalogs ){
-				if( auto schema = catalog->FindAppSchema(metaName); schema )
-					return schema;
-			}
+			if( auto schema = cluster->FindAppSchema(metaName); schema )
+				return schema;
 		}
 		THROW( "Schema '{}' not found.", metaName );
 	}

@@ -16,7 +16,7 @@
 
 namespace Jde::Access::Tests{
 	//`where 1=0` - the statement has to *prepare*, which is what names a missing column;  no rows are wanted.
-	Ω selectDeclaredColumns( const DB::View& view )ε->void{
+	Ω selectDeclaredColumns( const DB::Table& view )ε->void{
 		string columns;
 		for( let& c : view.Columns )
 			columns += (columns.empty() ? "" : ", ")+c->Name;

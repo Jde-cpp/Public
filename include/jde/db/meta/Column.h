@@ -3,7 +3,7 @@
 #include "../Value.h"
 
 namespace Jde::DB{
-	struct Column; struct Table; struct View;
+	struct Column; struct Table;
 	enum class ECardinality : uint8{ Zero=0, One=1, Many=2 };
 	struct Criteria {
 		sp<DB::Column> Column;
@@ -11,11 +11,10 @@ namespace Jde::DB{
 	};
 
 	struct ΓDB Column{
-		Column()=default;
 		Column( sv name )ι;  //placeholder
 		Column( sv name, const jobject& j )ε;
 		virtual ~Column()=default;
-		α Initialize( sp<DB::View> view )ε->void;
+		α Initialize( sp<DB::Table> table )ε->void;
 		α operator==( const Column& b )Ι->bool;
 
 		Ω Count()ι->sp<Column>;
@@ -28,19 +27,19 @@ namespace Jde::DB{
 		string Name;
 
 		optional<DB::Criteria> Criteria;//unUsers=not is_group
-		bool IsNullable;
+		bool IsNullable{};
 		optional<uint> MaxLength;
 		optional<uint> NumericPrecision; //currently for db schema columns
 		optional<uint> NumericScale; //currently for db schema columns
-		sp<DB::View> PKTable; //pk table if any.
+		sp<DB::Table> PKTable; //pk table if any.
 
-		bool IsSequence; //uses db sequence.  TODO look to move to ddl.
-		bool Insertable;
+		bool IsSequence{}; //uses db sequence.  TODO look to move to ddl.
+		bool Insertable{ true };
 		optional<uint8> SKIndex; //Is part of the surrogate key for the table.
 		string QLAppend; //also select this column in ql query TODO example
-		sp<DB::View> Table;
-		EType Type;
-		bool Updateable;
+		sp<DB::Table> Table;
+		EType Type{ EType::None };
+		bool Updateable{ true };
 		optional<Value> Default; //nullable=Value{}
 	};
 }

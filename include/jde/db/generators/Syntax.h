@@ -1,6 +1,4 @@
 ﻿#pragma once
-#ifndef SYNTAX_H
-#define SYNTAX_H
 #include <jde/fwk/str.h>
 #include <jde/db/Value.h>
 #include "../exports.h"
@@ -23,6 +21,9 @@ namespace Jde::DB{
 	struct GlobClass{ bool Negate; sv Body; uint Close; };//Close indexes the ']'.
 	Φ ParseGlobClass( sv glob, uint open )ι->optional<GlobClass>;
 
+	Φ FindCommonType( sv name )ι->optional<EType>; //case-insensitive; nullopt when the name is not a common one.
+	Φ CommonTypeName( EType type )ι->sv;          //empty for the types with no common spelling - the unsigned four, Guid, Blob - which ToString spells itself.
+
 	struct ΓDB Syntax{
 		Ω Instance()->const Syntax&;
 		virtual ~Syntax()=default;
@@ -31,6 +32,8 @@ namespace Jde::DB{
 		β PatternOperator( EOperator op, SRCE )Ε->sv;              //SQL Server: LIKE, but no regex before 2025.
 		β PatternParam( EOperator op, str pattern, SRCE )Ε->string;
 		β AddDefault( sv tableName, sv columnName, Value dflt )Ι->string;
+		β BoolLiteral( bool v )Ι->sv{ return v ? "1" : "0"; } //how a bit default is spelled in ddl.
+		α DefaultLiteral( const Value& dflt )Ι->string;       //AddDefault's value: a bool through BoolLiteral, a string verbatim; anything else is CRITICAL and empty.
 		β CanAddForeignKeys()Ι->bool{ return true; } //false (sqlite): no 'alter table add constraint' - fks only enforced when inline in create table.
 		β CanSetDefaultSchema()Ι->bool{ return false; }
 		β CatalogSelect()Ι->sv{ return "select db_name();"; }
@@ -51,6 +54,7 @@ namespace Jde::DB{
 		β IndexName( sv /*tableName*/, sv indexName )Ι->string{ return string{indexName}; } //per-table index namespace; schema-wide dialects qualify with the table.
 		β IsReservedWord( sv /*name*/ )Ι->bool{ return false; } //only words actually used as unprefixed object names - extend the dialect override when a new collision appears.
 		β Limit( str syntax, uint limit, uint skip )Ε->string;
+		α LimitOffset( str sql, uint limit, uint skip, sv unbounded )Ι->string; //the `limit n offset m` dialects' Limit; `unbounded` is their "every row" limit for a skip with no limit, since OFFSET needs a LIMIT.
 		β NeedsIdentityInsert()Ι->bool{ return true; }
 		β NowDefault()Ι->sv{ return UtcNow(); }
 		β PrefixOut()Ι->bool{ return false; }
@@ -70,6 +74,7 @@ namespace Jde::DB{
 		//*changed* (a re-save of an identical value counts 0), sqlite and SQL Server report rows *matched*.
 		//Empty means the dialect has no such form - SQL Server, where the caller's update-then-insert is correct anyway.
 		β UpsertSuffix( const vector<sv>& /*keyColumns*/, const vector<sv>& /*updateColumns*/ )Ι->string{ return {}; }
+		Ω SetList( const vector<sv>& columns, sv valuePrefix, sv valueSuffix )ι->string; //`a=<prefix>a<suffix>, b=…` - an upsert's update list, the value being the dialect's spelling of the incoming row's column.
 		β UsingClause( const Join& join )Ι->string;
 		β UtcNow()Ι->sv{ return "getutcdate()"; }
 	};
@@ -77,4 +82,3 @@ namespace Jde::DB{
 	//it is only reached through IDataSource::Syntax(), so Jde.DB never needs the type statically.
 }
 #undef Φ
-#endif

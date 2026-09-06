@@ -4,16 +4,6 @@
 
 #define let const auto
 namespace Jde::DB{
-	α IDataSource::TryExecuteSync( Sql&& sql, SL sl )ι->optional<uint>{
-		optional<uint> result;
-		try{
-			result = ExecuteSync( move(sql), sl );
-		}
-		catch( const Exception& )
-		{}
-		return result;
-	}
-
 	//C1: the sync wrappers every driver used to copy.  Each is a shape over the driver's Execute(Sql&&, SL, Params).
 	α IDataSource::ExecuteSync( Sql&& sql, SL sl )ε->uint{
 		return Execute( move(sql), sl, {} );
@@ -21,7 +11,7 @@ namespace Jde::DB{
 	α IDataSource::ExecuteScalerSync( Sql&& sql, EValue outValue, SL sl )ε->Value{
 		Value y;
 		RowΛ f = [&]( Row&& r )->void{
-			THROW_IFSL( r.Size()==0, "Query did not return any {}.", empty(outValue) ? "rows" : "out params" );
+			THROW_IFSL( r.Size()==0, "Query did not return any {}.", outValue==EValue::Null ? "rows" : "out params" );
 			y = move( r[0] );
 		};
 		Execute( move(sql), sl, {.Function=&f, .OutValue=outValue} );
@@ -35,6 +25,17 @@ namespace Jde::DB{
 	}
 	α IDataSource::Select( Sql&& sql, RowΛ f, SL sl )ε->uint{
 		return Execute( move(sql), sl, {.Function=&f} );
+	}
+
+	α IDataSource::AtCatalog( sv catalog, SL sl )ε->sp<IDataSource>{
+		THROW_IFSL( Syntax().HasCatalogs(), "AtCatalog('{}') is not implemented by this driver.", catalog );
+		LOGSL( ELogLevel::Critical, sl, ELogTags::Sql, "This dialect has no catalogs - AtCatalog('{}') answers the same data source.", catalog );
+		return shared_from_this();
+	}
+	α IDataSource::AtSchema( sv schema, SL sl )ε->sp<IDataSource>{
+		THROW_IFSL( Syntax().CanSetDefaultSchema(), "AtSchema('{}') is not implemented by this driver.", schema );
+		LOGSL( ELogLevel::Critical, sl, ELogTags::Sql, "This dialect cannot switch its default schema - AtSchema('{}') answers the same data source.", schema );
+		return shared_from_this();
 	}
 
 	α IDataSource::CatalogName( SL sl )ε->string{

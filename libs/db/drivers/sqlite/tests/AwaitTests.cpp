@@ -2,7 +2,7 @@
 #include <jde/db/DBException.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/meta/AppSchema.h>
-#include <jde/db/meta/Table.h> //complete type: SelectEnum takes const View& and GetTablePtr yields sp<Table>.
+#include <jde/db/meta/Table.h> //complete type: SelectEnum takes const Table& and GetTablePtr yields sp<Table>.
 #include <jde/db/meta/Cluster.h>
 #include <jde/access/Authorize.h>
 
@@ -21,8 +21,8 @@ namespace Jde::DB::Sqlite::Tests{
 	TEST_P( AwaitTests, SelectAsyncReturnsRows ){
 		let rows = select( _ds, "select 1 union all select 2 union all select 3" );
 		ASSERT_EQ( rows.size(), 3u );
-		EXPECT_EQ( rows[0].GetUInt(0), 1u );
-		EXPECT_EQ( rows[2].GetUInt(0), 3u );
+		EXPECT_EQ( rows[0].Get<uint>(0), 1u );
+		EXPECT_EQ( rows[2].Get<uint>(0), 3u );
 
 		EXPECT_TRUE( select(_ds, "select 1 where 1=0").empty() ); //no rows is not an error.
 	}
@@ -58,9 +58,9 @@ namespace Jde::DB::Sqlite::Tests{
 		EXPECT_THROW( one("select null"), Exception );
 		EXPECT_THROW( one("select 1 where 1=0"), Exception );
 
-		//C4: ScalerAwait<uint32> is an explicit specialisation - it exists so IAwait<uint32,...> is exported once - and it
-		//carried a verbatim copy of the template's Execute body.  Both now forward to one ScalerExecute helper, so both
-		//have to answer the same.  Nothing else in the tree instantiates it: this is its first caller.
+		//C4/B5: ScalerAwait<uint32> once was an explicit specialisation - it exists so IAwait<uint32,...> is exported once -
+		//that carried a verbatim copy of the template's Execute body; it is now the same template on fwk's UInt32Await base
+		//(ScalerBase<T>).  Same body, same answers - and this keeps the uint32 instantiation exercised.
 		let one32 = [&]( string sql ){ return BlockAwait<ScalerAwait<uint32>,uint32>( _ds->Scaler<uint32>(Sql{move(sql)}) ); };
 		EXPECT_EQ( one32("select 5"), 5u );
 		EXPECT_THROW( one32("select null"), Exception );        //the shared "No value returned" mapping.

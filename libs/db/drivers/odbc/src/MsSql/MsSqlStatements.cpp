@@ -1,4 +1,5 @@
 ﻿#include "MsSqlStatements.h"
+#include "../../../../src/meta/InformationSchemaSql.h"
 
 namespace Jde::DB::MsSql::Sql
 {
@@ -20,7 +21,7 @@ namespace Jde::DB::MsSql::Sql
 		return os.str();
 	}
 
-	α IndexSql( bool addTable )ι->string{
+	α IndexSql( bool addTable, bool addPrefix )ι->string{
 		std::ostringstream os;
 		os << "select tables.name table_name, indexes.name index_name, columns.name column_name, case when indexes.is_unique=0 then CAST(1 AS BIT) else CAST(0 AS BIT) end non_unique, index_columns.key_ordinal" << endl
 			<< "from sys.indexes" << endl
@@ -33,27 +34,17 @@ namespace Jde::DB::MsSql::Sql
 			<< "\t\tand schemas.name=?" << endl;
 		if( addTable )
 			os << " and tables.name=?" << endl;
+		else if( addPrefix )
+			os << " and tables.name like ?" << endl;
 		os << "ORDER BY tables.name, indexes.name, index_columns.key_ordinal" << endl;
 		return os.str();
 	}
 
-	α ForeignKeySql( bool addSchema )ι->string{
-		std::ostringstream os;
-		//Schema-qualified con joins: constraint names are unique per schema, not per database, so joining on name
-		//alone duplicates every fk row once per same-named constraint in another schema of the same database.
-		os << "select  fk.CONSTRAINT_NAME name, fk.TABLE_NAME foreign_table, fk.COLUMN_NAME fk, pk.TABLE_NAME primary_table, pk.COLUMN_NAME pk, pk.ORDINAL_POSITION ordinal" << endl
-			<< "from INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS con" << endl
-			<< "\tjoin INFORMATION_SCHEMA.KEY_COLUMN_USAGE fk on con.CONSTRAINT_SCHEMA=fk.CONSTRAINT_SCHEMA and con.CONSTRAINT_NAME=fk.CONSTRAINT_NAME" << endl
-			<< "\tjoin INFORMATION_SCHEMA.KEY_COLUMN_USAGE pk on con.UNIQUE_CONSTRAINT_SCHEMA=pk.CONSTRAINT_SCHEMA and con.UNIQUE_CONSTRAINT_NAME=pk.CONSTRAINT_NAME and fk.TABLE_SCHEMA=pk.TABLE_SCHEMA and fk.ORDINAL_POSITION=pk.ORDINAL_POSITION" << endl;
-		if( addSchema )
-			os << "where pk.TABLE_SCHEMA=?" << endl;
-		os << "order by name, ordinal";
-		return os.str();
+	α ForeignKeySql( bool addSchema )ι->string{ //both con joins carry the schema - see InformationSchemaSql.h.
+		return InformationSchema::ForeignKeySql(
+			"con.CONSTRAINT_SCHEMA=fk.CONSTRAINT_SCHEMA and con.CONSTRAINT_NAME=fk.CONSTRAINT_NAME",
+			"con.UNIQUE_CONSTRAINT_SCHEMA=pk.CONSTRAINT_SCHEMA and con.UNIQUE_CONSTRAINT_NAME=pk.CONSTRAINT_NAME and fk.TABLE_SCHEMA=pk.TABLE_SCHEMA and fk.ORDINAL_POSITION=pk.ORDINAL_POSITION",
+			addSchema ? "where pk.TABLE_SCHEMA=?\n" : "" );
 	}
-	α ProcSql( bool addSchema )ι->string{
-		std::ostringstream os{ "select SPECIFIC_NAME from INFORMATION_SCHEMA.ROUTINES", std::ios::ate };
-		if( addSchema )
-			os << " where ROUTINE_SCHEMA=?";
-		return os.str();
-	}
+	α ProcSql( bool addSchema )ι->string{ return InformationSchema::ProcSql( addSchema ); }
 }

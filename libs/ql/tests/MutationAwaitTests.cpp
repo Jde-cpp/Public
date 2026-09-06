@@ -1,5 +1,5 @@
 //review3 #1:  MutationQL resolves no DBTable for a system-shaped or empty name ("createStatus", "create"), and MutationAwait
-//handed that null straight to InsertAwait/AddRemoveAwait/PurgeAwait, each of which authorizes through it - View::Authorize reads
+//handed that null straight to InsertAwait/AddRemoveAwait/PurgeAwait, each of which authorizes through it - Table::Authorize reads
 //`this` - so an unauthenticated `/graphql` mutation segfaulted the app server.  Only UpdateAwait guarded.  NullQL claims no
 //mutation, which is what lets these reach the stock crud ops; no data source is involved, and Resume/ResumeExp are synchronous,
 //so BlockAwait drives the coroutine on this thread.

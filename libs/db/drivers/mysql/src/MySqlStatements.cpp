@@ -1,4 +1,5 @@
 #include "MySqlStatements.h"
+#include "../../../src/meta/InformationSchemaSql.h"
 
 namespace Jde::DB::MySql{
 	using std::endl;
@@ -18,20 +19,12 @@ namespace Jde::DB::MySql{
 	}
 
 	α Ddl::ForeignKeySql( bool addSchema )ι->string{
-		std::ostringstream os;
-		//The con joins must carry the schema: constraint names are only unique per schema, so joining on name alone
-		//fans each fk row out across every same-named constraint on the server (debug/rls/*_access twins) and
-		//LoadForeignKeys folds the copies into Columns - which then never matches SyncFKs' single-column compare.
-		os << "select	fk.CONSTRAINT_NAME name, fk.TABLE_NAME foreign_table, fk.COLUMN_NAME fk, pk.TABLE_NAME primary_table, pk.COLUMN_NAME pk, pk.ORDINAL_POSITION ordinal" << endl
-			<< "from INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS con" << endl
-			<< "  join INFORMATION_SCHEMA.KEY_COLUMN_USAGE fk on con.CONSTRAINT_SCHEMA=fk.CONSTRAINT_SCHEMA and con.CONSTRAINT_NAME=fk.CONSTRAINT_NAME and con.TABLE_NAME=fk.TABLE_NAME" << endl
-			<< "  join INFORMATION_SCHEMA.KEY_COLUMN_USAGE pk on pk.CONSTRAINT_SCHEMA COLLATE utf8_general_ci=con.UNIQUE_CONSTRAINT_SCHEMA and pk.CONSTRAINT_NAME COLLATE utf8_general_ci=con.UNIQUE_CONSTRAINT_NAME and pk.ORDINAL_POSITION=fk.ORDINAL_POSITION and pk.TABLE_NAME=con.REFERENCED_TABLE_NAME" << endl;
-		if( addSchema ){
-			os << "where pk.TABLE_SCHEMA=?" << endl;
-			os << "  and fk.TABLE_SCHEMA=?" << endl;
-		}
-		os << "order by name, ordinal";
-		return os.str();
+		//Both con joins carry the schema (see InformationSchemaSql.h); the pk side needs the COLLATE - the
+		//REFERENTIAL_CONSTRAINTS and KEY_COLUMN_USAGE name columns are collated differently on mysql.
+		return InformationSchema::ForeignKeySql(
+			"con.CONSTRAINT_SCHEMA=fk.CONSTRAINT_SCHEMA and con.CONSTRAINT_NAME=fk.CONSTRAINT_NAME and con.TABLE_NAME=fk.TABLE_NAME",
+			"pk.CONSTRAINT_SCHEMA COLLATE utf8_general_ci=con.UNIQUE_CONSTRAINT_SCHEMA and pk.CONSTRAINT_NAME COLLATE utf8_general_ci=con.UNIQUE_CONSTRAINT_NAME and pk.ORDINAL_POSITION=fk.ORDINAL_POSITION and pk.TABLE_NAME=con.REFERENCED_TABLE_NAME",
+			addSchema ? "where pk.TABLE_SCHEMA=?\n  and fk.TABLE_SCHEMA=?\n" : "" );
 	}
 
 	α Ddl::IndexSql( sv tablePrefix, bool addTable )ι->string{
@@ -45,10 +38,5 @@ namespace Jde::DB::MySql{
 		return os.str();
 	}
 
-	α Ddl::ProcSql( bool addSchema )ι->string{
-		std::ostringstream os{ "select SPECIFIC_NAME from INFORMATION_SCHEMA.ROUTINES", std::ios::ate };
-		if( addSchema )
-			os << " where ROUTINE_SCHEMA=?";
-		return os.str();
-	}
+	α Ddl::ProcSql( bool addSchema )ι->string{ return InformationSchema::ProcSql( addSchema ); }
 }

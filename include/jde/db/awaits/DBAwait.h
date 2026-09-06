@@ -1,6 +1,4 @@
 ﻿#pragma once
-#ifndef JDE_DB_AWAIT_H
-#define JDE_DB_AWAIT_H
 
 #include "../usings.h"
 #include "../exports.h"
@@ -10,61 +8,35 @@
 #define let const auto
 namespace Jde::DB{
 	struct IDataSource;
-//	using namespace Coroutine;
 	using RowΛ=function<void( Row&& )ε>;
 	Τ using CoRowΛ=function<void( T& pResult, Row&& r )ε>;
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////
-	α ΓDB TAwaitExecute( sp<IDataSource>&& _ds, Sql&& _sql, function<void(vector<Row>&&)> onRows, function<void(Exception&&)> onError, SL sl )ι->SelectAwait::Task;
-	Τ class TSelect{  //TODO need a TSelect for scaler, _pResult can be null in that case.
-	protected:
-		TSelect( sp<IDataSource> ds, Sql&& sql, CoRowΛ<T> fnctn, SL sl )ι:
-			_ds{ds}, _fnctn{fnctn}, _sql{move(sql)}, _sl{sl}
+	//A select folded into one T - the shape behind SelectMap/SelectEnum, where every row is a map entry.  `fold` is
+	//applied to each row in order and the T is what the caller is owed; Suspend hands that to RunQuery as the
+	//projection, so this is the same coroutine every other awaitable over IDataSource::Query runs, and a fold that
+	//throws reaches the caller through the promise like a driver error would.
+	Τ struct TSelectAwait : TAwait<T>{
+		using base=TAwait<T>;
+		TSelectAwait( sp<IDataSource> ds, Sql&& sql, CoRowΛ<T> fold, SL sl )ι:
+			base{ sl }, _ds{ move(ds) }, _sql{ move(sql) }, _fold{ move(fold) }
 		{}
-		virtual ~TSelect()=0;
-		α Select( TAwait<T>::Handle h )ι->void;
-		//α Result()ι->T&{ return _result; }
-		α OnRow( Row&& r )ε->void{ _fnctn( _result, move(r) ); }
-		T _result{};
-		up<Exception> _exception;
+		α Suspend()ι->void override{
+			RunQuery( *this, *_ds, move(_sql), false, base::_sl, [&]( Result&& r ){
+				T y{};
+				for( auto&& row : r.Rows )
+					_fold( y, move(row) );
+				return y;
+			});
+		}
 	private:
 		sp<IDataSource> _ds;
-		CoRowΛ<T> _fnctn;
-		TAwait<T>::Handle _h;
 		Sql _sql;
-		SL _sl;
-	};
-
-	Τ TSelect<T>::~TSelect(){};
-	Ŧ TSelect<T>::Select( TAwait<T>::Handle h )ι->void{
-		_h = h;
-		TAwaitExecute( move(_ds), move(_sql),
-			[&](vector<Row>&& rows){
-				for( auto&& r : rows )
-					OnRow( move(r) );
-				_h.resume();
-			},
-			[&](Exception&& e){ _exception = e.Move(); _h.resume(); },
-			_sl
-		);
-	}
-
-
-	Τ struct TSelectAwait : TAwait<T>, TSelect<T>{
-		TSelectAwait( sp<IDataSource> ds, Sql&& sql, CoRowΛ<T> fnctn, SL sl )ι:
-			TAwait<T>{sl},TSelect<T>( ds, move(sql), fnctn, sl )
-		{}
-		α Suspend()ι->void override{ TSelect<T>::Select( TAwait<T>::_h ); }
-		α await_resume()ε->T override{
-			if( TSelect<T>::_exception )
-				TSelect<T>::_exception->Throw();
-			return move( TSelect<T>::_result );//await_resume is terminal; move the member out (CacheAwait's miss path then moves it into the cache, one copy total).
-		}
+		CoRowΛ<T> _fold;
 	};
 
 	Τ struct CacheAwait final: TSelectAwait<T>{
-		CacheAwait( sp<IDataSource> ds, Sql&& sql, CoRowΛ<T> fnctn, string cacheName, optional<steady_clock::duration> duration, SL sl ):
-			TSelectAwait<T>{ ds, move(sql), fnctn, sl },
+		CacheAwait( sp<IDataSource> ds, Sql&& sql, CoRowΛ<T> fold, string cacheName, optional<steady_clock::duration> duration, SL sl ):
+			TSelectAwait<T>{ move(ds), move(sql), move(fold), sl },
 			_cacheName{ move(cacheName) },
 			_duration{ duration }
 		{}
@@ -90,4 +62,3 @@ namespace Jde::DB{
 	}
 }
 #undef let
-#endif

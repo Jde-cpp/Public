@@ -19,7 +19,7 @@ namespace Jde::Opc::Hub{
 	constexpr ELogTags _tags{ ELogTags::App };
 	α Startup( jobject httpSettings, jobject gatewayCredentials, function<void()> afterWebServer )ε->void{
 		//1. The in-process client replaces the gateway's socket client before anything captures AppClient(), and shares the
-		//AppServer's Authorize: Gateway::Configure's Acl("gateway") returns it, so GatewayQL/HubQL, View::Authorize and the listener's
+		//AppServer's Authorize: Gateway::Configure's Acl("gateway") returns it, so GatewayQL/HubQL, Table::Authorize and the listener's
 		//UserName all consult the one snapshot the AppServer maintains.
 		auto hub = ms<HubAppClient>();
 		Opc::Gateway::SetAppClient( hub );

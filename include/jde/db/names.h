@@ -6,7 +6,7 @@
 
 namespace Jde::DB::Names{
 	Φ IsPlural( sv name )ι->bool;
-	Ξ Capitalize( str name )ι->string{ ASSERT(name.size()>1); return string{(char)std::toupper(name[0])} + name.substr(1); }
+	Ξ Capitalize( str name )ι->string{ ASSERT(name.size()>0); return string{(char)std::toupper(name[0])} + name.substr(1); }
 	Φ FromJson( sv jsonName )ι->string;
 	Φ ToJson( str schemaName )ι->string;
 	Φ ToSingular( sv plural )ι->string;

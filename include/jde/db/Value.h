@@ -9,7 +9,6 @@
 #define let const auto
 namespace Jde::DB{
 	using uuid=boost::uuids::uuid;
-	struct Key;
 	enum class EValue:uint8{ Null, String=1, Bool=2, Int8=3, Int32=4, Int64=5, UInt32=6, UInt64=7, Double=8, Time=9, Bytes=10 };
 	α ΓDB ToType( sv typeName )ι->EType;
 
@@ -33,16 +32,28 @@ namespace Jde::DB{
 		α ToInt()Ι->_int{ return (_int)ToUInt(); }
 		α Type()Ι->EValue{ return (EValue)Variant.index(); }
 
-		Ŧ TryGetHeap()ι->T&;
+		//The heap alternatives - string and bytes - by reference.  A mismatch ASSERTs (log-only, like TryGetValue) and
+		//answers a reference to an empty T: thread-local and cleared on every hand-out, so a caller that writes through it
+		//neither races another thread nor poisons the next mismatch (B8 - it used to be one process-wide static per T).
+		Ŧ TryGetHeap()Ι->const T&{
+			auto p = std::get_if<T>( &Variant );
+			ASSERT_DESC( p, Ƒ("Value is a '{}'", TypeName()) );
+			if( p )
+				return *p;
+			thread_local T fallback;
+			fallback = T{};
+			return fallback;
+		}
 
-		α get_string()Ι->const string&{ return const_cast<Value*>(this)->get_string(); }
+		α get_string()Ι->const string&{ return TryGetHeap<string>(); }
 		α get_string()ι->string&;
-		α get_bytes()Ι->const vector<uint8_t>&{ return const_cast<Value*>(this)->get_bytes(); }
+		α get_bytes()Ι->const vector<uint8_t>&{ return TryGetHeap<vector<uint8_t>>(); }
 		α get_bytes()ι->vector<uint8_t>&;
 
 		//The exact alternative or a default, by value - the counterpart to TryGetHeap for the types cheap enough to copy.
-		//These are get_number's base case, which it reaches through GET(x), so they must not route back through
-		//Get<T>/get_number:  that is a cycle with no bottom, and it presents as a stack overflow rather than a bad value.
+		//The typed get_* below are one-liners over this and must not route through Get<T>/get_number: that is a cycle
+		//with no bottom, and it presents as a stack overflow rather than a bad value.  (get_number itself visits the
+		//variant - db-refactor A2 - so it no longer depends on them.)
 		Ŧ TryGetValue()Ι->T{
 			auto p = std::get_if<T>( &Variant );
 			ASSERT_DESC( p, Ƒ("Value is a '{}'", TypeName()) );
@@ -54,7 +65,7 @@ namespace Jde::DB{
  		α get_int8()Ι->int8_t{ return TryGetValue<int8_t>(); }
 		α get_int32()Ι->int{ return TryGetValue<int>(); }
 		α get_int()Ι->_int{ return TryGetValue<_int>(); }
-		Ŧ get_number()Ι->T requires std::is_arithmetic_v<T>;
+		Ŧ get_number()Ι->T requires std::is_arithmetic_v<T>; //any arithmetic alternative, converted; anything else ASSERTs and answers T{}.
 		Ŧ Get()Ι->T;
 		α get_uint32()Ι->uint32_t{ return TryGetValue<uint32_t>(); }
 		α get_uint()Ι->uint{ return TryGetValue<uint>(); }
@@ -68,7 +79,6 @@ namespace Jde::DB{
 			}
 		}
 		α is_double()Ι->bool{ return holds_alternative<double>(Variant); }
-		α is_int32()Ι->bool{ return holds_alternative<int>(Variant); }
 		α is_null()Ι->bool{ return holds_alternative<nullptr_t>(Variant); }
 		α is_string()Ι->bool{ return holds_alternative<string>(Variant); }
 
@@ -76,41 +86,26 @@ namespace Jde::DB{
 		α operator=( uint v )ι->Value&{ Variant=v; return *this; }
 		α operator==( const Value& r )Ι->bool{ return Variant==r.Variant; }
 		Underlying Variant;
-		static string _errorString;
-		static vector<uint8_t> _errorBytes;
 	};
 
 	Ŧ ToValue( vec<T> x )ι->vector<Value>;
 	Ŧ ToValue( const flat_set<T>& x )ι->vector<Value>;
-#define GET(x) static_cast<T>( get_##x() )
+	//A visit, not a switch over Type(): the arithmetic alternatives (bool, the integers, double) convert with one
+	//static_cast, and adding an alternative to Underlying is a compile error here rather than a silently-missed case.
 	Ŧ Value::get_number()Ι->T requires std::is_arithmetic_v<T>{
-		switch( Type() ){
-			using enum EValue;
-		case Bool: return GET( bool ) ? 1 : 0;
-		case Int8: return GET(int8);
-		case Int32: return GET(int32);
-		case Int64: return GET(int);
-		case UInt32: return GET(uint32);
-		case UInt64: return GET(uint);
-		case Double: return GET(double);
-		default:
-			ASSERT_DESC( false, Ƒ("Value is a '{}', not a number", TypeName()) );
-			return T{};
-		}
+		return std::visit( [&]<class U>( const U& v )->T {
+			if constexpr( std::is_arithmetic_v<U> )
+				return static_cast<T>( v );
+			else{
+				ASSERT_DESC( false, Ƒ("Value is a '{}', not a number", TypeName()) );
+				return T{};
+			}
+		}, Variant );
 	}
 
-	template<> Ξ Value::TryGetHeap<string>()ι->string&{
-		auto p = std::get_if<string>( &Variant );
-		ASSERT_DESC( p, Ƒ("Value is a '{}'", TypeName()) );
-		return p ? *p : _errorString;
-	}
-	template<> Ξ Value::TryGetHeap<vector<uint8_t>>()ι->vector<uint8_t>&{
-		auto p = std::get_if<vector<uint8_t>>( &Variant );
-		ASSERT_DESC( p, Ƒ("Value is a '{}'", TypeName()) );
-		return p ? *p : _errorBytes;
-	}
-	Ξ Value::get_string()ι->string&{ return TryGetHeap<string>(); }
-	Ξ Value::get_bytes()ι->vector<uint8_t>& { return TryGetHeap<vector<uint8_t>>(); }
+	//the mutable pair adds back what the const one took off - the one direction a const_cast is for (C).
+	Ξ Value::get_string()ι->string&{ return const_cast<string&>( std::as_const(*this).get_string() ); }
+	Ξ Value::get_bytes()ι->vector<uint8_t>&{ return const_cast<vector<uint8_t>&>( std::as_const(*this).get_bytes() ); }
 	Ξ Value::get_guid()Ι->boost::uuids::uuid{
 		let& bytes = get_bytes();
 		constexpr uint size{ boost::uuids::uuid::static_size() };
@@ -121,13 +116,13 @@ namespace Jde::DB{
 	}
 
 	Ŧ Value::Get()Ι->T{
-		if constexpr( std::same_as<T,string> ){
+		if constexpr( std::same_as<T,string> )
 			return get_string();
-		}
+		else if constexpr( std::same_as<T,DBTimePoint> )
+			return get_time();
 		else
 			return get_number<T>();
 	}
-#undef GET
 }
 namespace Jde{
 	Ŧ DB::ToValue( vec<T> x )ι->vector<Value>{

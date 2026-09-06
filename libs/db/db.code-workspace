@@ -28,5 +28,7 @@
 			"name": "sqlite-tests"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"window.title": "DB"
+	}
 }

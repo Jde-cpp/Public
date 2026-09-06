@@ -8,13 +8,13 @@ namespace Jde::DB{
 	struct ΓDB SelectClause final{
 		SelectClause()=default;
 		SelectClause( sp<Column> c )ι;
-		SelectClause( const View& t, str alias, const vector<string>& cols )ε;
+		SelectClause( const Table& t, str alias, const vector<string>& cols )ε;
 		SelectClause( AliasCol aliasCol )ι;
 		SelectClause( const vector<sp<Column>>& cols, const string& alias={} )ι;
 		SelectClause( const Object& obj )ι:Columns{obj}{};
 		α operator+=( SelectClause&& x )ι->SelectClause&;
 		α TryAdd( Object c )ι->void;
-		α TryAdd( const AliasCol& c )ι->void;
+		α TryAdd( AliasCol c )ι->void{ TryAdd( Object{move(c)} ); }
 		α TryAdd( const sp<Column>& c )ι->void;
 		α ToString( bool shouldAlias )Ι->string;
 		α FindColumn( sv name )Ι->sp<Column>;

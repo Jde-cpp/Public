@@ -1,5 +1,5 @@
 //ql-review3 #60: the SQL-touching select surface that no suite reached.  FilterTests covers Filter::Test - the in-memory
-//half - and says so in its own header ("ToWhereClause (the SQL half) needs a DB::View, so it is not covered here"); the
+//half - and says so in its own header ("ToWhereClause (the SQL half) needs a DB::Table, so it is not covered here"); the
 //dialect suites assert generated strings.  Between them, nothing issued a query that pushed a pattern, a page, or an
 //array-under-a-scalar-operator through a real database.  Everything below runs against sqlite `:memory:`, which is what
 //Jde.Access.Tests already is, and each case is one end-to-end query.

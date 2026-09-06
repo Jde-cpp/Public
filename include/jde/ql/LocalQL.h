@@ -18,8 +18,8 @@ namespace Jde::QL{
 		α Subscribe( string&& query, jobject vars, sp<IListener> listener, UserPK executer, SRCE )ε->up<TAwait<vector<SubscriptionId>>> override;
 
 		α DS()ι->DB::IDataSource&;
-		α GetTable( str tableName, SRCE )ε->DB::View&;
-		α GetTablePtr( str tableName, SRCE )ε->sp<DB::View>;
+		α GetTable( str tableName, SRCE )ε->DB::Table&;
+		α GetTablePtr( str tableName, SRCE )ε->sp<DB::Table>;
 		α Schemas()Ι->const vector<sp<DB::AppSchema>>& override{ return _schemas; }
 
 		template<class T=jobject> α QuerySync( string query, jobject vars, UserPK executer, bool returnRaw=true, SRCE )ε->T;

@@ -4,7 +4,7 @@
 namespace Jde::DB{
 	struct Syntax; struct Table;
 	struct ΓDB Index final{
-		Index( sv indexName, sv tableName, bool primaryKey, const vector<string>* pColumns=nullptr, bool unique=true, optional<bool> clustered=optional<bool>{} )ι;//, bool clustered=false
+		Index( sv indexName, sv tableName, bool primaryKey, vector<string> columns={}, bool unique=true, optional<bool> clustered=optional<bool>{} )ι;
 		Index( sv indexName, sv tableName, const Index& other )ι;
 
 		Ω GetConfig( const Table& t )ι->vector<Index>;

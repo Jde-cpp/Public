@@ -4,15 +4,17 @@
 
 namespace Jde::Access{ struct IAcl; }
 namespace Jde::DB{
-	struct Catalog; struct DBSchema; struct IDataSource;  struct Syntax; struct Table; struct View;
+	struct Catalog; struct DBSchema; struct IDataSource;  struct Syntax; struct Table;
 	struct ΓDB AppSchema{
 		AppSchema( sv name, const jobject& appSchema, sp<Access::IAcl> authorizer )ε;
 		AppSchema( sv name, flat_map<string,sp<Table>> tables, sv prefix )ι:Name{name},Prefix{prefix},Tables{tables}{}
 
 		Ω Initialize( sp<DB::DBSchema> db, sp<AppSchema> self )ε->void;
-		Ω GetTablePtr( const vector<sp<AppSchema>>& schemas, str viewName, SRCE )ε->sp<Table>;
-		Ω FindView( const vector<sp<AppSchema>>& schemas, str viewName )ι->sp<View>;
-		Ω GetViewPtr( const vector<sp<AppSchema>>& schemas, str viewName, SRCE )ε->sp<View>;
+		//Across a set of schemas: Find answers null, Get throws - the same pair the instance lookups below make.
+		Ω FindTable( const vector<sp<AppSchema>>& schemas, str tableName )ι->sp<Table>;
+		Ω GetTablePtr( const vector<sp<AppSchema>>& schemas, str tableName, SRCE )ε->sp<Table>;
+		Ω FindView( const vector<sp<AppSchema>>& schemas, str viewName )ι->sp<Table>;
+		Ω GetViewPtr( const vector<sp<AppSchema>>& schemas, str viewName, SRCE )ε->sp<Table>;
 		α ConfigPath()Ι->string;
 		α DS()Ε->sp<IDataSource>;
 		α ResetDS()Ι->void; //testing schema doesn't exist at startup.
@@ -22,9 +24,9 @@ namespace Jde::DB{
 		α GetTable( str name, SRCE )Ε->const Table&;
 		α GetTablePtr( str name, SRCE )Ε->sp<Table>;
 
-		α FindView( str name )Ι->sp<View>;
-		α GetView( str name, SRCE )ε->const View&;
-		α GetViewPtr( str name, SRCE )ε->sp<View>;
+		α FindView( str name )Ι->sp<Table>; //a `views:` entry, else the table of that name.
+		α GetView( str name, SRCE )ε->const Table&;
+		α GetViewPtr( str name, SRCE )ε->sp<Table>;
 
 		α ObjectPrefix()Ι->string;
 		α DBName( str objectName )Ι->string;
@@ -34,7 +36,7 @@ namespace Jde::DB{
 		sp<Access::IAcl> Authorizer;
 		string Prefix;
 		flat_map<string,sp<Table>> Tables;
-		flat_map<string,sp<View>> Views;
+		flat_map<string,sp<Table>> Views; //db-refactor B4: the same type as Tables - membership here is what makes an entry a view.
 		//Access resources the schema declares outright, as `resources:{ <jsonName>:{ ops:[…] } }`, keyed by the same
 		//internal name a table of that name would carry.  ResourceSyncAwait creates a row for each exactly as it does
 		//for a table with ops - for a target that names something the schema governs without owning a table for it

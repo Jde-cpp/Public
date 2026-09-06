@@ -4,17 +4,19 @@
 
 #define let const auto
 namespace Jde::DB{
-
-	ColumnDdl::ColumnDdl( sv name, uint /*ordinalPosition*/, sv dflt, bool isNullable, EType type, optional<uint> maxLength, bool isSequence, optional<uint8> skIndex, optional<uint> /*numericPrecision*/, optional<uint> /*numericScale*/ )ι:
-		Column{name}//,
+	ColumnDdl::ColumnDdl( sv name, optional<Value> dflt, bool isNullable, EType type, optional<uint> maxLength, bool isSequence, optional<uint8> skIndex, optional<uint> numericPrecision, optional<uint> numericScale )ι:
+		Column{ name }
 	{
-		if( type==EType::Bit )
-			Default = Value{ dflt=="1" };
+		Default = move( dflt );
 		IsNullable = isNullable;
 		Type = type;
 		MaxLength = maxLength;
+		NumericPrecision = numericPrecision;
+		NumericScale = numericScale;
 		IsSequence = isSequence;
 		SKIndex = skIndex;
+		Insertable = !isSequence; //the configured column's defaults (Column's json ctor); SyncTables copies the configured Insertable over this anyway.
+		Updateable = true;
 	}
 
 	α ColumnDdl::DataTypeString( const Column& config )ι->string{

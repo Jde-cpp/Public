@@ -31,9 +31,9 @@ namespace Jde::DB::Tests{
 		EXPECT_EQ( ins.SequenceColumn(), nullptr );          //was a null-column ->Table deref (segfault).
 	}
 
-	//#33: getMap() runs from View's member-init list and FindColumn's "id" alias reads SurrogateKeys, which used to be declared *after* Map - so the read was of a not-yet-constructed vector.
+	//#33: getMap() runs from Table's member-init list and FindColumn's "id" alias reads SurrogateKeys, which used to be declared *after* Map - so the read was of a not-yet-constructed vector.
 	//The surrogate key is deliberately not named "id": with the old order the garbage size() sends FindColumn to the Columns search, which has no "id", and GetColumnPtr throws.
-	TEST( ViewTests, MapIdAliasResolvesSurrogateKey ){
+	TEST( TableTests, MapIdAliasResolvesSurrogateKey ){
 		const auto j = Json::Parse( R"({"columns":{"entity_id":{"sk":0,"i":0},"member_id":{"i":1}},"map":{"parentId":"id","childId":"member_id"}})" );
 		const Table t{ "m", j };
 		ASSERT_EQ( t.SurrogateKeys.size(), 1u );
@@ -48,16 +48,48 @@ namespace Jde::DB::Tests{
 	//to be the first pk column.  It sat next to `isIdentity!=0`, which is spelled identically and is genuinely a bool.
 	//The all-bool spelling is now deleted, so getting it wrong is a compile error rather than a wrong answer.
 	TEST( ColumnDdlTests, SkIndexRejectsBool ){
-		static_assert( std::is_constructible_v<ColumnDdl, sv, uint, sv, bool, EType, optional<uint>, bool, optional<uint8>, optional<uint>, optional<uint>>,
+		static_assert( std::is_constructible_v<ColumnDdl, sv, optional<Value>, bool, EType, optional<uint>, bool, optional<uint8>, optional<uint>, optional<uint>>,
 			"the real signature has to stay callable." );
-		static_assert( !std::is_constructible_v<ColumnDdl, sv, uint, sv, bool, EType, optional<uint>, bool, bool, optional<uint>, optional<uint>>,
+		static_assert( !std::is_constructible_v<ColumnDdl, sv, optional<Value>, bool, EType, optional<uint>, bool, bool, optional<uint>, optional<uint>>,
 			"a bool in skIndex's place must not compile - it means optional{0}, which is a pk claim." );
 
-		const ColumnDdl noKey{ "c", 1, "", true, EType::Int, {}, false, optional<uint8>{}, {}, {} };
+		const ColumnDdl noKey{ "c", {}, true, EType::Int, {}, false, optional<uint8>{}, {}, {} };
 		EXPECT_FALSE( noKey.SKIndex.has_value() ); //what a non-pk column must report.
-		const ColumnDdl firstKey{ "c", 1, "", true, EType::Int, {}, false, optional<uint8>{0}, {}, {} };
+		const ColumnDdl firstKey{ "c", {}, true, EType::Int, {}, false, optional<uint8>{0}, {}, {} };
 		ASSERT_TRUE( firstKey.SKIndex.has_value() );
 		EXPECT_EQ( (uint)*firstKey.SKIndex, 0u ); //(uint): uint8 formats as a character.
+	}
+
+	//db-refactor A8: one ctor for every loader, and it keeps everything the server reported - the precision/scale pair
+	//used to be discarded on the way in, the length defaulted to an engaged 0 on one dialect, and the two bools the
+	//configured column initialises were left indeterminate.
+	TEST( ColumnDdlTests, KeepsWhatTheLoaderPassed ){
+		const ColumnDdl c{ "amount", Value{true}, false, EType::Decimal, optional<uint>{}, false, optional<uint8>{}, optional<uint>{10}, optional<uint>{2} };
+		ASSERT_TRUE( c.Default.has_value() ); EXPECT_TRUE( c.Default->get_bool() );
+		EXPECT_FALSE( c.IsNullable );
+		EXPECT_EQ( c.Type, EType::Decimal );
+		EXPECT_FALSE( c.MaxLength.has_value() ); //no length stays no length, not 0.
+		EXPECT_EQ( c.NumericPrecision.value_or(0), 10u );
+		EXPECT_EQ( c.NumericScale.value_or(0), 2u );
+		EXPECT_FALSE( c.IsSequence );
+		EXPECT_TRUE( c.Insertable ); EXPECT_TRUE( c.Updateable ); //the configured column's defaults.
+		const ColumnDdl seq{ "id", {}, false, EType::UInt, {}, true, optional<uint8>{0}, {}, {} };
+		EXPECT_FALSE( seq.Insertable ); //a sequence is not inserted, as Column's json ctor decides.
+		EXPECT_FALSE( seq.Default.has_value() );
+	}
+
+	//db-refactor B1: the placeholder ctors - Column::Count, a criteria column, the pkTable/extends/qlView stand-ins, every
+	//loader-built TableDdl - left the bools and the EType indeterminate, and SelectClause::ToString reads Count()'s Type.
+	//Default member initialisers answer the configured column's own defaults; this pins them (it cannot fail on a build
+	//that happens to zero the frame, but it says what the answers are).
+	TEST( ColumnTests, PlaceholdersAreDeterminate ){
+		const auto count = Column::Count();
+		EXPECT_EQ( count->Type, EType::None );
+		EXPECT_FALSE( count->IsNullable ); EXPECT_FALSE( count->IsSequence );
+		EXPECT_TRUE( count->Insertable ); EXPECT_TRUE( count->Updateable ); //the json ctor's value_or defaults.
+		const Table v{ "placeholder" };
+		EXPECT_FALSE( v.HasCustomInsertProc ); EXPECT_FALSE( v.IsFlags );
+		EXPECT_TRUE( v.Operations==Access::ERights{} );
 	}
 
 	//ql-review3 #3: TryAdd read join.To->Table->Name unconditionally, but a null To is a legal Join - it is the single-table

@@ -12,6 +12,24 @@ namespace Jde{
 namespace Jde::DB{
 	constexpr ELogTags _tags{ ELogTags::Sql };
 	static Syntax _sqlInstance;
+
+	constexpr std::array<std::pair<sv,EType>,22> CommonTypeNames{{ //one per EType that has a dialect-neutral name; see FindCommonType.
+		{"datetime",EType::DateTime}, {"smalldatetime",EType::SmallDateTime}, {"float",EType::Float}, {"real",EType::SmallFloat},
+		{"int",EType::Int}, {"bigint",EType::Long}, {"smallint",EType::Int16}, {"tinyint",EType::Int8},
+		{"nvarchar",EType::VarWChar}, {"nchar",EType::WChar}, {"varchar",EType::VarChar}, {"char",EType::Char},
+		{"ntext",EType::NText}, {"text",EType::Text}, {"uniqueidentifier",EType::Guid},
+		{"varbinary",EType::VarBinary}, {"binary",EType::Binary}, {"image",EType::Image}, {"bit",EType::Bit},
+		{"decimal",EType::Decimal}, {"numeric",EType::Numeric}, {"money",EType::Money}
+	}};
+	α FindCommonType( sv name )ι->optional<EType>{
+		let iv = ToIV( name );
+		auto p = find_if( CommonTypeNames, [&]( let& x ){ return ToIV(x.first)==iv; } );
+		return p==CommonTypeNames.end() ? optional<EType>{} : p->second;
+	}
+	α CommonTypeName( EType type )ι->sv{
+		auto p = find_if( CommonTypeNames, [&]( let& x ){ return x.second==type; } );
+		return p==CommonTypeNames.end() ? sv{} : p->first;
+	}
 	α Syntax::Instance()->const Syntax&{ return _sqlInstance; }
 
 	//OperatorStrings does double duty - it is the wire/display spelling for ToOperator/ToString *and* was indexed here for
@@ -135,16 +153,16 @@ namespace Jde::DB{
 		return y+"$";
 	}
 
-	α Syntax::AddDefault( sv tableName, sv columnName, Value dflt )Ι->string{
-		string v;
+	α Syntax::DefaultLiteral( const Value& dflt )Ι->string{
 		if( dflt.is_bool() )
-			v = dflt.get_bool() ? "1" : "0";
-		else if( dflt.is_string() )
-			v = dflt.get_string();
-		else
-			CRITICALT( ELogTags::Sql, "Default for '{}' not implemented.", dflt.TypeName() );
-
-		return Ƒ("alter table {} add default {} for {}", tableName, v, columnName);
+			return string{ BoolLiteral(dflt.get_bool()) };
+		if( dflt.is_string() )
+			return dflt.get_string();
+		CRITICALT( ELogTags::Sql, "Default for '{}' not implemented.", dflt.TypeName() );
+		return {};
+	}
+	α Syntax::AddDefault( sv tableName, sv columnName, Value dflt )Ι->string{
+		return Ƒ( "alter table {} add default {} for {}", tableName, DefaultLiteral(dflt), columnName );
 	}
 
 	α Syntax::EscapeDdl( sv sql )Ι->string{
@@ -160,6 +178,18 @@ namespace Jde::DB{
 		return type == VarChar || type == Binary || type == Char || type == VarBinary || type == VarWChar || type == WChar;
 	}
 
+	α Syntax::LimitOffset( str sql, uint limit, uint skip, sv unbounded )Ι->string{
+		ASSERT( limit || skip );
+		return skip
+			? Ƒ( "{} limit {} offset {}", sql, limit ? std::to_string(limit) : string{unbounded}, skip )
+			: Ƒ( "{} limit {}", sql, limit );
+	}
+	α Syntax::SetList( const vector<sv>& columns, sv valuePrefix, sv valueSuffix )ι->string{
+		string y;
+		for( let c : columns )
+			y += Ƒ( "{}{}={}{}{}", y.empty() ? "" : ", ", c, valuePrefix, c, valueSuffix );
+		return y;
+	}
 	α Syntax::Limit( str input, uint limit, uint skip )Ε->string{
 		ASSERT( limit || skip );
 		string sql = input+" offset "+std::to_string(skip)+" rows"; //T-SQL: OFFSET is mandatory before FETCH (emit it even for skip==0); both require an ORDER BY on the statement.
@@ -184,35 +214,18 @@ namespace Jde::DB{
 	}
 	α Syntax::ToString( EType type )Ι->string{
 		using enum EType;
-		string typeName;
-		if( HasUnsigned() && type == UInt ) typeName = "int unsigned";
-		else if( type == Int || type == UInt ) typeName = "int";
-		else if( HasUnsigned() && type == ULong ) typeName = "bigint(20) unsigned";
-		else if( type == Long || type == ULong ) typeName="bigint";
-		else if( type == DateTime ) typeName = "datetime";
-		else if( type == SmallDateTime )typeName = "smalldatetime";
-		else if( type == Float ) typeName = "float";
-		else if( type == SmallFloat )typeName = "real";
-		else if( type == VarWChar ) typeName = "nvarchar";
-		else if( type == WChar ) typeName = "nchar";
-		else if( HasUnsigned() && type == UInt16 ) typeName="smallint unsigned";
-		else if( type == Int16 || type == UInt16 ) typeName="smallint";
-		else if( HasUnsigned() && type == UInt8 ) typeName =  "tinyint unsigned";
-		else if( type == Int8 || type == UInt8 ) typeName = "tinyint";
-		else if( type == Guid ) typeName = GuidType();
-		else if( type == VarBinary ) typeName = "varbinary";
-		else if( type == VarChar ) typeName = "varchar";
-		else if( type == NText ) typeName = "ntext";
-		else if( type == Text ) typeName = "text";
-		else if( type == Char ) typeName = "char";
-		else if( type == Image ) typeName = "image";
-		else if( type == Bit ) typeName="bit";
-		else if( type == Binary ) typeName = "binary";
-		else if( type == Decimal ) typeName = "decimal";
-		else if( type == Numeric ) typeName = "numeric";
-		else if( type == Money ) typeName = "money";
-		else if( type == Blob ) typeName = "varbinary(max)";
-		else ERR( "Unknown datatype({}).", (uint)type );
-		return typeName;
+		switch( type ){ //the spellings that depend on the dialect or have no common name; everything else is the table's.
+		case UInt: return HasUnsigned() ? "int unsigned" : "int";
+		case ULong: return HasUnsigned() ? "bigint(20) unsigned" : "bigint";
+		case UInt16: return HasUnsigned() ? "smallint unsigned" : "smallint";
+		case UInt8: return HasUnsigned() ? "tinyint unsigned" : "tinyint";
+		case Guid: return string{ GuidType() };
+		case Blob: return "varbinary(max)";
+		default:
+			if( let name = CommonTypeName(type); name.size() )
+				return string{ name };
+			ERR( "Unknown datatype({}).", (uint)type );
+			return {};
+		}
 	}
 }

@@ -1,6 +1,4 @@
 ﻿#pragma once
-#ifndef DATA_SOURCE_H
-#define DATA_SOURCE_H
 #include <jde/fwk/co/Await.h>
 #include "awaits/DBAwait.h"
 #include "awaits/ExecuteAwait.h"
@@ -8,7 +6,7 @@
 #include "awaits/ScalerAwait.h"
 #include "awaits/SelectAwait.h"
 #include "meta/Column.h"
-#include "meta/View.h"
+#include "meta/Table.h"
 #include "Row.h"
 #include "generators/InsertClause.h"
 
@@ -16,7 +14,7 @@ namespace Jde::DB{
 	struct IServerMeta; struct Sql; struct Syntax;
 
 	struct ΓDB IDataSource : std::enable_shared_from_this<IDataSource>{
-		virtual ~IDataSource(){}//warning
+		virtual ~IDataSource()=default;
 		β Disconnect()ε->void = 0;
 		α CatalogName( SRCE )ε->string;
 		α SchemaName( SRCE )ε->string;
@@ -27,8 +25,8 @@ namespace Jde::DB{
 		//caller's frame under the resumed continuation and nest one level per await.
 		β CompletesInline()Ι->bool{ return false; }
 		β SetConfig( const jobject& config )ε->void=0;
-		β AtCatalog( sv catalog, SRCE )ε->sp<IDataSource> = 0; //create new pointing to other catalog.  If have catalogs.
-		β AtSchema( sv schema, SRCE )ε->sp<IDataSource> = 0; //create new pointing to other schema.  If can specify schema in connection.
+		β AtCatalog( sv catalog, SRCE )ε->sp<IDataSource>;
+		β AtSchema( sv schema, SRCE )ε->sp<IDataSource>;
 		β ServerMeta()ι->IServerMeta& =0;
 
 		Ŧ ScalerSync( Sql&& sql, SRCE )ε->T;
@@ -40,14 +38,12 @@ namespace Jde::DB{
 		α Select( Sql&& s, RowΛ f, SRCE )ε->uint;
 		α SelectAsync( Sql&& sql, SRCE )ι->SelectAwait{ return SelectAwait{ shared_from_this(), move(sql), sl }; }
 		template<class K=uint,class V=string>
-		α SelectEnum( const View& table, optional<steady_clock::duration> duration=Cache::DefaultDuration(), SRCE )ε->CacheAwait<flat_map<K,V>>{ return SelectMap<K,V>( {Ƒ("select {}, name from {}", table.GetPK()->Name, table.SqlName())}, table.Name, duration, sl ); }
-		ẗ SelectEnumSync( const View& table, optional<steady_clock::duration> duration=Cache::DefaultDuration(), SRCE )ε->flat_map<K,V>{
+		α SelectEnum( const Table& table, optional<steady_clock::duration> duration=Cache::DefaultDuration(), SRCE )ε->CacheAwait<flat_map<K,V>>{ return SelectMap<K,V>( {Ƒ("select {}, name from {}", table.GetPK()->Name, table.SqlName())}, table.Name, duration, sl ); }
+		ẗ SelectEnumSync( const Table& table, optional<steady_clock::duration> duration=Cache::DefaultDuration(), SRCE )ε->flat_map<K,V>{
 			return BlockAwait<CacheAwait<flat_map<K,V>>,flat_map<K,V>>( SelectEnum<K,V>(table, duration, sl) );
 		}
 
 		ẗ SelectMap( Sql&& sql, string cacheName, optional<steady_clock::duration> duration=Cache::DefaultDuration(), SRCE )ι->CacheAwait<flat_map<K,V>>;
-
-		α TryExecuteSync( Sql&& sql, SRCE )ι->optional<uint>;
 
 		[[nodiscard]] α Execute( Sql&& sql, SRCE )ε->ExecuteAwait{ return ExecuteAwait{shared_from_this(), move(sql), sl}; }
 		α ExecuteSync( Sql&& sql, SRCE )ε->uint;
@@ -76,8 +72,6 @@ namespace Jde::DB{
 		β InsertSeqSyncUInt( DB::InsertClause&& insert, SL sl )ε->uint=0;
 		optional<string> _catalog; //db catalog name ie jde
 		string _schema;  //db schema name ie dbo
-	private:
-		friend struct ISelect;
 	};
 #define let const auto
 	Ŧ IDataSource::ScalerSyncOpt( Sql&& sql, SL sl )ε->optional<T>{
@@ -100,4 +94,3 @@ namespace Jde::DB{
 	}
 }
 #undef let
-#endif

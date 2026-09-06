@@ -100,9 +100,9 @@ namespace Jde::DB::Sqlite::Tests{
 		EXPECT_EQ( r.GetString(0), "alice" );
 		EXPECT_EQ( r.GetString(1), "alice@example.com" );
 		EXPECT_TRUE( r.GetBit(2) ); //declared 'bit' comes back as Bool, not int.
-		EXPECT_EQ( r.GetUInt(3), 42u );
+		EXPECT_EQ( r.Get<uint>(3), 42u );
 		EXPECT_TRUE( r.IsNull(4) ); //description not supplied.
-		EXPECT_EQ( r.GetTimePoint(5), now ); //declared 'datetime' comes back as Time from the stored epoch int.
+		EXPECT_EQ( r.Get<DBTimePoint>(5), now ); //declared 'datetime' comes back as Time from the stored epoch int.
 	}
 
 	TEST_P( OpTests, IdentityAndReturning ){
@@ -117,7 +117,7 @@ namespace Jde::DB::Sqlite::Tests{
 		_ds->ExecuteSync( {"insert into access_identities( name, target ) values( ?, ? )", {Value{"dave"}, Value{"dave@example.com"}}} );
 		let rows = _ds->Select( {"select created from access_identities where name=?", {Value{"dave"}}} );
 		ASSERT_EQ( rows.size(), 1u );
-		let created = rows[0].GetTimePoint( 0 ); //default (unixepoch()) - SqliteSyntax::NowDefault.
+		let created = rows[0].Get<DBTimePoint>( 0 ); //default (unixepoch()) - SqliteSyntax::NowDefault.
 		let diff = std::chrono::abs( DBClock::now()-created );
 		EXPECT_LT( diff, std::chrono::minutes{1} );
 	}

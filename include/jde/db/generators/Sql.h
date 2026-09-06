@@ -5,7 +5,7 @@
 
 #define Φ ΓDB α
 namespace Jde::DB{
-	struct Column; struct FromClause; struct JoinClause; struct Table; struct WhereClause;
+	struct Column; struct FromClause; struct Table; struct WhereClause;
 	struct ΓDB Sql final{ //the drivers are separate modules: EmbedParams is out-of-line in Jde.DB.
 		string Text;
 		vector<Value> Params;

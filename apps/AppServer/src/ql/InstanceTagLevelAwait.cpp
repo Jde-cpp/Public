@@ -41,8 +41,8 @@ namespace Jde::App::Server{
 			};
 			for( auto&& row : rows ){
 				let type = row.GetString( 0 );
-				let tag = (ELogTags)row.GetUInt( 1 );
-				let level = (ELogLevel)row.GetUInt8( 2 );
+				let tag = (ELogTags)row.Get<uint>( 1 );
+				let level = (ELogLevel)row.Get<uint8>( 2 );
 				if( type=="text" )
 					add( text, tag, level );
 				else if( type=="binary" )

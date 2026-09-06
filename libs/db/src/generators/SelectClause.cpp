@@ -17,7 +17,7 @@ namespace Jde::DB{
 	}
 	//ε: GetColumnPtr THROWs on a name the view does not have, so a noexcept frame here turned a typo - or a meta rename -
 	//into std::terminate, which the caller's own try/catch could not see.
-	α tableCols( const View& t, str alias, const vector<string>& cols )ε->vector<Object>{
+	α tableCols( const Table& t, str alias, const vector<string>& cols )ε->vector<Object>{
 		vector<Object> y; y.reserve( cols.size() );
 		for( auto& c : cols )
 			y.emplace_back( AliasCol{alias, t.GetColumnPtr(move(c))} );
@@ -32,7 +32,7 @@ namespace Jde::DB{
 		Columns{ fromArray(cols, alias) }
 	{}
 
-	SelectClause::SelectClause( const View& t, str alias, const vector<string>& cols )ε:
+	SelectClause::SelectClause( const Table& t, str alias, const vector<string>& cols )ε:
 		Columns{ tableCols(t, move(alias), cols) }
 	{}
 
@@ -42,11 +42,7 @@ namespace Jde::DB{
 
 	α SelectClause::TryAdd( Object c )ι->void{
 		if( !FindColumn(c) )
-			Columns.push_back( {c} );
-	}
-	α SelectClause::TryAdd( const AliasCol& c )ι->void{
-		if( !FindColumn(c) )
-			Columns.push_back( c );
+			Columns.push_back( move(c) );
 	}
 	α SelectClause::TryAdd( const sp<Column>& c )ι->void{
 		if( !FindColumn(*c) )
@@ -66,18 +62,16 @@ namespace Jde::DB{
 		});
 		return p==Columns.end() ? nullptr : &*p;
 	}
+	//The AliasCol entries only - a Count, Coalesce or Value has no column to match.
+	Ω findAliasCol( const vector<Object>& columns, auto pred )ι->sp<Column>{
+		auto p = find_if( columns, [&](let& o){ auto c = get_if<AliasCol>( &o ); return c && pred( *c->Column ); } );
+		return p==columns.end() ? nullptr : get<AliasCol>(*p).Column;
+	}
 	α SelectClause::FindColumn( const DB::Column& a )Ι->sp<Column>{
-		auto p = find_if( Columns, [&](let& c){
-			return c.index()==underlying(EObject::AliasColumn) && *get<AliasCol>(c).Column==a;
-		});
-		return p==Columns.end() ? nullptr : get<AliasCol>(*p).Column;
+		return findAliasCol( Columns, [&]( const Column& c ){ return c==a; } );
 	}
 	α SelectClause::FindColumn( sv name )Ι->sp<Column>{
-		auto p = find_if( Columns, [=](let& o){
-			auto c = get_if<AliasCol>( &o );
-			return c && c->Column->Name==name;
-		});
-		return p==Columns.end() ? nullptr : get<AliasCol>(*p).Column;
+		return findAliasCol( Columns, [&]( const Column& c ){ return c.Name==name; } );
 	}
 
 	α SelectClause::ToString( bool shouldAlias )Ι->string{

@@ -5,17 +5,6 @@
 #pragma GCC diagnostic ignored "-Wswitch"
 
 namespace Jde {
-	α DB::GetParams( Object& o )ι->vector<DB::Value>{
-		vector<DB::Value> params;
-		switch( (EObject)o.index() ){
-			using enum EObject;
-			case Value: params.push_back(move(get<DB::Value>(o))); break;
-			case Values: params = move(get<vector<DB::Value>>(o)); break;
-			case Coalesce: params = get<DB::Coalesce>(o).Params(); break;
-		}
-		return params;
-	};
-
 	α DB::GetParams( const Object& o )ι->vector<Value>{
 		vector<DB::Value> params;
 		switch( (EObject)o.index() ){

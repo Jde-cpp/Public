@@ -279,9 +279,9 @@ namespace Jde{
 		return ToEnum<DB::EOperator>( QLOperatorStrings, op ).value_or( DB::EOperator::Equal );
 	}
 
-	α QL::FilterColumn( const DB::View& dbTable, sv jsonName, SL sl )ε->sp<DB::Column>{
+	α QL::FilterColumn( const DB::Table& dbTable, sv jsonName, SL sl )ε->sp<DB::Column>{
 		if( jsonName=="id" )
-			return !dbTable.IsView() && AsTable(dbTable).Extends ? AsTable(dbTable).Extends->GetPK() : dbTable.GetPK();//can't have left join users where users.id=42
+			return dbTable.Extends ? dbTable.Extends->GetPK() : dbTable.GetPK();//can't have left join users where users.id=42
 		let name = DB::Names::FromJson( jsonName );
 		if( auto column = dbTable.FindColumn(name); column )
 			return column;
@@ -309,7 +309,7 @@ namespace Jde{
 		return DB::Value{ column.Type, v };
 	}
 
-	α QL::ToWhereClause( const TableQL& table, const DB::View& dbTable, bool includeDeleted )ε->DB::WhereClause{
+	α QL::ToWhereClause( const TableQL& table, const DB::Table& dbTable, bool includeDeleted )ε->DB::WhereClause{
 		table.CheckVariables();
 		DB::WhereClause where;
 		for( let& [name,filters] : table.Filter().ColumnFilters ){

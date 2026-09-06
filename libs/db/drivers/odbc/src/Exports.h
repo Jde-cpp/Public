@@ -9,11 +9,7 @@
 #else 
 	#ifdef _MSC_VER
 		#define ΓODBC __declspec( dllimport )
-		#if NDEBUG
-			#pragma comment(lib, "Jde.DB.Odbc.lib")
-		#else
-			#pragma comment(lib, "Jde.DB.Odbc.lib")
-		#endif
+		#pragma comment(lib, "Jde.DB.Odbc.lib")
 	#else
 		#define ΓODBC
 	#endif

@@ -1,6 +1,6 @@
 #pragma once
 #include <jde/db/meta/Column.h>
-#include <jde/db/meta/View.h>
+#include <jde/db/meta/Table.h>
 
 namespace Jde::DB{
 	struct AliasCol{

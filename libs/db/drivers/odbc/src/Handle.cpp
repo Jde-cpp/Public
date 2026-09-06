@@ -27,29 +27,29 @@ namespace Jde::DB::Odbc{
 	}
 	HandleSession::HandleSession( sv connectionString )ε{
 		let hEnv = getEnvHandle();
-		CALL(hEnv, SQL_HANDLE_ENV, ::SQLAllocHandle(SQL_HANDLE_DBC, hEnv, &_hStatement), "SQLAllocHandle");
+		CALL(hEnv, SQL_HANDLE_ENV, ::SQLAllocHandle(SQL_HANDLE_DBC, hEnv, &_hConnection), "SQLAllocHandle");
 		try{
 			Connect( connectionString );
 		}
 		catch( ... ){ //ctor throw => ~HandleSession never runs => free the DBC handle here, else one leaks per failed connect.
-			::SQLDisconnect( _hStatement );
-			::SQLFreeHandle( SQL_HANDLE_DBC, _hStatement );
-			_hStatement = nullptr;
+			::SQLDisconnect( _hConnection );
+			::SQLFreeHandle( SQL_HANDLE_DBC, _hConnection );
+			_hConnection = nullptr;
 			throw;
 		}
 	}
 
 	HandleSession::~HandleSession() {
-		if( _hStatement ){
-			::SQLDisconnect( _hStatement );
-			::SQLFreeHandle( SQL_HANDLE_DBC, _hStatement );
+		if( _hConnection ){
+			::SQLDisconnect( _hConnection );
+			::SQLFreeHandle( SQL_HANDLE_DBC, _hConnection );
 		}
 	}
 
 	α HandleSession::Connect( sv connectionString )ε->void{
 		SQLCHAR connectionStringResult[8192];
 		SQLSMALLINT connectionStringLength;
-		CALL( _hStatement, SQL_HANDLE_DBC, ::SQLDriverConnect(_hStatement, nullptr, (SQLCHAR*)string(connectionString).c_str(), SQL_NTS, connectionStringResult, 8192, &connectionStringLength, SQL_DRIVER_NOPROMPT), "SQLDriverConnect" );
+		CALL( _hConnection, SQL_HANDLE_DBC, ::SQLDriverConnect(_hConnection, nullptr, (SQLCHAR*)string(connectionString).c_str(), SQL_NTS, connectionStringResult, 8192, &connectionStringLength, SQL_DRIVER_NOPROMPT), "SQLDriverConnect" );
 		if( connectionStringLength>0 )
 			Logging::LogOnce( SRCE_CUR, _tags, "connectionString={}", (char*)connectionStringResult );
 		else

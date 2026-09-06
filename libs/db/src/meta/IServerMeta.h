@@ -13,7 +13,7 @@ namespace Jde::DB{
 
 		β LoadTables( sv schemaName, sv tablePrefix )Ε->flat_map<string,sp<Table>> = 0;
 		β LoadTable( str schemaName, str tableName, SRCE )Ε->sp<TableDdl> = 0;
-		β LoadIndexes( sv tablePrefix, sv tableName={} )Ε->vector<Index> = 0;
+		β LoadIndexes( sv schemaName, sv tablePrefix, sv tableName={} )Ε->vector<Index> = 0;
 		β LoadForeignKeys( str schemaName )Ε->flat_map<string,ForeignKey> = 0;
 		β LoadProcs( str schemaName )Ε->flat_map<string,Procedure> = 0;
 	private:

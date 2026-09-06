@@ -18,7 +18,7 @@ namespace Jde::Access::Server{
 		QL::MutationQL _mutation;
 		Jde::UserPK _executer;
 
-		α Table()ε->const DB::View&;
+		α Table()ε->const DB::Table&;
 		α InsertPermission( const jobject& permission )ι->TAwait<optional<ResourcePK>>::Task;
 		α InsertPermission( ERights allowed, ERights denied, ResourcePK resourcePK )ι->DB::ScalerAwait<PermissionPK>::Task;
 		α InsertRole()ι->DB::ExecuteAwait::Task;

@@ -77,7 +77,7 @@ namespace Jde::Opc{
 		string uri; UA_UInt32 server{};
 		if( extended ){//these 2 could throw.
 			uri = r.GetString( index+5 );
-			server = r.GetUInt32Opt( index+6 ).value_or( 0 );
+			server = r.GetOpt<uint32_t>( index+6 ).value_or( 0 );
 		}
 		nodeId.namespaceIndex = r.Get<uint16>( index );
 		if( !r.IsNull(index+1) ){

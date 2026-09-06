@@ -27,10 +27,6 @@ namespace Jde::DB{
 		_ql{ql}
 	{}
 
-	Ω abbrevName( sv schemaName )ι->string;
-	Ω exists( const DBSchema& config )ι->bool;
-	α UniqueIndexName( const Index& index, sv tableName, const DB::Syntax& syntax, const vector<Index>& indexes )ε->string;
-
 	α ConfigurationJson( const AppSchema& config )ε->const jobject{
 		let appSchema = Settings::AsObject( config.ConfigPath() );
 		auto appMeta = Json::ReadJsonNet( Json::AsSV(appSchema, "meta"), {} );
@@ -38,7 +34,44 @@ namespace Jde::DB{
 			appMeta["prefix"] = *prefix;
 		return appMeta;
 	}
-//todo doc relativeScriptPath
+	//`access_identities` -> `accs_idntty`: each word of the singular loses its vowels past the first character, unless that
+	//leaves it under two shorter - the fk names SyncFKs builds from two of these have to fit the dialect's identifier limit.
+	α abbrevName( sv schemaName )ι->string{
+		auto abbrev = []( sv word )->string{
+			string y;
+			for( let ch : word ){
+				if( y.empty() || (ch!='a' && ch!='e' && ch!='i' && ch!='o' && ch!='u') )
+					y += ch;
+			}
+			return word.size()>2 && y.size()<word.size()-1 ? y : string{ word };
+		};
+		let singular = Names::ToSingular( schemaName );
+		vector<string> words;
+		for( let& word : Str::Split(singular, '_') )
+			words.push_back( abbrev(word) );
+		return Str::Join( words, "_" );
+	}
+
+	α exists( const DBSchema& config )ι->bool{
+		try{
+			return config.DS()->ScalerSyncOpt<string>( {string{config.DS()->Syntax().SchemaExistsSql()}, {Value{config.Name}}} ).has_value();
+		}
+		catch( Exception& e ){
+			e.SetLevel( ELogLevel::Debug );
+			return false;//connected to schema which doesn't exist.
+		}
+	}
+
+	α UniqueIndexName( const DB::Index& index, sv tableName, const DB::Syntax& syntax, const vector<Index>& indexes )ε->string{
+		let baseName = syntax.IndexName( tableName, index.Name ); //dialect owns the composition - schema-wide namespaces (sqlite) qualify with the table.
+		auto indexName = baseName;
+		for( uint i=2; ; indexName = Ƒ( "{}{}", baseName, i++ ) ){
+			if( find_if(indexes, [&](let& x){ return ToIV(x.Name)==ToIV(indexName);})==indexes.end() )
+				break;
+		}
+		return indexName;
+	}
+
 //todo add db version table.
 	α SchemaDdl::Sync( const AppSchema& config, sp<QL::IQL> ql )ε->void{
 		if( config.Syntax().HasSchemas() && !exists(*config.DBSchema) ){
@@ -53,37 +86,30 @@ namespace Jde::DB{
 		db->Initialize( catalog, db );
 		catalog = nullptr;
 
-		try{
-			db->SyncTables( config );
-			db->SyncScripts( config, initConfig );
-			db->SyncData( config, Json::AsObject(initConfig, "tables") );
-			db->SyncFKs( config );
-		}
-		catch( ... ){
-			db->Teardown();
-			throw;
-		}
-		db->Teardown();
+		struct Guard{ SchemaDdl& Db; ~Guard(){ Db.Teardown(); } } teardown{ *db }; //on every exit, thrown or not - the graph is cyclic, see Teardown.
+		db->SyncTables( config );
+		db->SyncScripts( config, initConfig );
+		db->SyncData( config, Json::AsObject(initConfig, "tables") );
+		db->SyncFKs( config );
 	}
 
-	//The metadata graph is strongly cyclic - AppSchema::DBSchema, View::Schema, Column::Table/PKTable, plus
+	//The metadata graph is strongly cyclic - AppSchema::DBSchema, Table::Schema, Column::Table/PKTable, plus
 	//QLView/Children/Map/Extends - so this temporary's refcount never reaches zero on scope exit.  Unwire only the
 	//objects this graph initialized (Schema points at its own AppSchema): SyncTables also emplaces the config
 	//schema's live views, which must merely be released, never mutated.
 	α SchemaDdl::Teardown()ι->void{
 		for( auto&& [_, appSchema] : AppSchemas ){
-			auto clear = []( View& v )ι{
-				v.Columns.clear();
-				v.Map.reset();
-				v.QLView = nullptr;
-				v.Children.clear();
-				v.Schema = nullptr;
+			auto clear = []( Table& t )ι{
+				t.Columns.clear();
+				t.Map.reset();
+				t.QLView = nullptr;
+				t.Children.clear();
+				t.Schema = nullptr;
+				t.Extends = nullptr;
 			};
 			for( auto&& [_, t] : appSchema->Tables ){
-				if( t->Schema!=appSchema )
-					continue;
-				clear( *t );
-				t->Extends = nullptr;
+				if( t->Schema==appSchema )
+					clear( *t );
 			}
 			for( auto&& [_, v] : appSchema->Views ){
 				if( v->Schema==appSchema )
@@ -98,12 +124,14 @@ namespace Jde::DB{
 
 	α SchemaDdl::SyncFKs( const AppSchema& config )ε->void{
 		let canAddFKs = config.DS()->Syntax().CanAddForeignKeys();
+		let prefix = config.ObjectPrefix();
 		for( let& [tableName, table] : config.Tables ){
+			let dbTableName = prefix+tableName;
 			for( auto& column : table->Columns ){
 				if( !column->NeedsFK() )
 					continue;
-				if( find_if(FKs, [&,t=config.ObjectPrefix()+table->Name](let& fk){
-					return fk.second.Table==t && fk.second.Columns==vector<string>{column->Name};
+				if( find_if(FKs, [&](let& fk){
+					return fk.second.Table==dbTableName && fk.second.Columns==vector<string>{column->Name};
 				})!=FKs.end() ){
 					continue;
 				}
@@ -160,10 +188,7 @@ namespace Jde::DB{
 	}
 
 	α SchemaDdl::SyncScripts( const AppSchema& config, const jobject& initConfig )ε->void{
-		//let& syntax = config.DS()->Syntax();
 		auto prefix = Json::FindString( initConfig, "prefix" ).value_or( "" );
-//		if( config.DBSchema->Name.size() && config.DBSchema->Name[0]!='_' )
-//			prefix = config.DBSchema->Name+ "." + prefix;
 		let stdPrefix = config.Name+"_"; //access_
 		forEachDir( "/dbServers/scriptPaths", ".sql", {stdPrefix}, [&](const fs::path& scriptFile){
 			let fileName = scriptFile.filename(); //[access_]user_insert.sql
@@ -198,30 +223,32 @@ namespace Jde::DB{
 		const DB::Syntax& syntax = config.DS()->Syntax();
 		IDataSource& ds = *DS();
 		let& schemaName = config.DBSchema->Name;
+		let prefix = config.ObjectPrefix();
 		for( let& [tableName, table] : config.Tables ){
+			let dbTableName = prefix+tableName; //the server-side name: Tables() and the loaded indexes are keyed by it.
 			sp<TableDdl> dbTable;
-			if( let kv=Tables().find(config.ObjectPrefix()+tableName); kv!=Tables().end() ){
+			if( let kv=Tables().find(dbTableName); kv!=Tables().end() ){
 				dbTable = std::dynamic_pointer_cast<TableDdl>( kv->second );
 				ASSERT( dbTable );
 				for( auto& column : table->Columns ){
 					auto pDBColumn = dbTable->FindColumn( column->Name ); if( !pDBColumn ){ CRITICAL("Could not find db column {}.{}", tableName, column->Name); continue; }
 					pDBColumn->Insertable = column->Insertable;
 					if( pDBColumn->Default && pDBColumn->Default->is_string() && pDBColumn->Default->get_string()!="$now" )
-						ds.TryExecuteSync( {syntax.AddDefault(table->SqlName(), column->Name, *pDBColumn->Default)} );
+						ds.ExecuteSync( {syntax.AddDefault(table->SqlName(), column->Name, *pDBColumn->Default)} );
 				}
 			}
 			else{
 				dbTable = ms<TableDdl>( *table );
 				ds.ExecuteSync( {dbTable->CreateStatement()} );
 				INFO( "Created table '{}'.", table->DBName );
-				dbTable = ds.ServerMeta().LoadTable( schemaName, config.ObjectPrefix()+table->Name );
+				dbTable = ds.ServerMeta().LoadTable( schemaName, dbTableName );
 				dbTable->Initialize( FindAppSchema( "" ), dbTable );
 				Tables().emplace( dbTable->Name, dbTable );
 			}
 
 			auto& dbIndexes = dbTable->Indexes;
 			for( let& index : Index::GetConfig(*table) ){
-				if( let db = find_if(dbIndexes, [&](let& db){ return db.TableName==config.ObjectPrefix()+tableName && db.Columns==index.Columns;} ); db!=dbIndexes.end() ){
+				if( let db = find_if(dbIndexes, [&](let& db){ return db.TableName==dbTableName && db.Columns==index.Columns;} ); db!=dbIndexes.end() ){
 					//matching on columns alone treats a non-unique index as satisfying a unique natural key - the case for schemas predating a naturalKeys addition. Not reconciled here: dropping an index on a live table is destructive, and recreating it unique fails outright once duplicates exist. Say so instead of skipping silently - callers treat the configured uniqueness as the integrity contract.
 					if( db->Unique!=index.Unique )
 						WARN( "Index '{}.{}' on ({}) is {}unique in the database but {}unique in the configuration - not reconciled; existing rows may already violate the configured constraint.", table->DBName, db->Name, Str::Join(index.Columns), db->Unique ? "" : "not ", index.Unique ? "" : "not " );
@@ -236,9 +263,7 @@ namespace Jde::DB{
 			}
 			//DdlInsertProcName is empty when there is no server object to create - !HasProcs (sqlite) registers a
 			//native twin through IProcs instead.  HasCustomInsertProc is create-specific: those come from .sql scripts.
-			if( auto procName = table->HasCustomInsertProc ? string{} : table->DdlInsertProcName(); procName.size() ){
-				if( let index = procName.find_first_of('.'); index<procName.size()-1 )
-					procName = procName.substr( index+1 );
+			if( let procName = table->HasCustomInsertProc ? string{} : UnqualifiedProcName(table->DdlInsertProcName()); procName.size() ){
 				let existed = Procs.find( procName )!=Procs.end();
 				if( let drop = syntax.DropProcSql( Ƒ("{}.{}", schemaName, syntax.EscapeDdl(procName)) ); existed && drop.size() )
 					ds.ExecuteSync( {drop} );
@@ -250,11 +275,9 @@ namespace Jde::DB{
 		}
 		for( let& [name, view] : config.Views ){
 			Views().emplace( name, view );
-			//p->Initialize( Meta(), p );
-			//placeholder
 		}
 		if( !syntax.CanAddForeignKeys() )
-			FKs = config.DS()->ServerMeta().LoadForeignKeys(config.Name);
+			FKs = config.DS()->ServerMeta().LoadForeignKeys( schemaName );
 
 		for( let& [_, table] : Tables() ){
 			table->Initialize( Meta(), table );
@@ -279,7 +302,7 @@ namespace Jde::DB{
 		//statement and go away with the table below (sqlite rejects 'alter table … drop constraint' as a syntax
 		//error).  Guarding the loop also skips LoadForeignKeys' per-table pragma scan for those dialects.
 		if( ds.Syntax().CanAddForeignKeys() ){
-			for( let& [name, fk] : config.DS()->ServerMeta().LoadForeignKeys(config.Name) ){
+			for( let& [name, fk] : config.DS()->ServerMeta().LoadForeignKeys(config.DBSchema->Name) ){
 				if( let p = find_if(config.Tables, [&fk](let& t){return t.second->DBName==fk.Table;}); p!=config.Tables.end() )
 					ds.ExecuteSync( {Ƒ("ALTER TABLE {} DROP CONSTRAINT {}", p->second->SqlName(), name)} );
 			}
@@ -306,49 +329,8 @@ namespace Jde::DB{
 			// if catalogs, would have dropped catalog
 			//C10: a commented-out SchemaDropsObjects() guard stood here; the virtual is gone with it.  Both dialects that
 			//overrode it answered true, so the guard would have skipped DropObjects() on every backend that has schemas.
-			let catalogName = config.DS()->CatalogName();
 			config.DS()->ExecuteSync( {Ƒ("DROP SCHEMA {}", config.DBSchema->Name)} );
 		}
 	}
 #endif
-
-	α abbrevName( sv schemaName )ι->string{
-		auto fnctn = []( let& word )->string {
-			std::ostringstream os;
-			for( let ch : word ){
-				if( (ch!='a' && ch!='e' && ch!='i' && ch!='o' && ch!='u') || os.tellp() == std::streampos(0) )
-					os << ch;
-			}
-			return word.size()>2 && os.str().size()<word.size()-1 ? os.str() : string{ word };
-		};
-		let singular = Names::ToSingular( schemaName );
-		let splits = Str::Split( singular, '_' );
-		std::ostringstream name;
-		for( uint i=0; i<splits.size(); ++i ){
-			if( i>0 )
-				name << '_';
-			name << fnctn( splits[i] );
-		}
-		return name.str();
-	}
-
-	α exists( const DBSchema& config )ι->bool{
-		try{
-			return config.DS()->ScalerSyncOpt<string>( {string{config.DS()->Syntax().SchemaExistsSql()}, {Value{config.Name}}} ).has_value();
-		}
-		catch( Exception& e ){
-			e.SetLevel( ELogLevel::Debug );
-			return false;//connected to schema which doesn't exist.
-		}
-	}
-
-	α UniqueIndexName( const DB::Index& index, sv tableName, const DB::Syntax& syntax, const vector<Index>& indexes )ε->string{
-		let baseName = syntax.IndexName( tableName, index.Name ); //dialect owns the composition - schema-wide namespaces (sqlite) qualify with the table.
-		auto indexName = baseName;
-		for( uint i=2; ; indexName = Ƒ( "{}{}", baseName, i++ ) ){
-			if( find_if(indexes, [&](let& x){ return ToIV(x.Name)==ToIV(indexName);})==indexes.end() )
-				break;
-		}
-		return indexName;
-	}
 }

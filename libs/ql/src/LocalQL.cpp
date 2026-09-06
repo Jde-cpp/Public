@@ -2,7 +2,6 @@
 #include <jde/db/Row.h>
 #include <jde/db/generators/Functions.h>
 #include <jde/db/meta/AppSchema.h>
-#include <jde/db/meta/View.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/LocalSubscriptions.h>
 #include "ops/InsertAwait.h"
@@ -11,14 +10,14 @@
 
 namespace Jde::QL{
 	α LocalQL::DS()ι->DB::IDataSource&{ ASSERT(!_schemas.empty() && _schemas.front()->DS()); return *_schemas.front()->DS(); }
-	α LocalQL::GetTablePtr( str tableName, SL sl )ε->sp<DB::View>{
+	α LocalQL::GetTablePtr( str tableName, SL sl )ε->sp<DB::Table>{
 		for( const auto& schema : _schemas ){
 			if( auto t = schema->FindView(tableName); t )
 				return t;
 		}
 		THROWSL( "Table not found:  {}", tableName );
 	}
-	α LocalQL::GetTable( str tableName, SL sl )ε->DB::View&{
+	α LocalQL::GetTable( str tableName, SL sl )ε->DB::Table&{
 		return *GetTablePtr( tableName, sl );
 	}
 
@@ -78,7 +77,7 @@ namespace Jde::QL{
 				if( auto name = m.Args.contains("name") ? nullptr : m.Args.if_contains("target"); name )
 					m.Args["name"] = Json::AsString( *name );
 				if( auto t = key->IsPK() ? GetTablePtr(m.TableName()) : nullptr; t && t->SequenceColumn() )
-					y.push_back( BlockAny<InsertAwait>({DB::AsTable(t), move(m), executer, true}) );
+					y.push_back( BlockAny<InsertAwait>({t, move(m), executer, true}) );
 				else
 					y.push_back( BlockAwait<QLAwait<jvalue>,jvalue>(QLAwait<jvalue>{move(m), executer}) );
 			}else

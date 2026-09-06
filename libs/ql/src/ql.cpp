@@ -9,13 +9,13 @@
 #include <jde/ql/types/Introspection.h>
 #include <jde/ql/LocalQL.h>
 #include <jde/db/IDataSource.h>
-#include <jde/db/meta/View.h>
+#include <jde/db/meta/Table.h>
 #include <jde/fwk/io/Cache.h>
 
 #define let const auto
 
 namespace Jde{
-	α QL::LoadEnum( const DB::View& table, SL sl )ι->bool{
+	α QL::LoadEnum( const DB::Table& table, SL sl )ι->bool{
 		try{
 			Cache::Clear( table.Name );
 			table.Schema->DS()->SelectEnumSync<uint,string>( table, nullopt, sl );

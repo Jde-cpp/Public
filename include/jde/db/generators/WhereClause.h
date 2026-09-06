@@ -1,6 +1,4 @@
 ﻿#pragma once
-#ifndef WHERE_CLAUSE_H
-#define WHERE_CLAUSE_H
 #include "../exports.h"
 #include "../Value.h"
 #include "Syntax.h"
@@ -31,8 +29,8 @@ namespace Jde::DB{
 		α Add( string clause )ε{ _clauses.push_back(move(clause)); }
 		α Add( const DB::Criteria& criteria )ε->void;
 		α Empty()Ι->bool{ return _clauses.empty(); }
-		α Move()ι->string;
-		α ToString()Ι->string;
+		α Move()ι->string;     //ToString, and the clauses are consumed - the params are the caller's to move separately.
+		α ToString()Ι->string; //"where a and b", or nothing at all.
 
 		α Params()ι->vector<Value>&{ return _params; }
 		α Params()Ι->const vector<Value>&{ return _params; }
@@ -41,4 +39,3 @@ namespace Jde::DB{
 		vector<Value> _params;
 	};
 }
-#endif

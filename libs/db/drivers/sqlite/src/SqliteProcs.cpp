@@ -97,7 +97,7 @@ namespace Jde::DB::Sqlite{
 
 	α ScalarUInt( sqlite3& db, sv sql, const vector<Value>& params, SL sl )ε->optional<uint>{
 		optional<uint> y;
-		RowΛ f = [&y]( Row&& row ){ if( !row.IsNull(0) ) y = row.GetUInt(0); };
+		RowΛ f = [&y]( Row&& row ){ if( !row.IsNull(0) ) y = row.Get<uint>(0); };
 		ExecuteStatement( db, sql, params, &f, sl );
 		return y;
 	}

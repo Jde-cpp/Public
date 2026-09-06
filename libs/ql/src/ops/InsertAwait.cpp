@@ -42,8 +42,7 @@ namespace Jde::QL{
 					nestedTable->Authorize( Access::ERights::Read, _userPK, _sl );
 					//#24: the same rule as the pk branch in AddStatement - `identity:{id:N}` on a table that *extends* identities
 					//would pre-seed the back-fill and bind the new row to N, so the id this insert is about to create is dropped.
-					let extends = table.IsView() ? nullptr : AsTable(table).Extends;
-					if( extends && extends->Name==nestedTable->Name ){
+					if( table.Extends && table.Extends->Name==nestedTable->Name ){
 						WARNT( ELogTags::QL, "[{}]ignoring the supplied '{}' id - an extension row takes its pk from the row it extends.", table.Name, string{key} );
 					}
 					else
@@ -74,7 +73,7 @@ namespace Jde::QL{
 			//#24: an extension's pk is the parent row's id - it comes from the insert a few lines up, never from the client.
 			//Honouring `identityId:N` (or `id:N`) bound the new users row to an existing identity and left the identities row
 			//this mutation just created an orphan;  ignoring it puts the column in _missingColumns, where Execute fills it in.
-			let isExtensionKey = !_identityInsert && c->IsPK() && !table.IsView() && AsTable(table).Extends;
+			let isExtensionKey = !_identityInsert && c->IsPK() && table.Extends;
 			if( isExtensionKey && (input.if_contains(memberName) || input.if_contains("id")) )
 				WARNT( ELogTags::QL, "[{}.{}]ignoring the supplied key - an extension row takes its pk from the row it extends.", table.Name, c->Name );
 			if( let jvalue = isExtensionKey ? nullptr : input.if_contains(memberName); jvalue ){// calling a stored proc, so need all columns.
@@ -144,7 +143,7 @@ namespace Jde::QL{
 							let result = co_await Any( ds.Query(move(sql), true, _sl) );
 							for( let& row : result.Rows ){
 								ASSERT( row.Size() );
-								id = row.Size() ? row.GetInt32( 0 ) : 0;
+								id = row.Size() ? row.Get<int32_t>( 0 ) : 0;
 							}
 							y.push_back( jobject{ {"id", id}, {"rowCount",result.RowsAffected} } );
 						}else{

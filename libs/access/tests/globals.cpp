@@ -22,7 +22,7 @@ namespace Jde::Access{
 	α Tests::QLPtr()ι->sp<QL::LocalQL>{ return _localQL; }
 	α Tests::SetQL( sp<QL::LocalQL> ql )ι->void{ _localQL = move(ql); }
 	α Tests::DS()ι->DB::IDataSource&{ return _localQL->DS(); }
-	α Tests::GetTable( str name )ι->sp<DB::Table>{ return DB::AsTable(_localQL->GetTablePtr(FromJson(name)) ); }
+	α Tests::GetTable( str name )ι->sp<DB::Table>{ return _localQL->GetTablePtr( FromJson(name) ); }
 	α Tests::Schemas()ι->vector<sp<DB::AppSchema>>{ return _localQL->Schemas(); }
 
 

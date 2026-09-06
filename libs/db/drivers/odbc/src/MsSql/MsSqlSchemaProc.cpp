@@ -2,48 +2,37 @@
 #include <jde/fwk/str.h>
 #include <jde/db/Row.h>
 #include <jde/db/meta/Table.h>
-#include "../../../../src/meta/ddl/ForeignKey.h"
-#include "../../../../src/meta/ddl/Index.h"
-#include "../../../../src/meta/ddl/Procedure.h"
 #include "../../../../src/meta/ServerMetaFold.h"
-#include "../../../../src/meta/ddl/TableDdl.h"
+#include "../../../../src/meta/ddl/Procedure.h"
 #include "MsSqlStatements.h"
 #include "../OdbcDataSource.h"
 #define let const auto
 
 namespace Jde::DB::MsSql{
-		α processRow( flat_map<string,sp<Table>>& tables, str tableName, sv name, _int /*ordinalPosition*/, sv dflt, bool isNullable, sv type, optional<_int> maxLength, _int isIdentity, _int /*isId*/, optional<_int> numericPrecision, optional<_int> numericScale )->void{
-			auto& table = tables.emplace( tableName, ms<TableDdl>(Table{tableName}) ).first->second;
-			let dataType = ToType(type);
-			optional<Value> defaultValue;
-			if( !dflt.empty() ){
-				if( dataType==EType::Int ){
-					sv v = dflt;//MSSQL wraps numeric defaults in parens, e.g. ((100)); strip them all, then parse. Expression defaults ("((1)+(2))") fail TryTo->no default, which is fine.
-					while( v.size()>=2 && v.front()=='(' && v.back()==')' )
-						v = v.substr( 1, v.size()-2 );
-					if( let value = Str::TryTo<_int>(string{v}); value )
-						defaultValue = *value;
-				}
-				else if( dataType==EType::Bit )
-					defaultValue = dflt!="((0))";
-			}
-			auto c = ms<Column>( string{name} );
-			c->Default = defaultValue;
-			c->IsNullable = isNullable;
-			c->IsSequence = isIdentity != 0;
-			c->Type = dataType;
-			c->MaxLength = maxLength.value_or(0);
-			c->NumericPrecision = numericPrecision.value_or(0);
-			c->NumericScale = numericScale.value_or(0);
-			c->Table = table;
-			table->Columns.push_back( c );
+	//sys.default_constraints' definition: SQL Server wraps a numeric default in parens, `((100))`, a bit's as `((0))`/`((1))`.
+	//Strip them all, then parse; an expression default (`((1)+(2))`) fails TryTo and is no default, which is fine.
+	Ω msSqlDefault( sv dflt, EType type )ι->optional<Value>{
+		optional<Value> y;
+		if( dflt.empty() )
+			return y;
+		if( type==EType::Int ){
+			sv v = dflt;
+			while( v.size()>=2 && v.front()=='(' && v.back()==')' )
+				v = v.substr( 1, v.size()-2 );
+			if( let value = Str::TryTo<_int>(string{v}); value )
+				y = Value{ *value };
 		}
+		else if( type==EType::Bit )
+			y = Value{ dflt!="((0))" };
+		return y;
+	}
 
 	α MsSqlSchemaProc::LoadColumns( DB::Sql&& sql )Ε->flat_map<string,sp<Table>>{
 		auto rows = _ds.Select( move(sql) );
 		flat_map<string,sp<Table>> tables;
-		for( auto&& row : rows ){
-			processRow( tables, move(row.GetString(0)), move(row.GetString(1)), row.GetInt(2), move(row.GetString(3)), row.GetBit(4), move(row.GetString(5)), row.GetIntOpt(6), row.GetInt(7), row.GetInt(8), row.GetIntOpt(9), row.GetIntOpt(10) );
+		for( auto&& row : rows ){ //ColumnSql's columns; [2] is column_id, which the statement orders by, and [8] a 0/1 pk-membership flag, not the key ordinal, so it is not an SKIndex.
+			let type = ToType( row.GetString(5) );
+			FoldColumnRow( tables, row.GetString(0), ms<ColumnDdl>(row.GetString(1), msSqlDefault(row.GetString(3), type), row.GetBit(4), type, row.GetOpt<_int>(6), row.Get<_int>(7)!=0, optional<uint8>{}, row.GetOpt<_int>(9), row.GetOpt<_int>(10)) );
 		}
 		return tables;
 	}
@@ -54,11 +43,7 @@ namespace Jde::DB::MsSql{
 			sql.Params.push_back( Value{string{tablePrefix}+'%'} );
 
 		auto tables = LoadColumns( move(sql) );
-		let indexes = LoadIndexes( schemaName, {} );
-		for( auto& index : indexes ){
-			if( auto table = tables.find(index.TableName); table != tables.end() )
-				std::dynamic_pointer_cast<TableDdl>( table->second )->Indexes.push_back( index );
-		}
+		AttachIndexes( tables, LoadIndexes(schemaName, tablePrefix) );
 		return tables;
 	}
 	α MsSqlSchemaProc::LoadTable( str schemaName, str tableName, SL sl )Ε->sp<TableDdl>{
@@ -66,18 +51,17 @@ namespace Jde::DB::MsSql{
 		auto tables = LoadColumns( move(sql) );
 		THROW_IFSL( tables.size()!=1, "Table not found '{}.{}'. size={}", schemaName, tableName, tables.size() );
 		auto dbTable = dynamic_pointer_cast<TableDdl>( tables.begin()->second );
-		dbTable->Indexes = LoadIndexes( schemaName, dbTable->Name );
+		dbTable->Indexes = LoadIndexes( schemaName, {}, dbTable->Name );
 		return dbTable;
 	}
 
-	α MsSqlSchemaProc::LoadIndexes( sv schema, sv tableName )Ε->vector<Index>{
-		if( schema.empty() )
-			schema = "dbo";// _ds.Catalog( MsSql::Sql::CatalogSql );
+	α MsSqlSchemaProc::LoadIndexes( sv schemaName, sv tablePrefix, sv tableName )Ε->vector<Index>{
+		let schema = schemaName.empty() ? "dbo"sv : schemaName;
 
 		vector<Index> indexes;
 		auto result = [&]( Row&& row ){
 			uint i=0;
-			let tableName = move(row.GetString(i++)); let indexName = move(row.GetString(i++)); let columnName = move(row.GetString(i++)); let unique = row.GetBit(i++)==0;
+			let tableName = row.TakeString(i++); let indexName = row.TakeString(i++); let columnName = row.TakeString(i++); let unique = row.GetBit(i++)==0;
 
 			FoldIndexRow( indexes, tableName, indexName, columnName, unique, indexName==Ƒ("{}_pk", tableName) );
 		};
@@ -85,7 +69,9 @@ namespace Jde::DB::MsSql{
 		vector<Value> values{ Value{string{schema}} };
 		if( tableName.size() )
 			values.push_back( Value{string{tableName}} );
-		let sql = Sql::IndexSql( tableName.size() );
+		else if( tablePrefix.size() )
+			values.push_back( Value{string{tablePrefix}+'%'} );
+		let sql = Sql::IndexSql( tableName.size(), tablePrefix.size() );
 		_ds.Select( {sql, values}, result );
 
 		return indexes;
@@ -94,72 +80,32 @@ namespace Jde::DB::MsSql{
 	α MsSqlSchemaProc::LoadProcs( str schemaName )Ε->flat_map<string,Procedure>{
 		flat_map<string,Procedure> values;
 		auto fnctn = [&]( Row&& row ){
-			let name = move(row.GetString( 0 ));
+			let name = row.TakeString(0);
 			values.try_emplace( name, Procedure{name, schemaName} );
 		};
 		_ds.Select( {Sql::ProcSql(true), {Value{schemaName}}}, fnctn );
 		return values;
 	}
 
+	//sys.types.name is the bare lowercase name, so an exact match: sql server's own two spellings, then the common table
+	//(B3; the old StartsWith on bigint/smallint/varchar/bit/binary/decimal matched nothing an exact compare does not).
 	α MsSqlSchemaProc::ToType( sv typeName )Ι->EType{
-		EType type{ EType::None };
 		using enum EType;
-		if(typeName=="datetime")
-			type=DateTime;
-		else if( typeName=="smalldatetime" )
-			type=SmallDateTime;
-		else if(typeName=="float")
-			type=Float;
-		else if(typeName=="real")
-			type=SmallFloat;
-		else if( typeName=="int" )
-			type = Int;
-		else if( Str::StartsWith(typeName, "bigint") )
-			type=Long;
-		else if( typeName=="nvarchar" || typeName=="sysname" )
-			type=VarWChar;
-		else if(typeName=="nchar")
-			type=WChar;
-		else if( Str::StartsWith(typeName, "smallint") )
-			type=Int16;
-		else if(typeName=="tinyint")
-			type=Int8;
-		else if( typeName=="tinyint unsigned" )
-			type=UInt8;
-		else if( typeName=="uniqueidentifier" )
-			type=Guid;
-		else if(typeName=="varbinary")
-			type=VarBinary;
-		else if( Str::StartsWithInsensitive(typeName, "varchar") )
-			type=VarChar;
-		else if(typeName=="ntext")
-			type=NText;
-		else if(typeName=="text")
-			type=Text;
-		else if(typeName=="char")
-			type=Char;
-		else if(typeName=="image")
-			type=Image;
-		else if(Str::StartsWith(typeName, "bit") )
-			type=Bit;
-		else if( Str::StartsWith(typeName, "binary") )
-			type=Binary;
-		else if( Str::StartsWith(typeName, "decimal") )
-			type=Decimal;
-		else if(typeName=="numeric")
-			type=Numeric;
-		else if(typeName=="money")
-			type=Money;
-		else
+		if( typeName=="sysname" )
+			return VarWChar;
+		if( typeName=="tinyint unsigned" )
+			return UInt8;
+		let type = FindCommonType( typeName );
+		if( !type )
 			WARNT( ELogTags::App, "Unknown datatype({}).  need to implement, no big deal if not our table.", typeName );
-		return type;
+		return type.value_or( None );
 	}
 
 	α MsSqlSchemaProc::LoadForeignKeys( str schemaName )Ε->flat_map<string,ForeignKey>{
 		flat_map<string,ForeignKey> fks;
 		auto result = [&]( Row&& row ){
 			uint i=0;
-			let name = move(row.GetString(i++)); let fkTable = move(row.GetString(i++)); let column = move(row.GetString(i++)); let pkTable = move(row.GetString(i++)); //let pkColumn = row.GetString(i++); let ordinal = row.GetUInt(i);
+			let name = row.TakeString(i++); let fkTable = row.TakeString(i++); let column = row.TakeString(i++); let pkTable = row.TakeString(i++); //let pkColumn = row.GetString(i++); let ordinal = row.Get<uint>(i);
 			FoldForeignKeyRow( fks, name, fkTable, column, pkTable );
 		};
 		_ds.Select( {Sql::ForeignKeySql(schemaName.size()), {Value{schemaName}}}, result );

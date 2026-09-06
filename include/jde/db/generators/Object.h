@@ -19,7 +19,6 @@ namespace Jde::DB{
 	struct ΓDB Coalesce final{
 		Coalesce( Object&& a, Object&& b )ι;
 		α ToString()Ι->string;
-		α Params()ι->vector<Value>;
 		α Params()Ι->vector<Value>;
 		vector<Object> Objects;
 	};
@@ -27,6 +26,5 @@ namespace Jde::DB{
 	ΓDB α operator==(const Object& a, const Object& b)ι->bool;
 
 	ΓDB α ToString( const Object& o )ι->string;
-	ΓDB α GetParams( Object& o )ι->vector<Value>;
 	ΓDB α GetParams( const Object& o )ι->vector<Value>;
 }

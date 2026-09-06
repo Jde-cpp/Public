@@ -6,10 +6,10 @@
 #define let const auto
 
 namespace Jde::DB{
-	Index::Index( sv indexName, sv tableName, bool primaryKey, const vector<string>* pColumns, bool unique, optional<bool> clustered )ι:
+	Index::Index( sv indexName, sv tableName, bool primaryKey, vector<string> columns, bool unique, optional<bool> clustered )ι:
 		Name{ indexName },
 		TableName{ tableName },
-		Columns{ pColumns ? *pColumns : vector<string>{} },
+		Columns{ move(columns) },
 		Clustered{ clustered ? *clustered : primaryKey },
 		Unique{ unique },
 		PrimaryKey{ primaryKey }
@@ -24,16 +24,10 @@ namespace Jde::DB{
 	{}
 
 	α Index::Create( sv name, sv tableName, sv sqlTableName, const Syntax& syntax )Ι->string{
-		string unique = Unique ? "unique" : "";
-		std::ostringstream os;
-		if( PrimaryKey )
-			os << "alter table " << sqlTableName << " add constraint " << Str::Replace(tableName, '.', '_') << "_" << name << (Clustered || !syntax.SpecifyIndexCluster() ? "" : " nonclustered") << " primary key(";
-		else
-			os << "create " << (Clustered && syntax.SpecifyIndexCluster() ? "clustered " : " ") << unique << " index "<< name << " on " << std::endl << sqlTableName << "(";
-
-		os << Str::Join( Columns ) << ")";
-
-		return os.str();
+		let head = PrimaryKey
+			? Ƒ( "alter table {} add constraint {}_{}{} primary key(", sqlTableName, Str::Replace(tableName, '.', '_'), name, Clustered || !syntax.SpecifyIndexCluster() ? "" : " nonclustered" )
+			: Ƒ( "create {}{} index {} on \n{}(", Clustered && syntax.SpecifyIndexCluster() ? "clustered " : " ", Unique ? "unique" : "", name, sqlTableName );
+		return Ƒ( "{}{})", head, Str::Join(Columns) );
 	}
 
 	α Index::GetConfig( const Table& t )ι->vector<Index>{
@@ -46,11 +40,11 @@ namespace Jde::DB{
 				if( c->IsNullable )
 					haveNullColumn = true;
 			}
-			indexes.emplace_back( "pk", t.Name, !haveNullColumn, &names );
+			indexes.emplace_back( "pk", t.Name, !haveNullColumn, move(names) );
 		}
 		for( uint i=0; i<t.NaturalKeys.size(); ++i ){
 			let name = t.NaturalKeys.size()==1 ? "nk" : Ƒ( "nk{}", i );
-			indexes.emplace_back( name, t.Name, false, &t.NaturalKeys[i] );
+			indexes.emplace_back( name, t.Name, false, t.NaturalKeys[i] );
 		}
 		return indexes;
 	}

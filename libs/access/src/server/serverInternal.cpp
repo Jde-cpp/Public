@@ -81,8 +81,8 @@ namespace Jde::Access{
 		}
 	}
 	α Server::DS()ι->DB::IDataSource&{ return LocalQL().DS(); }
-	α Server::GetTablePtr( str name, SL sl )ε->sp<DB::View>{ return LocalQL().GetTablePtr(name, sl); }
-	α Server::GetTable( str name, SL sl )ε->const DB::View&{ return LocalQL().GetTable(name, sl); }
+	α Server::GetTablePtr( str name, SL sl )ε->sp<DB::Table>{ return LocalQL().GetTablePtr(name, sl); }
+	α Server::GetTable( str name, SL sl )ε->const DB::Table&{ return LocalQL().GetTable(name, sl); }
 
 	α Server::Configure( vector<sp<DB::AppSchema>>&& schemas, sp<QL::LocalQL> localQL, UserPK executer, sp<Authorize> authorizer, sp<AccessListener> listener )ε->ConfigureAwait{
 		auto accessSchema = find_if( schemas, [](const sp<DB::AppSchema>& x){return x->Name=="access";} );

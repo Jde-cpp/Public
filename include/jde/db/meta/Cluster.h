@@ -11,6 +11,7 @@ namespace Jde::DB{
 
 		Ω Initialize( sp<Cluster> cluster )ε->void;
 		α Syntax()Ι->const DB::Syntax&;
+		α FindAppSchema( str name )ι->sp<AppSchema>; //across every catalog; null when none has it.
 		α GetAppSchema( str name, SRCE )ε->sp<AppSchema>;
 
 		string ConfigName;

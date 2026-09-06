@@ -168,7 +168,7 @@ namespace QL{
 			}
 			fields.push_back( field );
 		};
-		function<void(const DB::View&, bool, string)> addColumns = [&addColumns,&addField,&mainTable]( const DB::View& dbTable, bool isMap, string prefix={} ){
+		function<void(const DB::Table&, bool, string)> addColumns = [&addColumns,&addField,&mainTable]( const DB::Table& dbTable, bool isMap, string prefix={} ){
 			for( let& c : dbTable.Columns ){
 				let& column = *c;
 				string fieldName;
@@ -253,7 +253,7 @@ namespace QL{
 
 	α introspectEnum( const sp<DB::Table> baseTable, const TableQL& fieldTable)ε->jobject{
 		THROW_IF( !baseTable, "Base table is null" );
-		auto dbTable = baseTable->QLView ? baseTable->QLView : AsView(baseTable);
+		auto dbTable = baseTable->QLView ? baseTable->QLView : baseTable;
 		DB::SelectClause select;
 		for_each( fieldTable.Columns, [&select, &dbTable](let& x){
 			if( let c = x.JsonName=="id" ? dbTable->GetPK() : dbTable->FindColumn( x.JsonName ); c )
@@ -271,9 +271,9 @@ namespace QL{
 			for( uint i=0; i<select.Columns.size(); ++i ){
 				auto& c = *get<DB::AliasCol>(select.Columns[i]).Column;
 				if( c.IsPK() )
-					j["id"] = row.GetUInt( i );
+					j["id"] = row.Get<uint>( i );
 				else
-					j[c.Name] = move( row.GetString(i) );
+					j[c.Name] = row.TakeString(i);
 			}
 			fields.push_back( j );
 		} );
@@ -284,7 +284,7 @@ namespace QL{
 
 	α QueryType( const TableQL& typeTable )ε->jobject{
 		let& typeName = typeTable.As<jstring>( "name" ); //variable-aware: raw Args holds the '\b$var' marker when the caller binds name via $variables, which made Find miss the config types.
-		auto dbTable = DB::AsTable( typeTable.DBTable() ); //null for a config-only type (Parser uses FindView when the name is pre-defined) - then preDefined answers everything.
+		auto dbTable = typeTable.DBTable(); //null for a config-only type (Parser uses FindView when the name is pre-defined) - then preDefined answers everything.
 		let preDefined = _introspection.Find( typeName );
 		let extend = preDefined && preDefined->Extend && dbTable; //the DB fields first, then the config's extra ones; without a table there is nothing to extend, so the config replaces.
 		jobject y;

@@ -11,12 +11,12 @@
 namespace Jde::Opc::Gateway{
 	ServerCnnctn::ServerCnnctn( DB::Row&& r )ε:
 		Id{ r.Get<uint32>(0) },
-		Url{ move(r.GetString(1)) },
-		CertificateUri{ move(r.GetString(2)) },
-		DefaultBrowseNs{ r.GetUInt16Opt(4).value_or(0) },
+		Url{ r.TakeString(1) },
+		CertificateUri{ r.TakeString(2) },
+		DefaultBrowseNs{ r.GetOpt<uint16_t>(4).value_or(0) },
 		IsDefault{ r.GetBit(3) },
-		Name{ move(r.GetString(5)) },
-		Target{ move(r.GetString(6)) }
+		Name{ r.TakeString(5) },
+		Target{ r.TakeString(6) }
 	{}
 	ServerCnnctn::ServerCnnctn( jobject&& o )ε:
 		Id{ Json::FindNumber<uint32>(o, "id").value_or(0) },

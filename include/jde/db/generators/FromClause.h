@@ -2,7 +2,7 @@
 #include "../exports.h"
 
 namespace Jde::DB{
-	struct Column; struct Table; struct View; struct WhereClause;
+	struct Column; struct Table; struct WhereClause;
 
 	struct ΓDB Join final{
 		Join( sp<Column> from )ι:From{move(from)}{};
@@ -16,7 +16,6 @@ namespace Jde::DB{
 	};
 	struct ΓDB FromClause final{
 		FromClause()=default;
-		FromClause( const sp<View>& v )ι;
 		FromClause( const sp<Table>& t )ε;
 		FromClause( vec<sp<Table>>& tables, SRCE )ε;
 		FromClause( Join&& j )ι:Joins{move(j)}{};
@@ -28,7 +27,7 @@ namespace Jde::DB{
 		α Contains( sv tableName )ι->bool;
 		α Empty()Ι->bool;
 		α GetColumnPtr( sv name, SL sl )Ε->sp<Column>;
-		α GetFirstTable( SRCE )Ε->sp<View>;
+		α GetFirstTable( SRCE )Ε->sp<Table>;
 		α SetActive( WhereClause& where, SRCE )ε->void;
 		α HasJoin()Ι->bool{ return Joins.size() && Joins[0].To; }
 		vector<Join> Joins;

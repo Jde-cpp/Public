@@ -18,31 +18,20 @@ namespace Jde::DB::MySql{
 	{}
 
 	α MySqlQueryAwait::Main()ι->asio::awaitable<void>{
-		vector<mysql::field_view> params; params.reserve( _sql.Params.size() );
-		for( let& param : _sql.Params )
-			params.push_back( ToField(param, _sl) );
+		CallText( _sql );
+		DB::Log( _sql, _sl );
+		let params = ToFields( _sql, _outParams, _sl );
 
 		mysql::any_connection conn( co_await asio::this_coro::executor );
 		co_await conn.async_connect( _ds->ConnectionParams() );
-		mysql::results tz;//UTC session, matching the sync Session ctor - see the note there and in field.cpp.
-		co_await conn.async_execute( "set time_zone='+00:00'", tz );
-		if( _sql.IsProc )
-			_sql.Text = Ƒ( "call {}", move(_sql.Text) );
-		DB::Log( _sql, _sl );
-    auto stmt = co_await conn.async_prepare_statement( _sql.Text );
-
+		mysql::results tz;
+		co_await conn.async_execute( UtcSession, tz );
+		auto stmt = co_await conn.async_prepare_statement( _sql.Text );
 		mysql::results mySqlResult;
 		co_await conn.async_execute( stmt.bind(params.begin(), params.end()), mySqlResult );
-		Result result;
-		if( mySqlResult.has_value() ){
-			if( _outParams )
-				result.Rows.push_back( ToRow(mySqlResult.out_params()) );
-			for( auto&& row : mySqlResult.rows() )
-				result.Rows.push_back( ToRow(row) );
-			result.RowsAffected = mySqlResult.affected_rows();
-		}
- 		co_await conn.async_close_statement( stmt );
-    co_await conn.async_close();
+		auto result = ToResult( mySqlResult, _outParams );
+		co_await conn.async_close_statement( stmt );
+		co_await conn.async_close();
 		if( mySqlResult.has_value() ){
 			TRACET( ELogTags::Sql, "MySqlQueryAwait::Main: RowsAffected: {} rows: {}.", result.RowsAffected, result.Rows.size() );
 		}else
@@ -70,7 +59,7 @@ namespace Jde::DB::MySql{
 					ResumeExp( move(*Exception::FromPtr(e, _sl)) );
 				}
 			}
-    );
+		);
 		Execution::Run();
 	}
 }
