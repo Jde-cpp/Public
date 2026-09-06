@@ -35,6 +35,14 @@ namespace Jde::Opc::Gateway::Soak{
 			return *a;
 		return Settings::FindString( path ).value_or( string{dflt} );
 	}
+	Ω argNumber( sv arg, sv path, uint dflt )ε->uint{
+		if( auto a = Process::FindArg(string{arg}); a && a->size() ){
+			let n = Str::TryTo<uint>( string{*a} );
+			THROW_IF( !n, "{} '{}' is not a number.", arg, *a );
+			return *n;
+		}
+		return Settings::FindNumber<uint>( path ).value_or( dflt );
+	}
 
 	α ActiveServers()ε->vector<ServerLeg>{
 		vector<ServerLeg> legs;
@@ -104,6 +112,7 @@ namespace Jde::Opc::Gateway::Soak{
 		α EnsureServerConnections()ε->void;
 		α Subscribe( ServerLeg& leg )ε->void;
 		α WriteCycle( ServerLeg& leg )ε->void;//throws only when a reconnect attempt fails - anything else is counted and survived.
+		α Write( ServerLeg& leg, const NodeId& node, uint value )ε->bool;//one write with its retries; false = counted as a WriteFailure (and reconnected if it was the third in a row).
 		α SampleStatus()ι->void;
 		α Reconnect( ServerLeg& leg )ε->void;
 		α FindLeg( sv target )ι->ServerLeg*;
@@ -117,7 +126,8 @@ namespace Jde::Opc::Gateway::Soak{
 		vector<ServerLeg> _legs;
 		string _host;
 		PortType _port;
-		Duration _duration, _writePeriod, _pushTimeout, _statusPeriod, _quietInterval, _quietPeriod;
+		Duration _duration, _writePeriod, _pushTimeout, _statusPeriod, _quietInterval, _quietPeriod, _retryDelay;
+		uint _writeRetries, _missRetries;//extra attempts per write / extra rounds per missed push before they count as a WriteFailure / Miss.
 		fs::path _csvPath, _summaryPath;
 		std::ofstream _csv;
 
@@ -138,6 +148,9 @@ namespace Jde::Opc::Gateway::Soak{
 		_statusPeriod{ argDuration("-statusPeriod", "/soak/statusPeriod", 1min) },
 		_quietInterval{ argDuration("-quietInterval", "/soak/quietInterval", std::chrono::hours{6}) },
 		_quietPeriod{ argDuration("-quietPeriod", "/soak/quietPeriod", 10min) },
+		_retryDelay{ argDuration("-retryDelay", "/soak/retryDelay", 1s) },
+		_writeRetries{ argNumber("-writeRetries", "/soak/writeRetries", 2) },
+		_missRetries{ argNumber("-missRetries", "/soak/missRetries", 2) },
 		_csvPath{ argString("-csv", "/soak/csv", "soak.csv") },
 		_summaryPath{ argString("-summary", "/soak/summary", "summary.json") }
 	{
@@ -277,33 +290,67 @@ namespace Jde::Opc::Gateway::Soak{
 		}
 	}
 
+	α SoakRunner::Write( ServerLeg& leg, const NodeId& node, uint value )ε->bool{
+		//A failed write is re-sent with the same value up to _writeRetries times before it counts: the 2026-09-05 24h run lost its
+		//verdict to a single 5s UA read timeout during a ~25s whole-machine pause.  Re-sending a write that actually landed is
+		//harmless (same value), and the caller's push wait is satisfied either way.  Only exhausting the attempts is a WriteFailure;
+		//WriteRetries counts the extra attempts so a PASS still shows how often it leaned on them.  ConsecutiveFailures stays a
+		//per-cycle count, so the reconnect threshold is unchanged.
+		for( uint attempt{}; ; ++attempt ){
+			try{
+				//no {value} result-request: the subscription push is the round-trip assertion, and the mutation's read-back
+				//never resumes when UA responses land in the same run_iterate (split-process localhost; see soak findings).
+				string q{ "updateVariable( opc: $opc, id: $id, value: $value )" };
+				leg.Socket->QuerySync( move(q), jobject{ {"opc",leg.Target}, {"id",node.ToJson()}, {"value",value} } );
+				leg.ConsecutiveFailures = 0;
+				return true;
+			}
+			catch( const std::exception& e ){
+				if( attempt<_writeRetries && !Process::ShuttingDown() ){
+					++leg.WriteRetries;
+					WARN( "[{}]updateVariable failed for {} (attempt {} of {}) - retrying in {}: {}", leg.Target, node.ToString(), attempt+1, _writeRetries+1, Chrono::ToString(_retryDelay), e.what() );
+					std::this_thread::sleep_for( _retryDelay );
+					continue;
+				}
+				++leg.WriteFailures;
+				WARN( "[{}]updateVariable failed for {} after {} attempt(s): {}", leg.Target, node.ToString(), attempt+1, e.what() );
+				if( ++leg.ConsecutiveFailures>=3 )
+					Reconnect( leg );
+				return false;
+			}
+		}
+	}
+
 	α SoakRunner::WriteCycle( ServerLeg& leg )ε->void{
 		let& node = leg.Nodes[leg.WriteIndex++ % leg.Nodes.size()];
-		let value = ++leg.Counter;
 		let start = steady_clock::now();
-		try{
-			//no {value} result-request: the subscription push is the round-trip assertion, and the mutation's read-back
-			//never resumes when UA responses land in the same run_iterate (split-process localhost; see soak findings).
-			string q{ "updateVariable( opc: $opc, id: $id, value: $value )" };
-			leg.Socket->QuerySync( move(q), jobject{ {"opc",leg.Target}, {"id",node.ToJson()}, {"value",value} } );
-			++leg.Writes;
-			leg.ConsecutiveFailures = 0;
-		}
-		catch( const std::exception& e ){
-			++leg.WriteFailures;
-			WARN( "[{}]updateVariable failed for {}: {}", leg.Target, node.ToString(), e.what() );
-			if( ++leg.ConsecutiveFailures>=3 )
-				Reconnect( leg );
-			return;
-		}
-		std::unique_lock lock{ _mutex };
-		if( _cv.wait_for(lock, _pushTimeout, [&]{ auto p = leg.Latest.find(node); return p!=leg.Latest.end() && p->second==value; }) ){
-			++leg.Pushes;
-			leg.LatenciesMs.push_back( (uint32)duration_cast<milliseconds>(steady_clock::now()-start).count() );
-		}
-		else{
+		//A miss - the write was acked but no data-change push arrived within _pushTimeout - is retried the same way, with a FRESH
+		//value each round: re-sending the last one would leave the node unchanged and give the server nothing to push, and a late
+		//push for the earlier value is simply superseded.  Only exhausting the rounds is a Miss; MissRetries counts the extra ones.
+		//Writes/Pushes/Misses stay per cycle (a retried round is not another Write), so a run without write failures still has
+		//writes == pushes + misses.  Latency is measured from the first write, so a rescued cycle shows its full cost in maxMs.
+		for( uint attempt{}; ; ++attempt ){
+			let value = ++leg.Counter;
+			if( !Write(leg, node, value) )
+				return;//counted as a WriteFailure (and reconnected if it was the third in a row); the push criterion does not apply.
+			if( attempt==0 )
+				++leg.Writes;
+			std::unique_lock lock{ _mutex };
+			if( _cv.wait_for(lock, _pushTimeout, [&]{ auto p = leg.Latest.find(node); return p!=leg.Latest.end() && p->second==value; }) ){
+				++leg.Pushes;
+				leg.LatenciesMs.push_back( (uint32)duration_cast<milliseconds>(steady_clock::now()-start).count() );
+				return;
+			}
+			lock.unlock();
+			if( attempt<_missRetries && !Process::ShuttingDown() ){
+				++leg.MissRetries;
+				WARN( "[{}]No data-change push for {} value {} within {} (attempt {} of {}) - re-sending in {}.", leg.Target, node.ToString(), value, Chrono::ToString(_pushTimeout), attempt+1, _missRetries+1, Chrono::ToString(_retryDelay) );
+				std::this_thread::sleep_for( _retryDelay );
+				continue;
+			}
 			++leg.Misses;
-			WARN( "[{}]No data-change push for {} value {} within {}.", leg.Target, node.ToString(), value, Chrono::ToString(_pushTimeout) );
+			WARN( "[{}]No data-change push for {} value {} within {} after {} attempt(s).", leg.Target, node.ToString(), value, Chrono::ToString(_pushTimeout), attempt+1 );
+			return;
 		}
 	}
 
@@ -327,10 +374,10 @@ namespace Jde::Opc::Gateway::Soak{
 			let all = AllLatencies();
 			_csv << ToIsoString( Clock::now() )
 				<< ',' << num("memory") << ',' << num("uptimeSeconds") << ',' << num("clients") << ',' << num("monitoredItems")
-				<< ',' << Total(&ServerLeg::Writes) << ',' << Total(&ServerLeg::Pushes) << ',' << Total(&ServerLeg::Misses) << ',' << Total(&ServerLeg::WriteFailures) << ',' << _socketDrops << ',' << _statusFailures
+				<< ',' << Total(&ServerLeg::Writes) << ',' << Total(&ServerLeg::Pushes) << ',' << Total(&ServerLeg::Misses) << ',' << Total(&ServerLeg::WriteFailures) << ',' << Total(&ServerLeg::WriteRetries) << ',' << Total(&ServerLeg::MissRetries) << ',' << _socketDrops << ',' << _statusFailures
 				<< ',' << percentile(all, .5) << ',' << percentile(all, .99);
 			for( let& l : _legs )
-				_csv << ',' << l.Writes << ',' << l.Pushes << ',' << l.Misses << ',' << l.WriteFailures << ',' << percentile(l.LatenciesMs, .5) << ',' << percentile(l.LatenciesMs, .99);
+				_csv << ',' << l.Writes << ',' << l.Pushes << ',' << l.Misses << ',' << l.WriteFailures << ',' << l.WriteRetries << ',' << l.MissRetries << ',' << percentile(l.LatenciesMs, .5) << ',' << percentile(l.LatenciesMs, .99);
 			_csv << std::endl;
 		}
 		catch( const std::exception& e ){
@@ -345,14 +392,14 @@ namespace Jde::Opc::Gateway::Soak{
 			jobject servers;
 			for( let& l : _legs ){
 				servers[l.Target] = jobject{
-					{"writes", l.Writes}, {"pushes", l.Pushes}, {"misses", l.Misses}, {"writeFailures", l.WriteFailures},
+					{"writes", l.Writes}, {"pushes", l.Pushes}, {"misses", l.Misses}, {"writeFailures", l.WriteFailures}, {"writeRetries", l.WriteRetries}, {"missRetries", l.MissRetries},
 					{"p50Ms", percentile(l.LatenciesMs, .5)}, {"p99Ms", percentile(l.LatenciesMs, .99)},
 					{"maxMs", l.LatenciesMs.empty() ? 0 : *std::ranges::max_element(l.LatenciesMs)}
 				};
 			}
 			jobject y{
 				{"verdict", verdict}, {"completed", _completed}, {"writes", Total(&ServerLeg::Writes)}, {"pushes", Total(&ServerLeg::Pushes)}, {"misses", Total(&ServerLeg::Misses)},
-				{"writeFailures", Total(&ServerLeg::WriteFailures)}, {"socketDrops", _socketDrops}, {"statusFailures", _statusFailures},
+				{"writeFailures", Total(&ServerLeg::WriteFailures)}, {"writeRetries", Total(&ServerLeg::WriteRetries)}, {"missRetries", Total(&ServerLeg::MissRetries)}, {"socketDrops", _socketDrops}, {"statusFailures", _statusFailures},
 				{"quietWindows", _quietWindows}, {"p50Ms", percentile(all, .5)}, {"p99Ms", percentile(all, .99)},
 				{"maxMs", all.empty() ? 0 : *std::ranges::max_element(all)},
 				{"servers", servers}
@@ -370,9 +417,9 @@ namespace Jde::Opc::Gateway::Soak{
 		_csv.open( _csvPath, std::ios::app );
 		THROW_IF( !_csv.is_open(), "Could not open csv '{}'.", _csvPath.string() );
 		if( _csv.tellp()==0 ){
-			_csv << "time,memory,uptimeSeconds,clients,monitoredItems,writes,pushes,misses,writeFailures,socketDrops,statusFailures,p50Ms,p99Ms";
+			_csv << "time,memory,uptimeSeconds,clients,monitoredItems,writes,pushes,misses,writeFailures,writeRetries,missRetries,socketDrops,statusFailures,p50Ms,p99Ms";
 			for( let& l : _legs )
-				_csv << Ƒ( ",writes_{0},pushes_{0},misses_{0},writeFailures_{0},p50Ms_{0},p99Ms_{0}", l.Target );
+				_csv << Ƒ( ",writes_{0},pushes_{0},misses_{0},writeFailures_{0},writeRetries_{0},missRetries_{0},p50Ms_{0},p99Ms_{0}", l.Target );
 			_csv << std::endl;
 		}
 		Connect();
@@ -427,10 +474,10 @@ namespace Jde::Opc::Gateway::Soak{
 		SampleStatus();
 		let pass = _completed && !_socketDrops && !_statusFailures && std::ranges::all_of( _legs, [](let& l){ return !l.Misses && !l.WriteFailures; } );
 		WriteSummary( pass ? "PASS" : "FAIL" );
-		INFO( "Soak {}: completed={}, writes={}, pushes={}, misses={}, writeFailures={}, socketDrops={}, statusFailures={}, p50={}ms, p99={}ms.",
-			pass ? "PASS" : "FAIL", _completed, Total(&ServerLeg::Writes), Total(&ServerLeg::Pushes), Total(&ServerLeg::Misses), Total(&ServerLeg::WriteFailures), _socketDrops, _statusFailures, percentile(AllLatencies(), .5), percentile(AllLatencies(), .99) );
+		INFO( "Soak {}: completed={}, writes={}, pushes={}, misses={}, writeFailures={}, writeRetries={}, missRetries={}, socketDrops={}, statusFailures={}, p50={}ms, p99={}ms.",
+			pass ? "PASS" : "FAIL", _completed, Total(&ServerLeg::Writes), Total(&ServerLeg::Pushes), Total(&ServerLeg::Misses), Total(&ServerLeg::WriteFailures), Total(&ServerLeg::WriteRetries), Total(&ServerLeg::MissRetries), _socketDrops, _statusFailures, percentile(AllLatencies(), .5), percentile(AllLatencies(), .99) );
 		for( let& l : _legs )
-			INFO( "  [{}]writes={}, pushes={}, misses={}, writeFailures={}, p50={}ms, p99={}ms.", l.Target, l.Writes, l.Pushes, l.Misses, l.WriteFailures, percentile(l.LatenciesMs, .5), percentile(l.LatenciesMs, .99) );
+			INFO( "  [{}]writes={}, pushes={}, misses={}, writeFailures={}, writeRetries={}, missRetries={}, p50={}ms, p99={}ms.", l.Target, l.Writes, l.Pushes, l.Misses, l.WriteFailures, l.WriteRetries, l.MissRetries, percentile(l.LatenciesMs, .5), percentile(l.LatenciesMs, .99) );
 		return pass ? EXIT_SUCCESS : EXIT_FAILURE;
 	}
 

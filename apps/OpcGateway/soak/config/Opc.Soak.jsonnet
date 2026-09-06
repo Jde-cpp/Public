@@ -32,12 +32,20 @@ local gatewayProduct = "OpcGateway"; //must match the gateway process's ProductN
 	credentials:{
 		name: "OpcSoak"
 	},
+	web:{
+		//the AppServer is its own root - without this anchor the client rejects the self-signed cert localhost:1967 presents on the /login call
+		//(the same entry Opc.Gateway.jsonnet carries; no args.libsonnet here, so the path is spelled out the way Opc.PlcEmulator.jsonnet does).
+		client:{ ssl:{ caFile: "$(ProgramData)/Jde-Cpp/AppServer/ssl/certs/AppServer.pem" } }
+	},
 	soak:{
 		gatewayHost: "localhost",
 		gatewayPort: 1968,
 		duration: "PT24H",
 		writePeriod: "PT1S",
 		pushTimeout: "PT5S",
+		writeRetries: 2, //extra attempts a failed updateVariable gets (same value) before it counts as a writeFailure; retries are reported separately.
+		missRetries: 2, //extra rounds a cycle gets when the write was acked but no push arrived within pushTimeout - each re-sends a fresh value; reported separately too.
+		retryDelay: "PT1S",
 		statusPeriod: "PT1M",
 		quietInterval: "PT6H",
 		quietPeriod: "PT10M",
