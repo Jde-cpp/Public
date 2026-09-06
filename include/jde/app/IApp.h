@@ -6,7 +6,7 @@
 #include <jde/web/Jwt.h>
 #include <jde/app/usings.h>
 #include <jde/app/log/ProtoLog.h>
-#include <jde/app/proto/Web.FromServer.pb.h>
+#include <jde/web/client/proto/Web.FromServer.pb.h>
 #include <jde/fwk/log/SpdLog.h>	//no longer reachable through <jde/fwk.h>
 
 namespace Jde::App{
