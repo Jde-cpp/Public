@@ -31,35 +31,32 @@ namespace Jde::QL{
 		Ω Test( const DB::Value::Underlying& value, const vector<FilterValue>& filters, ELogTags logTags )ι->bool;
 		α ToString( str colName )Ι->string;
 		flat_map<string,vector<FilterValue>> ColumnFilters;
+	private:
+		template<class F> α TestWith( str columnName, const F& value )Ι->bool;
 	};
 	α ToWhereClause( const TableQL& table, const DB::View& schemaTable, bool includeDeleted=false )ε->DB::WhereClause;
 	//The column a filter or an order-by names, resolved the way addColumn resolves a *selected* column - the pk for "id", the
 	//column itself, or, for an enum's display name, the <name>_id it renders through (#20).  Throws naming the table if none.
 	α FilterColumn( const DB::View& dbTable, sv jsonName, SRCE )ε->sp<DB::Column>;
 
-	template<> Ξ FilterValue::Test( string value )Ι->bool{
-		return Test( DB::Value{move(value)}, ELogTags::QL );
-	}
 	Ŧ FilterValue::Test( T value )Ι->bool{
 		return Test( DB::Value{move(value)}, ELogTags::QL );
 	}
-	Ŧ Filter::Test( str columnName, const T& value )Ι->bool{
+	//`value()` runs only when the column has a filter - what TestF is for; Test hands over the value it already holds.
+	template<class F> α Filter::TestWith( str columnName, const F& value )Ι->bool{
 		if( auto it = ColumnFilters.find(columnName); it!=ColumnFilters.end() ){
+			decltype(auto) v = value();
 			for( const auto& filterValue : it->second ){
-				if( !filterValue.Test(value) )
+				if( !filterValue.Test(v) )
 					return false;
 			}
 		}
 		return true;
 	}
+	Ŧ Filter::Test( str columnName, const T& value )Ι->bool{
+		return TestWith( columnName, [&]()->const T&{ return value; } );
+	}
 	Ŧ Filter::TestF( str columnName, function<T()> f )Ι->bool{
-		if( auto it = ColumnFilters.find(columnName); it!=ColumnFilters.end() ){
-			auto value = f();
-			for( const auto& filterValue : it->second ){
-				if( !filterValue.Test(value) )
-					return false;
-			}
-		}
-		return true;
+		return TestWith( columnName, f );
 	}
 }

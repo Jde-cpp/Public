@@ -63,6 +63,20 @@ namespace Jde::QL::Tests{
 		EXPECT_NE( find(unbound, "third"), unbound.end() );
 		EXPECT_EQ( find(unbound, "bound"), unbound.end() );            //bound once at the top level and once inside an array.
 	}
+	//ql-refactor A9: the two walks are one, and it descends uniformly.  An array inside an array was the one shape the hand
+	//copies passed through untouched, so a marker there stayed a literal "\b$x" string and was never reported as unbound.
+	TEST( InputTests, VariablesInsideNestedArraysAreSubstitutedAndReported ){
+		TestInput in{ R"({pairs: [[$a, 1], [$missing]]})", jobject{{"a",7}} };
+		let args = in.ExtrapolateVariables();
+		let& pairs = args.at("pairs").as_array();
+		ASSERT_EQ( pairs.size(), 2u );
+		EXPECT_EQ( pairs[0].as_array()[0].to_number<uint>(), 7u ); //substituted two levels down.
+		EXPECT_EQ( pairs[0].as_array()[1].to_number<uint>(), 1u );
+		EXPECT_TRUE( pairs[1].as_array()[0].is_null() );           //unbound -> null, as at the top level.
+		let unbound = in.UnboundVariables();
+		ASSERT_EQ( unbound.size(), 1u ) << Str::Join( unbound, "," );
+		EXPECT_EQ( unbound[0], "missing" );
+	}
 	TEST( InputTests, NothingUnboundWhenEveryVariableResolves ){
 		TestInput in{ R"({id: $userId, name: $userName, plain: 3})", jobject{{"userId",42},{"userName","bob"}} };
 		EXPECT_TRUE( in.UnboundVariables().empty() );

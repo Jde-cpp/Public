@@ -1,4 +1,5 @@
 #include "AddRemoveAwait.h"
+#include <jde/fwk/co/AnyAwait.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/names.h>
@@ -6,20 +7,12 @@
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
 #include <jde/ql/QLHook.h>
-#include <jde/ql/LocalSubscriptions.h>
-#include "../types/QLColumn.h"
 
 #define let const auto
 
 namespace Jde::QL{
 	constexpr ELogTags _tags{ ELogTags::QL };
-
-	AddRemoveAwait::AddRemoveAwait( sp<DB::Table> table, MutationQL mutation, UserPK userPK, SL sl )ι:
-		base{ sl },
-		_mutation{ move(mutation) },
-		_table{ table },
-		_userPK{ userPK }
-	{}
+	struct ChildParentParams final{ sp<DB::Column> ParentCol; sp<DB::Column> ChildColumn; DB::Value ParentParam; vector<DB::Value> ChildParams; };
 
 	Ω getChildParentParams( sp<DB::Column> parentCol, sp<DB::Column> childCol, const jobject& input )ε->ChildParentParams{
 		ChildParentParams params{ parentCol, childCol };
@@ -43,137 +36,77 @@ namespace Jde::QL{
 		return params;
 	};
 
-	α AddRemoveAwait::Add()ι->DB::ExecuteAwait::Task{
-		let& map = *_table->Map;
-		let& parentId = map.Parent->Name; let& childId =map.Child->Name;
-		//#49: the column list has to grow with the placeholders.  It was fixed at the two mapped columns while `input:{…}` appended
-		//a `?` per extra value, so any use of the feature emitted `insert into t(a,b)values(?,?,?)` - a column-count error, every
-		//time.  Nothing in tree sends `input:` on an add, which is why a branch that could never work went unnoticed.
+	//#49: the column list has to grow with the placeholders.  It was fixed at the two mapped columns while `input:{…}` appended
+	//a `?` per extra value, so any use of the feature emitted `insert into t(a,b)values(?,?,?)` - a column-count error, every
+	//time.  Nothing in tree sends `input:` on an add, which is why a branch that could never work went unnoticed.
+	Ω addSql( const DB::Table& table, const jobject& input, vector<DB::Value>& extraParams )ε->string{
+		let& parentId = table.Map->Parent->Name; let& childId = table.Map->Child->Name;
 		string extraColumns;
 		string extraParamsString;
-		vector<DB::Value> extraParams;
-		try{
-			let input = _mutation.ExtrapolateVariables();
-			if( auto defParams = Json::FindObject(input, "input"); defParams ){
-				for( let& [name,value] : *defParams ){
-					if( name=="id" || name==parentId || name==childId )
-						continue;
-					auto pColumn = _table->GetColumnPtr( DB::Names::FromJson(name) );
-					extraColumns += ","+pColumn->Name;
-					extraParamsString += ",?";
-					extraParams.emplace_back( DB::Value{pColumn->Type, value} );
-				}
+		if( auto defParams = Json::FindObject(input, "input"); defParams ){
+			for( let& [name,value] : *defParams ){
+				if( name=="id" || name==parentId || name==childId )
+					continue;
+				auto pColumn = table.GetColumnPtr( DB::Names::FromJson(name) );
+				extraColumns += ","+pColumn->Name;
+				extraParamsString += ",?";
+				extraParams.emplace_back( DB::Value{pColumn->Type, value} );
 			}
-			let sql = Ƒ( "insert into {}({},{}{})values(?,?{})", _table->SqlName(), parentId, childId, extraColumns, extraParamsString );
-			uint result{};
-			for( let& p : _params.ChildParams ){
-				vector<DB::Value> params{ _params.ParentParam, p };
-				params.insert( end(params), begin(extraParams), end(extraParams) );
-				result += co_await _table->Schema->DS()->Execute( {sql, params}, _sl );
-			}
-			AddAfter( result );
 		}
-		catch( runtime_error& e ){
-			ResumeExp( move(e) );
-		}
-	}
-	α AddRemoveAwait::AddAfter( jvalue v )ι->MutationAwaits::Task{
-		try{
-			co_await Hook::AddAfter( _mutation, _userPK );
-			Resume( move(v) );
-		}
-		catch( runtime_error& e ){
-			ResumeExp( move(e) );
-		}
+		return Ƒ( "insert into {}({},{}{})values(?,?{})", table.SqlName(), parentId, childId, extraColumns, extraParamsString );
 	}
 
-	α AddRemoveAwait::Remove()->DB::ExecuteAwait::Task{
-		let& map = *_table->Map;
-		let sql = Ƒ( "delete from {} where {}=? and {}=?", _table->SqlName(), map.Parent->Name, map.Child->Name );
-		uint result{};
-		try{
-			for( let& p : _params.ChildParams ){
-				vector<DB::Value> params{ _params.ParentParam, p };
-				result += co_await _table->Schema->DS()->Execute( {sql, params}, _sl );
-			}
-			RemoveAfter( result );
-		}
-		catch( runtime_error& e ){
-			ResumeExp( move(e) );
-		}
-	}
-	α AddRemoveAwait::RemoveAfter( jvalue v )ι->MutationAwaits::Task{
-		try{
-			co_await Hook::RemoveAfter( _mutation, _userPK );
-			Resume( move(v) );
-		}
-		catch( runtime_error& e ){
-			ResumeExp( move(e) );
-		}
-	}
-	α AddRemoveAwait::AddBefore()ι->MutationAwaits::Task{
-		try{
-			co_await Hook::AddBefore( _mutation, _userPK );
-			Add();
-		}
-		catch( runtime_error& e ){
-			ResumeExp( move(e) );
-		}
-	}
-	α AddRemoveAwait::AddHook()ι->MutationAwaits::Task{
-		try{
-			auto y = co_await Hook::Add(_mutation, _userPK);
-			THROW_IF( !y, "Hook::Add returned null." );
-			TRACE( "AddHook::Add returned '{}'", serialize(*y) );
-			Resume( move(*y) );
-		}
-		catch( runtime_error& e ){
-			ResumeExp( move(e) );
-		}
-	}
-	α AddRemoveAwait::RemoveHook()ι->MutationAwaits::Task{
-		try{
-			auto y = co_await Hook::Remove( _mutation, _userPK );
-			THROW_IF( !y, "Hook::RemoveHook returned null." );
-			Resume( move(*y) );
-		}
-		catch( runtime_error& e ){
-			ResumeExp( move(e) );
-		}
-	}
-	α AddRemoveAwait::Suspend()ι->void{
+	//One coroutine.  Seven used to share the work - AddBefore → Add → AddAfter, Remove → RemoveAfter, AddHook, RemoveHook - each a
+	//paste of its neighbour (ql-review3 #52: RemoveAfter awaited Hook::AddAfter), because the hooks and the statements were
+	//different task types.  The hooks are AnyAwaits and Any() wraps the statements, so one frame awaits both, and the params are a local again.
+	α AddRemoveAwait::Execute()ι->TAwait<jvalue>::Task{
+		jvalue y;
 		try{
 			_table->Authorize( Access::ERights::Update, _userPK, _sl );
-			if( _mutation.Type==EMutationQL::Add && _table->AddProc.size() ){
-				AddHook();
-				return;
+			let isAdd = _mutation.Type==EMutationQL::Add;
+			ASSERT( isAdd || _mutation.Type==EMutationQL::Remove );
+			if( isAdd && _table->AddProc.size() ){//a proc-backed table's add/remove is the hook's alone.
+				auto result = co_await Hook::Add( _mutation, _userPK );
+				THROW_IF( !result, "Hook::Add returned null." );
+				TRACE( "Hook::Add returned '{}'", serialize(*result) );
+				y = move( *result );
 			}
-			if( _mutation.Type==EMutationQL::Remove && _table->RemoveProc.size() ){
-				RemoveHook();
-				return;
+			else if( !isAdd && _table->RemoveProc.size() ){
+				auto result = co_await Hook::Remove( _mutation, _userPK );
+				THROW_IF( !result, "Hook::Remove returned null." );
+				y = move( *result );
 			}
-			THROW_IF( !_table->Map, "'{}' does not support add/remove.", _table->Name );
-			_params = getChildParentParams( _table->Map->Parent, _table->Map->Child, _mutation.ExtrapolateVariables() );
+			else{
+				THROW_IF( !_table->Map, "'{}' does not support add/remove.", _table->Name );
+				let& map = *_table->Map;
+				let input = _mutation.ExtrapolateVariables();
+				let params = getChildParentParams( map.Parent, map.Child, input );//ahead of the hooks - when both would refuse, this is the message that arrives (access GroupTests).
+				auto& ds = *_table->Schema->DS();
+				uint rowCount{};
+				if( isAdd ){
+					co_await Hook::AddBefore( _mutation, _userPK );
+					vector<DB::Value> extraParams;
+					let sql = addSql( *_table, input, extraParams );
+					for( let& p : params.ChildParams ){
+						vector<DB::Value> values{ params.ParentParam, p };
+						values.insert( end(values), begin(extraParams), end(extraParams) );
+						rowCount += co_await Any( ds.Execute({sql, move(values)}, _sl) );
+					}
+					co_await Hook::AddAfter( _mutation, _userPK );
+				}
+				else{//no RemoveBefore: nothing has ever hooked one.
+					let sql = Ƒ( "delete from {} where {}=? and {}=?", _table->SqlName(), map.Parent->Name, map.Child->Name );
+					for( let& p : params.ChildParams )
+						rowCount += co_await Any( ds.Execute({sql, {params.ParentParam, p}}, _sl) );
+					co_await Hook::RemoveAfter( _mutation, _userPK );
+				}
+				y = rowCount;
+			}
 		}
 		catch( runtime_error& e ){
 			ResumeExp( move(e) );
-			return;
+			co_return;
 		}
-		if( _mutation.Type==EMutationQL::Add ){
-			AddBefore();
-		}
-		else if( _mutation.Type==EMutationQL::Remove )
-			Remove();
-		else
-			ASSERT( false );
-	}
-	α AddRemoveAwait::Resume( jvalue&& v )ι->void{
-		//#47: a statement that matched nothing is not an event.  OnMutation never looked at the result - an integer rowCount is not
-		//an object, so `available` was the args alone and the id the client sent went straight to the listeners.  `deleteUser( id:5,
-		//name:"nomatch" )` ands the extra arg into the where clause, updates 0 rows, and still had AccessListener mark user 5
-		//deleted in memory - "User is deleted" for every later request by 5, until restart, with the row untouched.
-		if( !v.is_number() || v.to_number<uint>() )
-			Subscriptions::OnMutation( _mutation, v );
-		base::Resume( move(v) );
+		Resume( move(y) );
 	}
 }

@@ -93,6 +93,18 @@ namespace Jde{
 		β Execute()ι->TExecuteResult=0;
 	};
 
+	//An already-failed typed awaitable:  co_await throws `e` without suspending - how a hook refuses (IQLHook returns one).  The
+	//IAwait family cannot pre-complete with a *value*, the awaiting promise is the mailbox, but it can pre-fail; the Any-family
+	//equivalent is AnyCompletedAwait (AnyAwait.h).
+	template<class Result,class TTask=Jde::TTask<Result>>
+	struct ExceptionAwait final : TAwait<Result,TTask>{
+		ExceptionAwait( up<Exception>&& e, SRCE )ι:TAwait<Result,TTask>{ sl }, _exception{ move(e) }{}
+		α await_ready()ι->bool override{ return true; }
+		α await_resume()ε->Result override{ _exception->Throw(); return {}; }
+	private:
+		up<Exception> _exception;
+	};
+
 	//msvc multiple defined symbols without
 	struct Γ StringAwait : TAwait<string>{
 		StringAwait( SRCE )ι:TAwait<string>{ sl }{}

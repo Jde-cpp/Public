@@ -135,7 +135,7 @@ namespace Jde::Access::Server{
 				THROW_IF( !groupPK, "Could not find the group id in '{}' - expected 'id' or the group's parent column.", serialize(m.Args) );
 				Authorizer().TestAddGroupMember( *groupPK, move(memberPKs), sl );
 			}catch( Exception& e ){
-				return mu<QL::ExceptionAwait>( e.Move() );
+				return mu<ExceptionAwait<jvalue>>( e.Move() );
 			}
 		}
 		return {};

@@ -8,6 +8,7 @@
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/DBSchema.h>
 #include <jde/db/meta/Column.h>
+#include "qlInternal.h"
 
 #define let const auto
 namespace Jde::QL{
@@ -42,23 +43,21 @@ namespace Jde::QL{
 		( *destination )[column] = value;
 	}
 
-	α TableQL::ExtractTable( sv jsonPluralName )ι->optional<TableQL>{
-		auto p = find_if( Tables, [&](let& t){return t.JsonName==jsonPluralName;} );
-		if( p==Tables.end() )
-			p = find_if( Tables.begin(), Tables.end(), [&](let& t){return t.JsonName==DB::Names::ToSingular(jsonPluralName);} );
-		if( p==Tables.end() )
-			return {};
-		auto y = move( *p );
-		Tables.erase( p );
-		return y;
-	}
-
+	//The name as asked, else its singular - a client may nest `providerType{…}` and a caller then ask for "providerTypes".
 	α TableQL::FindTable( sv jsonPluralName )ι->TableQL*{
-		TableQL* y{};
-		if( auto p = find_if(Tables, [&](let& t){return t.JsonName==jsonPluralName;}); p!=Tables.end() )
-			y = &*p;
-		else if( auto p = find_if(Tables.begin(), Tables.end(), [&](let& t){return t.JsonName==DB::Names::ToSingular(jsonPluralName);}); p!=Tables.end() )
-			y = &*p;
+		auto p = find_if( Tables, [&](let& t){return t.JsonName==jsonPluralName;} );
+		if( p==Tables.end() ){
+			let singular = DB::Names::ToSingular( jsonPluralName );
+			p = find_if( Tables, [&](let& t){return t.JsonName==singular;} );
+		}
+		return p==Tables.end() ? nullptr : &*p;
+	}
+	α TableQL::ExtractTable( sv jsonPluralName )ι->optional<TableQL>{
+		auto p = FindTable( jsonPluralName );
+		if( !p )
+			return {};
+		optional<TableQL> y{ move(*p) };
+		Tables.erase( Tables.begin()+(p-Tables.data()) );
 		return y;
 	}
 	α TableQL::FindTable( sv jsonPluralName )Ι->const TableQL*{
@@ -130,7 +129,6 @@ namespace Jde::QL{
 		return sql;
 	}
 
-	α ValueToJson( DB::Value&& dbValue, const ColumnQL* pMember=nullptr )ι->jvalue;
 	α TableQL::SetResult( jobject& o, const sp<DB::Column> dbColumn, DB::Value&& value )Ι->void{
 		ASSERT(dbColumn);
 		for( let& c : Columns ){
@@ -179,11 +177,9 @@ namespace Jde::QL{
 			for_each( Columns, [&cols](let& c){cols.push_back(c.JsonName);} );
 			y += Str::Join( cols, " " );
 		}
-		if( Tables.size() ){
-			for( let& t : Tables ){
-				if( t.Args.size() || t.Columns.size() || t.Tables.size() )
-					y += ' '+t.ToString();
-			}
+		for( let& t : Tables ){
+			if( t.Args.size() || t.Columns.size() || t.Tables.size() )
+				y += ' '+t.ToString();
 		}
 		y += '}';
 		return y;

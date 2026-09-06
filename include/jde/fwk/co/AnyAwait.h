@@ -2,6 +2,7 @@
 #ifndef ANY_AWAIT_H
 #define ANY_AWAIT_H
 #include "Task.h"
+#include "Await.h"
 
 namespace Jde{
 	//Secondary awaitable machinery. The VoidAwait/IAwait family (Await.h) fixes await_suspend to its own task's
@@ -93,6 +94,35 @@ namespace Jde{
 	};
 
 	Ŧ Any( T&& inner, SRCE )ι->AnyAdapter<T>{ return AnyAdapter<T>{ FWD(inner), sl }; }
+
+	//The blocking bridge for this family:  BlockAwait (Await.h) launches its glue as the inner's ::Task, which these do not have, so
+	//the glue is a VoidTask.  Same contract otherwise - Wait() never gives up, but warns on an interval naming the awaitable's source.
+	template<class TAwait, class TResult>
+	α BlockAnyExecute( TAwait& a, sp<BlockAwaitState<TResult>> s )ι->VoidTask{
+		try{
+			if constexpr( std::is_same_v<TResult,std::monostate> )
+				co_await a;
+			else
+				s->Result = co_await a;
+		}
+		catch( Exception& e ){
+			s->Error = e.Move();
+		}
+		s->Signal();
+	}
+	template<class TAwait>
+	α BlockAny( TAwait&& a )ε->decltype(std::declval<std::remove_reference_t<TAwait>&>().await_resume()){
+		using R = decltype(std::declval<std::remove_reference_t<TAwait>&>().await_resume());
+		using S = std::conditional_t<std::is_void_v<R>, std::monostate, R>;
+		auto s = ms<BlockAwaitState<S>>();
+		const auto sl = a.Source();
+		BlockAnyExecute<std::remove_reference_t<TAwait>,S>( a, s );
+		s->Wait( sl );
+		if( s->Error )
+			s->Error->Throw();
+		if constexpr( !std::is_void_v<R> )
+			return move( *s->Result );
+	}
 
 	Τ Ξ AnyAdapterExecute( AnyAdapter<T>& a )ι->typename std::remove_reference_t<T>::Task{
 		using R = typename AnyAdapter<T>::R;

@@ -28,7 +28,7 @@ namespace Jde::QL::Tests{
 
 	//A hook may not throw:  IQLHook's virtuals are ι, and an override of a non-throwing virtual must be non-throwing too, so a
 	//throw inside one terminates before MutationAwaits' catch can see it (that catch is defence against a hook that lies about
-	//its specification).  ExceptionAwait is the supported channel - QLHook.h says so: "need awaitable to throw an exception".
+	//its specification).  ExceptionAwait<jvalue> (fwk co/Await.h) is the supported channel.
 	struct RecordingHook final : IQLHook{
 		enum class EMode{ Silent, Value, Throw };
 		α Reset()ι->void{ Calls.clear(); Pk = 0; Executer = UserPK{}; Command.clear(); Mode = EMode::Silent; }
@@ -42,7 +42,7 @@ namespace Jde::QL::Tests{
 			using enum EMode;
 			switch( Mode ){
 			case Value: return mu<HookValueAwait>( jvalue{string{name}} );
-			case Throw: return mu<ExceptionAwait>( mu<Exception>(Ƒ("{} refused", name)) );
+			case Throw: return mu<ExceptionAwait<jvalue>>( mu<Exception>(Ƒ("{} refused", name)) );
 			case Silent: break;
 			}
 			return {};
@@ -73,7 +73,7 @@ namespace Jde::QL::Tests{
 	//Hook::Add owns the hook and there is no removal, so it is registered once for the process and reset around every test -
 	//left inert (Silent, returning nothing), which is what every other suite in this binary already assumes.
 	Ω hook()ι->RecordingHook&{
-		static RecordingHook& y = []()->RecordingHook&{
+		static RecordingHook& y = []()->RecordingHook& {
 			auto h = mu<RecordingHook>();
 			auto& ref = *h;
 			Hook::Add( move(h) );
@@ -81,16 +81,16 @@ namespace Jde::QL::Tests{
 		}();
 		return y;
 	}
-	Ω run( MutationAwaits&& a )ε->optional<jarray>{ return BlockAwait<MutationAwaits,optional<jarray>>( move(a) ); }
-	Ω run( QueryHookAwaits&& a )ε->optional<jvalue>{ return BlockAwait<QueryHookAwaits,optional<jvalue>>( move(a) ); } //a helper, not a local: the ',' in the template arguments would end an EXPECT_ macro's first argument.
+	Ω run( MutationAwaits&& a )ε->optional<jarray>{ return BlockAny( move(a) ); }
+	Ω run( QueryHookAwaits&& a )ε->optional<jvalue>{ return BlockAny( move(a) ); } //a helper, not a local: the ',' in the template arguments would end an EXPECT_ macro's first argument.
 
 	struct QLHookTests : ::testing::Test{
 		α SetUp()->void override{ hook().Reset(); }
 		α TearDown()->void override{ hook().Reset(); }
 	};
 
-	//The dispatch switch in MutationAwaits::await_ready keys on an Operation bitmask, and a mistyped case is a hook that simply
-	//never fires - #52 is exactly that, one layer up.  Every entry point, once, asserting the virtual it landed on and that the
+	//Each Hook::X names the IQLHook virtual it asks by member pointer (it used to be an Operation bitmask switched back into a
+	//virtual), and a wrong one is a hook that simply never fires - #52 is exactly that, one layer up.  Every entry point, once, asserting the virtual it landed on and that the
 	//hook's own result came back.
 	TEST_F( QLHookTests, EveryOperationReachesItsOwnVirtual ){
 		hook().Mode = RecordingHook::EMode::Value;
@@ -139,7 +139,7 @@ namespace Jde::QL::Tests{
 		EXPECT_EQ( hook().Pk, 0u ); //an insert whose id could not be recovered still says so - 0 is a value, not the default.
 	}
 
-	//A hook's only way to refuse:  ExceptionAwait, awaited in MutationAwaits::Execute, caught there and re-raised from
+	//A hook's only way to refuse:  ExceptionAwait, awaited in HookAwaits::Execute, caught there and re-raised from
 	//await_resume.  What must not happen is the mutation quietly succeeding.
 	TEST_F( QLHookTests, AHookThatRefusesFailsTheMutation ){
 		hook().Mode = RecordingHook::EMode::Throw;

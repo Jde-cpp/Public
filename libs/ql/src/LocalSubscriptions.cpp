@@ -148,14 +148,16 @@ namespace Jde::QL{
 					sub.Listener->OnChange( j, sub.Id );
 				}
 				catch( const runtime_error& e ){
+					WARN( "[{}]{}.{} listener threw on its notification: {}", sub.Listener->Name, m.TableName(), ToString(m.Type), e.what() );
 				}
 			}
 		}
 		catch( const runtime_error& e ){
+			ERR( "[{}]{} fan-out failed before its subscribers were notified: {}", m.TableName(), ToString(m.Type), e.what() );
 		}
 	}
 
-	α Subscriptions::StopListen( sp<IListener> listener, vector<SubscriptionId> ids )ι->jarray{
+	α Subscriptions::StopListen( sp<IListener> listener, vector<SubscriptionId> ids, SL sl )ι->jarray{
 		jarray y;
 		ul _{ _serverMutex };
 		for( auto tableOp = _serverSubs.begin(); tableOp!=_serverSubs.end(); ){ //TableOp,vector<ListenerSubs>
@@ -169,6 +171,7 @@ namespace Jde::QL{
 			}
 			tableOp = listenerSubs.empty() ? _serverSubs.erase( tableOp ) : next( tableOp );
 		}
+		TRACESL( "[{}]StopListen: {}", listener ? listener->Name : string{"null"}, serialize(y) );
 		return y;
 	}
 	//#9: a subscription is a standing read of the table - the same rows the client's query would return, delivered as they
@@ -191,7 +194,7 @@ namespace Jde::QL{
 	α Subscriptions::Listen( sp<IListener> listener, vector<Subscription>&& subs )ι->void{
 		ul _{ _serverMutex };
 		for( auto&& s : subs ){
-			TRACET( ELogTags::QL, "[{}]Listen:  '{}'.'{}'", listener->Name, s.TableName, ToString(s.Type) );
+			TRACE( "[{}]Listen:  '{}'.'{}'", listener->Name, s.TableName, ToString(s.Type) );
 			_serverSubs.try_emplace( {move(s.TableName), s.Type} ).first->second.emplace_back( ListenerSubs{s.Id,move(s.Fields), listener} );
 		}
 	}

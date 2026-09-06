@@ -22,8 +22,8 @@ namespace Jde::QL{
 		β Upsert( string query, jobject vars, UserPK executer )ε->jarray=0;
 		β Schemas()Ι->const vector<sp<DB::AppSchema>>& = 0;
 
-		β Unsubscribe( sp<IListener> listener, flat_set<SubscriptionId> ids, SL=SRCE_CUR )ι->void{
-			Subscriptions::StopListen( listener, vector<SubscriptionId>{ids.begin(), ids.end()} );
+		β Unsubscribe( sp<IListener> listener, vector<SubscriptionId> ids, SRCE )ι->void{
+			Subscriptions::StopListen( move(listener), move(ids), sl );
 		}
 		[[nodiscard]] β Subscribe( string&& query, jobject vars, sp<IListener> listener, UserPK executer, SRCE )ε->up<TAwait<vector<SubscriptionId>>> = 0;
 	};
