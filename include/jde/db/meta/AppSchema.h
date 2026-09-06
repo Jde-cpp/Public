@@ -10,7 +10,9 @@ namespace Jde::DB{
 		AppSchema( sv name, flat_map<string,sp<Table>> tables, sv prefix )ι:Name{name},Prefix{prefix},Tables{tables}{}
 
 		Ω Initialize( sp<DB::DBSchema> db, sp<AppSchema> self )ε->void;
-		Ω GetTablePtr( const vector<sp<AppSchema>>& schemas, str viewName, SRCE )ε->sp<Table>;
+		//Across a set of schemas: Find answers null, Get throws - the same pair the instance lookups below make.
+		Ω FindTable( const vector<sp<AppSchema>>& schemas, str tableName )ι->sp<Table>;
+		Ω GetTablePtr( const vector<sp<AppSchema>>& schemas, str tableName, SRCE )ε->sp<Table>;
 		Ω FindView( const vector<sp<AppSchema>>& schemas, str viewName )ι->sp<View>;
 		Ω GetViewPtr( const vector<sp<AppSchema>>& schemas, str viewName, SRCE )ε->sp<View>;
 		α ConfigPath()Ι->string;

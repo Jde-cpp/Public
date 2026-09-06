@@ -6,8 +6,6 @@
 namespace Jde::DB{
 	α ForeignKey::Create( sv name, sv columnName, const DB::View& pk, const DB::View& foreignTable )ε->string{
 		THROW_IF( pk.SurrogateKeys.size()!=1, "{} has {} columns in pk, multiple has not implemented", pk.Name, pk.SurrogateKeys.size() );
-		std::ostringstream os;
-		os << "alter table " << foreignTable.SqlName() << " add constraint " << name << " foreign key(" << columnName << ") references " << pk.SqlName() << "(" << pk.GetPK()->Name << ")";
-		return os.str();
+		return Ƒ( "alter table {} add constraint {} foreign key({}) references {}({})", foreignTable.SqlName(), name, columnName, pk.SqlName(), pk.GetPK()->Name );
 	}
 }

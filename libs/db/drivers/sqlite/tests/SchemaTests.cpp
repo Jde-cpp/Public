@@ -78,7 +78,7 @@ namespace Jde::DB::Sqlite::Tests{
 		ASSERT_TRUE( one );
 		EXPECT_EQ( one->Name, "access_zz_view" );
 
-		EXPECT_TRUE( _ds->ServerMeta().LoadIndexes("access_zz_", {}).empty() ); //index/fk queries keep the table-only filter.
+		EXPECT_TRUE( _ds->ServerMeta().LoadIndexes({}, "access_zz_").empty() ); //index/fk queries keep the table-only filter.
 		_ds->ExecuteSync( DB::Sql{"drop view access_zz_view"} );
 	}
 
@@ -219,7 +219,7 @@ namespace Jde::DB::Sqlite::Tests{
 	}
 
 	TEST_P( SchemaTests, ServerMetaIndexes ){
-		let indexes = _ds->ServerMeta().LoadIndexes( "access_", {} );
+		let indexes = _ds->ServerMeta().LoadIndexes( {}, "access_" );
 		let named = find_if( indexes, [](let& i){ return i.Name=="access_identities_nk0"; } );
 		ASSERT_NE( named, indexes.end() );
 		EXPECT_TRUE( named->Unique );
@@ -273,6 +273,7 @@ namespace Jde::DB::Sqlite::Tests{
 	TEST_P( SchemaTests, AtSchemaMainOnly ){
 		EXPECT_EQ( _ds->AtSchema("main").get(), _ds.get() );
 		EXPECT_THROW( _ds->AtSchema("other"), Exception );
+		EXPECT_EQ( _ds->AtCatalog("other").get(), _ds.get() ); //db-refactor A6: no catalogs, so IDataSource's base answers this data source (and logs Critical).
 	}
 
 	//#7: a single-table FromClause leaves Joins[0].To null; Contains/GetColumnPtr must not deref it.
@@ -408,8 +409,8 @@ namespace Jde::DB::Sqlite::Tests{
 			catch( const DBException& e ){ ++kept; EXPECT_EQ( e.Error, EDbError::Syntax ); } //sqlite: no such table -> Syntax.
 			catch( const Exception& ){ ++sliced; }                                            //the bug.
 		};
-		classify( [&]{ BlockAwait<ScalerAwait<uint>,uint>( _ds->Scaler<uint>(DB::Sql{bad}) ); } ); //ScalerAwaitExecute
-		//TAwaitExecute, which only TSelect::Select reaches - SelectAsync's SelectAwait talks to the driver directly.
+		classify( [&]{ BlockAwait<ScalerAwait<uint>,uint>( _ds->Scaler<uint>(DB::Sql{bad}) ); } ); //ScalerExecute -> RunQuery
+		//TSelectAwait's fold projection through RunQuery (SelectMap/CacheAwait) - SelectAsync's SelectAwait talks to the driver directly.
 		using EnumMap = flat_map<uint,string>;
 		classify( [&]{ BlockAwait<CacheAwait<EnumMap>,EnumMap>( _ds->SelectMap<uint,string>(DB::Sql{bad}, "zz_no_such_table") ); } );
 		EXPECT_EQ( kept, 2u );

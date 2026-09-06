@@ -42,11 +42,7 @@ namespace Jde::DB{
 
 	α SelectClause::TryAdd( Object c )ι->void{
 		if( !FindColumn(c) )
-			Columns.push_back( {c} );
-	}
-	α SelectClause::TryAdd( const AliasCol& c )ι->void{
-		if( !FindColumn(c) )
-			Columns.push_back( c );
+			Columns.push_back( move(c) );
 	}
 	α SelectClause::TryAdd( const sp<Column>& c )ι->void{
 		if( !FindColumn(*c) )
@@ -66,18 +62,16 @@ namespace Jde::DB{
 		});
 		return p==Columns.end() ? nullptr : &*p;
 	}
+	//The AliasCol entries only - a Count, Coalesce or Value has no column to match.
+	Ω findAliasCol( const vector<Object>& columns, auto pred )ι->sp<Column>{
+		auto p = find_if( columns, [&](let& o){ auto c = get_if<AliasCol>( &o ); return c && pred( *c->Column ); } );
+		return p==columns.end() ? nullptr : get<AliasCol>(*p).Column;
+	}
 	α SelectClause::FindColumn( const DB::Column& a )Ι->sp<Column>{
-		auto p = find_if( Columns, [&](let& c){
-			return c.index()==underlying(EObject::AliasColumn) && *get<AliasCol>(c).Column==a;
-		});
-		return p==Columns.end() ? nullptr : get<AliasCol>(*p).Column;
+		return findAliasCol( Columns, [&]( const Column& c ){ return c==a; } );
 	}
 	α SelectClause::FindColumn( sv name )Ι->sp<Column>{
-		auto p = find_if( Columns, [=](let& o){
-			auto c = get_if<AliasCol>( &o );
-			return c && c->Column->Name==name;
-		});
-		return p==Columns.end() ? nullptr : get<AliasCol>(*p).Column;
+		return findAliasCol( Columns, [&]( const Column& c ){ return c.Name==name; } );
 	}
 
 	α SelectClause::ToString( bool shouldAlias )Ι->string{

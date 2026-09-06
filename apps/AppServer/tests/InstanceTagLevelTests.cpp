@@ -61,7 +61,7 @@ namespace Jde::App::Server::Tests{
 		EXPECT_EQ( Logging::BreakLevel(), ELogLevel::Critical );
 		let rows = TagRows( instanceId );
 		ASSERT_EQ( rows.size(), 1u ) << "break is not a tag level - only sql should have been written";
-		EXPECT_EQ( rows[0].GetUInt(1), underlying(ELogTags::Sql) );
+		EXPECT_EQ( rows[0].Get<uint>(1), underlying(ELogTags::Sql) );
 		Logging::SetBreakLevel( restore );
 	}
 #endif
@@ -80,9 +80,9 @@ namespace Jde::App::Server::Tests{
 		ASSERT_EQ( rows.size(), 3u );
 		auto foundSql = false;
 		for( auto&& row : rows ){
-			if( row.GetString(0)=="text" && row.GetUInt(1)==underlying(ELogTags::Sql) ){
+			if( row.GetString(0)=="text" && row.Get<uint>(1)==underlying(ELogTags::Sql) ){
 				foundSql = true;
-				EXPECT_EQ( row.GetUInt8Opt(2).value_or(0), (uint8)underlying(ELogLevel::Debug) );
+				EXPECT_EQ( row.GetOpt<uint8>(2).value_or(0), (uint8)underlying(ELogLevel::Debug) );
 			}
 		}
 		EXPECT_TRUE( foundSql );
@@ -138,7 +138,7 @@ namespace Jde::App::Server::Tests{
 		RunQL( Ƒ(R"(mutation updateInstanceTagLevel( "id":{}, "text":[{{tags:["sql"],level:null}}] ))", instanceId) );
 		let rows = TagRows( instanceId );
 		ASSERT_EQ( rows.size(), 1u );
-		EXPECT_EQ( rows[0].GetUInt(1), 0u ) << "only the default override should remain";
+		EXPECT_EQ( rows[0].Get<uint>(1), 0u ) << "only the default override should remain";
 
 		RunQL( Ƒ(R"(mutation updateInstanceTagLevel( "id":{}, "text":[{{tags:["default"]}}] ))", instanceId) );
 		EXPECT_EQ( TagRows(instanceId).size(), 0u ) << "an omitted level is the same 'remove this override' a null one is";
@@ -150,7 +150,7 @@ namespace Jde::App::Server::Tests{
 		RunQL( Ƒ(R"(mutation updateInstanceTagLevel( "id":{}, "text":[{{tags:["socket.client.read"],level:"Error"}}] ))", instanceId) );
 		let rows = TagRows( instanceId );
 		ASSERT_EQ( rows.size(), 1u );
-		EXPECT_EQ( rows[0].GetUInt(1), underlying(ELogTags::SocketClientRead) );
+		EXPECT_EQ( rows[0].Get<uint>(1), underlying(ELogTags::SocketClientRead) );
 	}
 
 	//the appServer group rides the same table with its own type discriminator.

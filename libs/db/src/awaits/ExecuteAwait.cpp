@@ -2,13 +2,7 @@
 #include <jde/db/IDataSource.h>
 
 namespace Jde::DB{
-
 	α ExecuteAwait::Execute()ι->QueryAwait::Task{
-		try{
-			ResumeScaler( (co_await _ds->Query(move(_sql), false, base::_sl)).RowsAffected );
-		}
-		catch( runtime_error& e ){
-			ResumeExp( move(e) );
-		}
+		return RunQuery( *this, *_ds, move(_sql), false, base::_sl, []( Result&& r ){ return (uint32)r.RowsAffected; } );
 	}
 }

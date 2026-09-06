@@ -17,7 +17,6 @@ namespace Jde::DB::MySql{
 		α ServerMeta()ι->IServerMeta& override;
 		α Syntax()ι->const DB::Syntax& override{ return MySqlSyntax::Instance(); }
 
-		α AtCatalog( sv catalog, SRCE )ε->sp<IDataSource> override;
 		α AtSchema( sv schema, SRCE )ε->sp<IDataSource> override;
 		α SchemaNameConfig( SRCE )ι->string override;
 		α SetConfig( const jobject& config )ε->void override;

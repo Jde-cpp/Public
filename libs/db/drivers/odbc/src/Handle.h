@@ -2,21 +2,18 @@
 #include <boost/noncopyable.hpp>
 #include <jde/fwk/settings.h>
 
-namespace Jde::DB{ struct IRow; }
-namespace Jde::DB::Odbc
-{
+namespace Jde::DB::Odbc{
 	struct FetchAwaitable; struct OdbcDataSource; struct ExecuteAwaitable;
 
 	struct HandleSession : noncopyable{
 		HandleSession()ε;
 		HandleSession( sv connectionString )ε;
-		HandleSession( HandleSession&& rhs )ι:_hStatement{rhs._hStatement}{ rhs._hStatement=nullptr; };
+		HandleSession( HandleSession&& rhs )ι:_hConnection{rhs._hConnection}{ rhs._hConnection=nullptr; };
 		~HandleSession();
 		virtual auto Connect( sv connectionString )ε->void;
-		operator HDBC()Ι{ return _hStatement; }
+		operator HDBC()Ι{ return _hConnection; }
 	protected:
-		HDBC _hStatement{nullptr};
-		//HandleEnvironment _hEnv;
+		HDBC _hConnection{nullptr};
 	};
 	struct HandleStatement : noncopyable{
 		HandleStatement( string connectionString )ε;

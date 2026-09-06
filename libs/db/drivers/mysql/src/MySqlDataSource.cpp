@@ -16,8 +16,6 @@
 #define let const auto
 
 namespace Jde::DB::MySql{
-//	constexpr ELogTags _tags{ ELogTags::Sql };
-//	using mysqlx::SessionOption;
 	namespace mysql = boost::mysql;
 	α toString( const mysql::connect_params& cs )ι->string{
 		return Ƒ( "'{}@{}:{}/{}' pwd:'{}' collation:{}, ssl:{}, multi:{}",
@@ -37,19 +35,16 @@ namespace Jde::DB::MySql{
 			Logging::LogOnce( SRCE_CUR, ELogTags::DBDriver, "mysql::connect_params: {}", toString(cs) );
 			try{
 				Conn.connect( cs );
-				//The driver's datetime convention is UTC - see ToField in field.cpp - but CURRENT_TIMESTAMP and
-				//UNIX_TIMESTAMP read the *session* zone, so without this the write half and the read half disagree by the
-				//server's offset, and are ambiguous outright across a DST fold.  Set once per connection: a session
-				//variable survives, so a pooled session reused by AcquireSession keeps it.
+				//Once per connection - a session variable survives, so a pooled session reused by AcquireSession keeps it.
 				mysql::results tz;
-				Conn.execute( "set time_zone='+00:00'", tz );
+				Conn.execute( UtcSession, tz );
 			}
 			catch( mysql::error_with_diagnostics& e ){
 				throw MySqlException{ toString(cs), move(e), {ELogLevel::Critical, ELogTags::DBDriver}, sl };
 			}
 		}
 	private:
-    asio::io_context _ctx;
+		asio::io_context _ctx;
 	public:
 		mysql::any_connection Conn;
 	};
@@ -106,46 +101,31 @@ namespace Jde::DB::MySql{
 	}
 
 	α MySqlDataSource::Execute( Sql&& sql, SL sl, Params exeParams )ε->uint{
-		if( sql.IsProc )
-			sql.Text = Ƒ( "call {}", move(sql.Text) );
+		CallText( sql );
 		if( exeParams.Log )
 			DB::Log( sql, sl );
-
-		//#47: an OUT param is a *proc* convention - the trailing placeholder of `call p(?,?,?)`.  This used to key off
-		//outValue alone, so ExecuteScalerSync on plain SQL dropped the caller's last param, and with none at all the loop
-		//bound `0 + -1` wrapped to SIZE_MAX and walked off an empty vector.  sqlite binds every param for a non-proc and
-		//lets the row callback answer; keying on IsProc makes this driver do the same instead of corrupting the call.
-		let outPlaceholder = exeParams.HasOut() && sql.IsProc;
-		//ASSERT is log-only in every build, so it never actually stopped this.  Same precondition sqlite throws on (#42).
-		if( outPlaceholder && sql.Params.empty() )
-			throw MySqlException{ move(sql), mysql::error_with_diagnostics{mysql::error_code{mysql::client_errc::wrong_num_params}, mysql::diagnostics{}}, sl };
+		//#47: an OUT param is a *proc* convention - the trailing placeholder of `call p(?,?,?)`.  Keying on IsProc, not
+		//outValue alone, is what keeps ExecuteScalerSync on plain SQL from treating the caller's last param as one; sqlite
+		//binds every param for a non-proc and lets the row callback answer, and so does this.
+		let outParam = exeParams.HasOut() && sql.IsProc;
+		let params = ToFields( sql, outParam, sl );
 		auto session = AcquireSession( sl ); //not returned to the pool on exception - connection state is uncertain.
-		vector<mysql::field_view> params; params.reserve( sql.Params.size() );
-		for( uint i=0; i<sql.Params.size()-(outPlaceholder ? 1 : 0); ++i )
-			params.push_back( ToField(sql.Params[i], sl) );
-		if( outPlaceholder )
-			params.push_back( mysql::field_view{0ul} );
-   	mysql::results result;
+		mysql::results result;
 		mysql::statement stmt;
 		try{
-			if( sql.Params.empty() )
-				session->Conn.execute( sql.Text, result );
+			if( params.empty() )
+				session->Conn.execute( sql.Text, result ); //text protocol: runs a multi-statement script, which a prepared statement cannot.
 			else{
 				stmt = session->Conn.prepare_statement( sql.Text );
 				session->Conn.execute( stmt.bind(params.begin(), params.end()), result );
-				if( exeParams.Function && outPlaceholder ){ //out_params() is a proc's answer; a plain statement's rows come from the loop below.
-					auto view = result.out_params();
-					ASSERT( view.size() );
-					(*exeParams.Function)( ToRow(view) );
-				}
 			}
 		}
 		catch( mysql::error_with_diagnostics& e ){
 			throw MySqlException{ move(sql), move(e), sl };
 		}
-		if( exeParams.Function && result.has_value() ){
-			for( auto&& row : result.rows() )
-				(*exeParams.Function)( ToRow(row) );
+		if( exeParams.Function ){
+			for( auto&& row : ToResult(result, outParam).Rows )
+				(*exeParams.Function)( move(row) );
 		}
 		if( stmt.valid() ){
 			mysql::error_code ec; mysql::diagnostics diag;
@@ -161,11 +141,6 @@ namespace Jde::DB::MySql{
 		return result.has_value()
 			? exeParams.Sequence ? result.last_insert_id() : result.affected_rows()
 			: 0;
-	}
-
-	α MySqlDataSource::AtCatalog( sv , SL sl )ε->sp<IDataSource>{
-		LOGSL( ELogLevel::Critical, sl, _tags, "MySql doesn't have catalogs." );
-		return shared_from_this();
 	}
 
 	α MySqlDataSource::SchemaNameConfig( SL )ι->string{ return _cs.database.empty() ? string{} : _cs.database; }
@@ -192,7 +167,7 @@ namespace Jde::DB::MySql{
 	α MySqlDataSource::InsertSeqSyncUInt( DB::InsertClause&& insert, SL sl )ε->uint{
 		insert.Add( {}, 0ull ); //0ul is 32-bit under LLP64, so it matches both the unsigned int and unsigned long long alternatives of Value::Underlying - name the 64-bit one the OUT param wants.
 		uint y{};
-		RowΛ f = [&y]( Row&& r ){ y = r.GetUInt(0); };
+		RowΛ f = [&y]( Row&& r ){ y = r.Get<uint>(0); };
 		Execute( insert.Move(), sl, {.Function=&f, .OutValue=EValue::UInt64} );
 		return y;
 	}

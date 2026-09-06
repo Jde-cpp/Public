@@ -14,4 +14,13 @@ namespace Jde::DB{
 
 		vector<Index> Indexes;
 	};
+
+	//An insert proc's name without its schema.  InsertProcName derives from DBName, which carries a `schema.` when the
+	//app schema is not the connection's default (AppSchema::Initialize), and the DDL re-qualifies the bare name itself
+	//(db-refactor A10: SyncTables and InsertProcCreateStatement each stripped it in place).
+	Ξ UnqualifiedProcName( string procName )ι->string{
+		if( const auto index = procName.find_first_of('.'); index<procName.size()-1 )
+			procName = procName.substr( index+1 );
+		return procName;
+	}
 }

@@ -43,4 +43,19 @@ namespace Jde::DB{
 			values.push_back( toValue(field) );
 		return Row{ move(values) };
 	}
+
+	α MySql::ToResult( const mysql::results& r, bool outParams )ε->Result{
+		Result y;
+		if( !r.has_value() )
+			return y;
+		if( outParams ){ //out_params() is a proc's answer; a plain statement's rows come from the loop below.
+			let view = r.out_params();
+			ASSERT( view.size() );
+			y.Rows.push_back( ToRow(view) );
+		}
+		for( auto&& row : r.rows() )
+			y.Rows.push_back( ToRow(row) );
+		y.RowsAffected = r.affected_rows();
+		return y;
+	}
 }

@@ -18,13 +18,7 @@ namespace Jde::DB::Sqlite{
 		α HasProcs()Ι->bool override{ return false; } //generated insert procs -> plain sql + last_insert_rowid; hand-written procs dispatch to SqliteProcs registry.
 		//sqlite needs the conflict target named; `excluded` is the row the insert would have written.
 		α UpsertSuffix( const vector<sv>& keyColumns, const vector<sv>& updateColumns )Ι->string override{
-			string y{ " on conflict(" };
-			for( uint i=0; i<keyColumns.size(); ++i )
-				y += Ƒ( "{}{}", i ? "," : "", keyColumns[i] );
-			y += ") do update set ";
-			for( uint i=0; i<updateColumns.size(); ++i )
-				y += Ƒ( "{}{}=excluded.{}", i ? ", " : "", updateColumns[i], updateColumns[i] );
-			return y;
+			return Ƒ( " on conflict({}) do update set {}", Str::Join(keyColumns, ","), SetList(updateColumns, "excluded.", "") );
 		}
 		α HasSchemas()Ι->bool override{ return false; }
 		α HasUnsigned()Ι->bool override{ return false; }
@@ -32,12 +26,7 @@ namespace Jde::DB::Sqlite{
 		α IdentitySelect()Ι->sv override{ return "last_insert_rowid()"; }
 		α IndexName( sv tableName, sv indexName )Ι->string override{ return Ƒ("{}_{}", tableName, indexName); } //index names are schema-wide - qualify with the table (e.g. access_providers_nk).
 		α CreatePrimaryKey( str /*tableName*/, str columns )Ι->string override{ return Ƒ("PRIMARY KEY( {} )", columns); } //columns: comma-separated for composite keys. Single-column integer pk stays a rowid alias.
-		α Limit( str sql, uint limit, uint skip )Ι->string override{
-			ASSERT( limit || skip );
-			return skip
-				? Ƒ("{} limit {} offset {}", sql, limit ? std::to_string(limit) : "-1", skip)
-				: Ƒ("{} limit {}", sql, limit); //sqlite: negative limit = no upper bound; OFFSET requires a LIMIT (skip-only).
-		}
+		α Limit( str sql, uint limit, uint skip )Ι->string override{ return LimitOffset( sql, limit, skip, "-1" ); } //negative limit = no upper bound.
 		α NeedsIdentityInsert()Ι->bool override{ return false; }
 		α NowDefault()Ι->sv override{ return "(unixepoch())"; }
 		//The only dialect that takes a `glob:` pattern verbatim - QL::globMatch *is* sqlite GLOB, so the in-memory filter

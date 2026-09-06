@@ -106,11 +106,45 @@ namespace Jde::DB::Tests{
 		EXPECT_EQ( Value{}.Get<string>(), "" );
 	}
 
+	//B8: the reference a mismatched get_string/get_bytes hands back was one process-wide static per type, so a caller that
+	//wrote through it changed what every later mismatch read.  It is thread-local and cleared on every hand-out now.
+	TEST( ValueTests, HeapFallbackIsFresh ){
+		Value v{ 42 };
+		v.get_string() = "poison"; //writes through the mismatch fallback (the ASSERT is log-only).
+		EXPECT_TRUE( Value{1}.get_string().empty() );          //the next mismatch does not see it.
+		EXPECT_TRUE( Value{string{"x"}}.get_bytes().empty() ); //nor the other alternative's.
+		EXPECT_EQ( Value{string{"x"}}.get_string(), "x" );      //a match is the cell itself, as before.
+	}
+
 	//#21: Value::ToUInt on a negative Double must not be UB - go through signed _int, matching the integer cases' modular wrap.
 	TEST( ValueTests, ToUIntNegativeDouble ){
 		EXPECT_EQ( Value{-5.0}.ToUInt(), (uint)(_int)-5 ); //modular wrap, deterministic (was UB).
 		EXPECT_EQ( Value{-5.0}.ToInt(), -5 );              //ToInt = (_int)ToUInt round-trips.
 		EXPECT_EQ( Value{42.0}.ToUInt(), 42u );            //non-negative unchanged.
+	}
+
+	//db-refactor A2: ToString/ToJson/ToUInt/get_number are visits now, so an alternative missing from one is a compile
+	//error - this pins the *spelling* each one produces, which the visit cannot.
+	TEST( ValueTests, ToStringCoversEveryAlternative ){
+		let now = DBTimePoint{ std::chrono::floor<std::chrono::seconds>(DBClock::now()) };
+		const vector<uint8_t> bytes{ 1, 2, 3 };
+		EXPECT_EQ( Value{}.ToString(), "null" );
+		EXPECT_EQ( Value{string{"abc"}}.ToString(), "abc" );
+		EXPECT_EQ( Value{true}.ToString(), "true" );
+		EXPECT_EQ( Value{false}.ToString(), "false" );
+		EXPECT_EQ( Value{(int8_t)-3}.ToString(), "-3" );
+		EXPECT_EQ( Value{42}.ToString(), "42" );
+		EXPECT_EQ( Value{_int{-9}}.ToString(), "-9" );
+		EXPECT_EQ( Value{uint32_t{7}}.ToString(), "7" );
+		EXPECT_EQ( Value{uint{9}}.ToString(), "9" );
+		EXPECT_EQ( Value{1.5}.ToString(), std::to_string(1.5) );
+		EXPECT_EQ( Value{now}.ToString(), ToIsoString(now) );
+		EXPECT_EQ( Value{bytes}.ToString(), Str::Encode64(bytes) );
+		EXPECT_EQ( Value{now}.ToJson().as_string(), ToIsoString(now) );
+		EXPECT_EQ( Value{bytes}.ToJson().as_string(), Str::Encode64(bytes) );
+		EXPECT_EQ( Value{string{"x"}}.ToUInt(), 0u ); //non-numeric: 0 (and a WARN); null: 0 silently.
+		EXPECT_EQ( Value{}.ToUInt(), 0u );
+		EXPECT_EQ( Value{true}.ToUInt(), 1u );
 	}
 
 	TEST( ValueTests, ToJsonCoversEveryAlternative ){

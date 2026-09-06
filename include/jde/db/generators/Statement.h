@@ -1,6 +1,4 @@
-﻿#ifndef STATEMENT_H
-#define STATEMENT_H
-#pragma once
+﻿#pragma once
 #include "../exports.h"
 #include "FromClause.h"
 #include "SelectClause.h"
@@ -8,8 +6,6 @@
 #include "WhereClause.h"
 
 namespace Jde::DB{
-	struct Value;
-
 	struct ΓDB Statement final{
 		Statement()ι=default;
 		Statement( SelectClause select, FromClause&& from, WhereClause&& where, string orderBy={} )ι;
@@ -26,4 +22,3 @@ namespace Jde::DB{
 		uint _skip{};
 	};
 }
-#endif

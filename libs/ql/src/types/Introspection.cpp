@@ -270,9 +270,9 @@ namespace QL{
 			for( uint i=0; i<select.Columns.size(); ++i ){
 				auto& c = *get<DB::AliasCol>(select.Columns[i]).Column;
 				if( c.IsPK() )
-					j["id"] = row.GetUInt( i );
+					j["id"] = row.Get<uint>( i );
 				else
-					j[c.Name] = move( row.GetString(i) );
+					j[c.Name] = row.TakeString(i);
 			}
 			fields.push_back( j );
 		} );

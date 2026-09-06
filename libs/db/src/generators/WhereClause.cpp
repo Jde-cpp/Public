@@ -114,12 +114,12 @@ namespace Jde::DB{
 		Add( criteria.Column, EOperator::Equal, criteria.Value );
 	}
 
-	α WhereClause::Move()ι->string{
-		string prefix{ _clauses.size() ? "where " : "" };
-		return prefix + Str::Join( move(_clauses), " and " );
+	α WhereClause::Move()ι->string{ //A12: the old body's `Str::Join( move(_clauses) )` bound to Join's const& and never moved - this is what it did, plus the consumption its name promised.
+		auto y = ToString();
+		_clauses.clear();
+		return y;
 	}
 	α WhereClause::ToString()Ι->string{
-		string prefix{ _clauses.size() ? "where " : "" };
-		return prefix + Str::Join( _clauses, " and " );
+		return _clauses.size() ? "where "+Str::Join( _clauses, " and " ) : string{};
 	}
 }

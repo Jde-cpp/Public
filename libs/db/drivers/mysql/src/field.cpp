@@ -1,6 +1,20 @@
 #include "field.h"
+#include "MySqlException.h"
 
 namespace Jde::DB{
+	α MySql::ToFields( const Sql& sql, bool outParam, SL sl )ε->vector<mysql::field_view>{
+		if( outParam && sql.Params.empty() )
+			throw MySqlException{ Sql{sql}, mysql::error_with_diagnostics{mysql::error_code{mysql::client_errc::wrong_num_params}, mysql::diagnostics{}}, sl };
+		vector<mysql::field_view> y; y.reserve( sql.Params.size() );
+		for( const auto& param : sql.Params )
+			y.push_back( ToField(param, sl) );
+		return y;
+	}
+	α MySql::CallText( Sql& sql )ι->void{
+		if( sql.IsProc )
+			sql.Text = Ƒ( "call {}", move(sql.Text) );
+	}
+
 	α MySql::ToField( const Value& v, SL sl )ε->mysql::field_view{
 		switch( v.Type() ){
 			using enum EValue;
@@ -16,7 +30,7 @@ namespace Jde::DB{
 			//The driver's one datetime convention: a DATETIME column holds UTC wall time.  This builds the value from a
 			//UTC time_point and MySqlRow::ToValue reads it straight back as one, which only agrees with the server's own
 			//CURRENT_TIMESTAMP/UNIX_TIMESTAMP once the session zone is UTC - which is why every connection sets it
-			//(MySqlDataSource's Session ctor, MySqlQueryAwait::Main).
+			//through UtcSession (MySqlDataSource's Session ctor, MySqlQueryAwait::Main).
 			case Time: {
 				using namespace std::chrono;
 				DBTimePoint time = v.get_time();//duration<_GLIBCXX_CHRONO_INT64_T, nano>

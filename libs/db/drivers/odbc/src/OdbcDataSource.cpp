@@ -37,11 +37,6 @@ namespace Jde::DB::Odbc{
 		}
 		return ds;
 	}
-	α OdbcDataSource::AtSchema( sv /*schema*/, SL sl )ε->sp<IDataSource>{
-		LOGSL( ELogLevel::Critical, sl, _tags, "Odbc doesn't support AtSchema." );
-		return shared_from_this();
-	}
-
 	α OdbcDataSource::Execute( Sql&& sql, SL sl, Params params )ε->uint{
 		HandleStatement statement{ _connectionString };
 		vector<SQLUSMALLINT> paramStatusArray;
@@ -59,11 +54,6 @@ namespace Jde::DB::Odbc{
 			parameters.push_back( move(binding) );
 		}
 
-		/*if( prepare ){
-			HandleStatement statement{ CS() };
-			let retCode = ::SQLPrepare( statement, (SQLCHAR*)sql.Text.data(), static_cast<SQLINTEGER>(sql.Text.size()) );
-			THROW_IFX( retCode < 0, DBException( retCode, sql.Text, &sql.Params, HandleDiagnosticRecord( "SQLPrepare", statement, SQL_HANDLE_STMT, retCode, sl ), sl ) );
-		}*/
 		if( sql.IsProc )
 			sql.Text = Ƒ( "{{ call {} }}", move(sql.Text) );
 		uint resultCount{};
@@ -89,12 +79,10 @@ namespace Jde::DB::Odbc{
 				CALL( statement, SQL_HANDLE_STMT, SQLNumResultCols(statement,&columnCount), "SQLNumResultCols" );
 			if( columnCount>0 ){
 				let bindings = AllocateBindings( statement, columnCount );
-				OdbcRow row{ bindings };
 				for( SQLRETURN fetch; (fetch=::SQLFetch(statement))!=SQL_NO_DATA_FOUND; ){
 					if( fetch!=SQL_SUCCESS && fetch!=SQL_SUCCESS_WITH_INFO ) //SQL_ERROR/SQL_INVALID_HANDLE: was an infinite loop feeding garbage rows to the callback.
 						ThrowDiagnostic( "SQLFetch", statement, fetch, move(sql), sl );
-					row.Reset();
-					(*params.Function)( row.ToRow() );
+					(*params.Function)( ToRow(bindings) );
 					++resultCount;
 				}
 			}

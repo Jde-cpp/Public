@@ -17,14 +17,6 @@ namespace Jde::DB{
 		s.back() = ')';
 		return s;
 	}
-	α Coalesce::Params()ι->vector<Value>{
-		vector<Value> params;
-		for( auto&& o : Objects ){
-			if( o.index()==underlying(EObject::Value) )
-				params.push_back( move(get<Value>(o)) );
-		}
-		return params;
-	}
 	α Coalesce::Params()Ι->vector<Value>{
 		vector<Value> params;
 		for( let& o : Objects ){

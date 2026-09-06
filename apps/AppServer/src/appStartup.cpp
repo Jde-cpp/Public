@@ -37,9 +37,9 @@ namespace Jde::App{
 			{DB::Value{appName}, {instanceName}, DB::Value{hostName}, DB::Value{pid}},
 			true} );
 		for( auto&& row : rows ){
-			appId = row.GetUInt32(0);
-			appInstanceId = row.GetUInt32(1);
-			appConnectionId = row.GetUInt32(2);
+			appId = row.Get<uint32_t>(0);
+			appInstanceId = row.Get<uint32_t>(1);
+			appConnectionId = row.Get<uint32_t>(2);
 		}
 
 		//`hosts` has the enum shape (id + name) and is loaded like one, but unlike the real enumerations it grows - the proc

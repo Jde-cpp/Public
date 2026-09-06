@@ -27,14 +27,17 @@ namespace Jde::DB{
 		for_each(self->Catalogs, [self](auto&& catalog){ catalog->Initialize(self,catalog); });
 	}
 
-	α Cluster::GetAppSchema( str name, SL sl )ε->sp<AppSchema>{
-		sp<AppSchema> pSchema;
+	α Cluster::FindAppSchema( str name )ι->sp<AppSchema>{
 		for( let& catalog : Catalogs ){
-			if( pSchema = catalog->FindAppSchema(name); pSchema )
-				break;
+			if( auto schema = catalog->FindAppSchema(name); schema )
+				return schema;
 		}
-		THROW_IFSL( !pSchema, "Schema '{}' not found.", name );
-		return pSchema;
+		return nullptr;
+	}
+	α Cluster::GetAppSchema( str name, SL sl )ε->sp<AppSchema>{
+		auto y = FindAppSchema( name );
+		THROW_IFSL( !y, "Schema '{}' not found.", name );
+		return y;
 	}
 
 	α Cluster::Syntax()Ι->const DB::Syntax&{ return DataSource->Syntax(); };

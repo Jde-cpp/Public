@@ -11,9 +11,6 @@ namespace Jde::DB{
 	constexpr ELogTags _tags{ ELogTags::Sql };
 	constexpr array<sv,11> EValueStrings = { "null", "string", "bool", "int8", "int32", "int64", "uint32", "uint64", "double", "time", "bytes" };
 
-	string Value::_errorString;
-	vector<uint8_t> Value::_errorBytes;
-
 	Ω fromJson( EType type, const jvalue& j, SL sl )->Value::Underlying{
 		Value::Underlying value{ nullptr };
 		if( j.is_null() )
@@ -46,43 +43,32 @@ namespace Jde::DB{
 		Variant{ fromJson(type, j, sl) }
 	{}
 
+	//The three conversions below visit the variant rather than switch on Type(): every alternative must be named or the
+	//lambda fails to compile, so a new Underlying member cannot fall through to an ERR/empty default.
 	α Value::ToString()Ι->string{
-		string y;
-		using std::to_string;
-		switch( Type() ){
-			using enum EValue;
-			case Null: y = "null"; break;
-			case String: y = get_string(); break;
-			case Bool: y = get_bool() ? "true" : "false"; break;
-			case Int8: y = to_string( get_int8() ); break;
-			case Int32: y = to_string( get_int32() ); break;
-			case Int64: y = to_string( get_int() ); break;
-			case UInt32: y = to_string( get_uint32() ); break;
-			case UInt64: y = to_string( get_uint() ); break;
-			case Double: y = to_string( get_double() ); break;
-			case Time: y = ToIsoString( get_time() ); break;
-			case Bytes: y = Str::Encode64( get_bytes() );	break;
-		}
-		return y;
+		return std::visit( []<class T>( const T& v )->string{
+			if constexpr( std::same_as<T,std::nullptr_t> ) return "null";
+			else if constexpr( std::same_as<T,string> ) return v;
+			else if constexpr( std::same_as<T,bool> ) return v ? "true" : "false";
+			else if constexpr( std::same_as<T,DBTimePoint> ) return ToIsoString( v );
+			else if constexpr( std::same_as<T,vector<uint8_t>> ) return Str::Encode64( v );
+			else return std::to_string( v ); //the integers and double.
+		}, Variant );
 	}
 	α Value::TypeName()Ι->string{ return FromEnum( EValueStrings, Type() ); }
 
 	α Value::ToUInt()Ι->uint{
-		uint y{};
-		switch( Type() ){
-			using enum EValue;
-		case Bool: y = get_bool() ? 1 : 0; break;
-		case Int8: y = (uint)get_int8(); break;
-		case Int32: y = (uint)get_int32(); break;
-		case Int64: y = (uint)get_int(); break;
-		case UInt32: y = get_uint32(); break;
-		case UInt64: y = get_uint(); break;
-		case Double: y = (uint)(_int)get_double(); break;
-		default: //Null intentionally 0.
-			if( !is_null() )
-				WARN( "ToUInt on non-numeric type '{}' returns 0.", TypeName() );
-		}
-		return y;
+		return std::visit( [&]<class T>( const T& v )->uint{
+			if constexpr( std::same_as<T,double> )
+				return (uint)(_int)v; //#21: through _int - a negative double straight to uint is UB, this wraps like the integers do.
+			else if constexpr( std::is_arithmetic_v<T> )
+				return (uint)v;
+			else{
+				if constexpr( !std::same_as<T,std::nullptr_t> ) //Null intentionally 0.
+					WARN( "ToUInt on non-numeric type '{}' returns 0.", TypeName() );
+				return 0;
+			}
+		}, Variant );
 	}
 
 	α Value::Move()ι->jvalue{
@@ -95,90 +81,28 @@ namespace Jde::DB{
 	}
 
 	α Value::ToJson( jvalue& j )Ι->void{
-		switch( Type() ){
-			using enum EValue;
-		case String: j = get_string(); break;
-		case Null: j = nullptr; break;
-		case Bool: j = get_bool(); break;
-		case Int8: j = get_int8(); break;
-		case Int64: j = get_int(); break;
-		case UInt32: j = get_uint32(); break;
-		case UInt64: j = get_uint(); break;
-		case Int32: j = get_int32(); break;
-		case Double: j = get_double(); break;
-		case Time: j = ToIsoString( get_time() ); break;//ToIsoString already ends in 'Z'.
-		case Bytes: j = Str::Encode64( get_bytes() ); break;
-		default: ERR( "Unknown type({}).", TypeName() );
-		}
+		std::visit( [&]<class T>( const T& v ){
+			if constexpr( std::same_as<T,DBTimePoint> ) j = ToIsoString( v ); //ToIsoString already ends in 'Z'.
+			else if constexpr( std::same_as<T,vector<uint8_t>> ) j = Str::Encode64( v );
+			else j = v; //nullptr, string, bool, the integers, double - jvalue takes each directly.
+		}, Variant );
 	}
 }
 namespace Jde{
+	//The config's own spellings - common-meta.libsonnet's `int16`/`smallFloat`/`uint*`, the C#-ish `Long`/`ULong`/`bool`/`guid`
+	//- then the common table (B3); case-insensitive throughout.
+	constexpr std::array<std::pair<sv,DB::EType>,13> ConfigTypeNames{{
+		{"bool",DB::EType::Bit}, {"uint",DB::EType::UInt}, {"uint64",DB::EType::ULong}, {"ulong",DB::EType::ULong}, {"long",DB::EType::Long},
+		{"int16",DB::EType::Int16}, {"uint16",DB::EType::UInt16}, {"int8",DB::EType::Int8}, {"uint8",DB::EType::UInt8},
+		{"guid",DB::EType::Guid}, {"blob",DB::EType::Blob}, {"smallfloat",DB::EType::SmallFloat}, {"uri",DB::EType::Uri}
+	}};
 	α DB::ToType( sv csTypeName )ι->DB::EType{
-		Str::iv typeName{ ToIV(csTypeName) };
-		//String typeName{ t };
-		EType type{ EType::None };
-		if( typeName=="dateTime" )
-			type=EType::DateTime;
-		else if( typeName=="smallDateTime" )
-			type=EType::SmallDateTime;
-		else if( typeName=="float" )
-			type=EType::Float;
-		else if( typeName=="real" || typeName=="smallFloat" )//smallFloat: the name common-meta.libsonnet exports; `real` is the T-SQL spelling.
-			type=EType::SmallFloat;
-		else if( typeName=="bool" )
-			type=EType::Bit;
-		else if( typeName=="tinyint" )
-			type = EType::Int8;
-		else if( typeName=="int" )
-			type = EType::Int;
-		else if( typeName=="uint" )
-			type = EType::UInt;
-		else if( typeName=="uint64" || typeName=="ULong" )
-			type = EType::ULong;
-		else if( typeName=="Long" || typeName=="bigint" )
-			type = EType::Long;
-		else if( typeName=="nvarchar" )
-			type = EType::VarWChar;
-		else if(typeName=="nchar")
-			type = EType::WChar;
-		else if( typeName=="smallint" || typeName=="int16" )//int16: the name common-meta.libsonnet exports; `smallint` is the T-SQL spelling.
-			type = EType::Int16;
-		else if( typeName=="uint16" )
-			type = EType::UInt16;
-		else if( typeName=="int8" )
-			type = EType::Int8;
-		else if( typeName=="uint8" )
-			type = EType::UInt8;
-		else if( typeName=="guid" )
-			type = EType::Guid;
-		else if(typeName=="varbinary")
-			type = EType::VarBinary;
-		else if( typeName=="varchar" )
-			type = EType::VarChar;
-		else if( typeName=="ntext" )
-			type = EType::NText;
-		else if( typeName=="text" )
-			type = EType::Text;
-		else if( typeName=="char" )
-			type = EType::Char;
-		else if( typeName=="image" )
-			type = EType::Image;
-		else if( typeName=="bit" )
-			type = EType::Bit;
-		else if( typeName=="binary" )
-			type = EType::Binary;
-		else if( typeName=="blob" )
-			type = EType::Blob;
-		else if( typeName=="decimal" )
-			type = EType::Decimal;
-		else if( typeName=="numeric" )
-			type = EType::Numeric;
-		else if( typeName=="money" )
-			type = EType::Money;
-		else if( typeName=="Uri" )
-			type = EType::Uri;
-		else
-			TRACE( "Unknown datatype({}).", typeName );
-		return type;
+		let iv = ToIV( csTypeName );
+		if( auto p = find_if(ConfigTypeNames, [&](let& x){ return ToIV(x.first)==iv; }); p!=ConfigTypeNames.end() )
+			return p->second;
+		let common = DB::FindCommonType( csTypeName );
+		if( !common )
+			TRACE( "Unknown datatype({}).", csTypeName );
+		return common.value_or( DB::EType::None );
 	}
 }

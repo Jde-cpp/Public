@@ -3,11 +3,8 @@
 #include <jde/db/IDataSource.h>
 #include <jde/db/Row.h>
 #include <jde/db/meta/Table.h>
-#include "../../../src/meta/ddl/ColumnDdl.h"
-#include "../../../src/meta/ddl/ForeignKey.h"
-#include "../../../src/meta/ddl/Index.h"
+#include "../../../src/meta/ServerMetaFold.h"
 #include "../../../src/meta/ddl/Procedure.h"
-#include "../../../src/meta/ddl/TableDdl.h"
 #include "SqliteProcs.h"
 
 #define let const auto
@@ -39,19 +36,19 @@ namespace Jde::DB::Sqlite{
 		flat_map<string,sp<Table>> tables;
 		auto onRow = [&]( Row&& row ){
 			uint i=0;
-			auto table = row.GetString( i++ );
+			let table = row.GetString( i++ );
 			let name = row.GetString( i++ );
-			let ordinal = row.GetUInt( i++ );
+			++i; //cid: the statement orders by it, ColumnDdl has no ordinal.
 			let dflt = row.GetString( i++ );
-			let isNullable = row.GetInt( i++ )==0;
+			let isNullable = row.Get<_int>( i++ )==0;
 			let declared = row.GetString( i++ );
-			let pk = row.GetUInt( i++ );
-			let pkCount = row.GetUInt( i++ );
+			let pk = row.Get<uint>( i++ );
+			let pkCount = row.Get<uint>( i++ );
 			let [baseType, maxLength, precision, scale] = parseDeclaredType( declared );
+			let type = meta.ToType( baseType );
 			//rowid alias: only a single-column integer pk auto-assigns - see SqliteSyntax::ToString/CreatePrimaryKey.
 			let isIdentity = pk==1 && pkCount==1 && Str::ToLower(baseType).find("int")!=string::npos;
-			auto& pTable = tables.emplace( table, ms<TableDdl>(table) ).first->second;
-			pTable->Columns.push_back( ms<ColumnDdl>(name, ordinal, dflt, isNullable, meta.ToType(baseType), maxLength, isIdentity, pk ? optional<uint8>((uint8)(pk-1)) : optional<uint8>{}, precision, scale) );
+			FoldColumnRow( tables, table, ms<ColumnDdl>(name, BitDefault(dflt, type), isNullable, type, maxLength, isIdentity, pk ? optional<uint8>((uint8)(pk-1)) : optional<uint8>{}, precision, scale) );
 		};
 		Sql sql{ Ƒ("select m.name, ti.name, ti.cid, coalesce(ti.dflt_value,''), ti.\"notnull\", ti.type, ti.pk,"
 			"\n\t(select count(*) from pragma_table_info(m.name) p where p.pk>0)"
@@ -61,11 +58,7 @@ namespace Jde::DB::Sqlite{
 		if( tableName.size() )
 			sql.Params.emplace_back( like ? string{tableName}+'%' : string{tableName} );
 		ds.Select( move(sql), onRow );
-		let indexes = meta.LoadIndexes( like ? tableName : sv{}, like ? sv{} : tableName );
-		for( auto& index : indexes ){
-			if( auto pTable = tables.find( index.TableName ); pTable!=tables.end() )
-				std::dynamic_pointer_cast<TableDdl>( pTable->second )->Indexes.push_back( index );
-		}
+		AttachIndexes( tables, meta.LoadIndexes({}, like ? tableName : sv{}, like ? sv{} : tableName) );
 		//pragma_index_list omits the rowid-alias single-integer pk, so synthesize the pk index from pragma_table_info's pk columns (skip when an origin='pk' auto-index already covered a composite/non-rowid pk). Lets SchemaDdl's dedup skip the unsupported 'alter table add constraint ... primary key'.
 		for( auto&& [name, table] : tables ){
 			auto& dbIndexes = std::dynamic_pointer_cast<TableDdl>( table )->Indexes;
@@ -80,7 +73,7 @@ namespace Jde::DB::Sqlite{
 			vector<string> columns;
 			for( let& [_,col] : pkColumns )
 				columns.push_back( col );
-			dbIndexes.emplace_back( "pk", name, true, &columns, true, optional<bool>{} );
+			dbIndexes.emplace_back( "pk", name, true, move(columns), true, optional<bool>{} );
 		}
 		return tables;
 	}
@@ -94,20 +87,16 @@ namespace Jde::DB::Sqlite{
 		return std::dynamic_pointer_cast<TableDdl>( tables.begin()->second );
 	}
 
-	α SqliteServerMeta::LoadIndexes( sv tablePrefix, sv tableName )Ε->vector<Index>{
+	α SqliteServerMeta::LoadIndexes( sv /*schemaName - always 'main'*/, sv tablePrefix, sv tableName )Ε->vector<Index>{
 		vector<Index> indexes;
 		auto onRow = [&indexes]( Row&& row ){
 			uint i=0;
 			let table = row.GetString( i++ );
 			let indexName = row.GetString( i++ );
 			let columnName = row.GetString( i++ ); //empty for rowid/expression members.
-			let unique = row.GetInt( i++ )==1;
+			let unique = row.Get<_int>( i++ )==1;
 			let primaryKey = row.GetString( i++ )=="pk"; //origin: 'c'=create index, 'u'=unique constraint, 'pk'.
-			auto pExisting = find_if( indexes, [&](auto& index){ return index.Name==indexName && index.TableName==table; } );
-			auto& columns = pExisting==indexes.end()
-				? indexes.emplace_back( indexName, table, primaryKey, nullptr, unique, optional<bool>{} ).Columns
-				: pExisting->Columns;
-			columns.push_back( columnName );
+			FoldIndexRow( indexes, table, indexName, columnName, unique, primaryKey );
 		};
 		string filter;
 		Sql sql;
@@ -133,7 +122,7 @@ namespace Jde::DB::Sqlite{
 		auto onRow = [&]( Row&& row ){
 			uint i=0;
 			let table = row.GetString( i++ );
-			let id = row.GetUInt( i++ );
+			let id = row.Get<uint>( i++ );
 			let pkTable = row.GetString( i++ );
 			let column = row.GetString( i++ );
 			let name = Ƒ( "{}_fk{}", table, id );
@@ -160,74 +149,34 @@ namespace Jde::DB::Sqlite{
 		return procs;
 	}
 
+	//sqlite's own spellings - its integer aliases, the unsigned forms our ddl never emits but a hand-made table might, and
+	//bare `blob`, which is our GuidType (SqliteSyntax; bytes columns declare varbinary/binary/image) - then the common
+	//table (B3), then the affinity rules for a type created outside our ddl.
+	constexpr std::array<std::pair<sv,EType>,17> SqliteTypeNames{{
+		{"integer",EType::Long}, {"int8",EType::Long}, {"mediumint",EType::Int}, {"int unsigned",EType::UInt}, {"integer unsigned",EType::UInt},
+		{"bigint unsigned",EType::ULong}, {"int2",EType::Int16}, {"tinyint unsigned",EType::UInt8}, {"timestamp",EType::DateTime},
+		{"double",EType::Float}, {"double precision",EType::Float}, {"blob",EType::Guid}, {"guid",EType::Guid},
+		{"character",EType::Char}, {"clob",EType::Text}, {"bool",EType::Bit}, {"boolean",EType::Bit}
+	}};
 	α SqliteServerMeta::ToType( sv name )Ι->EType{
 		using enum EType;
 		let [base, length, precision, scale] = parseDeclaredType( name );
 		let typeName = Str::ToLower( base );
-		auto type{ None };
-		if( typeName=="integer" || typeName=="bigint" || typeName=="int8" )
+		if( auto p = find_if(SqliteTypeNames, [&](let& x){ return x.first==typeName; }); p!=SqliteTypeNames.end() )
+			return p->second;
+		if( let common = FindCommonType(typeName); common )
+			return *common;
+		//sqlite affinity rules for types created outside our ddl: https://sqlite.org/datatype3.html#determination_of_column_affinity
+		auto type{ Numeric };
+		if( typeName.find("int")!=string::npos )
 			type = Long;
-		else if( typeName=="int" || typeName=="mediumint" )
-			type = Int;
-		else if( typeName=="int unsigned" || typeName=="integer unsigned" )
-			type = UInt;
-		else if( typeName=="bigint unsigned" )
-			type = ULong;
-		else if( typeName=="smallint" || typeName=="int2" )
-			type = Int16;
-		else if( typeName=="tinyint unsigned" )
-			type = UInt8;
-		else if( typeName=="tinyint" )
-			type = Int8;
-		else if( typeName=="datetime" || typeName=="timestamp" )
-			type = DateTime;
-		else if( typeName=="smalldatetime" )
-			type = SmallDateTime;
-		else if( typeName=="float" || typeName=="double" || typeName=="double precision" )
-			type = Float;
-		else if( typeName=="real" )
-			type = SmallFloat;
-		else if( typeName=="blob" || typeName=="uniqueidentifier" || typeName=="guid" )
-			type = Guid; //bare 'blob' is our GuidType - see SqliteSyntax; bytes columns declare varbinary/binary/image.
-		else if( typeName=="varbinary" )
-			type = VarBinary;
-		else if( typeName=="binary" )
-			type = Binary;
-		else if( typeName=="image" )
-			type = Image;
-		else if( typeName=="nvarchar" )
-			type = VarWChar;
-		else if( typeName=="nchar" )
-			type = WChar;
-		else if( typeName=="varchar" )
+		else if( typeName.find("char")!=string::npos || typeName.find("clob")!=string::npos || typeName.find("text")!=string::npos )
 			type = VarChar;
-		else if( typeName=="char" || typeName=="character" )
-			type = Char;
-		else if( typeName=="ntext" )
-			type = NText;
-		else if( typeName=="text" || typeName=="clob" )
-			type = Text;
-		else if( typeName=="bit" || typeName=="bool" || typeName=="boolean" )
-			type = Bit;
-		else if( typeName=="decimal" )
-			type = Decimal;
-		else if( typeName=="numeric" )
-			type = Numeric;
-		else if( typeName=="money" )
-			type = Money;
-		else{ //sqlite affinity rules for types created outside our ddl: https://sqlite.org/datatype3.html#determination_of_column_affinity
-			if( typeName.find("int")!=string::npos )
-				type = Long;
-			else if( typeName.find("char")!=string::npos || typeName.find("clob")!=string::npos || typeName.find("text")!=string::npos )
-				type = VarChar;
-			else if( typeName.empty() || typeName.find("blob")!=string::npos )
-				type = VarBinary;
-			else if( typeName.find("real")!=string::npos || typeName.find("floa")!=string::npos || typeName.find("doub")!=string::npos )
-				type = Float;
-			else
-				type = Numeric;
-			WARN( "Unmapped declared type '{}' - using affinity fallback {}.", name, (uint)type );
-		}
+		else if( typeName.empty() || typeName.find("blob")!=string::npos )
+			type = VarBinary;
+		else if( typeName.find("real")!=string::npos || typeName.find("floa")!=string::npos || typeName.find("doub")!=string::npos )
+			type = Float;
+		WARN( "Unmapped declared type '{}' - using affinity fallback {}.", name, (uint)type );
 		return type;
 	}
 }

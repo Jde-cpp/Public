@@ -4,11 +4,11 @@
 #define let const auto
 namespace Jde::Access{
 	Resource::Resource( DB::Row&& row )ι{
-		PK = row.GetUInt16(0);
-		Schema = move( row.GetString(1) );
-		Target = move( row.GetString(2) );
-		Criteria = move( row.GetString(3) );
-		IsDeleted = row.GetTimePointOpt(4);
+		PK = row.Get<uint16_t>(0);
+		Schema = row.TakeString(1);
+		Target = row.TakeString(2);
+		Criteria = row.TakeString(3);
+		IsDeleted = row.GetOpt<DB::DBTimePoint>(4);
 	}
 	Resource::Resource( ResourcePK pk, jobject j )ι:
 		PK{ pk },

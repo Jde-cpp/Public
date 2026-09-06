@@ -11,7 +11,6 @@ namespace Jde::DB{
 	};
 
 	struct ΓDB Column{
-		Column()=default;
 		Column( sv name )ι;  //placeholder
 		Column( sv name, const jobject& j )ε;
 		virtual ~Column()=default;
@@ -28,19 +27,19 @@ namespace Jde::DB{
 		string Name;
 
 		optional<DB::Criteria> Criteria;//unUsers=not is_group
-		bool IsNullable;
+		bool IsNullable{};
 		optional<uint> MaxLength;
 		optional<uint> NumericPrecision; //currently for db schema columns
 		optional<uint> NumericScale; //currently for db schema columns
 		sp<DB::View> PKTable; //pk table if any.
 
-		bool IsSequence; //uses db sequence.  TODO look to move to ddl.
-		bool Insertable;
+		bool IsSequence{}; //uses db sequence.  TODO look to move to ddl.
+		bool Insertable{ true };
 		optional<uint8> SKIndex; //Is part of the surrogate key for the table.
 		string QLAppend; //also select this column in ql query TODO example
 		sp<DB::View> Table;
-		EType Type;
-		bool Updateable;
+		EType Type{ EType::None };
+		bool Updateable{ true };
 		optional<Value> Default; //nullable=Value{}
 	};
 }

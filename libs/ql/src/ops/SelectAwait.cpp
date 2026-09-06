@@ -246,7 +246,7 @@ namespace Jde::QL{
 							jSubRow[childTable.JsonName] = jChildTable;
 						}
 					}
-					jrow.emplace( row.GetUInt(0), jSubRow );
+					jrow.emplace( row.Get<uint>(0), jSubRow );
 				}
 			}
 			Query( move(parentSql), move(subTables) );
@@ -303,7 +303,7 @@ namespace Jde::QL{
 			for( auto&& row : rows ){
 				auto jrow = _qlTable.ToJson( row, statement.Select.Columns );
 				if( subTables.size() )
-					addSubTables( _qlTable, subTables, jrow, row.GetUInt(_parentKeyIndex) );
+					addSubTables( _qlTable, subTables, jrow, row.Get<uint>(_parentKeyIndex) );
 				if( _qlTable.IsPlural() )
 					y.get_array().emplace_back( move(jrow) );
 				else

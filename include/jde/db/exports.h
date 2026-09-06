@@ -8,11 +8,6 @@
 #else
 	#ifdef _MSC_VER
 		#define ΓDB __declspec( dllimport )
-		// #if NDEBUG
-		// 	#pragma comment(lib, "Jde.lib")
-		// #else
-		// 	#pragma comment(lib, "Jde.lib")
-		// #endif
 	#else
 		#define ΓDB
 	#endif

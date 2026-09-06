@@ -7,7 +7,6 @@ extern "C" ΓODBC Jde::DB::IDataSource* GetDataSource();
 namespace Jde::DB {
 	struct IServerMeta;
 	struct Sql;
-	namespace Types { struct IRow; }
 	namespace MsSql { struct MsSqlSchemaProc; }
 }
 namespace Jde::DB::Odbc{
@@ -20,7 +19,6 @@ namespace Jde::DB::Odbc{
 		α Disconnect()ε->void override;
 		α ServerMeta()ι->IServerMeta& override;
 		α AtCatalog( sv catalog, SRCE )ε->sp<IDataSource> override;
-		α AtSchema( sv schema, SRCE )ε->sp<IDataSource> override;
 		α SetConfig( const jobject& config )ε->void override;
 		α SetConnectionString( string x )ι->void;
 	private:

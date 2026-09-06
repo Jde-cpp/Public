@@ -18,7 +18,7 @@ namespace Jde::App::Server::Tests{
 		Ω ConnectionsTable()->string{ return Server::AppSchema()->GetView("connections").DBName; }
 		Ω LiveCount( App::ConnectionPK connectionId )->uint{
 			auto rows = Server::AppSchema()->DS()->Select( {Ƒ("select count(*) from {} where connection_id=? and deleted is null", ConnectionsTable()), {DB::Value{connectionId}}} );
-			return rows.empty() ? 0u : (uint)rows[0].GetInt( 0 );
+			return rows.empty() ? 0u : (uint)rows[0].Get<_int>( 0 );
 		}
 	};
 

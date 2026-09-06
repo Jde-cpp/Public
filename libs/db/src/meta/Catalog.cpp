@@ -11,7 +11,7 @@
 namespace Jde::DB{
 	Ω getSchemas( const jobject& config, sp<Access::IAcl> authorizer )ε->vector<sp<DBSchema>>{
 		vector<sp<DBSchema>> schemas;
-    for( auto&& [name, value] : config )
+		for( auto&& [name, value] : config )
 			schemas.emplace_back( ms<DBSchema>( name, Json::AsObject(value), authorizer ) );
 		return schemas;
 	}

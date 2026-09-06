@@ -19,7 +19,7 @@ namespace Jde::DB::Sqlite{
 		α LoadTables( sv schemaName, sv tablePrefix )Ε->flat_map<string,sp<Table>> override;
 		α LoadTable( str schemaName, str tableName, SRCE )Ε->sp<TableDdl> override;
 		α ToType( sv name )Ι->EType override; //affinity mapping: integer/text/real/blob/numeric.
-		α LoadIndexes( sv tablePrefix, sv tableName={} )Ε->vector<Index> override;
+		α LoadIndexes( sv schemaName, sv tablePrefix, sv tableName={} )Ε->vector<Index> override;
 		α LoadForeignKeys( str schemaName )Ε->flat_map<string,ForeignKey> override;
 		α LoadProcs( str schemaName )Ε->flat_map<string,Procedure> override;
 	};

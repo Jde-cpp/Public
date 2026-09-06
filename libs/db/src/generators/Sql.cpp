@@ -27,12 +27,7 @@ namespace Jde::DB{
 				using enum EValue;
 			case String: fullSql.append( '\''+Str::Replace(param.get_string(), "\'", "''")+'\'' ); break;
 			case Null: fullSql.append( "null" ); break;
-			case Bytes:
-				if( param.get_bytes().size()==0 )
-					fullSql.append( "Null" );
-				else
-					fullSql.append( '\''+Str::Encode64( param.get_bytes() )+'\'' );
-				break;
+			case Bytes: fullSql.append( param.get_bytes().empty() ? string{"Null"} : '\''+param.ToString()+'\'' ); break; //ToString is the Encode64.
 			default:
 				fullSql.append( param.ToString() );
 			}

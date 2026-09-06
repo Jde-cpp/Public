@@ -61,12 +61,17 @@ namespace Jde::DB{
 		for_each( self->Tables, [self](auto&& kv){kv.second->Initialize(self,kv.second);} );
 		for_each( self->Views, [self](auto&& kv){kv.second->Initialize(self,kv.second);} );
 	}
-	α AppSchema::GetTablePtr( const vector<sp<AppSchema>>& schemas, str tableName, SL sl )ε->sp<Table>{
+	α AppSchema::FindTable( const vector<sp<AppSchema>>& schemas, str tableName )ι->sp<Table>{
 		for( let& schema : schemas ){
 			if( let table = schema->FindTable(tableName) )
 				return table;
 		}
-		THROWSL( "Could not find table '{}'", tableName );
+		return nullptr;
+	}
+	α AppSchema::GetTablePtr( const vector<sp<AppSchema>>& schemas, str tableName, SL sl )ε->sp<Table>{
+		auto y = FindTable( schemas, tableName );
+		THROW_IFSL( !y, "Could not find table '{}'", tableName );
+		return y;
 	}
 
 	α AppSchema::FindView( const vector<sp<AppSchema>>& schemas, str viewName )ι->sp<View>{

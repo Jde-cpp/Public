@@ -151,7 +151,7 @@ namespace Jde::QL{
 					let result = co_await ds.Query( move(sql), true, _sl );
 					for( let& row : result.Rows ){
 						ASSERT( row.Size() );
-						id = row.Size() ? row.GetInt32( 0 ) : 0;
+						id = row.Size() ? row.Get<int32_t>( 0 ) : 0;
 					}
 					y.push_back( jobject{ {"id", id}, {"rowCount",result.RowsAffected} } );
 				}else{

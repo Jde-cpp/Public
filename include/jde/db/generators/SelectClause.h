@@ -14,7 +14,7 @@ namespace Jde::DB{
 		SelectClause( const Object& obj )ι:Columns{obj}{};
 		α operator+=( SelectClause&& x )ι->SelectClause&;
 		α TryAdd( Object c )ι->void;
-		α TryAdd( const AliasCol& c )ι->void;
+		α TryAdd( AliasCol c )ι->void{ TryAdd( Object{move(c)} ); }
 		α TryAdd( const sp<Column>& c )ι->void;
 		α ToString( bool shouldAlias )Ι->string;
 		α FindColumn( sv name )Ι->sp<Column>;

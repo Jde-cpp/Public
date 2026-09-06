@@ -8,7 +8,7 @@
 namespace Jde::DB{
 	α Column::Count()ι->sp<Column>{ return ms<Column>( "count(*)" ); }
 
-	α getDefault( const jobject& j, bool isNullable, EType type/*, sv name*/ )ε->optional<Value>{
+	α getDefault( const jobject& j, bool isNullable, EType type )ε->optional<Value>{
 		optional<Value> obj;
 		if( j.contains("default") )
 			obj = Value{ type, j.at("default") };

@@ -13,8 +13,9 @@
 #define let const auto
 
 namespace Jde::DB::Sqlite{
-	//C5: `call p( ?, ? )` -> `p`.  Both the dispatch in ExecuteProc and the error message in InsertSeqSyncUInt spell this,
-	//and they have to agree - the second is naming the proc the first failed to find.
+	//`p( ?, ? )` -> `p` - the bare form the generators emit; only the mysql and odbc drivers prepend their `call`.  Both
+	//the dispatch in ExecuteProc and the error message in InsertSeqSyncUInt spell this, and they have to agree - the second
+	//is naming the proc the first failed to find.
 	α procName( const DB::Sql& sql )ι->sv{ return Str::RTrim( sv{sql.Text}.substr(0, sql.Text.find('(')) ); }
 
 	//A loaded proc dll. Extends ProcRegistry so the dll registers through us; we record the names it registers and
@@ -201,7 +202,7 @@ namespace Jde::DB::Sqlite{
 		optional<uint> sequence;
 		RowΛ f = [&sequence]( Row&& r ){
 			if( !sequence && r.Size() )
-				sequence = r.GetUInt( 0 );
+				sequence = r.Get<uint>( 0 );
 		};
 		let name = string{ procName(sql) }; //owned - sql is moved below.
 		Execute( move(sql), sl, {.Function=&f} );
@@ -214,10 +215,6 @@ namespace Jde::DB::Sqlite{
 		return QueryAwait{ mu<SqliteQueryAwait>(shared_from_this(), move(sql), outParams, sl), sl };
 	}
 
-	α SqliteDataSource::AtCatalog( sv, SL sl )ε->sp<IDataSource>{
-		LOGSL( ELogLevel::Critical, sl, _tags, "Sqlite doesn't have catalogs." );
-		return shared_from_this();
-	}
 	α SqliteDataSource::AtSchema( sv schema, SL sl )ε->sp<IDataSource>{
 		THROW_IFSL( schema!="main", "Sqlite schema '{}' not supported - only 'main'.", schema ); //TODO: ATTACH DATABASE if multiple schemas needed.
 		return shared_from_this();
