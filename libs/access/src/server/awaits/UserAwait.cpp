@@ -2,7 +2,7 @@
 #include <jde/db/IDataSource.h>
 #include <jde/db/generators/Statement.h>
 #include <jde/db/meta/Column.h>
-#include <jde/db/meta/View.h>
+#include <jde/db/meta/Table.h>
 #include <jde/ql/QLAwait.h>
 #include "../serverInternal.h"
 #define let const auto

@@ -42,8 +42,7 @@ namespace Jde::QL{
 					nestedTable->Authorize( Access::ERights::Read, _userPK, _sl );
 					//#24: the same rule as the pk branch in AddStatement - `identity:{id:N}` on a table that *extends* identities
 					//would pre-seed the back-fill and bind the new row to N, so the id this insert is about to create is dropped.
-					let extends = table.IsView() ? nullptr : AsTable(table).Extends;
-					if( extends && extends->Name==nestedTable->Name ){
+					if( table.Extends && table.Extends->Name==nestedTable->Name ){
 						WARNT( ELogTags::QL, "[{}]ignoring the supplied '{}' id - an extension row takes its pk from the row it extends.", table.Name, string{key} );
 					}
 					else
@@ -74,7 +73,7 @@ namespace Jde::QL{
 			//#24: an extension's pk is the parent row's id - it comes from the insert a few lines up, never from the client.
 			//Honouring `identityId:N` (or `id:N`) bound the new users row to an existing identity and left the identities row
 			//this mutation just created an orphan;  ignoring it puts the column in _missingColumns, where Execute fills it in.
-			let isExtensionKey = !_identityInsert && c->IsPK() && !table.IsView() && AsTable(table).Extends;
+			let isExtensionKey = !_identityInsert && c->IsPK() && table.Extends;
 			if( isExtensionKey && (input.if_contains(memberName) || input.if_contains("id")) )
 				WARNT( ELogTags::QL, "[{}.{}]ignoring the supplied key - an extension row takes its pk from the row it extends.", table.Name, c->Name );
 			if( let jvalue = isExtensionKey ? nullptr : input.if_contains(memberName); jvalue ){// calling a stored proc, so need all columns.
@@ -144,7 +143,7 @@ namespace Jde::QL{
 							let result = co_await Any( ds.Query(move(sql), true, _sl) );
 							for( let& row : result.Rows ){
 								ASSERT( row.Size() );
-								id = row.Size() ? row.GetInt32( 0 ) : 0;
+								id = row.Size() ? row.Get<int32_t>( 0 ) : 0;
 							}
 							y.push_back( jobject{ {"id", id}, {"rowCount",result.RowsAffected} } );
 						}else{
@@ -180,84 +179,6 @@ namespace Jde::QL{
 		else
 			Resume( move(y) );
 	}
-
-	α InsertAwait::Execute()ι->DB::QueryAwait::Task{
-		jarray y;
-		auto& ds = *_table->Schema->DS();
-		try{
-			for( uint i=0; i<_statements.size(); ++i ){
-				auto& statement = _statements[i];
-				for( auto&& missingCol : _missingColumns[i] ){
-					if( auto missingValue = _nestedIds.find(missingCol->Name); missingValue!=_nestedIds.end() )
-						statement.SetValue( missingCol, move(missingValue->second) );
-				}
-
-				uint id{};
-				if( _identityInsert )
-					statement.IsStoredProc = false;
-				auto sql = statement.Move();
-				if( statement.IsStoredProc ){
-					let result = co_await ds.Query( move(sql), true, _sl );
-					for( let& row : result.Rows ){
-						ASSERT( row.Size() );
-						id = row.Size() ? row.Get<int32_t>( 0 ) : 0;
-					}
-					y.push_back( jobject{ {"id", id}, {"rowCount",result.RowsAffected} } );
-				}else{
-					if( _identityInsert && ds.Syntax().NeedsIdentityInsert() )
-						sql.Text = Ƒ("SET IDENTITY_INSERT {0} ON;{1};SET IDENTITY_INSERT {0} OFF;", _table->SqlName(), sql.Text );
-					let rowCount = ( co_await ds.Query(move(sql), false, _sl) ).RowsAffected;
-					y.push_back( jobject{ {"rowCount",rowCount} } );
-				}
-
-				auto table = statement.Values.size() ? statement.Values.begin()->first->Table : nullptr;
-				if( auto sequence = statement.Values.size() && table->SurrogateKeys.size() ? table->SurrogateKeys[0] : nullptr; sequence )
-					_nestedIds.emplace( sequence->Name, id );
-			}
-			TRACE( "InsertAwait::Execute: {}", serialize(y) );
-			InsertAfter( move(y) );
-		}
-		catch( runtime_error& e ){
-			InsertFailure( ToExceptionPtr(move(e)) );
-		}
-	}
-	α InsertAwait::InsertAfter( jarray result )ι->MutationAwaits::Task{
-		try{
-			let id = result.size() ? Json::FindNumber<uint>(result[0], "id").value_or(0) : 0;
-			co_await Hook::InsertAfter( id, _mutation, _executer );
-			Resume( move(result) );
-		}
-		catch( runtime_error& e ){
-			ResumeExp( move(e) );
-		}
-	}
-	//#28: by value, because the coroutine outlives the catch block that built it - but as up<Exception>, so the dynamic type
-	//survives.  ResumeExp( Exception&& ) hands the referent to SetExp, which calls the virtual Move().
-	α InsertAwait::InsertFailure( up<runtime_error> e )ι->MutationAwaits::Task{
-		try{
-			co_await Hook::InsertFailure( _mutation, _executer );
-			ResumeExp( move(*e) );
-		}
-		catch( runtime_error& e2 ){
-			ResumeExp( move(e2) );
-		}
-	}
-	α InsertAwait::Resume( jarray&& v )ι->void{
-		//#47: the insert half - no row means no statement inserted one, and publishing `null` told subscribers a row they could
-		//not identify had appeared.
-		if( v.size() )
-			Subscriptions::OnMutation( _mutation, v[0] );
-		base::Resume( move(v) );
-	}
-
-	α InsertAwait::await_resume()ε->jvalue{
-		if( _exception )
-			_exception->Throw();
-		return Promise()
-			? TAwait<jvalue>::await_resume()
-			: jvalue{};
-	}
-
 	α getEnumValue( const DB::Column& c, const JsonColumn& qlCol, const jvalue& v )->Value{
 		Value y;
 		let values = GetEnumValues( qlCol.Table() );

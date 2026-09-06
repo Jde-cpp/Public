@@ -37,7 +37,7 @@ namespace Jde::QL{
 		vector<DB::Sql> statements{ move(sql) };
 
 		if( table.Extends ){
-			let extendedPurge = Statements( AsTable(*table.Extends) );
+			let extendedPurge = Statements( *table.Extends );
 			statements.insert( end(statements), begin(extendedPurge), end(extendedPurge) );
 		}
 		return statements;

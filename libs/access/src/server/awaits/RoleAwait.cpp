@@ -3,7 +3,7 @@
 #include <jde/db/names.h>
 #include <jde/db/generators/InsertClause.h>
 #include <jde/db/meta/AppSchema.h>
-#include <jde/db/meta/View.h>
+#include <jde/db/meta/Table.h>
 #include <jde/db/awaits/ExecuteAwait.h>
 #include <jde/ql/ql.h>
 #include <jde/ql/IQL.h>

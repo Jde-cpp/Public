@@ -7,7 +7,6 @@
 #include <jde/db/meta/Catalog.h>
 #include <jde/db/meta/Cluster.h>
 #include <jde/db/meta/Table.h>
-#include <jde/db/meta/View.h>
 #define let const auto
 
 namespace Jde::DB{
@@ -29,8 +28,8 @@ namespace Jde::DB{
 		return y;
 	}
 
-	α GetViews( const jobject& jviews )ε->flat_map<string,sp<View>>{
-		flat_map<string,sp<View>> views;
+	α GetViews( const jobject& jviews )ε->flat_map<string,sp<Table>>{
+		flat_map<string,sp<Table>> views;
 		for( let& [jname,view] : jviews ){
 			let name = Names::FromJson( jname );
 			views.emplace( name, ms<Table>(name, Json::AsObject(view)) );
@@ -43,7 +42,7 @@ namespace Jde::DB{
 		Authorizer{ authorizer },
 		Prefix{ prefix },
 		Tables{ GetTables(Json::AsObject(meta,"tables")) },
-		Views{ meta.contains("views") ? GetViews(Json::AsObject(meta.at("views"))) : flat_map<string,sp<View>>{} },
+		Views{ meta.contains("views") ? GetViews(Json::AsObject(meta.at("views"))) : flat_map<string,sp<Table>>{} },
 		Resources{ meta.contains("resources") ? GetResources(Json::AsObject(meta.at("resources"))) : flat_map<string,Access::ERights>{} }
 	{}
 
@@ -74,14 +73,14 @@ namespace Jde::DB{
 		return y;
 	}
 
-	α AppSchema::FindView( const vector<sp<AppSchema>>& schemas, str viewName )ι->sp<View>{
+	α AppSchema::FindView( const vector<sp<AppSchema>>& schemas, str viewName )ι->sp<Table>{
 		for( let& schema : schemas ){
 			if( let view = schema->FindView(viewName) )
 				return view;
 		}
 		return nullptr;
 	}
-	α AppSchema::GetViewPtr( const vector<sp<AppSchema>>& schemas, str viewName, SL sl )ε->sp<View>{
+	α AppSchema::GetViewPtr( const vector<sp<AppSchema>>& schemas, str viewName, SL sl )ε->sp<Table>{
 		auto y = FindView( schemas, viewName );
 		THROW_IFSL( !y, "Could not find view '{}'", viewName );
 		return y;
@@ -114,14 +113,14 @@ namespace Jde::DB{
 		return y;
 	}
 
-	α AppSchema::FindView( str name )Ι->sp<View>{
+	α AppSchema::FindView( str name )Ι->sp<Table>{
 		auto kv = Views.find( name );
 		return kv==Views.end() ? FindTable(name) : kv->second;
 	}
-	α AppSchema::GetView( str name, SL sl )ε->const View&{
+	α AppSchema::GetView( str name, SL sl )ε->const Table&{
 		return *GetViewPtr( name, sl );
 	}
-	α AppSchema::GetViewPtr( str name, SL sl )ε->sp<View>{
+	α AppSchema::GetViewPtr( str name, SL sl )ε->sp<Table>{
 		let y = FindView( name ); THROW_IFSL( !y, "Could not find view '{}'", name );
 		return y;
 	}

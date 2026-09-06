@@ -16,7 +16,7 @@
 
 #define let const auto
 namespace Jde::Access::Server{
-	α AclQLAwait::Table()ε->const DB::View&{ return GetTable("acl"); }
+	α AclQLAwait::Table()ε->const DB::Table&{ return GetTable("acl"); }
 
 	α AclQLAwait::Suspend()ι->void{
 		if( _mutation.Type==QL::EMutationQL::Purge )

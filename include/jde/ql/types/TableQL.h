@@ -19,8 +19,8 @@ namespace Jde::QL{
 
 		α AddColumn( sv jsonName )ι->bool;
 		α AddFilter( const string& column, const jvalue& value )ι->void;
-		α DBTable()Ι->sp<DB::View>{ return _dbTable && _dbTable->QLView ? _dbTable->QLView : _dbTable; }
-		α SetDBTable( sp<DB::View> x )ι->void{ _dbTable = move(x); }
+		α DBTable()Ι->sp<DB::Table>{ return _dbTable && _dbTable->QLView ? _dbTable->QLView : _dbTable; }
+		α SetDBTable( sp<DB::Table> x )ι->void{ _dbTable = move(x); }
 		α DBTableName()Ι->str{ return DBTable() ? DBTable()->Name : Str::Empty(); }
 		α DefaultResult()Ι->jvalue{ return IsPlural() ? jvalue{jarray{}} : jvalue{jobject{}}; }
 		α EraseColumn( sv jsonName )ι->void{ Columns.erase( remove_if( Columns.begin(), Columns.end(), [&](let& c){return c.JsonName==jsonName;}), Columns.end() ); }
@@ -48,7 +48,7 @@ namespace Jde::QL{
 		vector<TableQL> InlineFragments; //... on Type { }
 		bool ReturnRaw{true};
 	private:
-		sp<DB::View> _dbTable;
+		sp<DB::Table> _dbTable;
 	};
 }
 #undef let

@@ -12,7 +12,7 @@
 
 #define let const auto
 namespace Jde::QL{
-	α dbTable( string jName, const vector<sp<DB::AppSchema>>& schemas, bool system, SL sl )ε->sp<DB::View>{
+	α dbTable( string jName, const vector<sp<DB::AppSchema>>& schemas, bool system, SL sl )ε->sp<DB::Table>{
 		let dbName = DB::Names::ToPlural( DB::Names::FromJson(move(jName)) );
 		return system ? DB::AppSchema::FindView( schemas, dbName ) : DB::AppSchema::GetViewPtr( schemas, dbName, sl );
 	}

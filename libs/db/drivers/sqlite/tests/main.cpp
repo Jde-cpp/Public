@@ -9,8 +9,8 @@ namespace Jde::DB::Sqlite::Schema{
 	α Create()ε->void;
 }
 
-//The meta graph has pre-existing reference cycles (Column::Table/PKTable are sp<View> back-refs into View::Columns),
-//so process-lifetime schema metadata never frees and LeakSanitizer reports it. The real fix (wp<View> back-refs) is
+//The meta graph has pre-existing reference cycles (Column::Table/PKTable are sp<Table> back-refs into Table::Columns),
+//so process-lifetime schema metadata never frees and LeakSanitizer reports it. The real fix (wp<Table> back-refs) is
 //tracked in reviews/dbReview.md TODO; until then, suppress just those allocation sites so unrelated leaks still surface.
 extern "C" const char* __lsan_default_suppressions(){
 	return
@@ -18,7 +18,6 @@ extern "C" const char* __lsan_default_suppressions(){
 		"leak:Jde::DB::TableDdl\n"
 		"leak:Jde::DB::ColumnDdl\n"
 		"leak:Jde::DB::Column\n"
-		"leak:Jde::DB::View\n"
 		"leak:Jde::DB::Table\n"
 		"leak:Jde::DB::AppSchema\n"
 		"leak:Jde::DB::DBSchema\n"

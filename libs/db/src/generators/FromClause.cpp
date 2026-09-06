@@ -5,7 +5,6 @@
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/db/meta/Table.h>
-#include <jde/db/meta/View.h>
 
 #define let const auto
 
@@ -33,9 +32,6 @@ namespace Jde::DB{
 
 		return joins;
 	}
-	FromClause::FromClause( const sp<View>& v )ι:
-		Joins{ {v->Columns[0]} }
-	{};
 	FromClause::FromClause( vec<sp<Table>>& tables, SL sl )ε:
 		Joins{ getJoins(tables, sl) }
 	{}
@@ -100,7 +96,7 @@ namespace Jde::DB{
 		return column;
 	}
 
-	α FromClause::GetFirstTable( SL sl )Ε->sp<View>{
+	α FromClause::GetFirstTable( SL sl )Ε->sp<Table>{
 		THROW_IFSL( Joins.size()==0, "!SingleTable and Joins.size()==0" );
 		return Joins[0].From->Table;
 	}

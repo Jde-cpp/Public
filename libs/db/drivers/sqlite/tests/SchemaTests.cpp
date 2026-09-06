@@ -330,7 +330,7 @@ namespace Jde::DB::Sqlite::Tests{
 	//#8: nothing pinned the placeholder-vs-param invariant on the update/where generators, which is why #5 and #22-#25 all
 	//sat unnoticed.  The invariant every clause owes its caller: one '?' in the text per bound param, and a text the
 	//backend will actually parse.  These live here rather than in Jde.DB.Tests because UpdateClause::Move and
-	//WhereClause::Add reach View::Syntax() -> AppSchema::Syntax() -> DBSchema->DS(), and that suite opens no data source.
+	//WhereClause::Add reach Table::Syntax() -> AppSchema::Syntax() -> DBSchema->DS(), and that suite opens no data source.
 	Ω placeholders( str sql )ι->uint{ return (uint)std::ranges::count( sql, '?' ); }
 	Ω countOf( str haystack, sv needle )ι->uint{
 		uint n{};
@@ -372,7 +372,7 @@ namespace Jde::DB::Sqlite::Tests{
 		EXPECT_EQ( sks.Text.find(",\n"), string::npos ) << sks.Text; //no comma left immediately before the from-newline.
 	}
 
-	//#15: View::Initialize must be idempotent - SchemaDdl::SyncTables re-initializes every table after the ctor's Initialize, and re-init duplicated PKTable->Children.
+	//#15: Table::Initialize must be idempotent - SchemaDdl::SyncTables re-initializes every table after the ctor's Initialize, and re-init duplicated PKTable->Children.
 	TEST_P( SchemaTests, InitializeIdempotentChildren ){
 		auto schema = DB::GetCluster( GetParam(), ms<Access::Authorize>("SqliteTests") )->GetAppSchema( "access" );
 		sp<Table> mapped;
@@ -385,7 +385,25 @@ namespace Jde::DB::Sqlite::Tests{
 		EXPECT_EQ( pkTable->Children.size(), before ); //no duplicate child on re-init.
 	}
 
-	//#17: the (View,alias,cols) SelectClause ctor resolves each name with View::GetColumnPtr, which THROWs.  While the
+	//db-refactor B4: a `views:` entry is a Table held in AppSchema::Views - map membership is the whole distinction.  FindView
+	//answers from Views, then falls back to Tables; FindTable never answers a view; and a view ran Initialize like a table
+	//(Schema set, and users' qlView points back at users through Owner).
+	TEST_P( SchemaTests, ViewsAreTables ){
+		auto schema = DB::GetCluster( GetParam(), ms<Access::Authorize>("SqliteTests") )->GetAppSchema( "access" );
+		auto view = schema->FindView( "users_ql" );
+		ASSERT_TRUE( view );
+		ASSERT_NE( schema->Views.find("users_ql"), schema->Views.end() );
+		EXPECT_EQ( schema->Views.find("users_ql")->second, view );
+		EXPECT_FALSE( schema->FindTable("users_ql") );
+		EXPECT_EQ( schema->FindView("users"), schema->FindTable("users") ); //the fallback.
+		EXPECT_EQ( view->Schema, schema );
+		auto users = schema->GetTablePtr( "users" );
+		ASSERT_TRUE( users->QLView );
+		EXPECT_EQ( users->QLView, view );
+		EXPECT_EQ( users->QLView->Owner.lock(), users );
+	}
+
+	//#17: the (Table,alias,cols) SelectClause ctor resolves each name with Table::GetColumnPtr, which THROWs.  While the
 	//ctor was ι that throw was std::terminate, and the caller's own try/catch could not see it - so a meta rename, or a
 	//typo in a new call site, took the process down.  Note the failure mode if this regresses: the suite does not report
 	//a failed test, it dies here.

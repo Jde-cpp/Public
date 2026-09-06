@@ -1,10 +1,10 @@
 #include "ForeignKey.h"
 #include <jde/db/meta/Column.h>
-#include <jde/db/meta/View.h>
+#include <jde/db/meta/Table.h>
 #include <jde/fwk/str.h>
 
 namespace Jde::DB{
-	α ForeignKey::Create( sv name, sv columnName, const DB::View& pk, const DB::View& foreignTable )ε->string{
+	α ForeignKey::Create( sv name, sv columnName, const DB::Table& pk, const DB::Table& foreignTable )ε->string{
 		THROW_IF( pk.SurrogateKeys.size()!=1, "{} has {} columns in pk, multiple has not implemented", pk.Name, pk.SurrogateKeys.size() );
 		return Ƒ( "alter table {} add constraint {} foreign key({}) references {}({})", foreignTable.SqlName(), name, columnName, pk.SqlName(), pk.GetPK()->Name );
 	}

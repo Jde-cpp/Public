@@ -6,7 +6,7 @@
 #include <jde/db/generators/InsertClause.h>
 #include <jde/db/generators/Statement.h>
 #include <jde/db/meta/AppSchema.h>
-#include <jde/db/meta/View.h>
+#include <jde/db/meta/Table.h>
 #include <jde/access/Authorize.h>
 #include "../serverInternal.h"
 

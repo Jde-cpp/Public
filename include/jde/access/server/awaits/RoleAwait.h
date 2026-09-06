@@ -9,7 +9,7 @@ namespace Jde::Access::Server{
 	struct RoleAwait final : TAwait<jvalue>, noncopyable{
 		RoleAwait( const QL::TableQL& q, UserPK userPK, SRCE )ε;
 		α Suspend()ι->void override{ Select(); }
-		sp<DB::View> MemberTable;
+		sp<DB::Table> MemberTable;
 		QL::TableQL Query;
 		Jde::UserPK UserPK;
 	private:

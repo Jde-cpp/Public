@@ -77,7 +77,7 @@ namespace Jde::QL::Tests{
 		subscribe( "subscription ProviderCreated{ providerCreated(subscriptionId:1){ id providerTypes{ id name } } }", UserPK{7} );
 		ASSERT_EQ( Acl->Tested.size(), 2u );
 		EXPECT_EQ( Acl->Tested[0].first, "providers" );
-		EXPECT_EQ( Acl->Tested[1].first, "providerTypes" ); //View::Authorize names the resource in json - see #10 for which name that ought to be.
+		EXPECT_EQ( Acl->Tested[1].first, "providerTypes" ); //Table::Authorize names the resource in json - see #10 for which name that ought to be.
 	}
 	//review3 #30: IQL::Unsubscribe built `unsubscribe( id:[…] )` and sent it round the QL text path - a spelling
 	//Parser::LoadUnsubscriptions rejects outright, and which QLAwait answers "Unsubscribe is not supported in this context."

@@ -31,9 +31,9 @@ namespace Jde::DB::Tests{
 		EXPECT_EQ( ins.SequenceColumn(), nullptr );          //was a null-column ->Table deref (segfault).
 	}
 
-	//#33: getMap() runs from View's member-init list and FindColumn's "id" alias reads SurrogateKeys, which used to be declared *after* Map - so the read was of a not-yet-constructed vector.
+	//#33: getMap() runs from Table's member-init list and FindColumn's "id" alias reads SurrogateKeys, which used to be declared *after* Map - so the read was of a not-yet-constructed vector.
 	//The surrogate key is deliberately not named "id": with the old order the garbage size() sends FindColumn to the Columns search, which has no "id", and GetColumnPtr throws.
-	TEST( ViewTests, MapIdAliasResolvesSurrogateKey ){
+	TEST( TableTests, MapIdAliasResolvesSurrogateKey ){
 		const auto j = Json::Parse( R"({"columns":{"entity_id":{"sk":0,"i":0},"member_id":{"i":1}},"map":{"parentId":"id","childId":"member_id"}})" );
 		const Table t{ "m", j };
 		ASSERT_EQ( t.SurrogateKeys.size(), 1u );
@@ -87,7 +87,7 @@ namespace Jde::DB::Tests{
 		EXPECT_EQ( count->Type, EType::None );
 		EXPECT_FALSE( count->IsNullable ); EXPECT_FALSE( count->IsSequence );
 		EXPECT_TRUE( count->Insertable ); EXPECT_TRUE( count->Updateable ); //the json ctor's value_or defaults.
-		const View v{ "placeholder" };
+		const Table v{ "placeholder" };
 		EXPECT_FALSE( v.HasCustomInsertProc ); EXPECT_FALSE( v.IsFlags );
 		EXPECT_TRUE( v.Operations==Access::ERights{} );
 	}

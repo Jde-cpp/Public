@@ -2,7 +2,7 @@
 #include <jde/db/DBException.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/meta/AppSchema.h>
-#include <jde/db/meta/Table.h> //complete type: SelectEnum takes const View& and GetTablePtr yields sp<Table>.
+#include <jde/db/meta/Table.h> //complete type: SelectEnum takes const Table& and GetTablePtr yields sp<Table>.
 #include <jde/db/meta/Cluster.h>
 #include <jde/access/Authorize.h>
 

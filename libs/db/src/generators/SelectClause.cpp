@@ -17,7 +17,7 @@ namespace Jde::DB{
 	}
 	//ε: GetColumnPtr THROWs on a name the view does not have, so a noexcept frame here turned a typo - or a meta rename -
 	//into std::terminate, which the caller's own try/catch could not see.
-	α tableCols( const View& t, str alias, const vector<string>& cols )ε->vector<Object>{
+	α tableCols( const Table& t, str alias, const vector<string>& cols )ε->vector<Object>{
 		vector<Object> y; y.reserve( cols.size() );
 		for( auto& c : cols )
 			y.emplace_back( AliasCol{alias, t.GetColumnPtr(move(c))} );
@@ -32,7 +32,7 @@ namespace Jde::DB{
 		Columns{ fromArray(cols, alias) }
 	{}
 
-	SelectClause::SelectClause( const View& t, str alias, const vector<string>& cols )ε:
+	SelectClause::SelectClause( const Table& t, str alias, const vector<string>& cols )ε:
 		Columns{ tableCols(t, move(alias), cols) }
 	{}
 

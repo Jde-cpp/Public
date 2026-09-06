@@ -24,7 +24,7 @@ namespace Jde::QL{
 		}
 		return y;
 	}
-	α GetEnumValues( const DB::View& table, SL sl )ε->flat_map<uint,string>{
+	α GetEnumValues( const DB::Table& table, SL sl )ε->flat_map<uint,string>{
 		return table.Schema->DS()->SelectEnumSync<uint,string>( table, Cache::DefaultDuration(), sl );
 	}
 	α numberToJson( const DB::Value& dbValue, const DB::Column& c )ι->jvalue{
@@ -105,18 +105,18 @@ namespace Jde::QL{
 	//(first match by pk table) can not.  But a guess is only an fk if the column it lands on has a pk table:  nesting a table
 	//under itself spells its own pk ("provider_types" -> provider_type_id), whose PKTable is null.  FindFK then covers the
 	//names the guess can not spell - an extension whose base pluralises irregularly (objects extends node_ids -> node_id_id).
-	α findFK( const DB::View& dbTable, string qlName )ε->sp<DB::Column>{
+	α findFK( const DB::Table& dbTable, string qlName )ε->sp<DB::Column>{
 		auto fk = dbTable.FindColumn( qlName ); //members.
 		if( !fk )
 			fk = dbTable.FindColumn( ToSingular(qlName)+"_id" );//member_id
 		return fk && fk->PKTable ? fk : dbTable.FindFK( qlName );
 	}
 
-	Ω addColumn( const ColumnQL& c, const TableQL& qlTable, const DB::View& dbTable, DB::Statement& statement, bool excludeId )ε->void{
+	Ω addColumn( const ColumnQL& c, const TableQL& qlTable, const DB::Table& dbTable, DB::Statement& statement, bool excludeId )ε->void{
 		auto pk = dbTable.FindPK();
 		let isPK = c.JsonName=="id";
-		if( let table = isPK ? dynamic_cast<const DB::Table*>(&dbTable) : nullptr; table )
-			pk = table->Extends ? table->Extends->GetPK() : pk;
+		if( isPK && dbTable.Extends )
+			pk = dbTable.Extends->GetPK();
 	 	THROW_IF( isPK && !pk, "[{}]No id column.", qlTable.JsonName );
 
 		auto columnName = isPK ? pk->Name : FromJson( c.JsonName );
@@ -144,7 +144,7 @@ namespace Jde::QL{
 		c.DBColumn = dbColumn;
 	}
 
-	Ω columnSql( const TableQL& qlTable, const DB::View& dbTable, bool excludeId, DB::Statement& statement, optional<bool> includeDeleted=nullopt, bool includeWhere=true )ε->void{
+	Ω columnSql( const TableQL& qlTable, const DB::Table& dbTable, bool excludeId, DB::Statement& statement, optional<bool> includeDeleted=nullopt, bool includeWhere=true )ε->void{
 		for( let& c : qlTable.Columns )
 			addColumn( c, qlTable, dbTable, statement, excludeId );
 
@@ -155,16 +155,16 @@ namespace Jde::QL{
 			auto pFK = findFK( dbTable, qlChild.DBTable()->Name ); //members.
 			if( pFK ){
 				auto pkTable = pFK->PKTable;
-				if( sp<DB::Table> table = AsTable( pkTable ); table && table->QLView )
-					pkTable = table->QLView;
+				if( pkTable->QLView )
+					pkTable = pkTable->QLView;
 				statement.From.TryAdd( {pFK, pkTable->GetPK(), !pFK->IsNullable} );
 				columnSql( qlChild, *pkTable, false, statement, includeDeleted, includeWhere );
 			}
 		}
 	}
 
-	α findMap( const DB::View& dbTable, string qlName )ε->optional<DB::View::ParentChildMap>{
-		optional<DB::View::ParentChildMap> map;
+	α findMap( const DB::Table& dbTable, string qlName )ε->optional<DB::Table::ParentChildMap>{
+		optional<DB::Table::ParentChildMap> map;
 		if( auto mapTable = find_if(dbTable.Children, [&](auto& c){return c->Map->Child->PKTable->Name==qlName;}); mapTable!=dbTable.Children.end() ) //role_members
 			map = (*mapTable)->Map;//permissionId
 		return map;
@@ -254,9 +254,8 @@ namespace Jde::QL{
 	//#22: sub-table rows are keyed by the parent's pk, and columnSql emits the select in the order the *client* asked for its
 	//columns - so the pk is at 0 only by luck.  Find it, and add it if the client did not ask for it at all: without a key
 	//there is nothing to attach the children to.  ToJson skips a column no ColumnQL claims, so the extra one does not surface.
-	Ω parentKeyIndex( DB::Statement& statement, const DB::View& dbTable )ε->uint{
-		let table = dbTable.IsView() ? nullptr : dynamic_cast<const DB::Table*>( &dbTable );
-		let pk = table && table->Extends ? table->Extends->GetPK() : dbTable.GetPK();
+	Ω parentKeyIndex( DB::Statement& statement, const DB::Table& dbTable )ε->uint{
+		let pk = dbTable.Extends ? dbTable.Extends->GetPK() : dbTable.GetPK();
 		for( uint i=0; i<statement.Select.Columns.size(); ++i ){
 			if( let col = get_if<DB::AliasCol>(&statement.Select.Columns[i]); col && col->Column && *col->Column==*pk )
 				return i;
@@ -274,7 +273,7 @@ namespace Jde::QL{
 			if( _qlTable.Tables.size() )
 				_parentKeyIndex = parentKeyIndex( statement, *dbTable );
 			auto where = statement.Where;//copied before the move below - argument evaluation order is unspecified.
-			SelectSubTables( move(statement), _qlTable.Tables, DB::AsTable(dbTable), move(where) );
+			SelectSubTables( move(statement), _qlTable.Tables, dbTable, move(where) );
 		}
 		catch( runtime_error& e ){
 			ResumeExp( move(e) );
@@ -317,8 +316,7 @@ namespace Jde{
 		columnSql( qlTable, *dbView, false, statement, includeDeleted, includeWhere );
 		if( statement.From.Empty() )
 			statement.From += { dbView->Columns[0] };
-		auto dbTable = dbView->IsView() ? nullptr : AsTable(dbView);
-		if( optional<DB::Criteria> criteria = dbTable && dbTable->Extends ? dbTable->SurrogateKeys[0]->Criteria : nullopt; criteria ) //identities is_group
+		if( optional<DB::Criteria> criteria = dbView->Extends ? dbView->SurrogateKeys[0]->Criteria : nullopt; criteria ) //identities is_group
 			statement.Where.Add( *criteria );//group with no members.
 		statement.OrderBy = qlTable.OrderBy();
 		statement.Limit( qlTable.Limit() );

@@ -15,5 +15,5 @@ namespace Jde::QL{
 			y = DB::Names::ToJson( Column->Name );
 		return y;
 	}
-	α JsonColumn::Table()Ι->const DB::View&{ return Column->IsFlags() || Column->IsEnum() ? *Column->PKTable : *Column->Table; }
+	α JsonColumn::Table()Ι->const DB::Table&{ return Column->IsFlags() || Column->IsEnum() ? *Column->PKTable : *Column->Table; }
 }

@@ -13,6 +13,6 @@
 #include <jde/fwk/io/json.h>
 #include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/db/meta/AppSchema.h>
-#include <jde/db/meta/View.h>
+#include <jde/db/meta/Table.h>
 #include <jde/opc/usings.h>
 #include <jde/opc/uatypes/opcHelpers.h>

@@ -1,5 +1,5 @@
 //The in-memory half of QL::Filter - the predicate the subscription fan-out uses to decide whether a changed row
-//still matches a live query.  ToWhereClause (the SQL half) needs a DB::View, so it is not covered here.
+//still matches a live query.  ToWhereClause (the SQL half) needs a DB::Table, so it is not covered here.
 #include <gtest/gtest.h>
 #include <jde/db/Value.h>
 #include <jde/fwk/chrono.h>

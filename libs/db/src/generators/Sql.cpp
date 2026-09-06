@@ -4,7 +4,7 @@
 #include <jde/db/generators/WhereClause.h>
 #include <jde/db/meta/Column.h>
 #include <jde/db/meta/Table.h>
-#include <jde/db/meta/View.h>
+#include <jde/db/meta/Table.h>
 
 #define let const auto
 

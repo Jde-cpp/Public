@@ -1,6 +1,6 @@
 ﻿#include <jde/db/generators/Statement.h>
 #include <jde/db/generators/Functions.h>
-#include <jde/db/meta/View.h>
+#include <jde/db/meta/Table.h>
 
 namespace Jde::DB{
 	Statement::Statement( SelectClause select, FromClause&& from, WhereClause&& where, string orderBy )ι:

@@ -33,9 +33,9 @@ namespace Jde::QL{
 	}
 
 	//The flags columns this mutation actually sets, over the same extension chain and the same arg predicate CreateUpdate uses.
-	Ω flagTables( const DB::Table& table, const jobject& input, vector<sp<DB::View>>& y )ι->void{
-		if( let extends = table.IsView() ? nullptr : AsTable(table).Extends; extends )
-			flagTables( *extends, input, y );
+	Ω flagTables( const DB::Table& table, const jobject& input, vector<sp<DB::Table>>& y )ι->void{
+		if( table.Extends )
+			flagTables( *table.Extends, input, y );
 		for( let& c : table.Columns ){
 			if( !c->Updateable || c->IsPK() || c->SKIndex || !c->IsFlags() )//#46: the same predicate createUpdate uses, so the two walks stay in step.
 				continue;
@@ -47,7 +47,7 @@ namespace Jde::QL{
 
 	//Prefetched by Execute().  The fallback is the old path (cached, but it blocks); it only runs if the two walks ever
 	//disagree, so a future divergence costs a stall instead of a failed mutation.
-	Ω enumValues( Enums& enums, const DB::View& enumTable )ε->const flat_map<uint,string>&{
+	Ω enumValues( Enums& enums, const DB::Table& enumTable )ε->const flat_map<uint,string>&{
 		auto p = enums.find( enumTable.Name );
 		if( p==enums.end() ){
 			WARNT( ELogTags::QL, "[{}]enum values were not prefetched - falling back to a blocking lookup.", enumTable.Name );
@@ -57,7 +57,7 @@ namespace Jde::QL{
 	}
 
 	Ω createUpdate( const DB::Table& table, const jobject& input, Enums& enums, vector<DB::UpdateClause>& updates )ε->DB::Value{
-		let pExtendedFromTable = table.IsView() ? nullptr : AsTable(table).Extends;
+		let pExtendedFromTable = table.Extends;
 		DB::Value rowKey = pExtendedFromTable  ? createUpdate(*pExtendedFromTable, input, enums, updates) : DB::Value{};
 
 		DB::UpdateClause update;
@@ -136,7 +136,7 @@ namespace Jde::QL{
 			let input = _mutation.ExtrapolateVariables();
 			vector<DB::UpdateClause> updates;
 			if( _mutation.Type==EMutationQL::Update ){
-				vector<sp<DB::View>> enumTables; Enums enums;//a flags column resolves its names through the enum table - fetched here, where waiting on the db is free.
+				vector<sp<DB::Table>> enumTables; Enums enums;//a flags column resolves its names through the enum table - fetched here, where waiting on the db is free.
 				flagTables( *_table, input, enumTables );
 				for( let& enumTable : enumTables ){
 					if( enums.contains(enumTable->Name) )

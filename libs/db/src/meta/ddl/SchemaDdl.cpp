@@ -93,24 +93,23 @@ namespace Jde::DB{
 		db->SyncFKs( config );
 	}
 
-	//The metadata graph is strongly cyclic - AppSchema::DBSchema, View::Schema, Column::Table/PKTable, plus
+	//The metadata graph is strongly cyclic - AppSchema::DBSchema, Table::Schema, Column::Table/PKTable, plus
 	//QLView/Children/Map/Extends - so this temporary's refcount never reaches zero on scope exit.  Unwire only the
 	//objects this graph initialized (Schema points at its own AppSchema): SyncTables also emplaces the config
 	//schema's live views, which must merely be released, never mutated.
 	α SchemaDdl::Teardown()ι->void{
 		for( auto&& [_, appSchema] : AppSchemas ){
-			auto clear = []( View& v )ι{
-				v.Columns.clear();
-				v.Map.reset();
-				v.QLView = nullptr;
-				v.Children.clear();
-				v.Schema = nullptr;
+			auto clear = []( Table& t )ι{
+				t.Columns.clear();
+				t.Map.reset();
+				t.QLView = nullptr;
+				t.Children.clear();
+				t.Schema = nullptr;
+				t.Extends = nullptr;
 			};
 			for( auto&& [_, t] : appSchema->Tables ){
-				if( t->Schema!=appSchema )
-					continue;
-				clear( *t );
-				t->Extends = nullptr;
+				if( t->Schema==appSchema )
+					clear( *t );
 			}
 			for( auto&& [_, v] : appSchema->Views ){
 				if( v->Schema==appSchema )

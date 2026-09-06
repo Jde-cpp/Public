@@ -11,7 +11,7 @@ namespace Jde::QL::Tests{
 		return { string{name}, ms<DB::Table>( name, Json::Parse(json) ) };
 	}
 	//Initialize wires the tables into the same cyclic graph the real schema is - Column::PKTable to the pk table, whose
-	//View::Children points back, AppSchema::Tables to every table, whose View::Schema points back - and a process-lifetime
+	//Table::Children points back, AppSchema::Tables to every table, whose Table::Schema points back - and a process-lifetime
 	//schema never lets go of it.  A fresh one per call does, so LeakSanitizer reported every set at exit (736 allocations across
 	//the suite).  Kept reachable here, exactly as the real one is, so the report matches the design rather than the scaffolding.
 	Ξ keepAlive( vector<sp<DB::AppSchema>> schemas )ι->vector<sp<DB::AppSchema>>{

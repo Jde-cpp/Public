@@ -1,7 +1,7 @@
 #pragma once
 #include <jde/access/usings.h>
 
-namespace Jde::DB{ struct AppSchema; struct IDataSource; struct View; }
+namespace Jde::DB{ struct AppSchema; struct IDataSource; struct Table; }
 namespace Jde::Access{
 	struct Authorize;
 	enum class ESubscription : uint16{
