@@ -15,8 +15,8 @@ if( WIN32 )
 	target_link_directories( ${targetName} PUBLIC ${CMAKE_INSTALL_PREFIX}/protobuf/lib )
 endif()
 
-file( GLOB sources *.cpp auth/*.cpp )
-file( GLOB headers   *.h ${jdeRoot}/include/jde/web/server/*.h )
+file( GLOB sources CONFIGURE_DEPENDS *.cpp auth/*.cpp )
+file( GLOB headers CONFIGURE_DEPENDS   *.h ${jdeRoot}/include/jde/web/server/*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 if( WIN32 )

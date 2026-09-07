@@ -54,7 +54,14 @@ namespace Jde::Web::Client{
 	α IClientSocketSession::PopTask( RequestId requestId )ι->std::any{
 		std::any h;
 		_tasks.erase_if( requestId, [&h](auto&& kv){h=kv.second; return true;} );//Subscriptions aren't in tasks.
+		CancelTimeout( requestId );//answered - stop its deadline from holding the io_context for the rest of the timeout.
 		return h;
+	}
+	α IClientSocketSession::CancelTimeout( RequestId requestId )ι->void{
+		_timeouts.visit( requestId, [](auto&& kv){ kv.second->Cancel(); } );//AddTimeout's own resumption erases the entry.
+	}
+	α IClientSocketSession::CancelTimeouts()ι->void{
+		_timeouts.visit_all( [](auto&& kv){ kv.second->Cancel(); } );
 	}
 	//60s: long enough that a slow query is not mistaken for a dead peer, short enough that a stranded caller does not wait out the
 	//process.  Whether it is right depends on the workload, hence the setting - a legitimate query that outlives it takes the
@@ -81,13 +88,20 @@ namespace Jde::Web::Client{
 		const auto _ = shared_from_this();//the timer outlives the request; keep us alive so the check below is not on a freed session.
 		const auto timeout = requestTimeout();
 		auto timer = ms<DurationTimer>( timeout, sl );
+		//Registered before the first suspend, which is before Suspend() writes the request (ClientSocketAwait), so no reply can
+		//arrive ahead of the entry PopTask cancels through.  Waiting the timer out instead is not free: a pending asio timer is
+		//work, and io_context::run - hence Process::Shutdown - blocks on it.  A process that exited within the timeout of its
+		//last request therefore sat out the remainder and was killed by the shutdown watchdog (emulator-review #11).
+		_timeouts.emplace( requestId, timer );
 		auto _ = co_await *timer;
+		_timeouts.erase( requestId );
 		if( !HasTask(requestId) )
 			co_return;//answered, or already failed with the session.
 		CloseOnError( Ƒ("request {} unanswered after {}", hex(requestId), Chrono::ToString(timeout)), sl );
 	}
 
 	α IClientSocketSession::CloseTasks( function<void(std::any&&)> f )ι->void{
+		CancelTimeouts();//the socket is gone; nothing these guard can still be answered, and each one is live io_context work.
 		_tasks.erase_if( [ f ](auto&& kv){
 			f( move(kv.second) );
 			return true;

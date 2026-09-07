@@ -6,8 +6,8 @@ include( ${jdeRoot}/build/dependencies.cmake )
 set( targetName Jde.App.Client )
 add_library( ${targetName} )
 compileOptions( ${targetName} )
-file(GLOB sources *.cpp awaits/*.cpp )
-file(GLOB headers  */*.h )
+file(GLOB sources CONFIGURE_DEPENDS *.cpp awaits/*.cpp )
+file(GLOB headers CONFIGURE_DEPENDS  */*.h )
 target_sources( ${targetName}
     PRIVATE
         "${sources}"

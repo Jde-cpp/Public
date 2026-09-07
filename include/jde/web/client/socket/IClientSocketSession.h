@@ -60,6 +60,11 @@ namespace Jde::Web::Client{
 		α CloseOnError( string reason, SRCE )ι->void;
 		α HasTask( RequestId requestId )Ι->bool{ return _tasks.contains( requestId ); }
 		α CloseTasks( function<void(std::any&&)> f )ι->void;
+		//Cancel the deadline AddTimeout armed for this request, if it is still pending.  A DurationTimer that is never
+		//cancelled is *live asio work*: `io_context::run` cannot return while one is queued, so an answered request used to
+		//hold the executor - and with it every shutdown - for the balance of its full requestTimeout.
+		α CancelTimeout( RequestId requestId )ι->void;
+		α CancelTimeouts()ι->void;//every one of them - the socket is gone, so nothing they guard can still be answered.
 		β OnClose( beast::error_code ec )ι->void;
 		//mirrors the server's StreamPtr (IWebsocketSession.h): _stream is written by OnClose on the strand and read from other
 		//threads - Write from any caller, Close from a shutdown thread - so always take a copy through here, never touch the
@@ -86,6 +91,9 @@ namespace Jde::Web::Client{
 		CreateClientSocketSessionAwait::Handle _connectHandle;
 		CloseClientSocketSessionAwait::Handle _closeHandle;
 		boost::concurrent_flat_map<RequestId,std::any> _tasks;
+		//The deadline per in-flight request, so answering one can cancel it.  The server side has always kept its timers this
+		//way (IWebsocketSession::_pendingQueries, finding S3); the client kept only the handle and paid the full timeout.
+		boost::concurrent_flat_map<RequestId,sp<DurationTimer>> _timeouts;
 		atomic<uint32> _id;//_serverSocketIndex
 
 		friend struct ClientSocketStream; friend struct CloseClientSocketSessionAwait;

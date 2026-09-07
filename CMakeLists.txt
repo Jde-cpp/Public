@@ -69,6 +69,7 @@ if( jde_APPS )
 		add_subdirectory( apps/OpcGateway/tests apps/OpcGateway/tests )
 		add_subdirectory( apps/OpcGateway/soak apps/OpcGateway/soak )
 		add_subdirectory( apps/OpcHub/tests apps/OpcHub/tests )
+		add_subdirectory( apps/OpcServer/emulator/tests apps/OpcServer/emulator/tests ) #the PLC emulator's units - no db, no server.
 	endif()
 	add_subdirectory( apps/AppServer apps/AppServer/exe )
 	add_subdirectory( apps/OpcServer apps/OpcServer/exe )

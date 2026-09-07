@@ -4,15 +4,17 @@
 #include <open62541/plugin/securitypolicy_default.h>
 #include <jde/opc/uatypes/BrowsePath.h>
 #include <jde/opc/uatypes/opcHelpers.h>
+#include <jde/opc/ServerTrust.h>
 
 #define let const auto
 namespace Jde::Opc::Emulator{
 	constexpr ELogTags _tags{ (ELogTags)EOpcLogTags::Client };
 	Ω check( UA_StatusCode sc, string what, SL sl )ε->void{ THROW_IFX( sc, UAException(sc, move(what), {.Tags=EOpcLogTags::Client}, sl) ); }
 
-	EmulatorClient::EmulatorClient( string url, string certificateUri, const Crypto::CryptoSettings& certificate, string issuedToken, SL sl )ε:
+	EmulatorClient::EmulatorClient( string url, string applicationUri, string serverApplicationUri, const Crypto::CryptoSettings& certificate, string issuedToken, SL sl )ε:
 		_url{ move(url) },
-		_uri{ Str::Replace(certificateUri, " ", "%20") },
+		_applicationUri{ Str::Replace(applicationUri, " ", "%20") },
+		_serverApplicationUri{ Str::Replace(serverApplicationUri, " ", "%20") },
 		_token{ move(issuedToken) },
 		_logger{ 0 }{
 		//UAAccess::ActivateSession reads a token under 9 chars as the AppServer session id in hex; anything longer is parsed as a JWT.
@@ -64,12 +66,16 @@ namespace Jde::Opc::Emulator{
 		try{
 			check( UA_SecurityPolicy_None(&policies[0], UA_BYTESTRING_NULL, &_logger), "UA_SecurityPolicy_None", sl ); ++initialized;
 			check( UA_SecurityPolicy_Basic256Sha256(&policies[1], certificate, privateKey, &_logger), "UA_SecurityPolicy_Basic256Sha256", sl ); ++initialized;
-			//applicationUri filters the *server's* endpoints; clientDescription's is what we advertise and what the server
-			//matches against the certificate's SAN uri.  Both from the certificateUri, as the gateway does.
+			//Two different uris (#15).  config->applicationUri only FILTERS the server's endpoints (matchEndpoint: keep those
+			//whose server advertises it; empty keeps all), so it is the server's.  clientDescription's is what we advertise
+			//as ourselves, and the server verifies it against the SAN of the certificate we present (validateCertificate) -
+			//against each other, never against its own - so it is this device's.  The gateway sets both from one string
+			//and so introduces itself as the server it is calling; a PLC has a name of its own.
 			UA_String_clear( &config->applicationUri );
-			config->applicationUri = AllocUAString( _uri );
+			if( _serverApplicationUri.size() )
+				config->applicationUri = AllocUAString( _serverApplicationUri );
 			UA_String_clear( &config->clientDescription.applicationUri );
-			config->clientDescription.applicationUri = AllocUAString( _uri );
+			config->clientDescription.applicationUri = AllocUAString( _applicationUri );
 			//the user token rides an encrypted policy (/opc/userTokenPolicyUri) - this is the policy that encrypts it.
 			auto grown = (UA_SecurityPolicy*)UA_realloc( config->authSecurityPolicies, sizeof(UA_SecurityPolicy)*(config->authSecurityPoliciesSize+1) );
 			check( grown ? UA_STATUSCODE_GOOD : UA_STATUSCODE_BADOUTOFMEMORY, "authSecurityPolicies", sl );
@@ -86,8 +92,12 @@ namespace Jde::Opc::Emulator{
 		config->securityPolicies = policies;
 		config->securityPoliciesSize = size;
 		config->secureChannelLifeTime = 60*60*1000;
-		//after the policies: setDefault back-fills only what is unset (AcceptAll server-cert verification, the UDP/interrupt
-		//event sources) and skips its own None policy because securityPoliciesSize!=0.  Before them it would install a
+		//A UA-enabled PLC checks who it is talking to: without this, setDefault's AcceptAll below would take any certificate
+		//the endpoint answers with, so anything that can occupy the OpcServer's address collects our issued token and our
+		//process values.  Same verifier and same /access/trustedCertDirs anchors as the gateway's - see jde/opc/ServerTrust.h.
+		ServerTrust::Install( *config, "/emulator/verifyServerCertificate", (Jde::Handle)(uint)_ptr, _url, sl );//the client pointer is the id StateCallback logs, so the verifier's lines and the connect failure line up.
+		//after the policies: setDefault back-fills only what is unset (the verifier just installed, the UDP/interrupt event
+		//sources) and skips its own None policy because securityPoliciesSize!=0.  Before them it would install a
 		//default policy set this block then trips over.
 		check( UA_ClientConfig_setDefault(config), "UA_ClientConfig_setDefault", sl );
 		vector<string> policyUris;
@@ -99,6 +109,12 @@ namespace Jde::Opc::Emulator{
 	α EmulatorClient::StateCallback( UA_Client* ua, UA_SecureChannelState channelState, UA_SessionState sessionState, UA_StatusCode connectStatus )ι->void{
 		constexpr array<sv,6> sessionStates{ "Closed", "CreateRequested", "Created", "ActivateRequested", "Activated", "Closing" };
 		LOG( connectStatus ? ELogLevel::Warning : ELogLevel::Debug, _tags, "[{}]channelState: '{}', sessionState: '{}', connectStatus: '({}){}'", hex((uint)ua), UAException::Message(channelState), FromEnum(sessionStates, sessionState), hex(connectStatus), UAException::Message(connectStatus) );
+		//BadCertificateUntrusted reads the same whether we rejected the server's certificate or it rejected ours; only the
+		//verifier knows which, so say so here.  Already logged by the verifier itself - this ties it to the failed connect.
+		if( connectStatus ){
+			if( let rejection = ServerTrust::Rejection(*UA_Client_getConfig(ua)); rejection.size() )
+				WARNT( _tags, "[{}]{}", hex((uint)ua), rejection );
+		}
 	}
 
 	α EmulatorClient::Connect( SL sl )ε->void{
@@ -116,6 +132,13 @@ namespace Jde::Opc::Emulator{
 	}
 	α EmulatorClient::Iterate( uint32 timeoutMs )ι->UA_StatusCode{
 		return UA_Client_run_iterate( _ptr, timeoutMs );
+	}
+	//Deleting the subscription before a clean Disconnect is what keeps the ten in-flight publish requests quiet:  the server
+	//answers them BadNoSubscription, which open62541 debug-logs, instead of answering a subscription the client has just
+	//forgotten, which processPublishResponse's default branch reports at WARNING each time.  ι - failing here is cosmetic.
+	α EmulatorClient::DeleteSubscription( UA_UInt32 subscription )ι->void{
+		if( let sc = UA_Client_Subscriptions_deleteSingle(_ptr, subscription); sc )
+			DBG( "deleteSubscription {} on '{}' - {}", subscription, _url, UA_StatusCode_name(sc) );
 	}
 	α EmulatorClient::Namespace( sv uri, SL sl )ε->NsIndex{
 		UA_UInt16 index{};

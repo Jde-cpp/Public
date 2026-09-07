@@ -137,8 +137,11 @@ namespace Jde::Opc::Gateway{
 	α AsyncRequest::Clear( RequestId requestId )ι->void{//strand-only (cross-thread callers go through UAClient::ClearRequest)
 		ASSERT( _strand.running_in_this_thread() );
 		TRACE( "[{}.{}]Clearing", hex(UAHandle()), hex(requestId) );
-		if( !_requests.erase(requestId) && requestId!=ConnectRequestId )
-			CRITICALT( ProcessingLoopTag, "[{}.{}]Could not find request handle.", hex(UAHandle()), hex(requestId) );
+		if( !_requests.erase(requestId) && requestId!=ConnectRequestId ){
+			//after Stop it was submitted too late to register (UAClient::Process drops it) and FailPending failed it - expected.
+			let level = _stopped.test() ? ELogLevel::Debug : ELogLevel::Critical;
+			LOG( level, _tags, "[{}.{}]Could not find request handle{}.", hex(UAHandle()), hex(requestId), _stopped.test() ? " - submitted after Stop" : "" );
+		}
 	}
 
 	α AsyncRequest::OnServiceBegin( RequestId requestId )ι->void{//strand-only (fires inside run_iterate)
@@ -162,9 +165,40 @@ namespace Jde::Opc::Gateway{
 		DBG( "[{}]Stopping ProcessingLoop", UAHandle() );
 		CancelPing();
 		_stopped.test_and_set();
-		_requests.clear();
 		_running.clear();
-		_client=nullptr;//breaks the UAClient<->AsyncRequest._client self-reference; the dispatching closure's keep-alive lets the UAClient be destroyed afterwards.
+		//move: breaks the UAClient<->AsyncRequest._client self-reference; the closure's copy keeps the UAClient (and so
+		//`this`) alive until FailPending has run, and its release is what finally lets ~UAClient run.  Posted, never
+		//called here: Stop runs inside UA_Client callbacks (a request callback's Retry, the connect-failure StateCallback
+		//mid-erase_if on _awaitingActivation), and FailPending's disconnect pumps the event loop and re-fires
+		//StateCallback.  _requests stays until then - the callbacks it fires Clear() their own ids.
+		if( auto client = move(_client); client )
+			asio::post( _strand, [this, client]{ FailPending( client ); } );
 	}
-	α AsyncRequest::UAHandle()ι->Handle{ return _client ? _client->Handle() : 0; }
+	α AsyncRequest::FailPending( sp<UAClient> client )ι->void{//strand-only; posted by Stop so it never runs inside a UA_Client callback.
+		ASSERT( _strand.running_in_this_thread() );
+		//Every awaitable that handed open62541 a callback holds an sp<UAClient>, and open62541 holds the awaitable (its
+		//userdata) until that callback fires - which, with the loop stopped, nothing pumps for.  UA_Client_delete would
+		//fire them all (BadShutdown), but ~UAClient cannot run while those sp's exist:  a cycle, and the client - its
+		//UA_Client, event-loop buffers, trust-store certs - leaked for the life of the process (LeakSanitizer:  ~1160
+		//allocations per stranded client; a RemoveClient while a delete-monitored-items round trip was in flight was
+		//enough).  UA_Client_disconnect fails them synchronously instead:  cleanupSession fires every pending callback
+		//with BadSessionClosed, then the channel close - pumped here, which is why this must not run inside run_iterate -
+		//fires anything a callback re-submitted meanwhile with BadSecureChannelClosed, and later submissions are refused
+		//outright.  The coroutines finish, the sp's drop, ~UAClient runs.  It is the call ~UAClient's UA_Client_delete
+		//makes anyway, just before the cycle can form.
+		let pending = _requests.size();
+		UA_Client_disconnect( *client );
+		if( _requests.size() ){
+			string ids; for_each( _requests, [&ids](auto r){ ids += Ƒ("{:x}, ", r); } );
+			WARN( "[{}]{} request(s) still registered after the disconnect: [{}]", hex(client->Handle()), _requests.size(), ids );
+		}
+		else if( pending )
+			DBG( "[{}]Failed {} pending request(s).", hex(client->Handle()), pending );
+		_requests.clear();
+	}
+	α AsyncRequest::SetClient( sp<UAClient> client )ι->void{
+		_handle = client ? client->Handle() : 0;
+		_client = move( client );
+	}
+	α AsyncRequest::UAHandle()ι->Handle{ return _handle; }
 }

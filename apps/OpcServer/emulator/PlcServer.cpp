@@ -8,12 +8,25 @@ namespace Jde::Opc::Emulator{
 	constexpr ELogTags _tags{ (ELogTags)EOpcLogTags::PubSub };
 	static Opc::Logger _logger{};
 
-	PlcServer::PlcServer( UA_UInt16 port, const fs::path& nodeset, PubSub::Config&& contract, SL sl )ε:
+	PlcServer::PlcServer( UA_UInt16 port, sv bind, const fs::path& nodeset, PubSub::Config&& contract, SL sl )ε:
 		_port{ port },
 		_contract{ move(contract) }{
 		UA_ServerConfig config{};
 		config.logging = &_logger;
 		let sc = UA_ServerConfig_setMinimal( &config, port, nullptr ); THROW_IFX( sc, UAException(sc, "UA_ServerConfig_setMinimal", {}, sl) );
+		//setMinimal leaves "opc.tcp://:<port>" - an empty hostname, i.e. "Listen on all interfaces (also external)"
+		//(ua_config_default.c) - alongside UA_AccessControl_default( allowAnonymous=true ), over a nodeset whose
+		//motorRpm/status nodes carry AccessLevel 3.  That is a second, unauthenticated door onto the same tags the
+		//OpcServer serves, on a server nothing is meant to connect to at all, so bind loopback.  It must happen AFTER
+		//setMinimal: setMinimal deletes whatever url it finds and logs "ServerUrls already set. Overriding.".  The
+		//anonymous access control stays - its startup warnings then describe a loopback-only server.
+		let url = bind.empty() ? Ƒ("opc.tcp://:{}", port) : Ƒ("opc.tcp://{}:{}", bind, port);
+		UA_Array_delete( config.serverUrls, config.serverUrlsSize, &UA_TYPES[UA_TYPES_STRING] );
+		config.serverUrls = nullptr;
+		config.serverUrlsSize = 0;
+		UA_String urls[1]{ UA_String{url.size(), (UA_Byte*)url.data()} };//a view: UA_Array_copy deep-copies.
+		let urlSc = UA_Array_copy( urls, 1, (void**)&config.serverUrls, &UA_TYPES[UA_TYPES_STRING] ); THROW_IFX( urlSc, UAException(urlSc, Ƒ("serverUrls '{}'", url), {}, sl) );
+		config.serverUrlsSize = 1;
 		_server = UA_Server_newWithConfig( &config );
 		THROW_IFSL( !_server, "UA_Server_newWithConfig failed." );
 		try{
@@ -28,7 +41,9 @@ namespace Jde::Opc::Emulator{
 			_server = nullptr;
 			throw;
 		}
-		INFO( "PLC server up on port {} with '{}'; publishing {}.", port, nodeset.filename().string(), _contract.ToString() );
+		INFO( "PLC server up on {} with '{}'; publishing {}.", url, nodeset.filename().string(), _contract.ToString() );
+		if( bind.empty() )
+			WARN( "The PLC's own UA server is bound to every interface with anonymous access control over a writable nodeset - anything on the network can write its tags.  Clear /emulator/plc/bind only for a deliberately LAN-visible demo." );
 	}
 	PlcServer::~PlcServer(){
 		if( _server ){

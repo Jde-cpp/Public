@@ -91,7 +91,8 @@ namespace Jde::App::Server::Tests{
 	//registers session as an application instance (kInstance) and returns the pks the server minted for it.
 	//authResource: the schema the instance asks to be the admin authorizer for (M10).  Empty for an app that authorizes nothing,
 	//which is every caller here bar the ones testing that arm;  userPK is the session's user, the one the gate tests.
-	Ξ RegisterInstance( RawClientSession& session, str application, str instanceName, str host, PortType webPort, uint32 pid=1234, str authResource="", Jde::UserPK userPK={1} )ε->RegisteredInstance{
+	//the two halves of RegisterInstance, for a test that needs several registrations in flight at once (RegistrationTests).
+	Ξ SendInstance( RawClientSession& session, str application, str instanceName, str host, PortType webPort, uint32 pid=1234, str authResource="", Jde::UserPK userPK={1} )ε->RequestId{
 		FromClientTrans t;
 		auto& m = *t.add_messages();
 		const auto requestId = session.NextRequestId();
@@ -105,9 +106,15 @@ namespace Jde::App::Server::Tests{
 		instance.set_session_id( MintSession(userPK) );
 		instance.set_auth_resource( authResource );
 		session.Write( move(t) );
-		auto reply = session.WaitFor( [requestId](const FromServerMessage& m){ return m.request_id()==requestId && m.value_case()==FromServerMessage::kConnectionInfo; } );
-		THROW_IF( !reply, "No ConnectionInfo reply for instance '{}'.", instanceName );
+		return requestId;
+	}
+	Ξ AwaitInstance( RawClientSession& session, RequestId requestId, str instanceName, std::chrono::seconds timeout=std::chrono::seconds{10} )ε->RegisteredInstance{
+		auto reply = session.WaitFor( [requestId](const FromServerMessage& m){ return m.request_id()==requestId && m.value_case()==FromServerMessage::kConnectionInfo; }, timeout );
+		THROW_IF( !reply, "No ConnectionInfo reply for instance '{}' within {}s.", instanceName, timeout.count() );
 		const auto& info = reply->connection_info();
 		return { info.app_pk(), info.instance_pk(), info.connection_pk(), info.auth_result() };
+	}
+	Ξ RegisterInstance( RawClientSession& session, str application, str instanceName, str host, PortType webPort, uint32 pid=1234, str authResource="", Jde::UserPK userPK={1} )ε->RegisteredInstance{
+		return AwaitInstance( session, SendInstance(session, application, instanceName, host, webPort, pid, authResource, userPK), instanceName );
 	}
 }

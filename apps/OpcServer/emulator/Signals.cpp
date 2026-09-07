@@ -26,6 +26,9 @@ namespace Jde::Opc::Emulator{
 		Tau{ Json::FindDuration(o, "tau").value_or(3s) }{
 		THROW_IFSL( Max<=Min && !IsBool() && Mode!=EMode::Follow, "Tag '{}': max ({}) must exceed min ({}).", Name, Max, Min );
 		THROW_IFSL( Period<=Duration::zero() || Tau<=Duration::zero(), "Tag '{}': period and tau must be positive.", Name );
+		//randomWalk builds uniform_real_distribution{-Step,Step}, which is UB unless -Step<=Step, and counter wraps on
+		//`>Max`, so a non-positive step walks down from Min forever.  A config typo either way - it must fail like one.
+		THROW_IFSL( Step<=0 && (Mode==EMode::RandomWalk || Mode==EMode::Counter), "Tag '{}': step ({}) must be positive for mode '{}'.", Name, Step, ToString(Mode) );
 	}
 
 	Ω seconds( Duration d )ι->double{ return std::chrono::duration<double>( d ).count(); }

@@ -1,4 +1,6 @@
+#include <boost/asio/io_context.hpp>
 #include <jde/fwk/co/Await.h>
+#include <jde/fwk/process/execution.h>
 #include <jde/fwk/process/process.h>
 #include <jde/fwk/settings.h>
 
@@ -18,8 +20,21 @@ namespace Jde{
 		_cv.notify_all();
 	}
 
+	//A BlockAwait that parks an executor thread is waiting for work that may need that very thread - a query co_spawned
+	//onto the pool, a resume posted to it - and with a small pool the wedge is silent until the stall warning below, which
+	//says "waiting", not "waiting for itself".  Named once per call site:  db-review3 #1 predicted it, emulator-review W1
+	//watched it take the AppServer's registrations down.
+	Ω warnIfOnExecutor( SL sl )ι->void{
+		if( !Executor()->get_executor().running_in_this_thread() )
+			return;
+		static concurrent_flat_set<string> _sites;
+		if( _sites.insert(Ƒ("{}:{}", sl.file_name(), sl.line())) )
+			LOGSL( ELogLevel::Warning, sl, _tags, "BlockAwait entered on an executor thread - if its result needs this pool, that is a deadlock in waiting (db-review3 #1).  Awaiting it (Any()) frees the thread." );
+	}
 	α BlockAwaitSync::Wait( SL sl )ι->void{
 		std::unique_lock l{ _mutex };
+		if( !_done )
+			warnIfOnExecutor( sl );
 		let interval = stallWarning();
 		if( interval<=Duration::zero() ){
 			_cv.wait( l, [this](){return _done;} );

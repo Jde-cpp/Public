@@ -119,7 +119,7 @@ namespace Jde::Opc::PubSub{
 		UA_DataSetWriterConfig dsw{};
 		dsw.name = uv( writerName );
 		dsw.dataSetWriterId = c.DataSetWriterId;
-		dsw.keyFrameCount = 10;
+		dsw.keyFrameCount = 0;//every message a keyframe: open62541's reader discards anything else ("Only keyframes are supported", ua_pubsub_reader.c), so any other value silently drops samples.  0 - not 1 - is what suppresses delta frames: the writer emits a delta while `deltaFrameCounter>0 && deltaFrameCounter<=keyFrameCount` (ua_pubsub_writer.c), so 1 alternates key/delta and 10 sent nine deltas per keyframe.
 		check( UA_Server_addDataSetWriter(&server, WriterGroup, DataSet, &dsw, &DataSetWriter), "addDataSetWriter", sl );
 		check( UA_Server_enableAllPubSubComponents(&server), "enableAllPubSubComponents", sl );
 		INFO( "PubSub writer: {}", c.ToString() );
@@ -160,5 +160,9 @@ namespace Jde::Opc::PubSub{
 		check( targetsStatus, "setDataSetReaderTargetVariables", sl );
 		check( UA_Server_enableAllPubSubComponents(&server), "enableAllPubSubComponents", sl );
 		INFO( "PubSub reader: {}", c.ToString() );
+		//A reader is an unauthenticated write path into the served address space: TargetVariables are written
+		//server-internally - no session, no OpcAuthorize - and the only filter is the three ids, which are published in a
+		//tracked config file.  Whoever reads a deployment's log has to be told, hence WARN rather than INFO.
+		WARN( "PubSub reader on '{}' is UNAUTHENTICATED: any UADP publisher that reaches this url with publisherId={} writerGroupId={} dataSetWriterId={} writes {} node(s) into the address space, bypassing access control.  Remove /opcServer/pubsub (it lives in the Opc.Server.Emulator overlays, not the stock config) to disable.", c.Url, c.PublisherId, c.WriterGroupId, c.DataSetWriterId, c.Fields.size() );
 	}
 }

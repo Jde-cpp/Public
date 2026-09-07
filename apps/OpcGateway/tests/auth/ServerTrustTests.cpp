@@ -1,4 +1,4 @@
-//Gateway→OPC-server certificate verification (src/ServerTrust.cpp):  the verifier open62541 consults in initSecurityPolicy
+//Gateway→OPC-server certificate verification (libs/opc ServerTrust.cpp):  the verifier open62541 consults in initSecurityPolicy
 //must accept a server certificate that is under a trusted directory, reject one that is not with a reason that names the
 //server and the fix, and accept anything when /gateway/verifyServerCertificate is off.  No connection:  the group is
 //installed on a bare UA_ClientConfig and its verifyCertificate called directly, on two certificates the harness already
@@ -6,7 +6,7 @@
 #include <open62541/client_config_default.h>
 #include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/opc/uatypes/Logger.h>
-#include "../../src/ServerTrust.h"
+#include <jde/opc/ServerTrust.h>
 #include "../../src/UAClient.h"
 #include "../../src/GatewayAppClient.h"
 #include "../utils/helpers.h"

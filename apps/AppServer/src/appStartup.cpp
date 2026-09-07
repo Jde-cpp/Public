@@ -1,6 +1,7 @@
 #include "appStartup.h"
 #include <jde/fwk/co/Await.h>
 #include <jde/fwk/crypto/OpenSsl.h>
+#include <jde/fwk/io/Cache.h>
 #include <jde/db/db.h>
 #include <jde/db/IDataSource.h>
 #include <jde/db/Row.h>
@@ -28,7 +29,7 @@ namespace Jde::App{
 		ds().ExecuteSync( {Ƒ("update {} set deleted={} where deleted is null", connectionTableName(), ds().Syntax().UtcNow())} );
 	}
 
-	α AddConnection( str appName, str instanceName, str hostName, uint pid )ε->tuple<ProgramPK, ProgInstPK, ConnectionPK>{
+	α AddConnection( str appName, str instanceName, str hostName, uint pid, bool reloadHosts )ε->tuple<ProgramPK, ProgInstPK, ConnectionPK>{
 		ProgramPK appId{};
 		ProgInstPK appInstanceId{};
 		ConnectionPK appConnectionId{};
@@ -44,10 +45,21 @@ namespace Jde::App{
 
 		//`hosts` has the enum shape (id + name) and is loaded like one, but unlike the real enumerations it grows - the proc
 		//above adds a row the first time a host registers, outside QL entirely, and instances.hostId renders through it.
-		//Re-loaded rather than cleared: a cleared entry hands the next render the blocking miss this exists to remove, and
-		//the Select above already blocks this thread (see AddInstance's `TODO Don't block`).
-		QL::LoadEnum( _appSchema->GetTable("hosts") );
+		//Re-loaded rather than cleared: a cleared entry hands the next render the blocking miss this exists to remove.  The
+		//Select above is a plain blocking driver call, safe anywhere;  LoadEnum is SelectEnumSync - a BlockAwait over a query
+		//co_spawned onto the executor pool - so it is only for callers off that pool (startup, tests).  The request path
+		//(ServerSocketSession::AddInstance) passes false and co_awaits ReloadHosts instead:  with executor.threads:2, two
+		//registrations in the same instant parked both threads here with their queries queued behind them, an AppServer
+		//bounce with two instances alive never completed either, and the OpcServer died on its startup timeout
+		//(emulator-review W1 - the threads:2 case db-review3 #1 predicted).
+		if( reloadHosts )
+			QL::LoadEnum( _appSchema->GetTable("hosts") );
 		return make_tuple( appId, appInstanceId, appConnectionId );
+	}
+	α ReloadHosts( SL sl )ε->DB::CacheAwait<flat_map<uint,string>>{
+		let& hosts = _appSchema->GetTable( "hosts" );
+		Cache::Clear( hosts.Name );//SelectEnum answers from the cache when it can - clear first so the select actually runs.
+		return ds().SelectEnum<uint,string>( hosts, nullopt, sl );//nullopt: no expiry, as LoadEnum caches it.
 	}
 	α EndConnection( ConnectionPK connectionId, SL sl )ι->DB::ExecuteAwait::Task{
 		try{
