@@ -1,19 +1,20 @@
-#include "ServerTrust.h"
+#include <jde/opc/ServerTrust.h>
 #include <open62541/plugin/certificategroup_default.h>
 #include <jde/fwk/settings.h>
 #include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/fwk/crypto/TrustStore.h>
 
 #define let const auto
-namespace Jde::Opc::Gateway{
+namespace Jde::Opc{
 	constexpr ELogTags _tags{ (ELogTags)EOpcLogTags::OpcCrypto };
 	namespace{
 		//the group's context - owned by the group, freed by clear() when open62541 clears the client config.
 		struct Context final{
-			Context( Jde::Handle h, string url )ε: Store{false}, Handle{h}, Url{move(url)}{}
+			Context( Jde::Handle h, string url, sv settingsPath )ε: Store{false}, Handle{h}, Url{move(url)}, SettingsPath{settingsPath}{}
 			Crypto::TrustStore Store;//anchors only - see the header.
 			Jde::Handle Handle;
 			string Url;
+			string SettingsPath;//the caller's own off switch, named in the rejection - see the header.
 			uint Anchors{};
 			string Rejection;//the last failure;  written by verifyCertificate and read by StateCallback, both on the client's strand.
 		};
@@ -29,7 +30,7 @@ namespace Jde::Opc::Gateway{
 				return UA_STATUSCODE_GOOD;
 			}
 			catch( const std::exception& e ){
-				c.Rejection = Ƒ( "server certificate for '{}' rejected: {} ({} trusted certificate{} loaded from /access/trustedCertDirs) - add the server's certificate to one of those directories, or set /gateway/verifyServerCertificate=false", c.Url, e.what(), c.Anchors, c.Anchors==1 ? "" : "s" );
+				c.Rejection = Ƒ( "server certificate for '{}' rejected: {} ({} trusted certificate{} loaded from /access/trustedCertDirs) - add the server's certificate to one of those directories, or set {}=false", c.Url, e.what(), c.Anchors, c.Anchors==1 ? "" : "s", c.SettingsPath );
 				ERRT( _tags, "[{}]{}", hex(c.Handle), c.Rejection );
 				return UA_STATUSCODE_BADCERTIFICATEUNTRUSTED;
 			}
@@ -67,7 +68,7 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α ServerTrust::Enabled()ι->bool{ return Settings::FindBool("/gateway/verifyServerCertificate").value_or(true); }
+	α ServerTrust::Enabled( sv settingsPath )ι->bool{ return Settings::FindBool(settingsPath).value_or(true); }
 
 	static std::mutex _overrideMutex;
 	static optional<vector<fs::path>> _override;//the test seam - see the header.
@@ -75,7 +76,7 @@ namespace Jde::Opc::Gateway{
 		std::lock_guard _{ _overrideMutex };
 		_override = move( dirs );
 	}
-	α ServerTrust::Install( UA_ClientConfig& config, Jde::Handle h, str url, SL sl )ε->void{
+	α ServerTrust::Install( UA_ClientConfig& config, sv settingsPath, Jde::Handle h, str url, SL sl )ε->void{
 		vector<fs::path> dirs;
 		{
 			std::lock_guard _{ _overrideMutex };
@@ -86,16 +87,16 @@ namespace Jde::Opc::Gateway{
 			for( let& dir : Settings::FindStringArray("/access/trustedCertDirs") )
 				dirs.emplace_back( dir );
 		}
-		Install( config, Enabled(), dirs, h, url, sl );
+		Install( config, Enabled(settingsPath), dirs, h, url, settingsPath, sl );
 	}
-	α ServerTrust::Install( UA_ClientConfig& config, bool verify, const vector<fs::path>& dirs, Jde::Handle h, str url, SL sl )ε->void{
+	α ServerTrust::Install( UA_ClientConfig& config, bool verify, const vector<fs::path>& dirs, Jde::Handle h, str url, sv settingsPath, SL sl )ε->void{
 		auto& g = config.certificateVerification;
 		if( !verify ){
 			UA_CertificateGroup_AcceptAll( &g );//clears whatever was there first.
-			WARNT( _tags, "[{}]Server-certificate verification is off (/gateway/verifyServerCertificate) - any certificate '{}' presents is accepted.", hex(h), url );
+			WARNT( _tags, "[{}]Server-certificate verification is off ({}) - any certificate '{}' presents is accepted.", hex(h), settingsPath, url );
 			return;
 		}
-		auto c = mu<Context>( h, url );
+		auto c = mu<Context>( h, url, settingsPath );
 		loadAnchors( *c, dirs, sl );
 		if( g.clear )
 			g.clear( &g );//AcceptAll, or an earlier Install.

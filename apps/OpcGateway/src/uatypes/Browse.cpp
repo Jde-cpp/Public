@@ -210,10 +210,19 @@ namespace Browse{
 		return y;
 	}
 
+	//A steal, like CallResponse/WriteResponse/ReadResponse.  This was a UA_BrowseResponse_copy followed by the _init:
+	//x's arrays deep-copied into *this, then x zeroed without a clear - so the originals, the buffers open62541 decoded
+	//off the wire, leaked.  IExpectedPromise::SetValue assigns into a variant that still holds the previous co_await's
+	//(moved-from) Response, so every browse after the first in one coroutine - NodeIndex::Crawl's second BFS level on -
+	//came through here.
 	α Response::operator=( Response&& x )ι->Response&{
-		UA_BrowseResponse_clear( this );
-		UA_BrowseResponse_copy( &x, this );
-		UA_BrowseResponse_init( &x );
+		if( this!=&x ){
+			UA_BrowseResponse_clear( this );
+			*(UA_BrowseResponse*)this = x;
+			Attribs = x.Attribs;
+			UA_BrowseResponse_init( &x );
+			x.Attribs = UA_BROWSERESULTMASK_NONE;
+		}
 		return *this;
 	}
 

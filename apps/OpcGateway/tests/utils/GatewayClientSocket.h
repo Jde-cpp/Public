@@ -16,7 +16,11 @@ namespace Jde::Opc::Gateway::Tests{
 		using base = Web::Client::TClientSocketSession<FromClient::Transmission,FromServer::Transmission>;
 		Τ using await = Web::Client::ClientSocketAwait<T>;
 		GatewayClientSocket( sp<net::io_context> ioc, optional<ssl::context>& ctx )ι;
-		~GatewayClientSocket(){ TRACET(ELogTags::Test, "GatewayClientSocket::~GatewayClientSocket"); }
+		//RemoveShutdown pairs Connect's AddShutdown: it registers a raw `this`, and nothing else takes it back out, so a
+		//session that dies with the test left Process::Shutdown a dangling IShutdown* to call at exit (the same pairing
+		//IAppClient and RemoteLog spell out).  Latent until the client stopped waiting out every request's full timeout -
+		//that wait was holding these sessions alive to the end of the process (emulator-review #11).
+		~GatewayClientSocket(){ Process::RemoveShutdown( this ); TRACET(ELogTags::Test, "GatewayClientSocket::~GatewayClientSocket"); }
 
 		α Connect( SessionPK sessionId, SRCE )ι->await<uint32>;
 		α Query( string&& query, jobject variables, bool returnRaw, SRCE )ι->await<jvalue> override;

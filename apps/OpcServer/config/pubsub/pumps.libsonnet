@@ -1,7 +1,9 @@
 // OPC UA PubSub (Part 14) contract for the pump process values - the ONE place the DataSet is described.
-// Imported by the OpcServer (config/Opc.Server.jsonnet -> /opcServer/pubsub, the DataSetReader) and by the PLC emulator
-// (emulator/config/Opc.PlcEmulator.jsonnet -> /emulator/pubsub, the DataSetWriter), so the DataSetMetaData both sides
-// build from `fields` can't drift: a mismatch makes the reader silently drop every message.
+// Imported by the OpcServer's emulator overlays (config/Opc.Server.Emulator[.Hub].jsonnet -> /opcServer/pubsub, the
+// DataSetReader - NOT the stock Opc.Server.jsonnet: a reader is an unauthenticated write into the address space, so it
+// is opt-in) and by the PLC emulator (emulator/config/Opc.PlcEmulator.jsonnet -> /emulator/pubsub, the DataSetWriter),
+// so the DataSetMetaData both sides build from `fields` can't drift: a mismatch makes the reader silently drop every
+// message.
 //
 // Only process values are published.  `status` is the run command the UI writes on the OpcServer; the emulator
 // subscribes to it over its client session and never publishes it (publishing would clobber the UI's write).

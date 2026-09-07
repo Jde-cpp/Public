@@ -101,8 +101,10 @@ function( sync=false )
 			"$(UA_NODE_SETS)/IA/Opc.Ua.IA.NodeSet2.examples.xml",
 			args.repoSourceDir + "/apps/OpcServer/config/nodesets/pumps.NodeSet2.xml" //the PLC emulator's tags - urn:jde:pumps
 		],
-		//Part 14 subscriber: the emulator publishes the pump process values into these nodes.  One contract for both ends.
-		pubsub: import 'pubsub/pumps.libsonnet',
+		//No `pubsub` key here, deliberately.  A DataSetReader writes its target variables through the server-internal path -
+		//no session, no OpcAuthorize - so any UADP publisher that can reach the url and carries the contract's three ids
+		//drives those nodes.  That is a demo affordance, not a production one: the PLC-emulator overlays
+		//(Opc.Server.Emulator.jsonnet, Opc.Server.Emulator.Hub.jsonnet) add it, and PubSub::Reader WARNs when they do.
 		port: 4840
 	},
 	//the UA server's trust list.  UAConfig reads /access/trustedCertDirs, not /opcServer/trustedCertDirs - anchoring it

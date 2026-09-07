@@ -1,5 +1,6 @@
 #pragma once
 #include "usings.h"
+#include <jde/db/awaits/DBAwait.h>
 #include <jde/db/awaits/ExecuteAwait.h>
 
 namespace Jde::DB{ struct AppSchema; }
@@ -21,7 +22,14 @@ namespace Jde::App::Server{
 	α AppSchema()ι->sp<DB::AppSchema>;
 }
 namespace Jde::App{
-	α AddConnection( str applicationName, str instanceName, str hostName, uint pid )ε->tuple<ProgramPK, ProgInstPK, ConnectionPK>;
+	//Inserts this process's/an instance's connection row and re-loads the `hosts` enum the row may have grown.  The re-load
+	//is synchronous (QL::LoadEnum) - fine from startup and the tests, which are off the executor pool.  reloadHosts=false
+	//for the request path, which awaits ReloadHosts instead:  a BlockAwait on an executor thread over a query that needs
+	//that pool is the wedge of emulator-review W1 / db-review3 #1.
+	α AddConnection( str applicationName, str instanceName, str hostName, uint pid, bool reloadHosts=true )ε->tuple<ProgramPK, ProgInstPK, ConnectionPK>;
+	//The `hosts` re-load as an awaitable:  clears the cached map and returns the select that refills it.  co_await it through
+	//Any() from any coroutine on the pool - the thread goes back to the pool while the query runs.
+	α ReloadHosts( SRCE )ε->DB::CacheAwait<flat_map<uint,string>>;
 	//ends a *connection*, not a program instance - it stamps connections.deleted for one connection_id.
 	α EndConnection( ConnectionPK connectionId, SRCE )ι->DB::ExecuteAwait::Task;
 }

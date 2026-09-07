@@ -5,8 +5,8 @@ project( ${targetName} VERSION ${JDE_VERSION} LANGUAGES CXX )
 include( ${jdeRoot}/build/dependencies.cmake )
 add_library( ${targetName} )
 compileOptions( ${targetName} )
-file( GLOB sources *.cpp */*.cpp )
-file( GLOB headers *.h */*.h ${jdeRoot}/include/jde/ql/*.h ${jdeRoot}/include/jde/ql/ops/*.h ${jdeRoot}/include/jde/ql/types/*.h )
+file( GLOB sources CONFIGURE_DEPENDS *.cpp */*.cpp )
+file( GLOB headers CONFIGURE_DEPENDS *.h */*.h ${jdeRoot}/include/jde/ql/*.h ${jdeRoot}/include/jde/ql/ops/*.h ${jdeRoot}/include/jde/ql/types/*.h )
 target_sources(${targetName}
 	PRIVATE
 		${sources}

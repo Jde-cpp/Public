@@ -6,8 +6,8 @@ include( ${jdeRoot}/build/dependencies.cmake )
 add_library( ${targetName} MODULE )
 compileOptions( ${targetName} )
 
-file( GLOB sources *.cpp MsSql/*.cpp )
-file( GLOB headers *.h )
+file( GLOB sources CONFIGURE_DEPENDS *.cpp MsSql/*.cpp )
+file( GLOB headers CONFIGURE_DEPENDS *.h )
 
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 

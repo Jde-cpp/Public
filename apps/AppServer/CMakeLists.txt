@@ -43,7 +43,7 @@ set( sources src/main.cpp )
 if( WIN32 )
 	list( APPEND sources src/AppServer.rc )
 endif()
-file( GLOB headers src/*/*.h )
+file( GLOB headers CONFIGURE_DEPENDS src/*/*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 if( NOT WIN32 )

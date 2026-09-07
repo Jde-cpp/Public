@@ -79,8 +79,16 @@ namespace Jde::Opc::Gateway{
 		_client->StopProcessDataSubscriptions();
 	}
 	α UnsubscribeAwait::RemoveMonitoredItems()ι->VoidAwait::Task{
-		if( _subscriptions.size() )
-			co_await DeleteMonitoredItemsAwait{ _subscriptions, _client };
+		try{
+			if( _subscriptions.size() )
+				co_await DeleteMonitoredItemsAwait{ _subscriptions, _client };
+		}
+		catch( runtime_error& e ){
+			//A refused submission - no channel, the client is being torn down.  The subscription delete below fails the
+			//same way and Resume()s; without this the exception left *this un-resumed, and the coroutine frame holding
+			//it - sp<UAClient> included - leaked, the client with it.
+			WARN( "[{}]Could not delete the monitored items ({}) - deleting the subscription anyway.", hex(_client->Handle()), e.what() );
+		}
 		Unsubscribe();
 	}
 	α UnsubscribeAwait::Unsubscribe()ι->void{

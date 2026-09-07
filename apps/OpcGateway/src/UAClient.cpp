@@ -9,7 +9,7 @@
 #include <open62541/types.h>
 #include <stdexcept>
 #include "GatewayAppClient.h"
-#include "ServerTrust.h"
+#include <jde/opc/ServerTrust.h>
 #include "async/DataChanges.h"
 #include "jde/fwk/crypto/CryptoSettings.h"
 #include "jde/fwk/settings.h"
@@ -172,7 +172,7 @@ namespace Jde::Opc::Gateway{
 		if( addSecurity && !certAuth )
 			EnsureCertificate( Target(), uri );
 		auto config = UA_Client_getConfig( _ptr );
-		ServerTrust::Install( *config, Handle(), Url() );//before setDefault, which would otherwise install AcceptAll;  applies to every endpoint that carries a certificate, secured or not.
+		ServerTrust::Install( *config, "/gateway/verifyServerCertificate", Handle(), Url() );//before setDefault, which would otherwise install AcceptAll;  applies to every endpoint that carries a certificate, secured or not.
 		const uint size = addSecurity ? 2 : 1; ASSERT( !config->securityPoliciesSize );
 		uint initialized = 0;//policies actually constructed; on an exception before ownership transfers to config, the deleter clears these — UA_free alone would leak each policy's internals (policyUri, contexts, ...).
 		auto clearPolicies = [&initialized]( UA_SecurityPolicy* p )ι{ for(uint i=0; i<initialized; ++i) p[i].clear(&p[i]); UA_free(p); };

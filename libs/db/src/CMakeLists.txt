@@ -11,8 +11,8 @@ endif()
 add_library( ${targetName} SHARED )
 compileOptions( ${targetName} )
 
-file( GLOB sources awaits/*.cpp generators/*.cpp *.cpp meta/*.cpp meta/ddl/*.cpp )
-file( GLOB headers *.h ${jdeRoot}/include/jde/db/*.h ${jdeRoot}/include/jde/db/meta/*.h ${jdeRoot}/include/jde/db/syntax/*.h )
+file( GLOB sources CONFIGURE_DEPENDS awaits/*.cpp generators/*.cpp *.cpp meta/*.cpp meta/ddl/*.cpp )
+file( GLOB headers CONFIGURE_DEPENDS *.h ${jdeRoot}/include/jde/db/*.h ${jdeRoot}/include/jde/db/meta/*.h ${jdeRoot}/include/jde/db/syntax/*.h )
 target_sources(${targetName}
     PRIVATE
         ${sources}

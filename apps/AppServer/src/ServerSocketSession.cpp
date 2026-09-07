@@ -1,3 +1,5 @@
+#include <jde/fwk/co/AnyAwait.h>
+#include <jde/db/IDataSource.h>//ReloadHosts' CacheAwait instantiates its query here.
 #include "ServerSocketSession.h"
 #include <jde/fwk/chrono.h>
 #include <jde/app/proto/LogProto.h>
@@ -22,7 +24,13 @@ namespace Jde::App::Server{
 		try{
 			auto info = co_await Web::Server::Sessions::UpsertAwait( Ƒ("{:x}", instance.session_id()), _userEndpoint.address().to_string(), true, nullptr );
 			SetSessionInfo( info );
-			let [appPK,instancePK,connectionPK] = App::AddConnection( instance.application(), instance.instance_name(), instance.host(), instance.pid() );//TODO Don't block
+			let [appPK,instancePK,connectionPK] = App::AddConnection( instance.application(), instance.instance_name(), instance.host(), instance.pid(), false );
+			//The `hosts` re-load after the insert, awaited:  it used to be AddConnection's synchronous LoadEnum - a BlockAwait on
+			//this executor thread over a MySQL query co_spawned onto the same pool.  With executor.threads:2, two instances
+			//re-registering in the same instant (every AppServer bounce with two apps alive) parked both threads with their
+			//queries queued behind them - neither registration completed and the OpcServer died on its startup timeout
+			//(emulator-review W1).  Any(): this coroutine's own await type is the session's, and the pairing rule allows no other.
+			co_await Any( App::ReloadHosts() );
 			INFOT( ELogTags::SocketServerRead, "[{}.{}]Adding application app:{}@{}:{} pid:{}, instancePK:{}, connectionPK:{}, sessionId: {}, endpoint: '{}'", hex(Id()), hex(requestId), instance.application(), instance.host(), instance.web_port(), instance.pid(), hex(instancePK), hex(connectionPK), hex(instance.session_id()), _userEndpoint.address().to_string() );
 			Server::RemoveExisting( instance.host(), instance.web_port() );
 			optional<bool> authResult;

@@ -7,10 +7,10 @@ include( ${jdeRoot}/build/dependencies.cmake )
 set( targetName Jde.App.ServerLib )
 add_library( ${targetName} )
 compileOptions( ${targetName} )
-file(GLOB sources *.cpp */*.cpp )
+file(GLOB sources CONFIGURE_DEPENDS *.cpp */*.cpp )
 get_filename_component( main_cpp ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp ABSOLUTE )
 list( REMOVE_ITEM sources ${main_cpp} )
-file( GLOB headers */*.h )
+file( GLOB headers CONFIGURE_DEPENDS */*.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 add_dependencies( ${targetName} Jde.DB.MySql ) #built on every platform; odbc only exists on windows.

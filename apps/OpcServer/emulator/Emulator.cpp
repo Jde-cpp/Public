@@ -5,6 +5,8 @@
 #include <jde/fwk/str.h>
 #include <jde/fwk/crypto/CryptoSettings.h>
 #include <jde/fwk/crypto/OpenSsl.h>
+#include <jde/access/usings.h>//Access::ERights - the vocabulary -grant's acl is written in.
+#include "Devices.h"
 #include "EmulatorClient.h"
 #include "PlcServer.h"
 #include "Signals.h"
@@ -24,56 +26,48 @@ namespace Jde::Opc::Emulator{
 			return *a;
 		return Settings::FindString( path ).value_or( string{dflt} );
 	}
-	//the UA channel cert: /emulator/ssl puts it under the PlcEmulator product dir with the certificateUri as its SAN.
+	//the UA channel cert: /emulator/ssl puts it under the PlcEmulator product dir with the applicationUri as its SAN.
 	Ω opcCertificate()ι->Crypto::CryptoSettings{ return Crypto::CryptoSettings{ Settings::FindDefaultObject("/emulator/ssl") }; }
 
 	//pubsub: process values publish over Part 14 and anything the contract does not list is written over the session;
 	//write: everything over the session - the PLC server is not started.  Commands are always subscribed.
 	enum class ETransport : uint8{ PubSub, Write };
-	struct Device; struct Emulator;
-	struct Tag{
-		TagSpec Spec;
-		up<IGenerator> Generator;//null for command tags.
-		optional<uint> Field;//index into the PubSub contract when published; else written over the client session.
-		NodeId Node;//on the OpcServer - command tags and session-written tags, resolved per session.
-		double Value{};
-		bool Seen{};//a monitored item's first notification is the current value, not a change.
-		Device* Owner{};
-		Emulator* Self{};
-	};
-	struct Device{
-		string Path, Name;//Name = the last path segment: "pumps~pump1" -> "pump1"; the contract's field names are "<Name>.<tag>".
-		vector<Tag> Tags;
-		bool Command{ true };//the last `status` seen - the run command the UI owns.
-	};
+	//Tag, Device and ParseDevices live in Devices.h - a unit the tests build without a session or a PLC server (T2).
 
 	struct Emulator final : noncopyable{
 		Emulator( sp<App::Client::IAppClient> app )ε;
 		α Run()ε->int;
 	private:
-		α ParseDevices( SL sl )ε->void;
 		α Connect()ε->void;//session, browse-path resolution, command subscriptions.
 		α Reconnect()ε->void;
-		α Cycle( Duration dt )ι->void;
-		α LogStatus()ι->void;
+		α Tick( bool sessionUp )ι->void;//one pass of the device clock; driven by BOTH loops - Run()'s and Reconnect()'s wait.
+		α Cycle( Duration dt, bool sessionUp )ι->void;
+		α LogStatus( bool onlyIfChanged=false )ι->void;//onlyIfChanged: the final line at exit, skipped when the timed one already said it (#12).
 		Ω OnDataChange( UA_Client*, UA_UInt32, void*, UA_UInt32, void* monContext, UA_DataValue* value )ι->void;
 
 		sp<App::Client::IAppClient> _app;
 		ETransport _transport;
-		string _url, _certificateUri, _nsUri, _alias;
+		string _url, _applicationUri, _serverApplicationUri, _nsUri;//the device's own uri (advertised + the cert SAN) and the endpoint filter - two jobs, two knobs (#15); _nsUri = the contract's namespace, the default for every device path (#16).
 		Duration _period, _statusPeriod, _reconnectMin, _reconnectMax, _reconnectDelay;
 		optional<Duration> _duration;
 		up<PlcServer> _plc;
 		up<EmulatorClient> _client;
 		vector<Device> _devices;
+		//The device clock.  Members rather than Run() locals because Reconnect()'s wait loop advances them too (#7).
+		steady_clock::time_point _lastCycle{}, _nextCycle{}, _nextStatus{};
+		UA_UInt32 _subscription{};//the command subscription this session holds, kept so a clean shutdown can delete it (#10).
 		uint _cycles{}, _published{}, _writes{}, _writeFailures{}, _consecutiveFailures{}, _externalChanges{}, _reconnects{};
+		bool _connected{};//a session has activated at least once.  Until then a failed attempt is the initial connect still failing, not a lost session (#17).
+		uint _attempts{};//connect attempts before the first activation - the initial phase's own count; _reconnects counts only losses after it.
+		string _lastStatus;//what LogStatus last wrote - the final line compares against it (#12).
 	};
 
 	Emulator::Emulator( sp<App::Client::IAppClient> app )ε:
 		_app{ move(app) },
 		_transport{ ETransport::PubSub },
 		_url{ argString("-url", "/emulator/url", "opc.tcp://127.0.0.1:4840") },
-		_certificateUri{ Settings::FindString("/emulator/certificateUri").value_or("urn:open62541.server.application") },
+		_applicationUri{ Settings::FindString("/emulator/applicationUri").value_or("urn:jde:plc-emulator") },
+		_serverApplicationUri{ Settings::FindString("/emulator/serverApplicationUri").value_or("urn:open62541.server.application") },
 		_period{ argDuration("-period", "/emulator/period", 1s) },
 		_statusPeriod{ argDuration("-statusPeriod", "/emulator/statusPeriod", 1min) },
 		_reconnectMin{ argDuration("-reconnectMin", "/emulator/reconnectMin", 1s) },
@@ -86,69 +80,54 @@ namespace Jde::Opc::Emulator{
 			_duration = d;
 		PubSub::Config contract{ Settings::AsObject("/emulator/pubsub") };
 		_nsUri = contract.Namespace;
-		_alias = contract.DataSetName;
 		if( _transport==ETransport::PubSub ){
 			let nodeset = Settings::FindPath( "/emulator/plc/nodeset" ); THROW_IF( !nodeset, "/emulator/plc/nodeset is required - the nodeset the OpcServer loads." );
-			_plc = mu<PlcServer>( Settings::FindNumber<UA_UInt16>("/emulator/plc/port").value_or(4841), *nodeset, move(contract) );
+			//loopback by default - nothing is meant to connect to the PLC's own endpoint, and it is anonymous-full.
+			let bind = Settings::FindString( "/emulator/plc/bind" ).value_or( "127.0.0.1" );
+			_plc = mu<PlcServer>( Settings::FindNumber<UA_UInt16>("/emulator/plc/port").value_or(4841), bind, *nodeset, move(contract) );
 		}
-		ParseDevices( SRCE_CUR );
-		_client = mu<EmulatorClient>( _url, _certificateUri, opcCertificate(), Ƒ("{:x}", _app->SessionId()) );
-	}
-
-	α Emulator::ParseDevices( SL sl )ε->void{
-		for( let& d : Settings::FindDefaultArray("/emulator/devices") ){
-			let& o = Json::AsObject( d, sl );
-			Device device{ Json::AsString(o, "path", sl) };
-			let lastSegment = device.Path.substr( device.Path.rfind('/')+1 );
-			device.Name = lastSegment.substr( lastSegment.rfind('~')+1 );
-			for( let& t : Json::AsArray(o, "tags", sl) ){
-				Tag tag{ TagSpec{Json::AsObject(t, sl), sl} };
-				if( tag.Spec.Mode!=EMode::Command ){
-					tag.Generator = MakeGenerator( tag.Spec );
-					if( _plc )
-						tag.Field = _plc->FindField( Ƒ("{}.{}", device.Name, tag.Spec.Name) );
-				}
-				device.Tags.push_back( move(tag) );
-			}
-			THROW_IFSL( device.Tags.empty(), "Device '{}' has no tags.", device.Path );
-			_devices.push_back( move(device) );
-		}
-		THROW_IFSL( _devices.empty(), "/emulator/devices is empty." );
-		for( auto& device : _devices ){//after every push_back: the vectors do not move again.
-			vector<string> routes;
-			for( auto& tag : device.Tags ){
-				tag.Owner = &device;
+		_devices = ParseDevices( Settings::FindDefaultArray("/emulator/devices"), _plc ? FindField{[this](sv name){ return _plc->FindField(name); }} : FindField{}, SRCE_CUR );
+		for( auto& device : _devices ){//the vectors are final: ParseDevices returned them.
+			for( auto& tag : device.Tags )
 				tag.Self = this;
-				routes.push_back( Ƒ("{}={}{}", tag.Spec.Name, ToString(tag.Spec.Mode), tag.Spec.Mode==EMode::Command ? " (subscribed)" : tag.Field ? " (published)" : " (written)") );
-			}
-			INFO( "[{}]{}", device.Name, Str::Join(routes, ", ") );
 		}
+		let opc = opcCertificate();
+		//On every start, not only -createCert:  the SAN must equal the applicationUri we advertise, and an edited uri would
+		//otherwise present the stale SAN forever, refused BadCertificateUriInvalid with nothing naming the file to delete
+		//(the gateway's CertTests lesson).  EnsureKeyCertificate re-issues on SAN drift and expiry as well as absence.
+		Crypto::EnsureKeyCertificate( opc );
+		_client = mu<EmulatorClient>( _url, _applicationUri, _serverApplicationUri, opc, Ƒ("{:x}", _app->SessionId()) );
 	}
 
 	α Emulator::Connect()ε->void{
 		_client->Connect();
-		flat_map<string,NsIndex> aliases;
-		if( _nsUri.size() )
-			aliases.emplace( _alias, _client->Namespace(_nsUri) );
-		UA_UInt32 subscription{};
+		//Device paths and tag names resolve in the contract's namespace by default - the one the published fields live
+		//in - so config writes `pump1`, not `pumps~pump1`.  That alias is the contract's own convention (PubSub.h:
+		//dataSet.name stands for dataSet.namespace inside its field paths); borrowing it here tied every device path to
+		//the dataset's NAME, and a renamed dataset failed each of them "Unknown namespace 'pumps'" with nothing saying
+		//why (#16).  `<index>~name` still reaches another namespace explicitly.
+		let ns = _nsUri.size() ? _client->Namespace( _nsUri ) : NsIndex{};
+		_subscription = 0;//a fresh session: whatever the previous one held died with it.
 		uint commands{};
 		for( auto& device : _devices ){
 			for( auto& tag : device.Tags ){
 				let command = tag.Spec.Mode==EMode::Command;
 				if( !command && tag.Field )
 					continue;//published - the OpcServer's reader owns that node's writes.
-				tag.Node = _client->Resolve( Ƒ("{}/{}~{}", device.Path, _alias, tag.Spec.Name), 0, aliases );
+				tag.Node = _client->Resolve( Ƒ("{}/{}", device.Path, tag.Spec.Name), ns, {} );
 				tag.Seen = false;
 				if( command ){
-					if( !subscription )
-						subscription = _client->CreateSubscription( _period );
-					_client->Monitor( subscription, tag.Node, _period, &tag, OnDataChange );
+					if( !_subscription )
+						_subscription = _client->CreateSubscription( _period );
+					_client->Monitor( _subscription, tag.Node, _period, &tag, OnDataChange );
 					++commands;
 				}
 				DBG( "[{}]{} -> {} ({})", device.Name, tag.Spec.Name, tag.Node.ToString(), command ? "subscribed" : "written" );
 			}
 		}
 		_reconnectDelay = _reconnectMin;
+		_connected = true;
+		_attempts = 0;
 		INFO( "Connected to '{}': {} command tag(s) subscribed.", _url, commands );
 	}
 
@@ -170,7 +149,12 @@ namespace Jde::Opc::Emulator{
 		}
 	}
 
-	α Emulator::Cycle( Duration dt )ι->void{
+	//A real PLC's process values evolve whether or not anyone is connected, so every generator advances on every period
+	//regardless of `sessionUp` - what the session gates is only the *write* over it.  Published tags (tag.Field) go to the
+	//local PLC node, which the Part 14 writer samples on its own timer, so they keep flowing to the OpcServer through an
+	//outage of the client session.  A session-written tag keeps evolving in memory and lands on the first cycle after
+	//recovery, instead of the whole outage arriving as one `dt` (#7).
+	α Emulator::Cycle( Duration dt, bool sessionUp )ι->void{
 		for( auto& device : _devices ){
 			for( auto& tag : device.Tags ){
 				if( !tag.Generator )
@@ -186,6 +170,8 @@ namespace Jde::Opc::Emulator{
 					}
 					continue;
 				}
+				if( !sessionUp )
+					continue;//nothing to write to; the value is current and goes out on the next cycle after recovery.
 				UA_Variant v;
 				UA_Boolean b = tag.Value!=0;
 				if( tag.Spec.IsBool() )
@@ -207,35 +193,72 @@ namespace Jde::Opc::Emulator{
 		++_cycles;
 	}
 
+	//The device clock, driven by both loops.  `sessionUp` false only suppresses the session writes - see Cycle.
+	α Emulator::Tick( bool sessionUp )ι->void{
+		if( let now = steady_clock::now(); now>=_nextCycle ){
+			Cycle( duration_cast<Duration>(now-_lastCycle), sessionUp );
+			_lastCycle = now;
+			_nextCycle += _period;
+			if( _nextCycle<now )
+				_nextCycle = now+_period;//a long stall (a blocking connect) must not queue up a burst of catch-up cycles.
+		}
+		if( let now = steady_clock::now(); now>=_nextStatus ){
+			LogStatus();
+			_nextStatus += _statusPeriod;
+			if( _nextStatus<now )
+				_nextStatus = now+_statusPeriod;
+		}
+	}
+
 	α Emulator::Reconnect()ε->void{
-		++_reconnects;
 		_consecutiveFailures = 0;
-		WARN( "Session to '{}' lost - reconnecting (#{}) in {}.", _url, _reconnects, Chrono::ToString(_reconnectDelay) );
+		//Two phases, one loop:  before the first activation nothing was lost - Run logged why the initial connect failed,
+		//and this is the retry schedule (#17);  after it, a session really did go away, and that is worth a WARN.
+		if( _connected ){
+			++_reconnects;
+			WARN( "Session to '{}' lost - reconnecting (#{}) in {}.", _url, _reconnects, Chrono::ToString(_reconnectDelay) );
+		}
+		else
+			INFO( "Not yet connected to '{}' - attempt #{} in {}.", _url, ++_attempts+1, Chrono::ToString(_reconnectDelay) );
+		_subscription = 0;//the session is already gone; there is nothing left to delete it on.
 		_client->Disconnect();
 		for( let until = steady_clock::now()+_reconnectDelay; steady_clock::now()<until && !Process::ShuttingDown(); std::this_thread::sleep_for(100ms) ){
 			if( _plc )
 				_plc->Iterate();//keep the PLC's own server and publisher alive while the session is down.
+			Tick( false );//...and its process values evolving.  A PLC does not freeze because a client left (#7).
 		}
 		if( Process::ShuttingDown() )
 			return;
 		_reconnectDelay = std::min( _reconnectDelay*2, _reconnectMax );
 		try{
+			//Synchronous: UA_Client_connect blocks this thread for up to /emulator's 10 s client timeout, and neither the
+			//PLC server nor the clock is iterated inside it, so one failed attempt is one stall of that length.  Tolerable
+			//against an async connect's state machine (UA_Client_connectAsync); Tick's catch-up guard absorbs the gap.
 			Connect();
 		}
 		catch( const std::exception& e ){
-			WARN( "Reconnect failed: {}", e.what() );
+			WARN( "{} failed: {}", _connected ? "Reconnect" : Ƒ("Connect attempt #{}", _attempts+1), e.what() );
 		}
 	}
 
-	α Emulator::LogStatus()ι->void{
+	α Emulator::LogStatus( bool onlyIfChanged )ι->void{
 		vector<string> values;
 		for( let& device : _devices ){
 			vector<string> tags;
-			for( let& tag : device.Tags )
-				tags.push_back( tag.Generator ? Ƒ("{}={:.1f}", tag.Spec.Name, tag.Value) : Ƒ("{}={}", tag.Spec.Name, device.Command) );
+			for( let& tag : device.Tags ){
+				//Branch on the spec, not on Generator:  a toggle has a generator and is written as UA_Boolean (Cycle), so it
+				//rendered `status=1.0` (#13).  Both boolean modes print as the bool they are; command tags have no Value.
+				let value = tag.Spec.IsBool()
+					? Ƒ( "{}={}", tag.Spec.Name, tag.Generator ? tag.Value!=0 : device.Command )
+					: Ƒ( "{}={:.1f}", tag.Spec.Name, tag.Value );
+				tags.push_back( value );
+			}
 			values.push_back( Ƒ("{}[{}]", device.Name, Str::Join(tags, " ")) );
 		}
 		let summary = Ƒ( "cycles={} published={} writes={} writeFailures={} externalChanges={} reconnects={} - {}", _cycles, _published, _writes, _writeFailures, _externalChanges, _reconnects, Str::Join(values, " ") );
+		if( onlyIfChanged && summary==_lastStatus )
+			return;//the deadline landed on a statusPeriod boundary - Tick just wrote this exact line, and it is the record (#12).
+		_lastStatus = summary;
 		INFO( "{}", summary );//pre-formatted: a `{:.1f}` inside the log message itself is a MemoryLog::Find self-deadlock.
 	}
 
@@ -247,9 +270,9 @@ namespace Jde::Opc::Emulator{
 			WARN( "Initial connect to '{}' failed: {} - retrying.", _url, e.what() );
 		}
 		let start = steady_clock::now();
-		auto lastCycle = start;
-		auto nextCycle = start+_period;
-		auto nextStatus = start+_statusPeriod;
+		_lastCycle = start;
+		_nextCycle = start+_period;
+		_nextStatus = start+_statusPeriod;
 		optional<steady_clock::time_point> deadline;
 		if( _duration )
 			deadline = start+*_duration;
@@ -261,21 +284,21 @@ namespace Jde::Opc::Emulator{
 				Reconnect();
 				continue;
 			}
-			let slice = std::clamp( duration_cast<milliseconds>(nextCycle-steady_clock::now()), 0ms, 50ms );
+			let slice = std::clamp( duration_cast<milliseconds>(_nextCycle-steady_clock::now()), 0ms, 50ms );
 			_client->Iterate( (uint32)slice.count() );//command notifications arrive in here.
-			if( let now = steady_clock::now(); now>=nextCycle ){
-				Cycle( duration_cast<Duration>(now-lastCycle) );
-				lastCycle = now;
-				nextCycle += _period;
-				if( nextCycle<now )
-					nextCycle = now+_period;
-			}
-			if( steady_clock::now()>=nextStatus ){
-				LogStatus();
-				nextStatus += _statusPeriod;
-			}
+			Tick( true );
 		}
-		LogStatus();
+		LogStatus( true );
+		//Delete the subscription before disconnecting, and iterate once so the answers land.  The client keeps ten publish
+		//requests in flight (outStandingPublishRequests, ua_config_default.c);  disconnecting first drops its subscription
+		//table while those are unanswered, and each of the server's ten replies then fails findSubscriptionById at a
+		//WARNING - the last ten lines of every run's log, reading like a defect (#10).  Deleted first, the server answers
+		//them BadNoSubscription, which the vendor demotes to debug.
+		if( _subscription && _client->IsActivated() ){
+			_client->DeleteSubscription( _subscription );
+			_client->Iterate( 100 );
+			_subscription = 0;
+		}
 		_client->Disconnect();
 		return EXIT_SUCCESS;
 	}
@@ -288,10 +311,16 @@ namespace Jde::Opc::Emulator{
 	α GrantWriteRights( const sp<App::Client::IAppClient>& client )ι->void{
 		try{
 			let schema = argString( "-opcSchema", "/emulator/opcSchema", _debug ? "opc.debug" : "opc.release" );
-			constexpr uint allAccess{ 0x7F };//the UA access-level byte: read|write|historyRead|historyWrite|semanticChange|statusWrite|timestampWrite.
+			//`allowed` is the generic Access::ERights vocabulary - NOT the UA access-level byte (OpcAuthorize::ToAccess is
+			//what crosses to that, and the two share no bit positions).  A PLC reads, writes and subscribes; it has no
+			//business holding Administer (status/timestamp/semantic-change), Delete (history write) or Purge on `nodeIds`,
+			//the root resource every node inherits.  Read also covers the subscription (ToAccess: "a subscription needs
+			//Read"), and these same bits serve -transport=write, whose tags go over the session rather than PubSub.
+			using enum Access::ERights;
+			constexpr uint plcAccess{ underlying(Read | Update | Subscribe) };
 			client->QuerySync<jvalue>(
 				"createAcl( identity:{id:$userId}, permissionRight:{ allowed:$allowed, denied:0, resource:{schemaName:$schemaName, target:\"nodeIds\"}} )",
-				{{"userId", client->UserPK().Value}, {"allowed", allAccess}, {"schemaName", schema}} );
+				{{"userId", client->UserPK().Value}, {"allowed", plcAccess}, {"schemaName", schema}} );
 			INFO( "Granted OPC node access for user {} on '{}' - restart the OpcServer to load it.", client->UserPK().Value, schema );
 		}
 		catch( const std::exception& e ){

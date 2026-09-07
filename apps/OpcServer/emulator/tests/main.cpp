@@ -1,0 +1,41 @@
+//The PLC emulator's unit suite (emulator-review T2):  Signals - TagSpec parsing and every generator - ParseDevices,
+//and PlcServer, the emulated PLC's own UA server.  Nothing here logs into an AppServer or opens a session on an
+//OpcServer; PlcServer binds loopback on a test port and its writer sends UADP to a port nothing listens on.
+#include "gtest/gtest.h"
+#include <jde/fwk/process/process.h>
+#include <jde/fwk/settings.h>
+#include <jde/opc/uatypes/Logger.h>
+#include <jde/tests/SpdlogTestListener.h>
+#include <jde/tests/testMain.h>
+
+#define let const auto
+
+namespace Jde{
+#ifndef _MSC_VER
+	α Process::ProductName()ι->sv{ return "Tests.Opc.PlcEmulator"; }
+#endif
+	Ω startup( int argc, char **argv )ε->void{
+		Logging::AddTagParser( mu<Opc::UALogParser>() );//before Startup: the jsonnet names opc tags.
+		Process::Startup( argc, argv, "Tests.Opc.PlcEmulator", "PLC emulator unit tests", true );
+		Logging::Init();
+	}
+}
+
+α main( int argc, char **argv )->int{
+	using namespace Jde;
+	let filterSet = Process::Args().find( "--gtest_filter" )!=Process::Args().end();
+	::testing::InitGoogleTest( &argc, argv );
+	int exitCode{ EXIT_FAILURE };
+	try{
+		startup( argc, argv );
+		if( !filterSet )
+			::testing::GTEST_FLAG( filter ) = Settings::FindSV( "/testing/tests" ).value_or( "*" );
+		Jde::SpdlogTestListener::Config( ::testing::UnitTest::GetInstance()->listeners() );
+		exitCode = CheckTestsRan( RUN_ALL_TESTS() );
+	}
+	catch( runtime_error& e ){
+		exitCode = StartupFailed( e );
+	}
+	Process::Shutdown( exitCode );
+	return exitCode;
+}

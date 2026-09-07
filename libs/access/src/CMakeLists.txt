@@ -7,11 +7,11 @@ set( targetName Jde.Access )
 add_library( ${targetName} )
 compileOptions( ${targetName} )
 
-file( GLOB sources
+file( GLOB sources CONFIGURE_DEPENDS
 	*.cpp awaits/*.cpp config/*.cpp events/*.cpp types/*.cpp
 	server/*.cpp server/awaits/*.cpp server/hooks/*.cpp
 	client/*.cpp )
-file( GLOB headers *.h server/*.h server/awaits/*.h awaits/*.h client/*.h types/*.h
+file( GLOB headers CONFIGURE_DEPENDS *.h server/*.h server/awaits/*.h awaits/*.h client/*.h types/*.h
 	${jdeRoot}/include/jde/access/*.h ${jdeRoot}/include/jde/access/types/*.h
 	${jdeRoot}/include/jde/access/awaits/*.h ${jdeRoot}/include/jde/access/client/*.h
 	${jdeRoot}/include/jde/access/server/*.h ${jdeRoot}/include/jde/access/server/awaits/*.h )

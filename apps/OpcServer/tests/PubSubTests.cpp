@@ -100,5 +100,26 @@ namespace Jde::Opc::Server::Tests{
 		EXPECT_EQ( *got, expected );
 		ASSERT_TRUE( gotManual );
 		EXPECT_EQ( *gotManual, expected*2 );
+
+		//Second act - sustained delivery.  The first network message is always a keyframe, so the pair above landing proves
+		//nothing about the ones after it:  at keyFrameCount=10 the writer sent nine delta frames per keyframe, the reader
+		//discards every delta ("Only keyframes are supported", ua_pubsub_reader.c), and this test stayed green while the
+		//OpcServer dropped 90 % of what the emulator published (emulator-review #2/T1).  A second pair must land within a
+		//couple of publishing intervals:  with keyframes only it takes one;  at 10 the next keyframe is ten away.
+		constexpr double second{ 987.25 };
+		publisher.Write( 0, second );
+		publisher.Write( 4, second*2 );
+		let limit = 2*contract.PublishingInterval + 500ms;//two intervals, plus slack for the 50 ms poll and the writer's timer phase.
+		let start = steady_clock::now();
+		for( ; steady_clock::now()<start+limit; std::this_thread::sleep_for(50ms) ){
+			publisher.Iterate();
+			got = ReadDouble( contract.Fields[0].Node );
+			gotManual = ReadDouble( contract.Fields[4].Node );
+			if( got && *got==second && gotManual && *gotManual==second*2 )
+				break;
+		}
+		let took = Chrono::ToString( duration_cast<Duration>(steady_clock::now()-start) );
+		EXPECT_EQ( got.value_or(0), second ) << "the second write did not land within " << Chrono::ToString(limit) << " (" << took << ") - delta frames being discarded?  PubSub::Writer keyFrameCount must stay 0.";
+		EXPECT_EQ( gotManual.value_or(0), second*2 ) << "pumpManual.motorRpm's second write did not land within " << Chrono::ToString(limit) << " (" << took << ").";
 	}
 }

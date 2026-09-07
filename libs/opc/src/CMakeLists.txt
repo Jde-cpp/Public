@@ -9,8 +9,8 @@ find_package( open62541 REQUIRED ) #open62541::open62541 (linked below) carries 
 set( targetName Jde.Opc )
 add_library( ${targetName} )
 compileOptions( ${targetName} )
-file( GLOB_RECURSE sources *.cpp )
-file( GLOB_RECURSE headers  *.h )
+file( GLOB_RECURSE sources CONFIGURE_DEPENDS *.cpp )
+file( GLOB_RECURSE headers CONFIGURE_DEPENDS  *.h )
 
 target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
 

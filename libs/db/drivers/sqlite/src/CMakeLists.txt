@@ -22,8 +22,8 @@ set_target_properties( ${targetName} PROPERTIES
 if( NOT WIN32 )
 	target_link_options( ${targetName} PRIVATE LINKER:--exclude-libs,ALL ) #don't re-export the statically-linked sqlite3 amalgamation.
 endif()
-file( GLOB sources *.cpp )
-file( GLOB headers *.h )
+file( GLOB sources CONFIGURE_DEPENDS *.cpp )
+file( GLOB headers CONFIGURE_DEPENDS *.h )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} )
 
 target_link_libraries( ${targetName} PRIVATE SQLite::SQLite3 Threads::Threads )

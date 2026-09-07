@@ -20,7 +20,7 @@ compileOptions( ${targetName} )
 
 file( GLOB sources CONFIGURE_DEPENDS *.cpp */*.cpp )
 file( GLOB headers CONFIGURE_DEPENDS *.h */*.h )
-file( GLOB protos */*.proto )
+file( GLOB protos CONFIGURE_DEPENDS */*.proto )
 target_sources( ${targetName} PRIVATE ${sources} ${headers} ${protos} )
 
 if( NOT jde_Superbuild )
