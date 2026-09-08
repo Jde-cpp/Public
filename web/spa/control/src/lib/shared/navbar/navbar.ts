@@ -24,6 +24,7 @@ import { RouteItem } from '../../pages/component-sidenav/route-item';
 import { matchConfig } from '../../services/route-utils';
 import { SearchService } from '../../services/search/search-service';
 import { SearchResult } from '../../services/search/search-provider';
+import { HELP_TOPICS, helpTopicFor, helpTopics } from '../../services/help/help-topic';
 
 export type Favorite={
 	folderName?:string;
@@ -72,7 +73,7 @@ export class NavBar implements OnInit {
 		this.router.events.pipe(//subscribe before the await:  the load defers the rest of ngOnInit past the initial NavigationEnd.
 			filter( (e)=> e instanceof NavigationEnd )
 		).subscribe( (e:NavigationEnd)=>{
-			const path = e.urlAfterRedirects.split('?')[0];
+			const path = e.urlAfterRedirects.split( /[?#]/ )[0];//query AND fragment - help pages link to '#section' anchors, which are not a segment
 			const crumbs = this.#buildCrumbs( path );
 			this.crumbs.set( crumbs );
 			this.name.set( crumbs[crumbs.length-1].title );
@@ -189,6 +190,13 @@ export class NavBar implements OnInit {
 	isLoading = signal<boolean>( true );
 	name = signal<string>( null as any );
 	route = signal<string>( null as any );
+	#helpTopics = helpTopics( inject(HELP_TOPICS, {optional: true}) );//optional:  a site without help topics still gets the index link
+	//the ? button's target - the topic whose route pattern best fits the current url, the index from inside the help section itself
+	helpRoute = computed<string[]>( ()=>{
+		const segments = (this.route() ?? '').split( '/' ).filter( s=>s.length );
+		const topic = segments[0]=='help' ? undefined : helpTopicFor( this.#helpTopics, segments );
+		return topic ? ['/help', topic.id] : ['/help'];
+	});
 	existing = computed<Favorite|undefined>( ()=>this.favorites()?.find( fav=>fav.route==this.route() ) );// the favorite corresponding to the current route, if any
 	router = inject(Router);
 	searchForm = new FormControl<string|SearchResult>( '', {nonNullable: true} );//the selected option lands here as the object;  displayWith renders it.

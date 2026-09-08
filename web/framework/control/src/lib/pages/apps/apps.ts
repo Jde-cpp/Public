@@ -21,7 +21,7 @@ export class Apps implements OnInit{
 		this.heading = pageHeading( this.route );
 		this.route.data.subscribe( (data)=>{
 			this.connections = data["connections"];
-			this.routeStore.setChildren( '/apps', this.connections.map( c=>new RouteItem({ path: c.urlSegments.join('/'), title: `${c.programName}/${c.instanceName}` }) ) );
+			this.routeStore.setChildren( '/apps', this.connections.map( c=>new RouteItem({ path: c.urlSegments.join('/'), title: `${c.displayName}/${c.instanceName}` }) ) );
     });
 	}
 	//the gateway tiles on /gateways use router too, so the same service reads the same in both places

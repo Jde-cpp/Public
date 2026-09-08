@@ -192,6 +192,13 @@ for libraryDir in "${libraries[@]}"; do
 		mklinkDir styles $libraryDir/control/src;
 	fi;
 	cd $baseDir/$workspace;
+	#assets/<lib>/... is runtime content the library ships (the help markdown).  The dir was symlinked at projects/<lib>/src/assets
+	#above; the builder only checks that the input sits inside the workspace and never realpaths it, and its glob reads through
+	#a symlinked root.  followSymlinks is for a link INSIDE assets - the root needs nothing.  Re-applied every run, like the
+	#test buildTarget above:  drop any entry for this input, then append (the type guard: entries may be plain strings).
+	if [ -d $libraryDir/control/src/assets ]; then
+		jqEdit angular.json ".projects.\"$workspace\".architect.build.options.assets |= ((. // []) | map(select((type==\"object\" and .input==\"projects/$library/src/assets\") | not)) + [{\"glob\":\"**/*\",\"input\":\"projects/$library/src/assets\",\"output\":\"assets/$library\",\"followSymlinks\":true}])";
+	fi;
 	execute $libraryDir/scripts/$library.sh;
 	echo execute $libraryDir/scripts/$library-proto.sh $baseDir/$workspace;
 	execute $libraryDir/scripts/$library-proto.sh $baseDir/$workspace;

@@ -6,7 +6,7 @@ import { StringUtils } from '../../utils/string-utils';
 import { TableSettings } from '../ql-list-resolver';
 
 
-export type Connection = { id: number, instanceId: number, programName: string, instanceName: string, hostName: string, created: Date, status: { memory: number, values: any[] }, urlSegments:string[] };
+export type Connection = { id: number, instanceId: number, programName: string, displayName: string, instanceName: string, hostName: string, created: Date, status: { memory: number, values: any[] }, urlSegments:string[] };
 
 export class AppInstanceRoute extends RouteItem{
 	constructor( programName:string, instanceName:string, tableSettings:TableSettings ){
@@ -27,6 +27,10 @@ export class AppResolver implements Resolve<Connection[]> {
 		connections.forEach( c=>{
 			c.created = new Date( c.created );
 			c.programName = c.programName.startsWith("Jde.") ? c.programName.substring(4) : c.programName;
+			//the card title is what the process calls itself;  programName is normalised below into a *routing* key, which is a
+			//different thing - keep the two apart or the hub loses its name on screen.  The plain gateway is the one exception:
+			//it keeps the "Gateway" label it has always had, so only the hub reads as itself.
+			c.displayName = c.programName=="OpcGateway" ? "Gateway" : c.programName;
 			if( c.programName=="OpcGateway" || c.programName=="OpcHub" )//the hub (AppServer + gateway in one process) registers once; its page is the gateway's - the connections, logs and levels there are its own
 				c.programName = "Gateway";
 			let childPath = StringUtils.toJson(StringUtils.plural(c.programName));

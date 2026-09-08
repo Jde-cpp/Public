@@ -1,0 +1,5 @@
+@if( error() ){
+	<p class="help-error" role="alert">{{error()}}</p>
+} @else if( html() ){
+	<div class="docs-markdown" [innerHTML]="html()" (click)="onClick($event)"></div>
+}

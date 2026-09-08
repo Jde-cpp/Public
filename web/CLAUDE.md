@@ -13,8 +13,9 @@ survives. The tracked sources are linked in:
 
 | tracked source | appears in the workspace as | link |
 |---|---|---|
-| `web/<lib>/control/src/{lib,public-api.ts,styles}` | `my-workspace/projects/jde-<lib>/src/…` | symlink |
-| `web/opc/site/**` | `my-workspace/src/**` | **hard link** (`web/opc/scripts/setup.sh`) |
+| `web/<lib>/control/src/{lib,public-api.ts,styles,assets}` | `my-workspace/projects/jde-<lib>/src/…` | symlink |
+| `web/opc/site/**` (except `assets`) | `my-workspace/src/**` | **hard link** (`web/opc/scripts/setup.sh`) |
+| `web/opc/site/assets` | `my-workspace/src/assets` | symlink (`setup.sh`) |
 | `web/proto` | `my-workspace/proto`, mapped as the `jde-proto/*` tsconfig path | symlink |
 
 Editing **through a symlink is fine** — the write lands in the tracked file under
@@ -29,6 +30,19 @@ workspace copy, re-link it with `ln -f <site-file> <workspace-file>` or re-run
 `preserveSymlinks` is set in both `angular.json` and `tsconfig.json` and must stay — without it
 tsc and esbuild resolve the library sources to their real paths outside the workspace, which
 breaks compilation and the sass `node_modules` lookup.
+
+## Help content
+
+The `/help` section renders markdown at runtime. Each library keeps its own under `web/<lib>/control/src/assets/help/*.md`
+and the site keeps `overview.md`/`about.md` under `web/opc/site/assets/help/`. `create-workspace.sh` adds one angular.json
+`assets` entry per library that has an assets dir (`projects/jde-<lib>/src/assets` → `assets/jde-<lib>`) and `setup.sh` one
+for the site (`src/assets` → `assets/site`), so a file is served at `assets/<jde-lib|site>/help/<file>.md`. Topics are
+described by `HelpTopic` constants each library exports (`spaHelpTopics`, `frameworkHelpTopics`, …) and registered in
+`app.config.ts` under the `HELP_TOPICS` multi token, in display order; a topic's `routes` patterns are what the navbar's `?`
+button matches the current url against. `marked` renders the page and must only ever be imported dynamically
+(`await import('marked')`): the libraries are not lazy — `app.config.ts` imports every barrel — so a static import anywhere
+would hoist it into the initial bundle. `{{version}}` in the markdown is the `JDE_VERSION` constant setup.sh passes through
+the builder's `define` option, read via `IEnvironment.get('version')`.
 
 ## Libraries
 

@@ -3,7 +3,7 @@
 // One place for the per-section colors, so the tiles on the home page and the pages they lead to agree.
 // The hue is mixed into the theme surface rather than set outright: the tint then follows whichever of the
 // four themes is selected, and the card text keeps its contrast on a light theme and a dark one alike.
-$section-tints: (gateways: #1976d2, access: #f9a825, apps: #2e7d32);
+$section-tints: (gateways: #1976d2, access: #f9a825, apps: #2e7d32, help: #6a1b9a);
 
 @mixin tint( $section ){
 	$tint: map.get( $section-tints, $section );

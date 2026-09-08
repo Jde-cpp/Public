@@ -18,3 +18,4 @@ export {SettingsRouteService} from './lib/services/routes/settings-route-service
 export {OPC_STORE, OpcStore} from './lib/services/opc-store';
 export {NodeSearchProvider} from './lib/services/node-search-provider';
 export type {NodeSearchRow} from './lib/services/node-search-provider';
+export * from './lib/help-topics';

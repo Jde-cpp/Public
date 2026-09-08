@@ -1,7 +1,7 @@
 import {Routes} from '@angular/router';
 
 import{ DetailResolver, IGRAPHQL, QLListResolver, QLListRouteService, HomeRouteService, AppResolver } from 'jde-framework';
-import { IROUTE_SERVICE } from 'jde-spa';
+import { HelpRouteService, helpTopicResolver, IROUTE_SERVICE } from 'jde-spa';
 import { AccessService, AuthGuard, Group, groupTableSettings, resourceTableSettings, Role, roleTableSettings, User, userTableSettings } from 'jde-access';
 import{ ClientResolver, GatewayRouteService, gatewayTableSettings, GatewayCnnctnRouteService,GatewayService, NodeResolver, OpcNodeRouteService, GatewayResolver } from 'jde-opc';
 
@@ -9,6 +9,7 @@ const accessProvider = { provide: IGRAPHQL, useExisting: AccessService };//route
 const gatewayProvider = { provide: IGRAPHQL, useExisting: GatewayService };//route-scoped token, but aliases the single providedIn:'root' instance instead of constructing a per-route one
 const qlListProvider = { provide: IROUTE_SERVICE, useClass: QLListRouteService };
 const opcNodeRouteProvider = { provide: IROUTE_SERVICE, useExisting: OpcNodeRouteService };//NodeChildren injects the class token, so the route binding must alias that instance rather than build a second one
+const helpProvider = { provide: IROUTE_SERVICE, useClass: HelpRouteService };
 
 //pages are loadComponent, not component:  an eager reference drags the page and its Material deps into the initial bundle, which blew the 2mb size budget
 const sidenav = ()=>import('jde-spa').then( m=>m.ComponentSidenav );
@@ -135,6 +136,14 @@ export const routes: Routes = [
 				canActivate: [AuthGuard],
 				data: { summary: "Opc Server" }
 			}
+		]
+	},
+	//the access idiom:  the cards route has no children, so /help/<topic> falls through to the sidenav one.  No AuthGuard on
+	//purpose - help stays readable signed out, like login.
+	{ path: 'help', title: "Help", loadComponent: cards, providers: [helpProvider], data: {summary: "Documentation", icon: "help_outline"} },
+	{ path: 'help', loadComponent: sidenav,
+		children :[
+			{ path: ':topic', loadComponent: ()=>import('jde-spa').then( m=>m.HelpPage ), resolve: { topic: helpTopicResolver }, runGuardsAndResolvers: "paramsChange" }
 		]
 	}
 ];

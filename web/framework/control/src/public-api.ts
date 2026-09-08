@@ -52,3 +52,4 @@ export * from './lib/utils/stl';
 export * from './lib/utils/string-utils';
 export * from './lib/utils/utils';
 export * from './lib/services/app/app-service-types';
+export * from './lib/help-topics';
