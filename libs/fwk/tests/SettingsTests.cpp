@@ -1,6 +1,17 @@
 #include <jde/fwk/settings.h>
 #include <jde/fwk/process/process.h>
 #include <cstdlib>
+#ifdef _WIN32 //CommandLineToArgvW, to round-trip ServiceCommandLine through the parser that reads it back.
+	#ifndef NOMINMAX
+		#define NOMINMAX
+	#endif
+	#ifndef WIN32_LEAN_AND_MEAN
+		#define WIN32_LEAN_AND_MEAN
+	#endif
+	#include <windows.h>
+	#include <shellapi.h>
+	#pragma comment( lib, "shell32.lib" )
+#endif
 
 #define let const auto
 
@@ -42,6 +53,48 @@ namespace Jde::Tests{
 		let repeated = parsed( {"-arg", "a=1", "-arg", "b=2"} );
 		EXPECT_EQ( repeated.count("-arg"), 2u );
 	}
+
+	//What -install hands the SCM.  The other end is CommandLineToArgvW (Args() on windows), so the rules are its.  An
+	//unquoted `C:\Program Files\…\x.exe` came back as argv[0]=`C:\Program`: Executable() pointed at nothing, ProductName()
+	//fell back to "Jde-cpp" and the service grew a second data tree - hence the exe is quoted whether or not it needs it.
+	TEST( ProcessTests, ServiceCommandLineQuotesExeAndSpacedArgs ){
+		const fs::path exe{ "C:\\Program Files\\Jde-Cpp\\OpcHub\\Jde.Opc.Hub.exe" };
+		EXPECT_EQ( Process::ServiceCommandLine(exe, {}), "\"C:\\Program Files\\Jde-Cpp\\OpcHub\\Jde.Opc.Hub.exe\"" );
+		EXPECT_EQ( Process::ServiceCommandLine(exe, {"-settings=C:\\ProgramData\\Jde-Cpp\\config\\Opc.Hub.jsonnet", "-include=args/install", "-sync"}),
+			"\"C:\\Program Files\\Jde-Cpp\\OpcHub\\Jde.Opc.Hub.exe\" -settings=C:\\ProgramData\\Jde-Cpp\\config\\Opc.Hub.jsonnet -include=args/install -sync" ) << "plain tokens pass through unquoted - `sc qc` stays readable";
+		EXPECT_EQ( Process::ServiceCommandLine("x.exe", {"-settings=C:\\My Dir\\a.jsonnet"}), "\"x.exe\" \"-settings=C:\\My Dir\\a.jsonnet\"" ) << "a space quotes the whole token";
+		EXPECT_EQ( Process::ServiceCommandLine("x.exe", {"a\"b"}), "\"x.exe\" \"a\\\"b\"" ) << "an embedded quote is escaped";
+		EXPECT_EQ( Process::ServiceCommandLine("x.exe", {"C:\\dir\\"}), "\"x.exe\" C:\\dir\\" ) << "unquoted, a trailing backslash is literal";
+		EXPECT_EQ( Process::ServiceCommandLine("x.exe", {"C:\\my dir\\"}), "\"x.exe\" \"C:\\my dir\\\\\"" ) << "quoted, it doubles or it would escape the closing quote";
+		EXPECT_EQ( Process::ServiceCommandLine("x.exe", {""}), "\"x.exe\" \"\"" ) << "an empty token survives as a quoted empty";
+	}
+
+#ifdef _WIN32
+	//and the composed line parses back to the tokens it was built from, through the parser Args() uses.
+	TEST( ProcessTests, ServiceCommandLineRoundTrips ){
+		const fs::path exe{ "C:\\Program Files\\Jde-Cpp\\OpcHub\\Jde.Opc.Hub.exe" };
+		const vector<string> args{ "-settings=C:\\ProgramData\\Jde-Cpp\\config\\Opc.Hub.jsonnet", "-include=args/install", "-arg", "path=C:\\my db\\a.db", "quote\"inside", "trail\\", "" };
+		let line = Process::ServiceCommandLine( exe, args );
+		const std::wstring wide{ line.begin(), line.end() };//ascii by construction
+		int count{};
+		LPWSTR* argv = ::CommandLineToArgvW( wide.c_str(), &count );
+		ASSERT_NE( argv, nullptr );
+		vector<string> tokens;
+		for( int i=0; i<count; ++i ){
+			const std::wstring w{ argv[i] };
+			tokens.emplace_back( w.begin(), w.end() );
+		}
+		::LocalFree( argv );
+		ASSERT_EQ( tokens.size(), args.size()+1 );
+		EXPECT_EQ( tokens[0], exe.string() ) << "argv[0] is the whole path - what Executable() and loadResource read";
+		for( uint i=0; i<args.size(); ++i )
+			EXPECT_EQ( tokens[i+1], args[i] ) << "token " << i;
+		let parsed = Process::ParseArgs( tokens );
+		EXPECT_EQ( one(parsed,"-settings"), "C:\\ProgramData\\Jde-Cpp\\config\\Opc.Hub.jsonnet" );
+		EXPECT_EQ( one(parsed,"-include"), "args/install" );
+		EXPECT_EQ( one(parsed,"-arg"), "path=C:\\my db\\a.db" );
+	}
+#endif
 
 	//and the parsed rules really are what this process is running under - the two forms every suite passes.
 	TEST( ProcessTests, ThisSuiteArgsParsed ){
@@ -117,6 +170,17 @@ namespace Jde::Tests{
 		EXPECT_EQ( Settings::FindString("/settingsTests/host"), "overridden-host" );
 		setEnv( "HostName", hostName ? hostName->c_str() : "" );//"" reads back as unset, which is where it started.
 		EXPECT_EQ( Settings::FindString("/settingsTests/host"), Process::HostName() );
+	}
+
+	//$(ExeDir) is how the installed args files reach the db driver and proc modules beside the exe wherever the installer
+	//put it (Program Files, or a per-user Programs dir) - the OS's exe path, not argv[0], which is whatever the launcher spelled.
+	TEST_F( SettingsTests, ExeDirBuiltInExpands ){
+		Settings::Set( "/settingsTests/exeDir", "$(ExeDir)/x.dll" );
+		EXPECT_EQ( Settings::FindString("/settingsTests/exeDir"), Process::ExePath().parent_path().string()+"/x.dll" );
+		setEnv( "ExeDir", "/env-wins" );
+		EXPECT_EQ( Settings::FindString("/settingsTests/exeDir"), "/env-wins/x.dll" ) << "a real environment variable outranks the builtIn, as for HostName";
+		setEnv( "ExeDir", "" );//"" reads back as unset.
+		EXPECT_EQ( Settings::FindString("/settingsTests/exeDir"), Process::ExePath().parent_path().string()+"/x.dll" );
 	}
 
 	//a value naming itself rescans forever without the 32-pass bound.  Note the failure mode this guards is a hang,

@@ -24,8 +24,8 @@ namespace Jde{
 		auto p = ::dlsym( module, procName.c_str() ); CHECK( p );
 		return p;
 	}
-	α Process::Install( str /*serviceDescription*/ )ε->void{
-		THROW( "Not Implemeented" );
+	α Process::Install( str /*serviceDescription*/, const vector<string>& /*args*/ )ε->void{
+		THROW( "Not Implemented" );
 	}
 	α Process::UnPause()ι->void{
 		::raise( SIGALRM );//handled by ExitHandler - interrupts ::pause(). SIGKILL is uncatchable & would kill the process outright.

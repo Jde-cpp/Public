@@ -6,11 +6,17 @@ name: Win2025
 # cache is missing this workflow fails fast — it never builds deps itself.
 # Run "Win2025 Deps" on `main` first (and after any dep/preset bump).
 #
-# On demand only: dispatch it manually (Actions -> Win2025 -> Run
-# workflow), picking the branch to build. workflow_dispatch is gated to users
-# with write access, so no fork-PR fence is needed.
+# Dispatch it manually (Actions -> Win2025 -> Run workflow), picking the
+# branch to build - workflow_dispatch is gated to users with write access, so
+# no fork-PR fence is needed - or push a release tag (yyyy.MM.dd). Every run
+# also builds the Windows installer (apps/OpcHub/setup) as an artifact; a tag
+# run publishes it as that tag's GitHub release. The deps-cache coupling holds
+# for tag runs too: GitHub evicts caches unused for 7 days, so after a quiet
+# stretch re-run "Win2025 Deps" before tagging.
 on:
   workflow_dispatch:
+  push:
+    tags: ['20*']
 
 concurrency:
   group: win2025-build-${{ github.ref }}
@@ -23,6 +29,8 @@ jobs:
     # Keep it unique across workflows and in sync with the badge URL.
     name: Win2025
     runs-on: windows-2025
+    permissions:
+      contents: write # the Release step; read is all checkout needs
     defaults:
       run:
         shell: pwsh
@@ -32,6 +40,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           clean: true
+          fetch-depth: 0 # the tags: the installer's version is `git describe --tags`
 
       - name: Setup Windows toolchain
         id: toolchain
@@ -81,3 +90,50 @@ jobs:
           path: C:/jde/build/clang++-jde/release/bin/**
           if-no-files-found: error
           retention-days: 7
+
+      # The installer (apps/OpcHub/setup/build-setup.ps1). NSIS ships on the
+      # hosted image (choco as the fallback); the OpcServer's DI/IA nodesets come
+      # from OPCFoundation/UA-Nodeset, pinned to the commit the dev clone is on,
+      # and the VC++ runtime from Microsoft. -SkipWeb: the Angular site is not
+      # built in CI yet.
+      - name: Installer inputs
+        if: success()
+        run: |
+          if (-not (Test-Path 'C:\Program Files (x86)\NSIS\makensis.exe')) { choco install nsis -y --no-progress }
+          New-Item -ItemType Directory -Force C:/jde/nodesets/DI, C:/jde/nodesets/IA | Out-Null
+          $raw = 'https://raw.githubusercontent.com/OPCFoundation/UA-Nodeset/4a6f0c8e9790116eb2eb4511ae688109ee281934'
+          foreach ($f in 'DI/Opc.Ua.Di.NodeSet2.xml', 'IA/Opc.Ua.IA.NodeSet2.xml', 'IA/Opc.Ua.IA.NodeSet2.examples.xml') {
+            curl.exe -sSfL "$raw/$f" -o "C:/jde/nodesets/$f"
+            if ($LASTEXITCODE -ne 0) { throw "download failed: $f" }
+          }
+          curl.exe -sSfL https://aka.ms/vs/17/release/vc_redist.x64.exe -o C:/jde/vc_redist.x64.exe
+          if ($LASTEXITCODE -ne 0) { throw 'download failed: vc_redist.x64.exe' }
+
+      - name: Installer
+        if: success()
+        run: |
+          # a tag names the version outright; otherwise build-setup.ps1 takes `git describe --tags`
+          $version = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME } else { '' }
+          ./apps/OpcHub/setup/build-setup.ps1 -BuildDir C:/jde/build/clang++-jde/release -UaNodeSets C:/jde/nodesets -VcRedist C:/jde/vc_redist.x64.exe -OutDir C:/jde/setup -SkipWeb -Version $version
+
+      - name: Upload installer
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer-${{ github.run_id }}
+          path: C:/jde/setup/OpcHubSetup-*.exe
+          if-no-files-found: error
+          retention-days: 7
+
+      # A tag run publishes the installer as the tag's GitHub release - created
+      # here, or the file replaced when the run is repeated.
+      - name: Release
+        if: success() && github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = '${{ github.ref_name }}'
+          $exe = (Get-Item C:/jde/setup/OpcHubSetup-*.exe).FullName
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) { gh release upload $tag $exe --clobber } else { gh release create $tag $exe --title $tag --generate-notes }
+          if ($LASTEXITCODE -ne 0) { throw 'gh release failed' }

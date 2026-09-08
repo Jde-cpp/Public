@@ -40,7 +40,11 @@ namespace Jde{
 			{ "JDE_BUILD_TYPE", []{ return string{buildTypeSubDir()}; } },
 			{ "ProgramData", []{ return Process::ProgramDataFolder().string(); } },
 			{ "PRODUCT_NAME", []{ return string{Process::ProductName()}; } },
-			{ "HostName", []{ return Process::HostName(); } }
+			{ "HostName", []{ return Process::HostName(); } },
+			//the dir the running exe sits in:  the installed args find the db driver and its proc modules beside the exe with
+			//it, wherever the installer put them (Program Files, or a per-user Programs dir) - ExePath(), not argv[0], which
+			//is whatever the launcher spelled.
+			{ "ExeDir", []{ return Process::ExePath().parent_path().string(); } }
 		};
 		return y;
 	}

@@ -52,7 +52,14 @@ and opens its OPC websocket on `/opc` (`Gateway.socketPath` in `web/opc/control/
 gateway ignores the path, so one build serves both deployments.  The hub's one `connections{}` row (`Jde.OpcHub`) routes to
 the gateway page (`app-resolver.ts`).
 
+## Install
+
+Windows: `setup/` - an NSIS installer (`OpcHubSetup-<version>.exe`, built by `setup/build-setup.ps1`) with the hub, the
+OpcServer and the Web UI as components, an all-users (Windows services) or current-user (Start Menu shortcuts, no
+administrator rights) mode, and sqlite as the database.  The installed layout, the service command lines and what
+uninstall leaves behind are in `setup/README.md`; the settings it ships are `config/args/install` (sqlite - `args/install-sqlServer`
+is the by-hand SQL Server variant) and `apps/OpcServer/config/Opc.Server.Install.jsonnet`.
+
 ## Not done here
 
-Soak support (`apps/OpcGateway/soak/soak.sh` is shaped around three exes), the Windows installer
-(`apps/OpcGateway/setup` is still on the split layout), source consolidation under this directory.
+Soak support (`apps/OpcGateway/soak/soak.sh` is shaped around three exes), source consolidation under this directory.
