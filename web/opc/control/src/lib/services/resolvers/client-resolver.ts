@@ -1,7 +1,7 @@
 import { ActivatedRouteSnapshot, createUrlTreeFromSnapshot, Resolve, Router, RouterStateSnapshot } from '@angular/router';
 import { inject, Injectable } from '@angular/core';
 import { RouteItem, RouteStore } from 'jde-spa';
-import { DetailResolver, DetailResolverData, DetailRoute, IGRAPHQL, SnackbarService, TargetNotFoundError} from 'jde-framework'
+import { DetailResolver, DetailResolverData, DetailRoute, errorText, IGRAPHQL, SnackbarService, TargetNotFoundError} from 'jde-framework'
 import { Gateway, GatewayService } from '../gateway-service';
 import { ServerCnnctn } from '../../model/server-cnnctn';
 import { OpcStore } from '../opc-store';
@@ -12,12 +12,13 @@ export class ClientResolver implements Resolve<DetailResolverData<ServerCnnctn>>
 	private gatewayService = inject( IGRAPHQL ) as GatewayService;//the gateway routes alias IGRAPHQL to the one GatewayService instance (app.routes.ts gatewayProvider)
 
 	resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<DetailResolverData<ServerCnnctn>>{
-		let collectionDisplay = "Server Connections";
-		let target = route.paramMap.get( "connection" )!;
-		return this.loadProfile( route, collectionDisplay, target, state.url );
+		return this.loadProfile( route, route.paramMap.get("connection")! );
 	}
 
-	private async loadProfile( route: ActivatedRouteSnapshot, collectionDisplay:string, target:string, url:string ):Promise<DetailResolverData<ServerCnnctn>>{
+	//The route is the only input:  everything user-facing calls one of these rows a connection ("Connections" tab,
+	//"<name> - Connection" title, the serverConnections collection), and the sibling titles come from the RouteStore, so
+	//there was nothing for the collection-display name this used to carry - nor for the url beside it - to feed.
+	private async loadProfile( route: ActivatedRouteSnapshot, target:string ):Promise<DetailResolverData<ServerCnnctn>>{
 		const parent = route.parent!;
 		let gatewayTarget = parent.url[parent.url.length-1].path;
 		const ql = await this.gatewayService.gateway( gatewayTarget );
@@ -53,7 +54,8 @@ export class ClientResolver implements Resolve<DetailResolverData<ServerCnnctn>>
 			try{
 				y.row["server"] = await opcStore.getConnection( ql, target );
 			}
-			catch( e ){ //can't connect, maybe bad settings.
+			catch( e ){ //can't connect, maybe bad settings.  The toast goes by; the row keeps the reason for the Connection tab's not-connected state.
+				y.row["serverError"] = errorText( e ) ?? "Unknown error";
 				snackbar.exception( "Could not connect to server.", e );
 			}
 		}

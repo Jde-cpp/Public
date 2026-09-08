@@ -10,11 +10,13 @@ namespace Jde::Opc::Gateway{
 	private:
 		α Query()ι->TAwait<jvalue>::Task override;
 	};
-	//serverConnections{ … opcSessions{count} opcConnections{count} } - grafts live totals onto the DB rows, each child one object {count}: opcSessions = web sessions holding a credential on the target (auth cache), opcConnections = open UAClients (idle drain/disconnect shrink it).
+	//serverConnections{ … opcSessions{count} opcConnections{count} connectionStatus{name error} } - grafts live state onto the DB rows: opcSessions = web
+	//sessions holding a credential on the target (auth cache), opcConnections = open UAClients (idle drain/disconnect shrink it), connectionStatus = those
+	//counts read as Connected|Idle|Error against UAClient::ConnectErrors(), so a broken target is distinguishable from a merely unused one.
 	struct ServerCnnctnSessionsQLAwait final : QL::IQLTableAwaitExe{
 		using base = QL::IQLTableAwaitExe;
 		ServerCnnctnSessionsQLAwait( QL::TableQL&& q, QL::Creds&& creds, SRCE )ι:base{ move(q), move(creds), sl }{}
-		Ω IsApplicable( const QL::TableQL& q )ι->bool{ return q.JsonName.starts_with("serverConnection") && (q.FindTable("opcSessions") || q.FindTable("opcConnections")); }
+		Ω IsApplicable( const QL::TableQL& q )ι->bool{ return q.JsonName.starts_with("serverConnection") && (q.FindTable("opcSessions") || q.FindTable("opcConnections") || q.FindTable("connectionStatus")); }
 	private:
 		α Query()ι->TAwait<jvalue>::Task override;
 	};

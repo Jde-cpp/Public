@@ -62,7 +62,7 @@
 			<!-- <mat-paginator (page)="pageChangeEvent($event)" [pageIndex]="pageIndex" [length]="data.length" [pageSize]="pageSize" [pageSizeOptions]="[14, 100, 500, 1000]" showFirstLastButtons></mat-paginator> -->
 			<!-- [startIndex]="pageInfo.startIndex" -->
 			<!-- <mat-form-field>
-				<input matInput (keyup)="applyFilter($event.target['value'])" placeholder="Filter">
+				<input matInput (input)="applyFilter($event.target['value'])" placeholder="Filter">
 			</mat-form-field> -->
 			<!-- <button mat-icon-button [disabled]="profile.hiddenMessages.length==0"><mat-icon class="iconButton" (click)="clearHiddenMessages()">layers_clear</mat-icon></button>
 			<button mat-icon-button [disabled]="selectedIndex==null"><mat-icon class="iconButton" (click)="hideSelectedMessage()">clear</mat-icon></button>

@@ -9,7 +9,7 @@ export class ServerDesc{
 		this.applicationType = obj.applicationType;
 		this.gatewayServerUri = obj.gatewayServerUri;
 		this.discoveryProfileUri = obj.discoveryProfileUri;
-		this.discoveryUrls = obj.discoveryUrls;
+		this.discoveryUrls = obj.discoveryUrls ?? [];
 	}
 	applicationUri: string;
 	productUri: string;

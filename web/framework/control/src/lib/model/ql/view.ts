@@ -42,8 +42,14 @@ export enum Operator{
 	Between
 }
 //hidden = queried but not necessarily shown eg id
-export type ViewFieldSettings = {name?:string, displayName?:string, style?:Style, defaultView?:boolean/*=!hidden*/, hidden?:boolean, selection?:string/*OBJECT/UNION sub-selection, e.g. "count" -> `name{count}`; defaults to "id name"/"id"*/};
-type ViewFieldJson = {name:string, hidden?:boolean, displayName?:string, style?:Style, selection?:string};
+//A column whose values are a small closed set reads as a chip rather than as text - the same treatment the log table gives
+//its level.  The map is value -> tone, not value -> colour:  the palette belongs to the table (graphql-table.scss), so a
+//caller's own vocabulary ("Connected", "Idle") never reaches the framework's stylesheet.  A value the map does not name
+//falls back to the theme's default chip.
+export type ChipTone = "ok"|"neutral"|"error";
+export type ChipTones = Record<string,ChipTone>;
+export type ViewFieldSettings = {name?:string, displayName?:string, style?:Style, defaultView?:boolean/*=!hidden*/, hidden?:boolean, selection?:string/*OBJECT/UNION sub-selection, e.g. "count" -> `name{count}`; defaults to "id name"/"id"*/, chip?:ChipTones};
+type ViewFieldJson = {name:string, hidden?:boolean, displayName?:string, style?:Style, selection?:string, chip?:ChipTones};
 export type Filter = { operator: Operator, value: DbScalar[] };
 export class Flex{
 	constructor( value:string|number ){
@@ -78,6 +84,10 @@ export class Flex{
 	flexShrink?:number;
 	flexBasis?:string
 };
+//How a column's header and its cells sit in the width the flex row gives them.  Both are flex containers, so `text-align`
+//alone never moves the content - graphql-table.columnStyle() expands this to justify-content as well, and writes the pair
+//onto the header and the cell alike, which is what keeps a heading over its values.
+export type Align = "left"|"center"|"right";
 export class Style{
 	constructor( value:Partial<Style>|number ){
 		if( typeof value === "number" )
@@ -86,9 +96,10 @@ export class Style{
 			Object.assign( this, value );
 	}
 	toJSON(){
-		return this.flex ? {flex: this.flex.toString()} : {};
+		return { ...(this.flex ? {flex: this.flex.toString()} : {}), ...(this.align ? {align: this.align} : {}) };//a saved view keeps both, or a user view reloads left-aligned while the default view it was edited from is not
 	}
 	flex?: Flex;
+	align?: Align;
 }
 export class ViewField{
 	constructor( args: {qlField: Field, settings?: ViewFieldSettings}|{field: ViewFieldJson, schema: TableSchema}|ViewField ){
@@ -99,6 +110,7 @@ export class ViewField{
 			this._displayed = copyFrom._displayed;
 			this.displayName = copyFrom.displayName;
 			this.selection = copyFrom.selection;
+			this.chip = copyFrom.chip;
 		}else if( "qlField" in args ){
 			const settings = args.settings;
 			this.qlField = args.qlField;
@@ -106,6 +118,7 @@ export class ViewField{
 			this._displayed = settings?.hidden ? false : undefined;
 			this.displayName = settings?.displayName ?? StringUtils.idToDisplay( this.name );
 			this.selection = settings?.selection;
+			this.chip = settings?.chip;
 		}else{
 			const serialized = args as {field: ViewFieldJson, schema: TableSchema};
 			const json = serialized.field;
@@ -114,6 +127,7 @@ export class ViewField{
 			this._displayed = !json.hidden;//explicit, not the type default: toJson always stamps hidden when a field isn't displayed, so no flag means displayed - the default would re-hide an ID/list column the user checked
 			this.displayName = json.displayName ?? StringUtils.idToDisplay( this.name );
 			this.selection = json.selection;
+			this.chip = json.chip;
 		}
 	}
 	toJson( customDisplay:boolean=false ):ViewFieldJson{
@@ -126,6 +140,8 @@ export class ViewField{
 			y["style"] = this.style;
 		if( this.selection )
 			y["selection"] = this.selection;
+		if( this.chip )
+			y["chip"] = this.chip;
 		return y;
 	}
 	//what query() emits for this field: composite kinds need a sub-selection - an explicit one from settings, else the framework's {id name}/{id} convention (proto.service.fieldColumns).
@@ -142,6 +158,7 @@ export class ViewField{
 	get type(){ return this.qlField.type; }
 	style?: Style;
 	selection?:string;
+	chip?:ChipTones;
 };
 
 type ViewConfigArgs = { configColumns:(string|ViewFieldSettings)[], sort:Sort[], filters?:{name: string, filter: Filter} };

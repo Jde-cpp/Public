@@ -8,6 +8,14 @@ body {
   margin: 0;
 }
 
+// A property form and the action row under it stop growing here:  a 1900px input holding `1` is unreadable, and the
+// row's far-right Delete has to stay on the form's edge, not the window's.  Custom property rather than a scss
+// variable because the form (jde-framework) and the pages that put a button row under it (jde-opc, ...) are
+// different libraries.  Equals $extra-small-breakpoint-width, so anything narrower still gets the full width.
+:root {
+  --jde-form-max-width: 720px;
+}
+
 .docs-button[md-button], .docs-button[md-raised-button] {
   text-transform: uppercase;
 }

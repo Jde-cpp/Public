@@ -46,9 +46,10 @@ export class DetailResolver<T> implements Resolve<DetailResolverData<T>> {
 	resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<DetailResolverData<T>>{
 		let collectionDisplay = route.url.length>1 ? route.url[route.url.length-2].path : route.data["collectionName"]; //users
 		let target = route.paramMap.get( "target" )!;
-		return this.loadProfile( route, collectionDisplay, target, state.url );
+		return this.loadProfile( route, collectionDisplay, target );
 	}
-	private async loadProfile( route: ActivatedRouteSnapshot, collectionDisplay:string, target:string, url:string ):Promise<DetailResolverData<T>>{
+	//The absolute list url the breadcrumb needs is rebuilt from the route below, so the state url this also used to take was never read.
+	private async loadProfile( route: ActivatedRouteSnapshot, collectionDisplay:string, target:string ):Promise<DetailResolverData<T>>{
 		//ComponentNav renders each sibling as parent.path + '/' + sibling.path, so the parent must be the absolute list url
 		//('/access/users') and the siblings bare targets — the relative ListRoute path resolved against the sidenav route
 		//('/access/users/users/<target>'), breaking sibling navigation and the routerLinkActive highlight.

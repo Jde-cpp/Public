@@ -35,9 +35,6 @@ export class ClientDetail extends DetailPage<ServerCnnctn>{
 			...this.properties(),
 		} as ServerCnnctnProps);
 	}
-	//not the base's `!id`: this page's one extra tab is gated on `server`, so an EXISTING connection with none has only
-	//the Properties tab too, and a stored index past it would hard-loop mat-tab-group the same way (review3 L2).
-	protected override get onlyPropertiesTab(){ return !this.server; }
 	protected override get title(){ return this.row.name ? `${this.row.name} - Connection` : "New Connection"; }
 	override get ql(){ return this.gateway; }//per-gateway, not a single injected service - resolved in ngOnInit
 
@@ -51,10 +48,16 @@ export class ClientDetail extends DetailPage<ServerCnnctn>{
 		}
 	}
 
+	//what a user reads first, then the connection, then the two technical fields - the alphabetical default buried Description between them and put Url last
+	readonly fieldOrder = ["target", "name", "description", "url", "certificateUri", "defaultBrowseNs"];
+	readonly fieldLabels = { url: "URL", certificateUri: "Certificate URI", defaultBrowseNs: "Default Namespace" };//the camelCase split gives "Url", "Certificate Uri", "Default Browse Ns"
 	get serverCnnctn(){ return this.row; }//the template's name for it
 	get isDeleted():boolean{ return this.row?.deleted!=null; }//only populated when show-deleted is on - the query drops the column otherwise
-	get isNew():boolean{ return !this.row?.id; }
-	get server(): Server{ return this.row?.server; }
+	//Gates the Connection tab as well as the Id field.  The tab used to be gated on `server`, so an unreachable server had
+	//no tab at all;  it now shows its not-connected state, and the base's `!id` clamp (review3 L2) covers the one case left.
+	get isNew():boolean{ return !this.row?.id; }//the Id field: target is the connection's identity and the gateway meta refuses to update it, so the form does not offer it
+	get server(): Server|undefined{ return this.row?.server; }
+	get serverError(): string|undefined{ return this.row?.serverError; }
 	gatewayService:GatewayService = inject( GatewayService );
 	gateway!:Gateway;
 }

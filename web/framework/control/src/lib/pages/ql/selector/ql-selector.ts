@@ -15,7 +15,7 @@ import { QLList } from '../list/ql-list';
 //with the rows checked against a caller-owned selection of ids.
 @Component( {
 	selector: 'ql-selector',
-	template: `@if( listData() ){ <ql-list [listData]=listData() [selector]=true [collectionDisplay]=type() [(selections)]=rowSelections></ql-list> }`,
+	template: `@if( listData() ){ <ql-list [listData]=listData() [selector]=true [(selections)]=rowSelections></ql-list> }`,
 	host: {class:'main-content mat-drawer-container my-content'},
 	imports: [QLList]
 })

@@ -21,7 +21,7 @@ import { Favorites } from './favorites/favorites-dialog';
 import { ProfileStore } from '../../services/profile/profile-store';
 import { RouteStore } from '../../services/route-store';
 import { RouteItem } from '../../pages/component-sidenav/route-item';
-import { matchConfig } from '../../services/route-utils';
+import { matchConfig, segmentDisplay } from '../../services/route-utils';
 import { SearchService } from '../../services/search/search-service';
 import { SearchResult } from '../../services/search/search-provider';
 import { HELP_TOPICS, helpTopicFor, helpTopics } from '../../services/help/help-topic';
@@ -117,7 +117,7 @@ export class NavBar implements OnInit {
 			const config = NavBar.matchConfig( this.router.config, segments.slice(0, i+1) );
 			let title = config?.title as string|undefined;
 			if( !title || title.startsWith(':') )//no title, or the ':param' substitute-the-segment convention
-				title = this.#segmentName( segments.slice(0,i).join('/'), segments[i] ) ?? decodeURIComponent( segments[i] );
+				title = this.#segmentName( segments.slice(0,i).join('/'), segments[i] ) ?? segmentDisplay( segments[i] );
 			crumbs.push( new RouteItem({ path: config ? '/'+segments.slice(0,i+1).join('/') : undefined, title }) );//no matching route ⇒ no path ⇒ rendered as text, not a link
 		}
 		return crumbs;

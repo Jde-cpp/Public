@@ -1,37 +1,79 @@
-/* the read-only namespace table beneath the connection's form fields:  mat-sys tokens so it carries the same surface and
-type as the filled form-fields above it. */
-table.namespaces{
-	width: 100%;
-	border-collapse: collapse;
-	margin-block-start: .5rem;
+/* Read-only rows, all three sections alike:  mat-sys tokens so they carry the same surface and type as the filled
+   form-fields on the Properties tab, and one row padding and rule so the list and the two tables read as one grid. */
+:host{
+	/* the same cap and inset as the `properties` form on the sibling tab, so the two tabs share a left and a right edge,
+	   and the page's action row (sized to that width) keeps its far-right Delete on this tab's edge too */
+	display: block;
+	box-sizing: content-box;
+	max-width: var(--jde-form-max-width);
+	padding: 16px 24px 0;
 	color: var(--mat-sys-on-surface);
 	font: var(--mat-sys-body-medium);
 }
 
-table.namespaces caption{
+/* label | value, the label column as wide as its longest entry;  no column gap, so each row's rule is unbroken */
+dl.fields{
+	display: grid;
+	grid-template-columns: max-content minmax(0, 1fr);
+	margin: 0;
+}
+/* 1rem sides = the fill field's text inset, so the labels line up under the Properties tab's field text and the Save button */
+dl.fields dt, dl.fields dd, table.list td{
+	padding: .5rem 1rem;
+	border-block-end: 1px solid var(--mat-sys-outline-variant);
+}
+dl.fields dd{
+	margin: 0;
+	overflow-wrap: anywhere;
+}
+dl.fields dt, .ns-index, .empty{
+	color: var(--mat-sys-on-surface-variant);
+}
+
+table.list{
+	width: 100%;
+	border-collapse: collapse;
+	margin-block-start: 1.5rem;
+}
+table.list caption{
 	text-align: left;
-	padding-block-end: .25rem;
+	padding: 0 1rem .25rem;
 	color: var(--mat-sys-on-surface-variant);
 	font: var(--mat-sys-body-small);
 }
-
-table.namespaces td{
-	padding: .25rem .5rem;
-	border-block-end: 1px solid var(--mat-sys-outline-variant);
+table.list td{
+	overflow-wrap: anywhere;
 }
 
 .ns-index{
 	width: 3rem;
 	text-align: right;
-	color: var(--mat-sys-on-surface-variant);
 	font-variant-numeric: tabular-nums;
 }
 
-.ns-uri{
-	overflow-wrap: anywhere;
+.empty{
+	font-style: italic;
 }
 
-.ns-empty{
+/* the not-connected state:  icon beside a title and the reason, on the same inset as the rows it replaces */
+.not-connected{
+	display: flex;
+	gap: 1rem;
+	align-items: flex-start;
+	padding: .5rem 1rem;
+}
+.not-connected mat-icon{
+	flex: none;
+	color: var(--mat-sys-error);
+}
+.not-connected p{
+	margin: 0;
+}
+.not-connected .title{
+	font: var(--mat-sys-title-small);
+}
+.not-connected .detail{
+	margin-block-start: .25rem;
 	color: var(--mat-sys-on-surface-variant);
-	font-style: italic;
+	overflow-wrap: anywhere;
 }

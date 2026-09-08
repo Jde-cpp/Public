@@ -2,25 +2,26 @@
 	[selectedIndex]="tabIndex()"
 	(selectedIndexChange)="onTabIndexChanged($event)">
 	<mat-tab>
-		<ng-template mat-tab-label>{{properties().name ?? "Properties"}}</ng-template>
+		<ng-template mat-tab-label>Properties</ng-template><!--was the record's name: the same word as the breadcrumb and the side nav, and it re-titled with every keystroke in Name-->
 		<ng-template matTabContent>
-			<properties [ctor]=ctor [(record)]=properties type=role [schema]=schema></properties>
+			<properties [ctor]=ctor [(record)]=properties type=role [schema]=schema [order]=fieldOrder [displayNames]=fieldLabels [readonlyFields]="isNew ? [] : ['target']"></properties>
 		</ng-template>
 	</mat-tab>
-	@if( server ){
+	@if( !isNew ){<!--every saved connection, live or not:  the tab says "Not connected" and why, where a missing tab said nothing-->
 		<mat-tab>
 			<ng-template mat-tab-label>Connection</ng-template>
 			<ng-template matTabContent>
-					<server-properties [server]="server"></server-properties>
+					<server-properties [server]="server" [error]="serverError"></server-properties>
 			</ng-template>
 		</mat-tab>
 	}
 </mat-tab-group>
-<div style="display: flex; gap: 20px; margin: 20px;"><!--only Save is filled: three extended fabs gave the destructive Delete the same weight as the primary action-->
-	<button tabindex="100" matButton="tonal" (click)="onSubmitClick()" [disabled]="!isChanged()">Save</button>
+<div class="actions"><!--only Save is filled: three extended fabs gave the destructive Delete the same weight as the primary action, and the tonal it had next was a grey pill that read as disabled even with a dirty form-->
+	<button tabindex="100" matButton="filled" (click)="onSubmitClick()" [disabled]="!isChanged()">Save</button>
 	<button tabindex="101" matButton="outlined" (click)="onCancelClick()">Cancel</button>
-	<!--the only icon in the row, so the trash can still reads as a warning; it also carries the delete/restore state-->
-	<button tabindex="102" matButton="outlined" (click)="onDeleteClick()" [disabled]="isNew" [attr.aria-label]="isDeleted ? 'Restore' : 'Delete'">
+	<!--the only icon in the row, so the trash can still reads as a warning; it also carries the delete/restore state.
+		Pushed to the far side of the row: it sat one gap from Cancel, in the click path of the two safe actions-->
+	<button tabindex="102" matButton="outlined" style="margin-left: auto;" (click)="onDeleteClick()" [disabled]="isNew" [attr.aria-label]="isDeleted ? 'Restore' : 'Delete'">
 		<mat-icon>{{isDeleted ? "restore" : "delete"}}</mat-icon>{{isDeleted ? "Restore" : "Delete"}}
 	</button>
 </div>

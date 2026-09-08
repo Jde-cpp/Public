@@ -72,8 +72,10 @@ input[type="number"], input.mat-datepicker-input {
 	text-align: end;
 }
 
+/* the heading takes the alignment of the values under it - left, and the id column below right-aligns both.  It was
+centred on its own, which left every heading off from its column. */
 mat-header-cell{
-	justify-content: center;
+	justify-content: flex-start;
 }
 
 .mat-column-select{
@@ -82,13 +84,13 @@ mat-header-cell{
 	padding-left: 5px;
 	padding-right: 5px;
 }
+/* numeric, so it reads right-aligned - on the header too, or the heading drifts off the ids under it. */
 .mat-column-id{
 	flex: 0 0 100px;
 	//padding-left: 5px;
 	padding-right: 15px;
-}
-mat-cell.mat-column-id{
 	justify-content: right;
+	text-align: right;
 }
 /* OPC browse names are long ("ExampleCalibrationTargets"), so the column takes some of the table's slack rather than
 chopping every name at a fixed 150px - and what still does not fit ends in an ellipsis instead of running into the Class
