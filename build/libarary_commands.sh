@@ -1,6 +1,6 @@
 #need to add set( CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_GLIBCXX_DEBUG" ) to mysql-concpp/src/mysql-connector-cpp/CMakeLists.txt
 cd /mnt/ram/external/Debug
-cls;rm -f CMakeCache.txt;cmake /home/duffyj/code/jde/Public/build --preset linux-debug;
+cls;rm -f CMakeCache.txt;cmake $JDE_DIR/build --preset linux-debug;
 
 
 #Boost (Linux, clang/libc++) - json + charconv (container comes in as json's dependency). toolset=clang uses whatever

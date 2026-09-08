@@ -91,7 +91,7 @@ function buildWindows2 {
 	local file=$2;
 	echo buildWindows2 - cmd: $cmd file: $2;
 	local out=.bin/$configuration/$file;
-	#local targetDir=$baseDir/$jdeRoot/Public/stage/$configuration;
+	#local targetDir=$baseDir/$jdeRoot/stage/$configuration;
 	local targetDir=.bin/$configuration;
 	local target=$targetDir/$file;
 	local found=0;

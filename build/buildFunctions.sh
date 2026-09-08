@@ -1,7 +1,7 @@
 #Function bodies are subshells - ( ) not { } - so sourcing callers (CLAUDE.md flow, VS Code tasks) don't inherit cd/set -o pipefail/variables.
 function buildRelativePath() (
-	cmakeSourceDir=$1; #/home/duffyj/code/jde/Public2
-	absoluteFile=$2; #/home/duffyj/code/jde/Public2/apps/OpcGateway/tests/BrowseTests.cpp
+	cmakeSourceDir=$1; #/home/duffyj/code/jde/opc-hub2
+	absoluteFile=$2; #/home/duffyj/code/jde/opc-hub2/apps/OpcGateway/tests/BrowseTests.cpp
 	relativePath=${absoluteFile#"$cmakeSourceDir/"};
 	relativePath=${relativePath%/*};
 	filename=$(basename "$absoluteFile");
@@ -22,8 +22,8 @@ function absoluteFile() (
 #buildRelativePath supplies the src->lib/exe rename first.  Echoes "<repoSourceDir> <buildDir> <relativeFile>"
 #on success, the failure reason on non-zero return.
 function makefileDirForFile() (
-	buildRoot=$1; # /mnt/ram/jde/clang++/PublicX/debug
-	file=$2; #/home/duffyj/code/jde/Public2/apps/OpcGateway/tests/BrowseTests.cpp
+	buildRoot=$1; # /mnt/ram/jde/clang++/opc-hubX/debug
+	file=$2; #/home/duffyj/code/jde/opc-hub2/apps/OpcGateway/tests/BrowseTests.cpp
 	cache=$buildRoot/CMakeCache.txt;
 	if [ ! -f "$cache" ]; then
 		echo "no CMakeCache.txt in $buildRoot - run reconfig first.";
@@ -54,15 +54,15 @@ function buildProject() (
 	buildRoot=$1; # ${config:cmake.buildDirectory}/debug - full build dir, same as compile.
 	workspaceFolder=$2; #${fileWorkspaceFolder}
 	relativeFile=$3; #${relativeFile} e.g. ../tests/BrowseTests.cpp
-	file=`absoluteFile $workspaceFolder $relativeFile`; #/home/duffyj/code/jde/Public2/apps/OpcGateway/tests/BrowseTests.cpp
+	file=`absoluteFile $workspaceFolder $relativeFile`; #/home/duffyj/code/jde/opc-hub2/apps/OpcGateway/tests/BrowseTests.cpp
 	resolved=$(makefileDirForFile "$buildRoot" "$file") || { echo "buildProject: $resolved"; return 1; };
 	read repoSourceDir buildDir relativeFile <<< "$resolved";
 	echo "buildProject buildRoot=$buildRoot, buildDir=$buildDir";
 	make -C $buildDir -j$(nproc) 2>&1;
 )
 function compile() (
-	buildRoot=$1; # /mnt/ram/jde/clang++/PublicX/debug
-	file=$(realpath "$2"); #/home/duffyj/code/jde/Public2/apps/OpcGateway/tests/BrowseTests.cpp
+	buildRoot=$1; # /mnt/ram/jde/clang++/opc-hubX/debug
+	file=$(realpath "$2"); #/home/duffyj/code/jde/opc-hub2/apps/OpcGateway/tests/BrowseTests.cpp
 	resolved=$(makefileDirForFile "$buildRoot" "$file") || { echo "compile: $resolved"; return 1; };
 	read repoSourceDir buildDir relativeFile <<< "$resolved"; #relativeFile=libs/fwk/src/io/json.cpp
 

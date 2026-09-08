@@ -11,7 +11,7 @@ Prerequisites on the build machine:
 | what | where |
 |---|---|
 | NSIS 3.x | `C:\Program Files (x86)\NSIS` (`-MakeNsis` otherwise) |
-| the release build tree | `$env:JDE_RBUILD_DIR\clang++\Public\release` (`-BuildDir`): `bin\Jde.Opc.Hub\`, `bin\Jde.Opc.Server\` and, in `bin\`, `Jde.DB.Sqlite.dll`, `sqlite3.dll`, `Jde.DB.Sqlite.AppServer.dll`, `Jde.DB.Sqlite.OpcGateway.dll` |
+| the release build tree | `$env:JDE_RBUILD_DIR\clang++\<repo dir>\release` (`-BuildDir`): `bin\Jde.Opc.Hub\`, `bin\Jde.Opc.Server\` and, in `bin\`, `Jde.DB.Sqlite.dll`, `sqlite3.dll`, `Jde.DB.Sqlite.AppServer.dll`, `Jde.DB.Sqlite.OpcGateway.dll` |
 | the Angular site | `web\opc\my-workspace\dist\my-workspace\browser` - `web/opc/scripts/setup.sh` runs `ng build` (`-WebDist`, or `-SkipWeb`) |
 | [OPCFoundation/UA-Nodeset](https://github.com/OPCFoundation/UA-Nodeset) | `$env:UA_NODE_SETS` (`-UaNodeSets`) - DI/IA nodesets for the OpcServer |
 | `vc_redist.x64.exe` | the VS install's `VC\Redist\MSVC\v14x\` (`-VcRedist`); bundled for the all-users mode, skipped with a warning if missing |

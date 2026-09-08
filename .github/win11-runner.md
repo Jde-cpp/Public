@@ -16,19 +16,19 @@ self-hosted runner (Windows x64)**. Then, in an **elevated** PowerShell in the r
 ```powershell
 # A registration token expires after an hour; mint one here or copy it from the
 # "New self-hosted runner" page.
-$token = gh api -X POST repos/Jde-cpp/Public/actions/runners/registration-token --jq .token
+$token = gh api -X POST repos/Jde-cpp/opc-hub/actions/runners/registration-token --jq .token
 
 # --runasservice installs and starts the Windows service in the same step. There is no
 # svc.cmd on Windows (svc.sh is the Linux/macOS script). The service must run as the dev
 # account - see "Service account requirements" below.
-.\config.cmd --unattended --url https://github.com/Jde-cpp/Public --token $token `
+.\config.cmd --unattended --url https://github.com/Jde-cpp/opc-hub --token $token `
   --name jde-ci-win11 --labels win11-clang --replace `
   --runasservice --windowslogonaccount jde-cpp\duffyj --windowslogonpassword '<password>'
 ```
 
 The password goes into PSReadLine's history file; delete that line afterwards
 (`(Get-PSReadLineOption).HistorySavePath`). The service is
-`actions.runner.Jde-cpp-Public.jde-ci-win11`, start type Automatic. Confirm the runner shows
+`actions.runner.Jde-cpp-opc-hub.jde-ci-win11`, start type Automatic. Confirm the runner shows
 **Idle** under Settings → Actions → Runners, or from a shell:
 
 ```powershell
@@ -103,10 +103,10 @@ user-level env vars): `REPO_DIR=C:/Users/duffyj/source/repos/libs`,
 ## Build directory
 
 The workflow sets a **CI-only** `JDE_BUILD_DIR=C:/Users/duffyj/source/build/ci`, kept separate from
-the local dev build (`x:\build\clang++\Public\debug`) so the two never fight over one build tree. The
+the local dev build (`x:\build\clang++\opc-hub\debug`) so the two never fight over one build tree. The
 preset appends `\clang++\${sourceDirName}\debug` and the runner always checks out to
-`…\_work\Public\Public`, so the actual build dir is
-`C:\Users\duffyj\source\build\ci\clang++\Public\debug`.
+`…\_work\opc-hub\opc-hub`, so the actual build dir is
+`C:\Users\duffyj\source\build\ci\clang++\opc-hub\debug`.
 
 **Enable long paths** — deep object paths under the CI build root can approach the 260-char limit
 (object files embed the full source path):

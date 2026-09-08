@@ -48,7 +48,7 @@ function projectName() (
 #failure reason on non-zero return.
 function repoSourceDirFor() (
 	source $JDE_BASH/build/common.sh; #toBashDir
-	buildRoot=$1; # /mnt/ram/win/clang++/Public/debug
+	buildRoot=$1; # /mnt/ram/win/clang++/opc-hub/debug
 	cache=$buildRoot/CMakeCache.txt;
 	if [ ! -f "$cache" ]; then
 		echo "no CMakeCache.txt in $buildRoot - run reconfig first.";
@@ -68,8 +68,8 @@ function repoSourceDirFor() (
 #hardcoded project->target table, and no dependency on ninja query's human-readable stdout format, is needed.
 #Echoes "<repoSourceDir> <ninjaTarget> <relativeFile>" on success, the failure reason on non-zero return.
 function ninjaTargetForFile() (
-	buildRoot=$1; # /mnt/ram/win/clang++/Public/debug
-	file=$2; #/c/Users/duffyj/source/repos/jde/Public/libs/fwk/src/io/json.cpp
+	buildRoot=$1; # /mnt/ram/win/clang++/opc-hub/debug
+	file=$2; #/c/Users/duffyj/source/repos/jde/opc-hub/libs/fwk/src/io/json.cpp
 	repoSourceDir=$(repoSourceDirFor "$buildRoot") || { echo "$repoSourceDir"; return 1; };
 	relativeFile=${file#"$repoSourceDir/"}; #libs/fwk/src/io/json.cpp
 	if [[ $relativeFile == "$file" ]]; then
@@ -92,8 +92,8 @@ function ninjaTargetForFile() (
 )
 function buildProject() (
 	source $JDE_BASH/build/common.sh; #toBashDir
-	toBashDir $1 buildRoot; # /mnt/ram/win/clang++/Public/debug
-	toBashDir $2 file; #/c/Users/duffyj/source/repos/jde/Public/libs/web/server/Server.cpp
+	toBashDir $1 buildRoot; # /mnt/ram/win/clang++/opc-hub/debug
+	toBashDir $2 file; #/c/Users/duffyj/source/repos/jde/opc-hub/libs/web/server/Server.cpp
 	file=$(realpath "$file");
 	repoSourceDir=$(repoSourceDirFor "$buildRoot") || { echo "buildProject: $repoSourceDir"; return 1; };
 	buildRelativePath=`buildRelativePath $repoSourceDir $file`; #libs/web/server/auth - may be nested below the CMakeLists.txt dir
@@ -121,8 +121,8 @@ function buildProject() (
 )
 function compile() (
 	source $JDE_BASH/build/common.sh; #toBashDir
-	toBashDir $1 buildRoot; # /mnt/ram/win/clang++/Public/debug
-	toBashDir $2 file; #/c/Users/duffyj/source/repos/jde/Public/libs/fwk/src/io/json.cpp
+	toBashDir $1 buildRoot; # /mnt/ram/win/clang++/opc-hub/debug
+	toBashDir $2 file; #/c/Users/duffyj/source/repos/jde/opc-hub/libs/fwk/src/io/json.cpp
 	file=$(realpath "$file");
 	if [ -f "$buildRoot/build.ninja" ]; then
 		resolved=$(ninjaTargetForFile "$buildRoot" "$file") || { echo "compile: $resolved"; return 1; };

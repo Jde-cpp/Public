@@ -16,7 +16,7 @@ SetCompressor /SOLID lzma
 ; Inputs - each overridable with makensis /DNAME=value (build-setup.ps1 sets them all).
 ;--------------------------------------------------------------------------------------------------------------------------
 !ifndef BUILD_DIR
-	!define BUILD_DIR "R:\clang++\Public\release" ;the release build tree: bin\<Target>\<Target>.exe + dlls, bin\Jde.DB.Sqlite*.dll, bin\sqlite3.dll
+	!define BUILD_DIR "R:\clang++\opc-hub\release" ;the release build tree: bin\<Target>\<Target>.exe + dlls, bin\Jde.DB.Sqlite*.dll, bin\sqlite3.dll
 !endif
 !define SRC_DIR "${__FILEDIR__}\..\..\.." ;apps\OpcHub\setup -> the repo root
 !ifndef WEB_DIST
