@@ -37,6 +37,14 @@ if( -not $BuildDir ){
 if( -not $WebDist ){ $WebDist = Join-Path $repo 'web\opc\my-workspace\dist\my-workspace\browser' }
 if( -not $UaNodeSets ){ $UaNodeSets = 'C:\Users\duffyj\source\repos\libs\UA-Nodeset' }
 if( -not $OutDir ){ $OutDir = Join-Path $BuildDir 'setup' }
+# Native separators for everything handed to makensis: its compile-time `!if /FileExists` does not take a forward-slash
+# path (the CI run passed C:/jde/vc_redist.x64.exe and the runtime silently went unbundled), and GetFullPath also
+# resolves a relative dir against the caller's cwd rather than the script's.
+$BuildDir = [IO.Path]::GetFullPath( $BuildDir )
+$WebDist = [IO.Path]::GetFullPath( $WebDist )
+$UaNodeSets = [IO.Path]::GetFullPath( $UaNodeSets )
+$OutDir = [IO.Path]::GetFullPath( $OutDir )
+if( $VcRedist ){ $VcRedist = [IO.Path]::GetFullPath( $VcRedist ) }
 
 foreach( $f in 'bin\Jde.Opc.Hub\Jde.Opc.Hub.exe', 'bin\Jde.Opc.Server\Jde.Opc.Server.exe', 'bin\Jde.DB.Sqlite.dll', 'bin\sqlite3.dll', 'bin\Jde.DB.Sqlite.AppServer.dll', 'bin\Jde.DB.Sqlite.OpcGateway.dll' ){
 	if( -not (Test-Path (Join-Path $BuildDir $f)) ){ throw "missing $f under $BuildDir - build Jde.Opc.Hub, Jde.Opc.Server, Jde.DB.Sqlite, Jde.DB.Sqlite.AppServer and Jde.DB.Sqlite.OpcGateway in the release tree first, or pass -BuildDir" }

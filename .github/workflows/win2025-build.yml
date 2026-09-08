@@ -91,11 +91,11 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      # The installer (apps/OpcHub/setup/build-setup.ps1). NSIS ships on the
-      # hosted image (choco as the fallback); the OpcServer's DI/IA nodesets come
-      # from OPCFoundation/UA-Nodeset, pinned to the commit the dev clone is on,
-      # and the VC++ runtime from Microsoft. -SkipWeb: the Angular site is not
-      # built in CI yet.
+      # The installer (apps/OpcHub/setup/build-setup.ps1). The windows-2025 image
+      # has no NSIS - choco installs it (~30 s); the OpcServer's DI/IA nodesets
+      # come from OPCFoundation/UA-Nodeset, pinned to the commit the dev clone is
+      # on, and the VC++ runtime from Microsoft. -SkipWeb: the Angular site is
+      # not built in CI yet.
       - name: Installer inputs
         if: success()
         run: |
