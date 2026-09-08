@@ -30,13 +30,17 @@ addHard app.config.ts $sitePath/app;
 addHard google-relogin.spec.ts $sitePath/app;
 addHard profile-store.spec.ts $sitePath/app;
 addHard profile-service.spec.ts $sitePath/app;
-#lib specs live here too: under this workspace the unit-test builder realpaths a lib's own specs through the symlink and rejects them.
+#app-project specs for jde-spa services (library specs themselves live beside the code since the buildTarget fix in create-workspace.sh).
 addHard search-service.spec.ts $sitePath/app;
 addHard route-search-provider.spec.ts $sitePath/app;
 addHard node-search-provider.spec.ts $sitePath/app;
+addHard environment-keys.spec.ts $sitePath/app;
 moveToDir services;
 addHard environment-service.ts $sitePath/app/services;
 cd ../..;
+#the site's help markdown (assets/help/*.md).  A symlink, not addHardDir:  .md is exactly what gets hand-edited, and an editor
+#save replaces the file and silently breaks a hard link.  Served under assets/site by the angular.json entry below.
+mklinkDir assets $sitePath;
 moveToDir environments;
 addHard environment.ts $sitePath/environments;
 addHard environment.development.ts $sitePath/environments;
@@ -45,8 +49,13 @@ cd ../..;
 #libraries and the C++ services carry, so anything reading it (npm ls, a future about-box) agrees with them.
 jdeVersion jdeVer;
 jqEdit package.json ".version = \"$jdeVer\"";
+#the same version as a build-time constant for the about page:  the builder replaces the identifier JDE_VERSION with the
+#string literal under serve, build and test alike (the unit-test builder inherits the application options through buildTarget).
+jqEdit angular.json ".projects.\"my-workspace\".architect.build.options.define = {\"JDE_VERSION\": (\"$jdeVer\" | tojson)}";
 #create-workspace.sh writes angular.json, but only when the workspace is absent, so the swap is re-applied here on
 #every run.  Without it `ng serve` and `--configuration development` build against the production environment.ts.
 jqEdit angular.json '.projects."my-workspace".architect.build.configurations.development.fileReplacements = [{"replace":"src/environments/environment.ts","with":"src/environments/environment.development.ts"}]';
+#src/assets (linked above) ships as assets/site - the same shape create-workspace.sh writes for each library's assets dir.
+jqEdit angular.json '.projects."my-workspace".architect.build.options.assets |= ((. // []) | map(select((type=="object" and .input=="src/assets") | not)) + [{"glob":"**/*","input":"src/assets","output":"assets/site","followSymlinks":true}])';
 echo ------------------- Starting Build -------------------;
 ng build --output-hashing=none --source-map=true;

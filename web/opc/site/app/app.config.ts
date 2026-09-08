@@ -3,12 +3,16 @@ import { ApplicationConfig } from '@angular/core';
 import { MAT_TABS_CONFIG } from '@angular/material/tabs';
 import { MAT_NATIVE_DATE_FORMATS, MatDateFormats, provideNativeDateAdapter } from '@angular/material/core';
 import { provideRouter } from '@angular/router';
-import { APP_SERVICE, AppService, AUTH_STORE, AuthStore, ProfileService } from 'jde-framework'
-import { GATEWAY_SERVICE, GatewayService, NodeSearchProvider, OPC_STORE, OpcAuthService, OpcStore} from 'jde-opc';
-import { IAUTH, IENVIRONMENT, IPROFILE_SERVICE, RouteSearchProvider, SEARCH_PROVIDERS } from 'jde-spa';
+import { APP_SERVICE, AppService, AUTH_STORE, AuthStore, frameworkHelpTopics, ProfileService } from 'jde-framework'
+import { GATEWAY_SERVICE, GatewayService, NodeSearchProvider, OPC_STORE, OpcAuthService, opcHelpTopics, OpcStore} from 'jde-opc';
+import { HELP_TOPICS, HelpTopic, IAUTH, IENVIRONMENT, IPROFILE_SERVICE, RouteSearchProvider, SEARCH_PROVIDERS, spaHelpTopics } from 'jde-spa';
 import {EnvironmentService} from './services/environment-service';
 import { routes } from './app.routes';
-import { ACCESS_SERVICE, AccessSearchProvider, AccessService } from "jde-access";
+import { ACCESS_SERVICE, accessHelpTopics, AccessSearchProvider, AccessService } from "jde-access";
+
+//the site's own help topics - the libraries export theirs.  Served from src/assets (web/opc/site/assets, linked by setup.sh).
+const siteOverview:HelpTopic[] = [ {id: 'overview', title: 'Overview', summary: 'What this site is and where to start', icon: 'menu_book', url: 'assets/site/help/overview.md'} ];
+const siteAbout:HelpTopic[] = [ {id: 'about', title: 'About', summary: 'Version and components', icon: 'info', url: 'assets/site/help/about.md'} ];
 
 //2-digit rather than the native numeric:  it zero-pads the datepicker input ("08/27/2026", not "8/27/2026"), so a column
 //of dates is one width and lines up when right-aligned.  These are Intl.DateTimeFormat OPTIONS, not a pattern string, so
@@ -43,6 +47,13 @@ export const appConfig: ApplicationConfig = {
 		{provide: SEARCH_PROVIDERS, useExisting: RouteSearchProvider, multi: true},
 		{provide: SEARCH_PROVIDERS, useExisting: AccessSearchProvider, multi: true},
 		{provide: SEARCH_PROVIDERS, useExisting: NodeSearchProvider, multi: true},
+		//the help section (jde-spa) lists these in registration order - the site's overview first, about last.
+		{provide: HELP_TOPICS, useValue: siteOverview, multi: true},
+		{provide: HELP_TOPICS, useValue: spaHelpTopics, multi: true},
+		{provide: HELP_TOPICS, useValue: frameworkHelpTopics, multi: true},
+		{provide: HELP_TOPICS, useValue: accessHelpTopics, multi: true},
+		{provide: HELP_TOPICS, useValue: opcHelpTopics, multi: true},
+		{provide: HELP_TOPICS, useValue: siteAbout, multi: true},
 		//OpcNodeRouteService/AuthGuard need no string token - every consumer injects the class, which providedIn:'root' already supplies
 	]
 };
