@@ -59,7 +59,7 @@ tokens.
 sudo docker rm -f gha-runner 2>/dev/null || true
 
 sudo docker run -d --restart always --name gha-runner \
-  -e REPO_URL="https://github.com/Jde-cpp/Public" \
+  -e REPO_URL="https://github.com/Jde-cpp/opc-hub" \
   -e ACCESS_TOKEN="<PAT>" \
   -e RUNNER_NAME="jde-ci" \
   -e RUNNER_SCOPE="repo" \

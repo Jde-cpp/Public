@@ -32,16 +32,18 @@
 			"path": "../../libs/fwk/src",
 			"name": "fwk"
 		},
+		//open62541 is fetched into the build tree, so it has no source location outside it, and VS Code does not expand
+		//variables in folders[].path - hence the absolute build root.  It names $JDE_DIR's checkout, not necessarily this one.
 		{
-			"path": "/mnt/ram/linux/clang++/Public/debug/repos/open62541/src/open62541/src",
+			"path": "/mnt/ram/linux/clang++/opc-hub/debug/repos/open62541/src/open62541/src",
 			"name": "open62541"
 		},
 		{
-			"path": "/mnt/ram/linux/clang++/Public/debug/repos/open62541/src/open62541/include",
+			"path": "/mnt/ram/linux/clang++/opc-hub/debug/repos/open62541/src/open62541/include",
 			"name": "openInclude"
 		},
 		{
-			"path": "/mnt/ram/linux/clang++/Public/debug/repos/open62541/src/open62541/tests",
+			"path": "/mnt/ram/linux/clang++/opc-hub/debug/repos/open62541/src/open62541/tests",
 			"name": "openTests"
 		},
 		{

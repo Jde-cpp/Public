@@ -80,7 +80,7 @@ Awaitables inherit from `VoidAwait` or `IAwait<TResult, TTask>` in `co/Await.h`.
 | Variable | Purpose |
 |----------|---------|
 | `$REPO_DIR` | Third-party/dependency root (e.g. `/home/duffyj/code/libs`) — **not** the jde repo. Presets install deps under `$REPO_DIR/install/$CXX/<buildType>`; `functions.cmake` reads Boost sources from `$REPO_DIR/boostorg` on Windows |
-| `$JDE_DIR` | This checkout's source root (e.g. `/home/duffyj/code/jde/Public`); used by shell scripts and VS Code workspace configs — CMake files use paths relative to `CMAKE_CURRENT_LIST_DIR` instead |
+| `$JDE_DIR` | This checkout's source root (e.g. `/home/duffyj/code/jde/opc-hub`); used by shell scripts and VS Code workspace configs — CMake files use paths relative to `CMAKE_CURRENT_LIST_DIR` instead |
 | `$JDE_BASH` | Same as `$JDE_DIR` |
 | `$JDE_BUILD_DIR` | Build-output parent directory (e.g. `/mnt/ram/linux`); actual build dirs are `$JDE_BUILD_DIR/$JDE_COMPILER/<repo-basename>/<debug\|release>` |
 | `$JDE_COMPILER` | Compiler subdirectory name under `$JDE_BUILD_DIR` (e.g. `clang++`) |
@@ -92,5 +92,5 @@ Awaitables inherit from `VoidAwait` or `IAwait<TResult, TTask>` in `co/Await.h`.
 - Never suggest enclosing single-line `if` statements with braces.
 - Never run an unscoped/filesystem-wide search (e.g. `find /`, or any search rooted above the repo). Always scope file searches to `C:\Users\duffyj\source\repos` or `$JDE_BUILD_DIR` (build outputs, e.g. `x:\build` on Windows) — or a narrower subdirectory of either. A full-drive search can run for tens of minutes burning CPU for no benefit. Prefer Glob/Grep over shelling out to `find`/`grep` in the first place.
 - GTest is installed (headers only, no vendored source) at `C:\Users\duffyj\source\repos\libs\install\<compiler>\<Debug|RelWithDebInfo>\gtest\include\gtest\` — look there directly instead of searching for it.
-- Markdown docs that cite repo files (reviews, findings, design notes) must link them per the **`md-file-refs`** skill — `` [`DBException.h:37`](../Public/include/jde/db/DBException.h#L37) ``, never `file://` (the VS Code preview blocks it) or root-relative. Run its `linkify.py` over the doc when finishing it; no need to ask first.
+- Markdown docs that cite repo files (reviews, findings, design notes) must link them per the **`md-file-refs`** skill — `` [`DBException.h:37`](../opc-hub/include/jde/db/DBException.h#L37) ``, never `file://` (the VS Code preview blocks it) or root-relative. Run its `linkify.py` over the doc when finishing it; no need to ask first.
 

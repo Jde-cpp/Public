@@ -7,7 +7,7 @@ Resolves the inputs the NSIS script takes as /D defines (build tree, Angular dis
 version), checks they exist, and runs makensis.  Optionally signs the result.
 
 .EXAMPLE
-.\build-setup.ps1                       # defaults: $env:JDE_RBUILD_DIR\clang++\Public\release, the repo's web dist, git describe
+.\build-setup.ps1                       # defaults: $env:JDE_RBUILD_DIR\clang++\<repo dir>\release, the repo's web dist, git describe
 .\build-setup.ps1 -SkipWeb -Version 1.0 # no Web UI component
 #>
 [CmdletBinding()]
@@ -30,9 +30,10 @@ $repo = (Resolve-Path (Join-Path $setupDir '..\..\..')).Path
 
 if( -not $BuildDir ){
 	# the win-clang-release-jde preset's binaryDir is $env:JDE_BUILD_DIR\clang++-jde\release; the release tree actually
-	# built here is $env:JDE_RBUILD_DIR\clang++\Public\release - so no preset lookup, an explicit default.
+	# built here is $env:JDE_RBUILD_DIR\clang++\<repo dir>\release - so no preset lookup, an explicit default.
+	# The <repo dir> segment is the checkout's own name, the same basename rule buildFunctions.sh and the jde extension use.
 	$rbuild = if( $env:JDE_RBUILD_DIR ){ $env:JDE_RBUILD_DIR } else { 'R:\' }
-	$BuildDir = Join-Path $rbuild 'clang++\Public\release'
+	$BuildDir = Join-Path $rbuild ('clang++\{0}\release' -f (Split-Path $repo -Leaf))
 }
 if( -not $WebDist ){ $WebDist = Join-Path $repo 'web\opc\my-workspace\dist\my-workspace\browser' }
 if( -not $UaNodeSets ){ $UaNodeSets = 'C:\Users\duffyj\source\repos\libs\UA-Nodeset' }

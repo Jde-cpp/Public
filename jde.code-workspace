@@ -2,7 +2,7 @@
 	"settings": {
 		"window.title": "Jde",
 		"releaseRoot": "${env:JDE_BASH}/Release",
-		"sourceDir": "${workspaceFolder:Public}",
+		"sourceDir": "${workspaceFolder:src}",
 		"workspace": "${config:sourceDir}",
 		"target": "",
 		"testTarget": "",
@@ -26,7 +26,8 @@
 	},
 	"folders": [
 		{
-			"path": "."
+			"path": ".",
+			"name": "src"
 		},
 		{
 			"path": "../reviews"

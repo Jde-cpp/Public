@@ -9,9 +9,8 @@
 					"${env:REPO_DIR}/install/asan/protobuf/include/",
 					"${env:REPO_DIR}/install/asan/spdlog/include/",
 					"${env:REPO_DIR}/json/include",
-					"${env:JDE_DIR}/Public",
+					"${env:JDE_DIR}",
 					"${env:JDE_DIR}/Framework/tests/.obj/asan/googletest-src/googletest/include",
-					"${env:JDE_DIR}/Public/src/web/.obj/asan",
 					".."
 				],
 				"limitSymbolsToIncludedHeaders": true },
@@ -25,7 +24,7 @@
 					"${env:REPO_DIR}/json/include",
 					"${env:REPO_DIR}/json/include",
 					"${env:BOOST_ROOT}",
-					"${env:JDE_DIR}/Public"
+					"${env:JDE_DIR}"
 				],
 				"defines": [],
 				"forcedInclude": ["pc.h"],

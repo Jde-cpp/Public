@@ -44,15 +44,15 @@ jobs:
 
     env:
       # CI-only build root — separate from the local dev build
-      # (x:\build\clang++\Public\debug) so the two never collide. The preset
+      # (x:\build\clang++\opc-hub\debug) so the two never collide. The preset
       # appends \clang++\${sourceDirName}\debug, and the runner checks out to
-      # ...\_work\Public\Public, so the real build dir is BUILD_DIR below.
+      # ...\_work\opc-hub\opc-hub, so the real build dir is BUILD_DIR below.
       JDE_BUILD_DIR: C:/Users/duffyj/source/build/ci
       REPO_DIR: C:/Users/duffyj/source/repos/libs
       VCPKG_ROOT: C:/Users/duffyj/source/repos/libs/vcpkg
       UA_NODE_SETS: C:/Users/duffyj/source/repos/libs/UA-Nodeset
       PRESET: win-clang-debug-jde
-      BUILD_DIR: C:/Users/duffyj/source/build/ci/clang++/Public/debug
+      BUILD_DIR: C:/Users/duffyj/source/build/ci/clang++/opc-hub/debug
 
     steps:
       - name: Checkout
