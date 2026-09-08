@@ -62,6 +62,35 @@ namespace Jde{
 		auto p = Args().find( key );
 		return p!=Args().end() ? p->second : optional<string>{};
 	}
+
+	//CommandLineToArgvW's rules, since that is what reads a service's ImagePath back (Args()):  a backslash is literal
+	//unless it precedes a '"', where the run doubles and the quote is escaped; a run before the closing quote doubles too.
+	//Only tokens that need it are quoted - a plain -settings=C:\ProgramData\… stays readable in `sc qc`.
+	Ω quoteArg( sv arg, bool force )ι->string{
+		if( !force && !arg.empty() && arg.find_first_of(" \t\"")==sv::npos )
+			return string{ arg };
+		string y{ '"' };
+		uint backslashes{};
+		for( char c : arg ){
+			if( c=='\\' ){
+				++backslashes;
+				continue;
+			}
+			y.append( c=='"' ? backslashes*2+1 : backslashes, '\\' );
+			backslashes = 0;
+			y += c;
+		}
+		y.append( backslashes*2, '\\' );
+		return y += '"';
+	}
+	α Process::ServiceCommandLine( const fs::path& exe, const vector<string>& args )ι->string{
+		//The exe is quoted unconditionally:  unquoted, `C:\Program Files\…\x.exe` parsed back as argv[0]=`C:\Program`, which
+		//Executable() handed to loadResource - ProductName() then fell back to "Jde-cpp" and the service grew a second data tree.
+		string y = quoteArg( exe.string(), true );
+		for( const auto& arg : args )
+			y += ' ' + quoteArg( arg, false );
+		return y;
+	}
 }
 namespace Jde{
 #undef SetConsoleTitle
@@ -91,22 +120,33 @@ namespace Jde{
 		_applicationName = appName;
 		const string arg0{ argv[0] };
 		bool terminate = !_debug;
+		bool install{}, uninstall{};
 		flat_set<string> values;
+		vector<string> serviceArgs; //the tokens this loop leaves alone, in argv order:  what a service registered by -install starts with (-settings, -include, -sync).
 		for( int i=1; i<argc; ++i ){
 			if( string(argv[i])=="-c" && !console )
 				isConsole = true;
 			else if( string(argv[i])=="-t" )
 				terminate = !terminate;
-			else if( string(argv[i])=="-install" ){
-				Install( serviceDescription );
-				throw Exception{ "successfully installed.", ELogLevel::Trace };
-			}
-			else if( string(argv[i])=="-uninstall" ){
-				Uninstall();
-				throw Exception{ "successfully uninstalled.", ELogLevel::Trace };
-			}
-			else
+			else if( string(argv[i])=="-install" )
+				install = true;
+			else if( string(argv[i])=="-uninstall" )
+				uninstall = true;
+			else{
 				values.emplace( argv[i] );
+				if( string(argv[i])!="-c" ) //console is this run's, not the service's.
+					serviceArgs.emplace_back( argv[i] );
+			}
+		}
+		//After the scan, not on the token:  acting on -install mid-loop meant a -settings that came after it never reached
+		//the registration, and the service silently started on the default config search instead.
+		if( install ){
+			Install( serviceDescription, serviceArgs );
+			throw Exception{ "successfully installed.", ELogLevel::Trace };
+		}
+		if( uninstall ){
+			Uninstall();
+			throw Exception{ "successfully uninstalled.", ELogLevel::Trace };
 		}
 		if( terminate )
 			std::set_terminate( OnTerminate );

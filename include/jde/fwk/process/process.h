@@ -59,7 +59,12 @@ namespace Process{
 	Φ ShuttingDown()ι->bool;
 	Φ Finalizing()ι->bool;
 
-	Φ Install( str serviceDescription )ε->void;
+	//The service's ImagePath:  the exe, always quoted, then `args` escaped per CommandLineToArgvW - the parser on the other
+	//end (Args() on windows) - so what the SCM launches parses back to the same tokens.  Pure, split out of Install so it
+	//can be asserted where there is no SCM.
+	Φ ServiceCommandLine( const fs::path& exe, const vector<string>& args )ι->string;
+	//`args`:  what the service starts with - Startup's unconsumed tokens (-settings, -include, -sync), never -install/-c/-t.
+	Φ Install( str serviceDescription, const vector<string>& args )ε->void;
 	Φ Uninstall()ε->void;
 }}
 #undef Φ

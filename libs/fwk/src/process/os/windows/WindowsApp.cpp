@@ -214,10 +214,12 @@ namespace Jde{
 		return schSCManager;
 	}
 
-	α Process::Install( str serviceDescription )ε->void{
+	α Process::Install( str serviceDescription, const vector<string>& args )ε->void{
 		auto schSCManager = MyOpenSCManager();
 		const string serviceName{ Process::AppName() };
-		auto service = ServiceHandle{ ::CreateService(schSCManager.get(), serviceName.c_str(), (serviceName).c_str(), SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS, SERVICE_DEMAND_START, SERVICE_ERROR_NORMAL, ExePath().string().c_str(), nullptr, nullptr, nullptr, nullptr, nullptr) };
+		//The SCM launches this line verbatim, so it carries the caller's -settings/-include/-sync and quotes the exe - see ServiceCommandLine.
+		const auto commandLine = ServiceCommandLine( ExePath(), args );
+		auto service = ServiceHandle{ ::CreateService(schSCManager.get(), serviceName.c_str(), (serviceName).c_str(), SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS, SERVICE_DEMAND_START, SERVICE_ERROR_NORMAL, commandLine.c_str(), nullptr, nullptr, nullptr, nullptr, nullptr) };
 		if( !service.get() ){
 			if( ::GetLastError()==ERROR_SERVICE_EXISTS )
 				THROW( "Service already exists." );
@@ -229,7 +231,7 @@ namespace Jde{
 			if( !::ChangeServiceConfig2A(service.get(), SERVICE_CONFIG_DESCRIPTION, &d) )
 				std::cerr << "ChangeServiceConfig2A failed" << std::endl;
 		}
-		INFOT( ELogTags::App, "service '{}' installed successfully", serviceName );
+		INFOT( ELogTags::App, "service '{}' installed successfully:  {}", serviceName, commandLine );
 	}
 	α Process::Uninstall()ε->void{
 		auto manager = MyOpenSCManager();

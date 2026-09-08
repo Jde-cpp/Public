@@ -4,33 +4,29 @@ Rest/Websocket Application on top of [open62541.org](https://www.open62541.org/)
 
 ## Installation
 ### Prerequisites
-1) [Microsoft Sql Server](https://www.microsoft.com/en-us/sql-server/sql-server-downloads).
+1) The [Microsoft Visual C++ 2015-2022 x64 redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe). An all-users install adds it when missing; a current-user install has no administrator rights and expects it present.
 
 ### Steps
-1) Execute OpcGateway.exe installation.
-2) Setup databases, services, from administrator powershell run:
-    ```
-    . "$([Environment]::GetFolderPath("CommonDesktopDirectory"))/JdeSetup.ps1"
-    ```
-3) IIS
+1) Run `OpcHubSetup-<version>.exe` - built from [`apps/OpcHub/setup`](../OpcHub/setup/README.md), which also documents the installed layout.
+   - Install mode: **All users** registers the selected products as Windows services (administrator rights); **Current user** installs under `%LOCALAPPDATA%\Programs` and runs them from Start Menu shortcuts (no administrator rights).
+   - Components: the OPC Hub (`Jde.OpcHub` - the AppServer and the OpcGateway in one process, required), the OPC UA Server (`Jde.OpcServer`, optional), the Web UI files for IIS.
+
+   The database is sqlite, one file per product under `C:\ProgramData\Jde-Cpp\<Product>`, created on first start - no SQL Server, no setup script.
+2) IIS - physical path `C:\Program Files\Jde-Cpp\Web` (or the current-user install's `Web` dir)
 
   a.  Features:  ![](./doc/iis-features.png)
 
   b.  Settings:  ![](./doc/iis-site-settings.png)
 
-4) To uninstall, from administrator powershell run:
-    ```
-    . "$([Environment]::GetFolderPath("CommonDesktopDirectory"))/JdeUninstall.ps1"
-    ```
-    You will need to manually delete the databases, or uncomment the related lines in JdeUninstall.ps1.
+3) To uninstall: Settings > Apps (a current-user install also has an Uninstall shortcut in its Start Menu folder). The database, certificates and logs under `C:\ProgramData\Jde-Cpp` are left in place.
 
 ## Running
-1) Start Services
+1) Start the service(s)
 ```
-    net start Jde.AppServer
-    net start Jde.OpcGateway
+    net start Jde.OpcHub
+    net start Jde.OpcServer
 ```
-   or, with both in one process (`apps/OpcHub`, `Jde.Opc.Hub.exe`), `net start Jde.OpcHub` instead of the two.
+   or, in a current-user install, the Start Menu shortcuts (each runs in its own console window). The standalone `Jde.AppServer` + `Jde.OpcGateway` pair (`apps/AppServer`, `apps/OpcGateway`) still builds for split deployments but is not installed.
 2) Browse to http://127.0.0.1:8071.
 3) Setup Opc Server.
 ![](./doc/OpcServer.png)
