@@ -23,6 +23,43 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The Angular site the installer ships (its Web UI component). web/opc/scripts/setup.sh
+  # scaffolds the workspace (`ng new`, Material, ts-proto/buf for the generated proto
+  # package - all from npm), links the tracked sources in and runs `ng build`; nothing
+  # of the workspace is tracked, so this is a from-scratch scaffold every run (~5 min).
+  # Linux on purpose: the scaffold symlinks and hard-links, which a Windows runner
+  # would need Developer Mode for. Runs beside the Windows build, not ahead of it -
+  # the Installer step below waits for it.
+  web:
+    name: Web UI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 26 # @angular/cli 22 takes ^22.22 || ^24.15 || >=26; the dev box is on 26
+
+      # The global cli decides which Angular `ng new` scaffolds (create-workspace.sh
+      # pins everything to it), so pin the major the libraries' peer ranges name
+      # (web/*/control/package.json: ^22.1.0) rather than let it install @latest.
+      - name: Build the site
+        env:
+          JDE_BASH: ${{ github.workspace }}
+        run: |
+          npm install -g @angular/cli@22
+          bash web/opc/scripts/setup.sh
+
+      - name: Upload the site
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist-${{ github.run_id }}
+          path: web/opc/my-workspace/dist/my-workspace/browser
+          if-no-files-found: error
+          retention-days: 7
+
   build:
     # This becomes the check-run name on the commit the run was dispatched against,
     # which is what the README badge filters on (shields.io …?nameFilter=Win2025).
@@ -31,6 +68,7 @@ jobs:
     runs-on: windows-2025
     permissions:
       contents: write # the Release step; read is all checkout needs
+      actions: read # `gh run view` in the Web UI wait step
     defaults:
       run:
         shell: pwsh
@@ -94,8 +132,7 @@ jobs:
       # The installer (apps/OpcHub/setup/build-setup.ps1). The windows-2025 image
       # has no NSIS - choco installs it (~30 s); the OpcServer's DI/IA nodesets
       # come from OPCFoundation/UA-Nodeset, pinned to the commit the dev clone is
-      # on, and the VC++ runtime from Microsoft. -SkipWeb: the Angular site is
-      # not built in CI yet.
+      # on, the VC++ runtime from Microsoft, and the Web UI from the `web` job.
       - name: Installer inputs
         if: success()
         run: |
@@ -109,12 +146,35 @@ jobs:
           curl.exe -sSfL https://aka.ms/vs/17/release/vc_redist.x64.exe -o C:/jde/vc_redist.x64.exe
           if ($LASTEXITCODE -ne 0) { throw 'download failed: vc_redist.x64.exe' }
 
+      # The `web` job normally finishes long before the C++ build does; this is the
+      # guard for the day it does not (or fails) - a `needs:` would instead put its
+      # ~5 min ahead of the 20-min build.
+      - name: Wait for the Web UI
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $state = ''
+          foreach ($i in 1..45) {
+            $state = gh run view ${{ github.run_id }} --json jobs --jq '.jobs[] | select(.name == "Web UI") | .status + " " + (.conclusion // "")'
+            if ($state -like 'completed*') { break }
+            Start-Sleep -Seconds 20
+          }
+          if ($state.Trim() -ne 'completed success') { throw "Web UI job: '$state'" }
+
+      - name: Download the Web UI
+        if: success()
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist-${{ github.run_id }}
+          path: C:/jde/web
+
       - name: Installer
         if: success()
         run: |
           # a tag names the version outright; otherwise build-setup.ps1 takes `git describe --tags`
           $version = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME } else { '' }
-          ./apps/OpcHub/setup/build-setup.ps1 -BuildDir C:/jde/build/clang++-jde/release -UaNodeSets C:/jde/nodesets -VcRedist C:/jde/vc_redist.x64.exe -OutDir C:/jde/setup -SkipWeb -Version $version
+          ./apps/OpcHub/setup/build-setup.ps1 -BuildDir C:/jde/build/clang++-jde/release -UaNodeSets C:/jde/nodesets -VcRedist C:/jde/vc_redist.x64.exe -WebDist C:/jde/web -OutDir C:/jde/setup -Version $version
 
       - name: Upload installer
         if: success()

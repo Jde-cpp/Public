@@ -24,9 +24,10 @@ Prerequisites on the build machine:
 
 Every input is a `/D` define of the script, so `makensis /DBUILD_DIR=… OpcHubSetup.nsi` works without the wrapper.
 
-CI: the Win2025 workflow (`.github/workflows/win2025-build.yml`) runs `build-setup.ps1` after its release build (`-SkipWeb`;
-the nodesets and `vc_redist.x64.exe` are downloaded) and uploads `OpcHubSetup-<version>.exe` as an artifact; a push of a
-`yyyy.MM.dd` tag runs it too and publishes the installer as that tag's GitHub release.
+CI: the Win2025 workflow (`.github/workflows/win2025-build.yml`) runs `build-setup.ps1` after its release build - the
+nodesets and `vc_redist.x64.exe` are downloaded, the Web UI comes from the workflow's `web` job (an `ubuntu-latest` run of
+`web/opc/scripts/setup.sh`) - and uploads `OpcHubSetup-<version>.exe` as an artifact; a push of a `yyyy.MM.dd` tag runs it
+too and publishes the installer as that tag's GitHub release.
 
 ## Install modes
 
