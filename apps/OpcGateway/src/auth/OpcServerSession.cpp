@@ -1,8 +1,25 @@
 #include "OpcServerSession.h"
+#include <jde/web/server/Sessions.h>
 #define let const auto
 
 namespace Jde::Opc::Gateway{
 	flat_map<SessionPK,flat_map<ServerCnnctnNK,Credential>> _sessions; shared_mutex _sessionsMutex;
+	//Nothing but an explicit /logout ever removed an entry, so this was a high-water mark:  every web session that had touched
+	//a target since startup, counted by opcSessions long after the session itself was gone.  (opcConnections never drifted the
+	//same way - its _clients drain on the idle ttl.)  Web::Server's store is the authority and trims itself on expiry, so an id
+	//it no longer knows - or knows only as expired, which UpdateExpiration will not revive - has no session behind it.  Called
+	//under the caller's lock at the two growth points and on the read; the map is tiny, so an O(n) sweep is cheaper than a timer.
+	Ω pruneDeadSessions( ul& )ι->void{
+		for( auto p = _sessions.begin(); p!=_sessions.end(); ){
+			let session = Web::Server::Sessions::Find( p->first );
+			if( session && session->Expiration>steady_clock::now() )
+				++p;
+			else{
+				TRACET( ELogTags::Sessions, "Session {} gone - dropping its {} opc credential(s).", hex(p->first), p->second.size() );
+				p = _sessions.erase( p );
+			}
+		}
+	}
 
 	α Credential::operator==( const Credential& other )Ι->bool{
 		bool equal{ Type() == other.Type() };
@@ -59,7 +76,8 @@ namespace Jde::Opc::Gateway{
 }
 namespace Jde::Opc{
 	α Gateway::AddSession( SessionPK sessionId, ServerCnnctnNK opcNK, Credential credential )ι->void{
-		ul _{ _sessionsMutex };
+		ul l{ _sessionsMutex };
+		pruneDeadSessions( l ); //the map only grows here and in AuthCache - sweeping both bounds it without a timer, for a gateway nobody is watching the Connections list of.
 		auto& sessionConnections = _sessions[sessionId];
 		sessionConnections[opcNK] = move( credential );
 	}
@@ -67,7 +85,7 @@ namespace Jde::Opc{
 	α Gateway::AuthCache( const Credential& cred, const ServerCnnctnNK& opcNK, SessionPK sessionId )ι->optional<bool>{
 		optional<bool> authenticated;
 		Jde::UserPK matchedUser; //by value: the reference into _sessions is dead once the insert below runs.
-		ul _{ _sessionsMutex };
+		ul l{ _sessionsMutex };
 		for( let& [_,sessionConnections] : _sessions ){
 			auto p = sessionConnections.find(opcNK);
 			if( p==sessionConnections.end() )
@@ -91,6 +109,7 @@ namespace Jde::Opc{
 			stored.SetUserPK( matchedUser ); //the incoming credential never carries the user - the matched one does.
 			_sessions[sessionId][opcNK] = move( stored );
 		}
+		pruneDeadSessions( l ); //after the match, not before:  whether a dead session's credential may still vouch for a new one is the AuthCache design (review #14), untouched here.
 		return authenticated;
 	}
 
@@ -115,7 +134,8 @@ namespace Jde::Opc{
 	α Gateway::SessionCounts()ι->vector<SessionCount>{
 		flat_map<tuple<ServerCnnctnNK,ETokenType,Jde::UserPK>,uint32> counts;
 		{
-			sl _{ _sessionsMutex };
+			ul l{ _sessionsMutex }; //unique, not shared:  the sweep below erases.
+			pruneDeadSessions( l );
 			for( let& [_,sessionConnections] : _sessions ){ //at most one credential per opcNK per session - no per-session dedup needed.
 				for( let& [opcNK,cred] : sessionConnections )
 					++counts[ {opcNK, cred.Type(), cred.UserPK()} ];

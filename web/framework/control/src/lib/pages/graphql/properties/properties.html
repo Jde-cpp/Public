@@ -2,17 +2,21 @@
 	<ng-container>
 		<div>
 			@for( field of fields(); track field.name; let tab = $index ){
-				<mat-form-field style="width: 100%;" appearance="fill">
+				<mat-form-field style="width: 100%;" appearance="fill"><!--required = the schema's NON_NULL: it puts the asterisk on the label, which is the only hint the user gets for why Save stays disabled on a new record-->
 					<mat-label>{{field.displayName}}</mat-label>
 					@if( field.type==InputTypes.Text ){
 						<textarea matInput
+							[required]="!field.nullable"
+							[readonly]="isReadonly(field)"
 							[value]="record()[field.name] ?? ''"
 							[tabIndex]="tab+1"
-							(keyup)="onChange( field.name, $any($event.target).value )">
+							(input)="onChange( field.name, $any($event.target).value )">
 						</textarea>
 					}
 					@else if( field.type==InputTypes.Select ){
 						<mat-select
+							[required]="!field.nullable"
+							[disabled]="isReadonly(field)"
 							[tabIndex]="tab+1"
 							(selectionChange)="onChange( field.name, $event.value )"
 							[value]="getEnumId( field )">
@@ -23,11 +27,13 @@
 					}
 					@else {<!-- None, Bool, and any future type: a form field must never render without a control -->
 						<input #stringField matInput
+							[required]="!field.nullable"
+							[readonly]="isReadonly(field)"
 							[type]="field.name=='url' ? 'url' : 'text'"
 							[attr.cdkFocusInitial]="field.name=='target' ? '' : null"
 							[value]="record()[field.name] ?? ''"
 							[tabIndex]=tab+1
-							(keyup)="onChange( field.name, $any($event.target).value )" >
+							(input)="onChange( field.name, $any($event.target).value )" >
 					}
 				</mat-form-field>
 			}

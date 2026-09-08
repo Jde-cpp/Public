@@ -7,11 +7,26 @@
 {
 	min-width: 100px;
 }
-/* center the column headings only - data cells keep their own alignment. */
+/* A heading has to sit over its values, so the header cell takes the same alignment the data cells already have - left.
+   (It used to be centred on its own, which left every heading floating away from the column under it, worst on the wide
+   ones.)  Both are flex containers: justify-content is what actually moves the content, text-align only wraps.  A column
+   that wants something else - a count reading better right-aligned - sets `align` in its view Style, and columnStyle()
+   writes it inline over this on both cells at once. */
 mat-header-cell
 {
-	justify-content: center;
-	text-align: center;
+	justify-content: flex-start;
+	text-align: left;
+}
+/* The whole row is the click target - it opens the row's detail page, or checks it in selector mode - so it has to say so
+   before it is clicked.  A state layer over `transparent`, not a flat colour, so it composites over whatever the row
+   already has under it (.highlight's selection, the sticky header's backdrop) instead of replacing it. */
+mat-row
+{
+	cursor: pointer;
+}
+mat-row:hover
+{
+	background: color-mix( in srgb, var(--mat-sys-on-surface) 8%, transparent );
 }
 .highlight
 {
@@ -22,6 +37,31 @@ mat-header-cell
 	border-width: 1px;
 	border-style: solid;
 }
+/* A chip cell.  The chip is a flex item of the cell, so it would otherwise shrink until its label was cut mid-word - hold
+   it at its natural width instead.  The container tokens shrink Material's 32px default into the row;  they are custom
+   properties, so they inherit into the chip's own DOM, which a component stylesheet cannot reach. */
+mat-cell mat-chip{
+	flex: 0 0 auto;
+	--mat-chip-container-height: 22px;
+	--mat-chip-container-shape-radius: 11px;
+	--mat-chip-label-text-size: 11px;
+	--mat-chip-label-text-line-height: 22px;
+}
+/* The tones a column can ask for.  Colour goes through the chip's own tokens - a plain `color` never reaches the label,
+   which MatChip paints from --mat-chip-label-text-color inside its template.  `neutral` is a resting state, not a
+   warning, so it is dimmed rather than coloured;  only `error` is meant to catch the eye. */
+.chip-ok{
+	--mat-chip-label-text-color: var(--mat-sys-primary);
+	--mat-chip-outline-color: var(--mat-sys-primary);
+}
+.chip-neutral{
+	--mat-chip-label-text-color: var(--mat-sys-on-surface-variant);
+	--mat-chip-outline-color: var(--mat-sys-outline);
+}
+.chip-error{
+	--mat-chip-label-text-color: var(--mat-sys-error);
+	--mat-chip-outline-color: var(--mat-sys-error);
+}
 .dateColumn{
 	flex: 0 0 160px;
 }
@@ -30,6 +70,9 @@ mat-header-cell
 }
 .boolColumn{
 	flex: 0 0 80px;
+	/* the cell is a single check/cross glyph, so it reads centred - stated on both cells now that the header no longer centres itself */
+	justify-content: center;
+	text-align: center;
 }
 .mat-column-target{
 	flex: 0 0 150px;

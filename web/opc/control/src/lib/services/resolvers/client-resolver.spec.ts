@@ -82,6 +82,7 @@ describe( 'ClientResolver.load delegation', ()=>{
 		const data = await ClientResolver.load( spyGateway([]), failing, 'plc1', routing, {exception, error: vi.fn()} as unknown as SnackbarService );
 		expect( data.row.id ).toBe( 4 );//a page that cannot reach the OPC server still has its connection row
 		expect( data.row.server ).toBeUndefined();
+		expect( data.row.serverError ).toBe( "no route to host" );//the Connection tab's not-connected state shows it after the toast has gone
 		expect( exception ).toHaveBeenCalledWith( "Could not connect to server.", expect.any(Error) );
 	} );
 

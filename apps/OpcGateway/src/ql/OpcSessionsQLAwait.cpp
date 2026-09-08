@@ -91,6 +91,7 @@ namespace Jde::Opc::Gateway{
 			QL().Authorizer().Test( "gateway", "sessions", Access::ERights::Read, UserPK(), _sl ); //one gate covers both grafts - the same live-usage telemetry.
 			auto sessionsQL = _query.ExtractTable( "opcSessions" ); //before the select: SelectAwait derefs every child's DBTable(), and these have none.
 			auto connectionsQL = _query.ExtractTable( "opcConnections" );
+			auto statusQL = _query.ExtractTable( "connectionStatus" );
 			let addedTarget = _query.AddColumn( "target" ); //the join key - both totals are per target.
 			_query.ReturnRaw = true;
 			auto rows = co_await QL::QLAwait{ move(_query), UserPK(), _sl }; //UserPK ctor: no IQL, so CustomQuery is not re-entered; SelectAwait still authorizes the read.
@@ -99,12 +100,28 @@ namespace Jde::Opc::Gateway{
 				for( let& c : SessionCounts() )
 					sessionTotals[c.Connection] += c.Count;
 			}
-			let connectionTotals = connectionsQL ? UAClient::ConnectionCounts() : flat_map<ServerCnnctnNK,uint32>{};
+			let connectionTotals = connectionsQL || statusQL ? UAClient::ConnectionCounts() : flat_map<ServerCnnctnNK,uint32>{};
+			let connectErrors = statusQL ? UAClient::ConnectErrors() : flat_map<ServerCnnctnNK,string>{};
 			auto graft = []( const flat_map<ServerCnnctnNK,uint32>& totals, const QL::TableQL& child, str target )ι->jobject {
 				jobject y;
 				if( child.FindColumn("count") ){
 					let p = totals.find( target );
 					y["count"] = p==totals.end() ? 0 : p->second;
+				}
+				return y;
+			};
+			//An open client wins over a remembered failure: the error is only the *last* attempt, and a later one succeeding clears it anyway.
+			auto graftStatus = [&connectionTotals, &connectErrors]( const QL::TableQL& child, str target )ι->jobject {
+				jobject y;
+				let client = connectionTotals.find( target );
+				let error = connectErrors.find( target );
+				if( child.FindColumn("name") )
+					y["name"] = client!=connectionTotals.end() && client->second ? "Connected" : error!=connectErrors.end() ? "Error" : "Idle";
+				if( child.FindColumn("error") ){
+					if( error==connectErrors.end() )
+						y["error"] = nullptr;
+					else
+						y["error"] = error->second;
 				}
 				return y;
 			};
@@ -116,6 +133,8 @@ namespace Jde::Opc::Gateway{
 					o["opcSessions"] = graft( sessionTotals, *sessionsQL, target );
 				if( connectionsQL )
 					o["opcConnections"] = graft( connectionTotals, *connectionsQL, target );
+				if( statusQL )
+					o["connectionStatus"] = graftStatus( *statusQL, target );
 			} );
 			Resume( move(rows) );
 		}

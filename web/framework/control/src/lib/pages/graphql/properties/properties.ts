@@ -16,6 +16,10 @@ import { MatButtonModule } from '@angular/material/button';
 @Component({
     selector: 'properties',
     templateUrl: 'properties.html',
+    //see _general.scss for the cap - every page that hosts this form gets it.  The 24px sides are the tab label's own inset, so the
+    //fields line up under "Properties" instead of sitting on the sidenav divider; the 16px top clears the tab underline.  content-box,
+    //so the cap is still the fields' width.
+    styles: ':host{ display: block; box-sizing: content-box; max-width: var(--jde-form-max-width); padding: 16px 24px 0; }',
     imports: [CommonModule, MatButtonModule, MatChipsModule, MatChipGrid, MatInputModule, MatFormFieldModule, MatLabel, MatSelectModule],
 		schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
@@ -54,18 +58,13 @@ export class Properties implements OnInit{
 			&& !this.excludedColumns().includes(field.name);
 		for( const field of this.schema().fields.filter(filter) ){
 			let values = field.isEnum ? this.schema().enums.get(field.type.name) : undefined;
-			y.push( new PropertyField(field, values) );
+			y.push( new PropertyField(field, values, this.displayNames()[field.name]) );
 		}
-		const order = ["target", "name"];
-		const sort = ( a:PropertyField,b:PropertyField )=>{
-			const bIndex = order.indexOf( b.name )+1;
-			const aIndex = order.indexOf( a.name )+1;
-			if( aIndex || bIndex )
-				return ( aIndex || order.length )-( bIndex || order.length );
-			else
-				return a.name.localeCompare( b.name );
-		}
-		return y.sort( sort );
+		//listed fields first, in the listed order; the rest alphabetical after them.  (The comparator this replaced ranked
+		//an unlisted field EQUAL to the last listed one, so the split between the two groups depended on the sort's whim.)
+		const order = this.order();
+		const rank = ( f:PropertyField )=>{ const i = order.indexOf( f.name ); return i==-1 ? order.length : i; };
+		return y.sort( (a,b)=>rank(a)-rank(b) || a.name.localeCompare(b.name) );
 	});
 	boolFields = computed<PropertyField[]>( ()=>{
 		return [];
@@ -78,6 +77,10 @@ export class Properties implements OnInit{
 
 	ctor = input.required<new (item: any) => any>();
 	excludedColumns = input<string[]>([]);
+	order = input<string[]>( ["target", "name"] );//field names to show first, in this order; anything unlisted follows alphabetically
+	displayNames = input<Record<string,string>>( {} );//label overrides by field name, for the ones the camelCase split gets wrong ("Url", "Certificate Uri")
+	readonlyFields = input<string[]>( [] );//shown but not editable - a key the server will not update (client-detail's target on an existing connection)
+	isReadonly( field:PropertyField ){ return this.readonlyFields().includes( field.name ); }
 	record = model.required<any>();
 	schema = input.required<TableSchema>();
 	type = input.required<string>();
@@ -96,10 +99,10 @@ enum InputTypes{
 	Bool=2
 }
 class PropertyField{
-	constructor( private field:Field, public options?:Array<EnumValue> )
+	constructor( private field:Field, public options?:Array<EnumValue>, private label?:string )
 	{}
 	get name(){ return this.field.name; }
-	get displayName(){ return this.field.name=="target" ? "Id" : StringUtils.idToDisplay( this.field.name ); }
+	get displayName(){ return this.label ?? (this.field.name=="target" ? "Id" : StringUtils.idToDisplay( this.field.name )); }
 	get nullable(){ return this.field.type.kind!=FieldKind.NON_NULL; }
 	get type():InputTypes{
 		let type = InputTypes.None;

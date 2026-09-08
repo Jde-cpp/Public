@@ -68,13 +68,14 @@ div.table
 	overflow: auto;
 }
 
-/* center the column headings only - data cells keep their own alignment, so .number cells stay right aligned
-under a centered heading.  mat-header-cell.number is needed to outrank .number's justify-content below. */
-mat-header-cell,
-mat-header-cell.number
+/* A heading sits over its values, so the header cell takes the alignment the data cells already have.  Left here, and the
+   .number columns below right-align header and cell together - that class is on both, so it needs no header override.
+   (The headings used to be centred on their own, which left every one of them off from the column under it, and the
+   .number ones off by the full column width.) */
+mat-header-cell
 {
-	justify-content: center;
-	text-align: center;
+	justify-content: flex-start;
+	text-align: left;
 }
 
 .level
@@ -119,10 +120,16 @@ scrollWidth>clientWidth true exactly when the text is cut, which is what drives 
 	text-overflow: ellipsis;
 }
 
+/* clicking a row selects the entry, so the row shows it is a target - same state layer the shared list table uses. */
 .table-row
 {
 	height: 30px;
 	min-height: 30px;
+	cursor: pointer;
+}
+.table-row:hover
+{
+	background: color-mix( in srgb, var(--mat-sys-on-surface) 8%, transparent );
 }
 .highlight
 {

@@ -4,11 +4,25 @@
 #include <jde/web/client/proto/Web.FromServer.pb.h>
 #include "../src/GatewayAppClient.h"
 #include "../src/auth/OpcServerSession.h"
+#include <jde/web/server/Sessions.h>
 
 #define let const auto
 
 namespace Jde::Opc::Gateway::Tests{
 	constexpr ELogTags _tags{ ELogTags::Test };
+
+	//A real web session, not a fabricated id:  SessionCounts sweeps out entries whose session Web::Server no longer knows, so a
+	//seeded credential only survives to be counted if there is a live session behind it.
+	Ω addSession( string token )ι->SessionPK{
+		auto session = Web::Server::Sessions::Add( AppClient()->UserPK(), string{"127.0.0.1"}, false );
+		Credential cred{ move(token) }; cred.SetUserPK( AppClient()->UserPK() );
+		AddSession( session->SessionId, OpcServerTarget, move(cred) );
+		return session->SessionId;
+	}
+	Ω removeSession( SessionPK sessionId )ι->void{
+		Logout( sessionId );
+		Web::Server::Sessions::Remove( sessionId );
+	}
 
 	struct QLTests : ::testing::Test{
 	protected:
@@ -63,14 +77,12 @@ namespace Jde::Opc::Gateway::Tests{
 		ASSERT_TRUE( serialize(value).size() );
 	}
 	TEST_F( QLTests, opcSessions ){
-		const SessionPK sessionId{ 0x0bc5e551 }; //not a live web session: opcSessions reads the credential cache only, so a seeded entry is enough.
-		Credential cred{ string{"opcSessionsTestToken"} }; cred.SetUserPK( AppClient()->UserPK() );
-		AddSession( sessionId, OpcServerTarget, move(cred) );
+		let sessionId = addSession( "opcSessionsTestToken" );
 		let q = "opcSessions{ connection{target} type user{id target name} count }";
 		let value = BlockAwait<Web::Client::ClientSocketAwait<jvalue>,jvalue>( Socket().Query(q, {}, true) );
 		TRACE( "opcSessions: {}.", serialize(value) );
 		let projected = BlockAwait<Web::Client::ClientSocketAwait<jvalue>,jvalue>( Socket().Query("opcSessions{ count }", {}, true) );
-		Logout( sessionId );
+		removeSession( sessionId );
 
 		let& rows = value.as_array();
 		let userPK = AppClient()->UserPK().Value;
@@ -105,19 +117,37 @@ namespace Jde::Opc::Gateway::Tests{
 		EXPECT_GE( Json::AsNumber<uint32>(row->as_object(), "count"), 1u );
 	}
 
+	//A session that ends without a /logout - a timeout, a purge, a browser that never came back - must stop being counted.
+	//Nothing but that logout ever removed an entry, so opcSessions reported every session that had touched the target since
+	//startup, an ever-climbing number that opcConnections (drained by the idle ttl) never matched.
+	TEST_F( QLTests, deadSessionsAreNotCounted ){
+		let count = []ι->uint32{
+			uint32 y{};
+			for( let& c : SessionCounts() ){
+				if( c.Connection==OpcServerTarget )
+					y += c.Count;
+			}
+			return y;
+		};
+		let before = count();
+		let sessionId = addSession( "deadSessionTestToken" );
+		EXPECT_EQ( count(), before+1 );
+		Web::Server::Sessions::Remove( sessionId ); //the session ends;  nothing tells the gateway.
+		EXPECT_EQ( count(), before );
+		EXPECT_FALSE( GetCredential(sessionId, OpcServerTarget) ) << "the swept entry takes its cached credential with it.";
+	}
+
 	TEST_F( QLTests, serverConnectionSessions ){
-		const SessionPK sessionId{ 0x0bc5e552 };
-		Credential cred{ string{"serverConnectionSessionsTestToken"} }; cred.SetUserPK( AppClient()->UserPK() );
-		AddSession( sessionId, OpcServerTarget, move(cred) );
+		let sessionId = addSession( "serverConnectionSessionsTestToken" );
 		BlockAwait<Web::Client::ClientSocketAwait<jvalue>,jvalue>( Socket().Query("serverDescription( opc: $opcTarget ){ applicationUri }", {{"opcTarget", OpcServerTarget}}, true) );//ensure a live UAClient so opcConnections has something to count.
 		//the exact shape View.query() emits for the Connections list - args must survive the graft's DB pass.
-		let listQL = "serverConnections(limit:25,orderBy:[{name:\"asc\"}],deleted:$deleted){ id name certificateUri url opcSessions{count} opcConnections{count} description target }";
+		let listQL = "serverConnections(limit:25,orderBy:[{name:\"asc\"}],deleted:$deleted){ id connectionStatus{name} name certificateUri url opcSessions{count} opcConnections{count} description target }";
 		let rows = BlockAwait<Web::Client::ClientSocketAwait<jvalue>,jvalue>( Socket().Query(listQL, {{"deleted",nullptr}}, true) );
 		TRACE( "serverConnections: {}.", serialize(rows) );
 		const jobject vars{ {"opc", OpcServerTarget} };
 		let single = BlockAwait<Web::Client::ClientSocketAwait<jvalue>,jvalue>( Socket().Query("serverConnection( target: $opc ){ name opcSessions{count} }", vars, true) );
 		TRACE( "serverConnection: {}.", serialize(single) );
-		Logout( sessionId );
+		removeSession( sessionId );
 
 		let connection = SelectServerCnnctn( OpcServerTarget ); ASSERT_TRUE( connection );
 		bool found{};
@@ -128,11 +158,16 @@ namespace Jde::Opc::Gateway::Tests{
 			ASSERT_TRUE( count ) << serialize( o );
 			let connectionCount = Json::FindNumberPath<uint32>( o, "opcConnections/count" );
 			ASSERT_TRUE( connectionCount ) << serialize( o );
+			let status = Json::FindSVPath( o, "connectionStatus/name" );
+			ASSERT_TRUE( status ) << serialize( o ); //grafted for every row, connected or not.
 			if( Json::AsNumber<ServerCnnctnPK>(o, "id")==connection->Id ){
 				found = true;
 				EXPECT_GE( *count, 1u );
 				EXPECT_GE( *connectionCount, 1u ) << "a UAClient for the target is live - the serverDescription above connected it.";
+				EXPECT_EQ( *status, "Connected" ) << serialize( o ); //the same live client the count above sees.
 			}
+			else
+				EXPECT_TRUE( *status=="Idle" || *status=="Error" ) << serialize( o );
 		}
 		EXPECT_TRUE( found ) << serialize( rows );
 		let& o = single.as_object();
@@ -215,6 +250,19 @@ namespace Jde::Opc::Gateway::Tests{
 			auto opcConnections = find( "opcConnections" );
 			ASSERT_NE( opcConnections, fields.end() ) << serialize( value );
 			EXPECT_EQ( Json::AsSVPath(opcConnections->as_object(), "type/name"), "OpcConnections" );
+			auto connectionStatus = find( "connectionStatus" );
+			ASSERT_NE( connectionStatus, fields.end() ) << serialize( value );
+			EXPECT_EQ( Json::AsSVPath(connectionStatus->as_object(), "type/kind"), "OBJECT" );
+			EXPECT_EQ( Json::AsSVPath(connectionStatus->as_object(), "type/name"), "ConnectionStatus" );
+		}
+		{ //the status type carries a name and the reason the last connect failed - the SPA's list selects only the name.
+			let value = Socket().QuerySync( Ƒ("__type( name: \"ConnectionStatus\" ){}", fieldsQL), {} );
+			let& fields = Json::AsArray( value.as_object(), "fields" );
+			ASSERT_EQ( fields.size(), 2u ) << serialize( value );
+			EXPECT_EQ( Json::AsSV(fields[0].as_object(), "name"), "name" );
+			EXPECT_EQ( Json::AsSVPath(fields[0].as_object(), "type/ofType/name"), "String" );
+			EXPECT_EQ( Json::AsSV(fields[1].as_object(), "name"), "error" );
+			EXPECT_EQ( Json::AsSVPath(fields[1].as_object(), "type/name"), "String" );
 		}
 		for( sv typeName : {"OpcSessions"sv, "OpcConnections"sv} ){ //config-only types - no view behind them.
 			let value = Socket().QuerySync( Ƒ("__type( name: \"{}\" ){}", typeName, fieldsQL), {} );

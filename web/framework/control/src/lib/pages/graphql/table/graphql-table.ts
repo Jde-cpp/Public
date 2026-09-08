@@ -6,6 +6,7 @@ import { MatSortModule, Sort } from '@angular/material/sort';
 import { SnackbarService } from '../../../shared/snackbar/snackbar-service';
 import {FieldKind} from '../../../model/ql/schema/field';
 import { MatCheckbox } from '@angular/material/checkbox';
+import { MatChipsModule } from '@angular/material/chips';
 import { MatIcon } from '@angular/material/icon';
 import { StringUtils } from '../../../utils/string-utils';
 import { ViewField } from '../../../model/ql/view';
@@ -15,7 +16,7 @@ import { QLRow } from '../../../model/ql/target-row';
 	selector: 'ql-table',
 	styleUrls: ['./graphql-table.scss'],
 	templateUrl: './graphql-table.html',
-	imports: [CommonModule, MatCheckbox, MatIcon, MatTableModule, MatSortModule]
+	imports: [CommonModule, MatCheckbox, MatChipsModule, MatIcon, MatTableModule, MatSortModule]
 })
 export class GraphQLTable{
 	private cnsle:SnackbarService = inject( SnackbarService );
@@ -61,9 +62,25 @@ export class GraphQLTable{
 	isAllSelected(){ return this.selections().selected.length==this.dataSource()().length; }
 	isSelected( row:QLRow ){ return this.selections().isSelected(row); }
 	columnName( colName:string ){ return this.displayedFields().find(f=>f.name===colName)?.displayName ?? StringUtils.capitalize(colName); }
+	//Applied to the header cell and the data cell from the one setting, so the two cannot drift apart.  `align` is expanded
+	//rather than passed through: it is not a CSS property, and a mat-cell is a flex container - text-align on its own leaves
+	//the content wherever justify-content put it.
 	columnStyle( colName:string ):Record<string,string>{
 		const style = this.displayedFields().find( f=>f.name===colName )?.style;
-		return style ? Object.fromEntries( Object.entries(style).filter(([,v])=>v!=null).map(([k,v])=>[k,`${v}`]) ) : {};
+		if( !style )
+			return {};
+		const y:Record<string,string> = {};
+		for( const [key,value] of Object.entries(style) ){
+			if( value==null )
+				continue;
+			if( key=="align" ){
+				y["justifyContent"] = value=="right" ? "flex-end" : value=="center" ? "center" : "flex-start";
+				y["textAlign"] = `${value}`;
+			}
+			else
+				y[key] = `${value}`;
+		}
+		return y;
 	}
 	objectValue( obj: unknown ): string{
 		if( obj==null )
@@ -80,6 +97,14 @@ export class GraphQLTable{
 	}
 	sortable( colName:string ){ return this.displayedFields().find(f=>f.name===colName)?.type.underlyingKind!=FieldKind.OBJECT; }//orderBy on a grafted object field is a server error.
 
+	//The tone class for a chip cell.  The column names the tones, the stylesheet owns the colours, so a value the column did
+	//not list simply gets the theme's default chip rather than the wrong colour.
+	chipClass( colName:string, row:QLRow ):string{
+		const tones = this.displayedFields().find( f=>f.name===colName )?.chip;
+		const tone = tones?.[ this.objectValue(row[colName]) ];
+		return tone ? `chip-${tone}` : "";
+	}
+
 	dataSource=input.required<Signal<QLRow[]>>();
 	displayedFields = input.required<ViewField[]>();
 	selections=model.required<SelectionModel<QLRow>>();
@@ -89,8 +114,11 @@ export class GraphQLTable{
 	onRowActivate = output<QLRow>();
 
 	get displayedColumnNames(){ return (this.selections().isMultipleSelection() ? ["select"] : []).concat( this.displayedFields().filter((x)=>x.displayed).map((x)=>x.name) ); };
-	get stringColumnNames(){ return this.displayedFields().filter( (x)=>(x.type.underlyingKind==FieldKind.SCALAR && x.type.underlyingName=="String") || x.type.underlyingKind==FieldKind.ENUM ).map( (x)=>x.name ); }
-	get objectColumnNames(){ return this.displayedFields().filter( (x)=>x.type.underlyingKind==FieldKind.OBJECT ).map( (x)=>x.name ); }
+	//A chip column is whatever kind it always was - it just renders as a chip, so it has to leave the bucket it would
+	//otherwise fall in or the same matColumnDef is declared twice and the table throws.
+	get chipColumnNames(){ return this.displayedFields().filter( (x)=>x.chip ).map( (x)=>x.name ); }
+	get stringColumnNames(){ return this.displayedFields().filter( (x)=>!x.chip && ((x.type.underlyingKind==FieldKind.SCALAR && x.type.underlyingName=="String") || x.type.underlyingKind==FieldKind.ENUM) ).map( (x)=>x.name ); }
+	get objectColumnNames(){ return this.displayedFields().filter( (x)=>!x.chip && x.type.underlyingKind==FieldKind.OBJECT ).map( (x)=>x.name ); }
 	get listColumnNames(){ return this.displayedFields().filter( (x)=>x.type.underlyingKind==FieldKind.LIST ).map( (x)=>x.name ); }
 	get dateColumnNames(){ return this.displayedFields().filter( (x)=>x.type.underlyingName=="DateTime" ).map( (x)=>x.name ); }
 	get boolColumnNames(){ return this.displayedFields().filter( (x)=>x.type.underlyingName=="Boolean" ).map( (x)=>x.name ); }

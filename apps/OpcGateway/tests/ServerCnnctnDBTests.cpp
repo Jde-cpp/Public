@@ -102,6 +102,16 @@ namespace Jde::Opc::Gateway::Tests{
 		let updated = SelectServerCnnctn( id );
 		THROW_IF( updated->Description!=description, "description={} updated={}", description, serialize(updated->ToJson()) );
 
+		//target is the connection's identity - the url segment, the key the live UAClient sits under - so the meta marks it
+		//updateable:false.  createUpdate skips the column, the statement has nothing to set, and the mutation is refused.
+		let rename = Ƒ( "mutation updateServerConnection( id:{}, target:\"renamed\" ) }}", id );
+		bool refused{};
+		try{ QL().QuerySync<jvalue>( rename, {}, {UserPK::System} ); }
+		catch( const std::exception& e ){ refused = true; TRACET( _tags, "rename refused: {}", e.what() ); }
+		THROW_IF( !refused, "a target rename was accepted" );
+		let renamed = SelectServerCnnctn( id );
+		THROW_IF( renamed->Target!=target, "target='{}' should still be '{}'", renamed->Target, target );
+
 		let del = Ƒ( "deleteServerConnection(\"id\":{})", id );
 		let deleteJson = QL().QuerySync<jvalue>( del, {}, {UserPK::System} );
 		TRACET( _tags, "deleted={}", serialize(deleteJson) );

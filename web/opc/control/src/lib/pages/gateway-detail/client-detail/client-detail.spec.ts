@@ -15,8 +15,9 @@ import { SnackbarService } from 'jde-framework';
 import { GatewayService } from '../../../services/gateway-service';
 import { ClientDetail } from './client-detail';
 
-//angular-review3 L2: only group-detail clamped the stored tab index.  Here the Connection tab is gated on `server`, so a
-//stored index of 1 named a tab that does not exist for a new connection - mat-tab-group hard-loops on an index it cannot resolve.
+//angular-review3 L2: only group-detail clamped the stored tab index.  Here the Connection tab is gated on the row being
+//saved, so a stored index of 1 named a tab that does not exist for a new connection - mat-tab-group hard-loops on an index
+//it cannot resolve.  An existing connection whose server is unreachable keeps the tab (in its not-connected state).
 const create = ( row:any )=>{
 	TestBed.configureTestingModule({ providers: [
 		{ provide: ActivatedRoute, useValue: {data: of({pageData: {row, routing: {}, schema: {enums: new Map()}}})} },
@@ -34,11 +35,15 @@ describe( 'ClientDetail tab index', ()=>{
 	beforeEach( ()=>localStorage.setItem('client-detail', '1') );//Connection
 	afterEach( ()=>localStorage.removeItem('client-detail') );
 
-	it( 'clamps to Properties when there is no server', ()=>{
+	it( 'clamps to Properties for a new connection', ()=>{
 		expect( create({}).tabIndex() ).toBe( 0 );
 	} );
 
 	it( 'keeps the stored index when the Connection tab exists', ()=>{
 		expect( create({id: 7, name: "plc", server: {id: 2}}).tabIndex() ).toBe( 1 );
+	} );
+
+	it( 'keeps the stored index for a saved connection whose server is unreachable', ()=>{
+		expect( create({id: 7, name: "plc", serverError: "no route to host"}).tabIndex() ).toBe( 1 );
 	} );
 } );

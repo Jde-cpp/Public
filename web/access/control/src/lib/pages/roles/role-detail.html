@@ -2,7 +2,7 @@
 	[selectedIndex]="tabIndex()"
 	(selectedIndexChange)="onTabIndexChanged($event)">
 	<mat-tab>
-		<ng-template mat-tab-label>{{properties().name}}</ng-template>
+		<ng-template mat-tab-label>Properties</ng-template><!--was the role's name: the same word as the breadcrumb and the side nav, and it re-titled with every keystroke in Name-->
 		<ng-template matTabContent>
 			<properties [ctor]=ctor [(record)]=properties type=role [schema]=schema></properties>
 		</ng-template>

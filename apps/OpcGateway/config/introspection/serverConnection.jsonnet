@@ -2,9 +2,12 @@
 //`serverConnections{ … opcSessions{count} }`). `extend: true` appends these to the introspected server_connections columns instead of replacing them.
 local UInt = { kind: "SCALAR", name: "UInt" };
 local NonNullUInt = { kind: "NON_NULL", name: null, ofType: UInt };
+local String = { kind: "SCALAR", name: "String" };
+local NonNullString = { kind: "NON_NULL", name: null, ofType: String };
 local serverConnection = {
 	extend: true,
 	fields: [
+		{ name: "connectionStatus", type: { kind: "OBJECT", name: "ConnectionStatus" } },
 		{ name: "opcSessions", type: { kind: "OBJECT", name: "OpcSessions" } },
 		{ name: "opcConnections", type: { kind: "OBJECT", name: "OpcConnections" } }
 	]
@@ -20,6 +23,12 @@ local serverConnection = {
 	OpcConnections: {
 		fields: [
 			{ name: "count", type: NonNullUInt }
+		]
+	},
+	ConnectionStatus: { //Connected|Idle|Error, from the live UAClients and UAClient::ConnectErrors() - `error` carries why the last attempt failed.
+		fields: [
+			{ name: "name", type: NonNullString },
+			{ name: "error", type: String }
 		]
 	}
 }

@@ -21,6 +21,22 @@
 namespace Jde::Opc::Gateway{
 	constexpr ELogTags _tags{ (ELogTags)EOpcLogTags::Opc };
 	flat_map<ServerCnnctnNK,flat_map<Credential,sp<UAClient>>> _clients; shared_mutex _clientsMutex;
+	//Why the last connect attempt on a target failed.  Keyed by target, not by credential: the connection list is per target and a
+	//failure that is credential-specific still leaves the target unusable for that caller.  Its own mutex - the status query reads it
+	//without touching _clients, and StateCallback writes it while unlocked.
+	flat_map<ServerCnnctnNK,string> _connectErrors; mutex _connectErrorMutex;
+	α UAClient::ConnectErrors()ι->flat_map<ServerCnnctnNK,string>{
+		lg _{ _connectErrorMutex };
+		return _connectErrors;
+	}
+	α UAClient::SetConnectError( const ServerCnnctnNK& target, string message )ι->void{
+		lg _{ _connectErrorMutex };
+		_connectErrors.insert_or_assign( target, move(message) );
+	}
+	α UAClient::ClearConnectError( const ServerCnnctnNK& target )ι->void{
+		lg _{ _connectErrorMutex };
+		_connectErrors.erase( target );
+	}
 	α UAClient::RemoveClient( sp<UAClient>&& client )ι->bool{
 		client->Connected = false;
 		client->StopProcessing();//cancels the ping timer & processing loop; otherwise _pingTimer stays pending on the io_context (and the ping coroutine keeps a UAClient ref), blocking shutdown.
@@ -310,6 +326,7 @@ namespace Jde::Opc::Gateway{
 
 				client->ClearRequest( ConnectRequestId );//previous clear didn't have client
 				if( sessionState == UA_SESSIONSTATE_ACTIVATED ){
+					ClearConnectError( client->Target() );//a reachable target - whatever the previous attempt failed on no longer applies.
 					client->_asyncRequest.RequestDrain();//open62541 fires its namespace-array read right after this callback returns; ProcessingLoop must keep pumping until the reply is serviced (OnServiceBegin).
 					{
 						ul _{ _clientsMutex };
@@ -323,13 +340,18 @@ namespace Jde::Opc::Gateway{
 					});
 				}
 				else{
+					//Remembered for serverConnections{connectionStatus}: the waiting requests get the reason once, the list has no other
+					//way to learn the target is broken.  Named by status where there is no richer detail - the caller's exception
+					//carries the code separately, but a stored "Connection Failed" would say nothing about what went wrong.
+					SetConnectError( client->Target(), detail.size() ? detail : string{UAException::Message(connectStatus)} );
+					string message{ detail.size() ? move(detail) : string{"Connection Failed"} };
 					client->StopProcessing();// Break the UAClient<->_asyncRequest._client self-reference; on the failure path the client never enters _clients, so Shutdown would never Stop() it and the UAClient (and its UA_Client) would leak.
 					Post(
-						[client,connectStatus,detail=move(detail)]()ι->void {
+						[client,connectStatus,message=move(message)]()ι->void {
 							ConnectAwait::Resume(
 								client->Target(),
 								client->Credential,
-								UAClientException{connectStatus, client->Handle(), detail.size() ? detail : "Connection Failed"}
+								UAClientException{connectStatus, client->Handle(), message}
 							);
 						}
 					);

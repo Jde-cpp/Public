@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Operator, View } from './view';
+import { Flex, Operator, Style, View } from './view';
 import { TableSchema } from './schema/table-schema';
 
 //Mirrors the gateway's ServerConnection: introspected DB columns plus the grafted opcSessions OBJECT (config/introspection/serverConnection.jsonnet).
@@ -33,6 +33,23 @@ describe( "View.query", ()=>{
 		const view = new View( {columns: [{name:"opcSessions", selection:"count"}], sort: "name"}, schema );
 		const field = view.fields.find( f=>f.name=="opcSessions" )!;
 		expect( field.toJson().selection ).toBe( "count" );
+	} );
+} );
+
+//A saved user view is JSON, so anything Style holds has to survive toJSON or the column reloads with the default
+//alignment while the view it was edited from keeps its own.
+describe( "Style serialization", ()=>{
+	it( "keeps both the width and the alignment", ()=>{
+		const style = new Style( {flex: new Flex(130), align: "right"} );
+		expect( JSON.parse(JSON.stringify(style)) ).toEqual( {flex: "0 0 130px", align: "right"} );
+	} );
+	it( "omits what was not set", ()=>{
+		expect( JSON.parse(JSON.stringify(new Style(90))) ).toEqual( {flex: "0 0 90px"} );
+		expect( JSON.parse(JSON.stringify(new Style({align: "right"}))) ).toEqual( {align: "right"} );
+	} );
+	it( "carries the alignment onto a view field", ()=>{
+		const view = new View( {columns: [{name:"opcSessions", selection:"count", style: new Style({align:"right"})}], sort: "name"}, schema );
+		expect( view.fields.find(f=>f.name=="opcSessions")!.toJson().style ).toMatchObject( {align: "right"} );
 	} );
 } );
 

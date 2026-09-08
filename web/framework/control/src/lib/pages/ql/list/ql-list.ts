@@ -243,7 +243,6 @@ export class QLList implements OnInit, OnDestroy{
 	}
 
 	sideNav = model<RouteItem>();//optional:  embedded in a detail page's tab the host owns the sidenav
-	collectionDisplay = input.required<string>();
 	listData = input<QLListData>();//pre-resolved by the host instead of the route (QLSelector); `data` is the rows
 	selector = input<boolean>( false );//pick-rows mode:  always multi-select, no Add/show-deleted, a row click selects instead of navigating
 

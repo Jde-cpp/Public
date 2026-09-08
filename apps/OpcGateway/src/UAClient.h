@@ -36,6 +36,9 @@ namespace Jde::Opc::Gateway{
 		Ω Find( str id, const Gateway::Credential& cred )ι->sp<UAClient>;
 		Ω StatusCounts()ι->tuple<uint,uint>;//{connected clients, monitored items} for the status query.
 		Ω ConnectionCounts()ι->flat_map<ServerCnnctnNK,uint32>;
+		//The reason the last connect attempt failed, per target - cleared when one succeeds.  A target with no live client and no
+		//entry here was never attempted (or was drained when idle), which is what separates `Idle` from `Error` in serverConnections{connectionStatus}.
+		Ω ConnectErrors()ι->flat_map<ServerCnnctnNK,string>;
 		Ω Find( UA_Client* ua, SRCE )ε->sp<UAClient>;
 		Ω TryFind( UA_Client* ua, SRCE )ι->sp<UAClient>;
 		Ω RemoveClient( sp<UAClient>&& client )ι->bool;
@@ -85,6 +88,8 @@ namespace Jde::Opc::Gateway{
 		bool Connected{};
 	private:
 		Ω StateCallback( UA_Client *ua, UA_SecureChannelState channelState, UA_SessionState sessionState, StatusCode connectStatus )ι->void;
+		Ω SetConnectError( const ServerCnnctnNK& target, string message )ι->void;
+		Ω ClearConnectError( const ServerCnnctnNK& target )ι->void;
 		Ω ServiceNotificationCallback( UA_Client* ua, UA_ApplicationNotificationType type, const UA_KeyValueMap payload )ι->void;
 		α Configuration()ε->UA_ClientConfig*;
 		α Create()ε->UA_Client*;
