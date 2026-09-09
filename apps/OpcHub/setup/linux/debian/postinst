@@ -1,0 +1,26 @@
+#!/bin/sh
+# jde-opchub postinst - the service account, the data root's ownership, and the units (apps/OpcHub/setup/linux/README.md).
+set -e
+case "$1" in
+	configure)
+		# The account the units run as; owns the data root (the .db, ssl/, the logs) and reads the passcode file.
+		if ! getent passwd jde-cpp >/dev/null; then
+			adduser --system --group --home /var/lib/Jde-Cpp --no-create-home --shell /usr/sbin/nologin --quiet jde-cpp
+		fi
+		chown -R jde-cpp:jde-cpp /var/lib/Jde-Cpp
+		chmod 750 /var/lib/Jde-Cpp
+		chgrp jde-cpp /etc/jde-cpp/env
+		chmod 640 /etc/jde-cpp/env
+		if [ -d /run/systemd/system ]; then
+			systemctl daemon-reload || true
+			if [ -z "$2" ]; then
+				# first install: the hub runs; the OPC UA server is optional - `systemctl enable --now jde-opcserver`
+				systemctl enable --now jde-opchub.service || true
+			else
+				# upgrade: the binaries were replaced under the running processes - restart whatever is running
+				systemctl try-restart jde-opchub.service jde-opcserver.service || true
+			fi
+		fi
+		;;
+esac
+exit 0

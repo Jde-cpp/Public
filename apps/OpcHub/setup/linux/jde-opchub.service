@@ -1,0 +1,34 @@
+# Jde OpcHub - the AppServer and the OPC gateway in one process (port 1967).  Installed by the jde-opchub package
+# (apps/OpcHub/setup/linux), enabled and started by its postinst; local changes go in `systemctl edit jde-opchub`.
+[Unit]
+Description=Jde OpcHub - AppServer + OPC gateway (port 1967)
+Documentation=https://github.com/Jde-cpp/opc-hub
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=jde-cpp
+Group=jde-cpp
+# Exports STATE_DIRECTORY=/var/lib/Jde-Cpp, whose parent Process::ProgramDataFolder() takes as the data root, so the
+# product dir is /var/lib/Jde-Cpp/OpcHub (OpcHub.db, ssl/, the logs) - the tree a Windows install has under %ProgramData%.
+StateDirectory=Jde-Cpp
+StateDirectoryMode=0750
+# JDE_PASSCODE, the private keys' passphrase (empty: the keys are written in the clear) - and anything else the process
+# should see.  Set it before the first start.
+EnvironmentFile=-/etc/jde-cpp/env
+WorkingDirectory=/opt/jde-cpp/opchub
+# -c keeps the process in the foreground with the log on stdout, i.e. the journal - without it the exe daemon()s.
+# -sync creates the tables in a fresh .db on the first start and is idempotent afterwards (create-missing tables,
+# recreate the views, upsert the mutations).
+ExecStart=/opt/jde-cpp/opchub/Jde.Opc.Hub -c -settings=/etc/jde-cpp/apps/OpcHub/config/Opc.Hub.jsonnet -include=args/install -sync
+Restart=on-failure
+RestartSec=5
+# /usr, /boot and /etc read-only, no home dirs, a private /tmp: the process writes only under its StateDirectory.
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

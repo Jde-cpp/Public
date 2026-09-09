@@ -1,5 +1,6 @@
 #include <iostream> // !important
 #include <syslog.h>
+#include <unistd.h>
 #include <execinfo.h>
 #include <dlfcn.h>
 
@@ -79,11 +80,14 @@ namespace Jde{
 
 	α Process::Pause()ι->int{
 		INFOT( ELogTags::App, "Pausing main thread." );
-		let exitReason = ::pause();
-		INFOT( ELogTags::App, "Pause returned = {}.", exitReason );
-		Shutdown( exitReason );
-		//std::cout << "pause returned" << std::endl;
-		return exitReason;
+		let paused = ::pause(); //-1/EINTR by contract - the signal, recorded by ExitHandler, is the result.
+		let signal = ExitReason().value_or( -1 );
+		INFOT( ELogTags::App, "Pause returned = {} (signal {}).", paused, signal );
+		//A requested stop - SIGTERM (systemctl stop, kill) or ^C - is a clean exit; pause's -1 (exit code 255) had systemd log
+		//every stop as a failure.  Anything else (SIGALRM from UnPause/Kill, SIGUSR1) keeps pause's result as before.
+		let exitCode = signal==SIGTERM || signal==SIGINT ? EXIT_SUCCESS : paused;
+		Shutdown( exitCode );
+		return exitCode;
 	}
 
 	α Process::AsService()ι->bool{
@@ -104,6 +108,12 @@ namespace Jde{
 	}
 
 	α Process::ProgramDataFolder()ι->fs::path{
+		//A system service:  a unit with StateDirectory=Jde-Cpp (apps/OpcHub/setup/linux) exports STATE_DIRECTORY=/var/lib/Jde-Cpp,
+		//and the data root is its parent - paths-common.libsonnet and CompanyRootDir() append the company dir themselves.
+		//Colon-separated when a unit names several directories; the first is ours.
+		if( let state = GetEnv("STATE_DIRECTORY"); state )
+			return fs::path{ state->substr(0, state->find(':')) }.parent_path();
+		//Otherwise per-user - a console run, or a systemd --user unit:  $XDG_CONFIG_HOME, else $HOME/.config.
 		return GetEnv("XDG_CONFIG_HOME").value_or( Process::GetEnv("HOME").value_or("/etc/app")+"/.config" );
 	}
 
@@ -169,8 +179,10 @@ namespace Jde{
 */
 	}
 
+	α Process::IsTerminal()ι->bool{ return ::isatty(STDOUT_FILENO)!=0; }
 	α Process::SetConsoleTitle( sv title )ι->void{
-		std::cout << "\033]0;" << title << "\007";
+		if( IsTerminal() ) //a service runs with -c too (Type=simple), stdout on the journal - the escape would be its first line.
+			std::cout << "\033]0;" << title << "\007";
 	}
 
 	// https://stackoverflow.com/questions/3596781/how-to-detect-if-the-current-process-is-being-run-by-gdb

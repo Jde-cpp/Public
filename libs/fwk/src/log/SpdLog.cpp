@@ -48,8 +48,8 @@ namespace Jde::Logging{
 			auto pattern =  Json::FindSV( sink, "/pattern" );
 			if( name=="console" && Process::IsConsole() ){
 				if( !pattern ){
-					if( Process::Args().contains("-ctest") )
-						pattern = "%^%3!l%$-%H:%M:%S.%e %v %g:%#";//%-64@  %v
+					if( Process::Args().contains("-ctest") || !Process::IsTerminal() )
+						pattern = "%^%3!l%$-%H:%M:%S.%e %v %g:%#";//plain, the source at the end: ctest's log, or stdout on a pipe/the journal (a service's -c run) - the osc-8 link would be literal there.
 					else
 						pattern = "\033]8;;file://%U#%#\a%^%3!l%$\033]8;;\a-%H:%M:%S.%e %v";//osc-8 link on the level;  the message stays plain so vscode finds the paths inside it.
 				}

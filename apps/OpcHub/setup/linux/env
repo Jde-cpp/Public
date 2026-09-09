@@ -1,0 +1,7 @@
+# Environment of the jde-opchub and jde-opcserver services (systemd EnvironmentFile: KEY=value, no shell expansion).
+# Owned by root, readable by the jde-cpp group only - the package's postinst sets that.
+#
+# The private keys' passphrase, $(JDE_PASSCODE) in the configs.  Unset, the keys are written in the clear (the documented
+# behaviour of an empty passcode).  Set it before the first start: a key written under one passcode does not open under
+# another.
+#JDE_PASSCODE=

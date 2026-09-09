@@ -1,0 +1,133 @@
+name: Linux Release
+
+# Builds the release tree (linux-clang-relWithDebInfo-jde, the app targets only) on the self-hosted, containerised
+# runner (.github/docker/) and packages it with apps/OpcHub/setup/linux/build-deb.sh: the .deb and the per-user tarball
+# come out as artifacts, and a push of a `yyyy.MM.dd` tag publishes them on that tag's GitHub release - beside the
+# Windows installer win2025-build.yml puts there. The Web UI comes from the `web` job, a GitHub-hosted `ng build`, as in
+# the Windows workflow. Dispatch it by hand (Actions -> Linux Release -> Run workflow, any branch; gated to users with
+# write access, so no fork-PR fence is needed) or push a tag.
+on:
+  workflow_dispatch:
+  push:
+    tags: ['20*']
+
+concurrency:
+  group: linux-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The Angular site the package ships (opt/jde-cpp/web). web/opc/scripts/setup.sh scaffolds the workspace from npm,
+  # links the tracked sources in and runs `ng build` - a from-scratch scaffold every run (~5 min). GitHub-hosted: the
+  # runner image has no node, and the scaffold's links are what the Windows workflow keeps off Windows anyway.
+  web:
+    name: Web UI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 26 # @angular/cli 22 takes ^22.22 || ^24.15 || >=26; the dev box is on 26
+
+      # The global cli decides which Angular `ng new` scaffolds; pin the major the libraries' peer ranges name
+      # (web/*/control/package.json: ^22.1.0) rather than let it install @latest.
+      - name: Build the site
+        env:
+          JDE_BASH: ${{ github.workspace }}
+        run: |
+          npm install -g @angular/cli@22
+          bash web/opc/scripts/setup.sh
+
+      - name: Upload the site
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist-${{ github.run_id }}
+          path: web/opc/my-workspace/dist/my-workspace/browser
+          if-no-files-found: error
+          retention-days: 7
+
+  build:
+    name: Linux Release
+    # `needs:` puts the ~5 min site build ahead of this one instead of beside it (what the Windows workflow's poll
+    # avoids) - the runner container has no `gh` to poll with, and the release build here is a fraction of the debug one.
+    needs: web
+    # Matches the LABELS set when the runner container was registered.
+    runs-on: [self-hosted, clang23]
+    permissions:
+      contents: write # the Release step; read is all checkout needs
+
+    env:
+      JDE_DIR: ${{ github.workspace }}
+      JDE_BASH: ${{ github.workspace }}
+      JDE_COMPILER: clang++
+      # Container-local tmpfs (mounted at `docker run`), so each job builds clean.
+      JDE_BUILD_DIR: /mnt/ram/linux
+      # Bind-mount point of the host's third-party install tree; the presets read $REPO_DIR/install/clang++/RelWithDebInfo.
+      REPO_DIR: /deps
+      # Bind-mounted clone of https://github.com/OPCFoundation/UA-Nodeset (see .github/docker/README.md) - the DI/IA
+      # nodesets the package installs for the OpcServer.
+      UA_NODE_SETS: /deps/UA-Nodeset
+      PRESET: linux-clang-relWithDebInfo-jde
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          clean: true
+          fetch-depth: 0 # the tags: the package's version is `git describe --tags`
+
+      - name: Resolve build dir
+        shell: bash
+        run: echo "BUILD_DIR=$JDE_BUILD_DIR/$JDE_COMPILER/$(basename "$JDE_DIR")/release" >> "$GITHUB_ENV"
+
+      # Not buildFunctions.sh's reconfig: it takes no extra cache variables, and the test targets are not wanted here.
+      - name: Configure
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$BUILD_DIR/runtime/logs"
+          cmake -B "$BUILD_DIR" -S "$JDE_DIR" -Wno-dev --preset "$PRESET" -Djde_TESTS=OFF
+
+      - name: Build
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake --build "$BUILD_DIR" -j "$(nproc)" --target Jde.Opc.Hub Jde.Opc.Server Jde.DB.Sqlite Jde.DB.Sqlite.AppServer Jde.DB.Sqlite.OpcGateway
+
+      - name: Download the Web UI
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist-${{ github.run_id }}
+          path: ${{ runner.temp }}/web
+
+      - name: Package
+        shell: bash
+        run: |
+          set -euo pipefail
+          # a tag names the version outright; otherwise build-deb.sh takes `git describe --tags`
+          version=""; [ "$GITHUB_REF_TYPE" = tag ] && version="$GITHUB_REF_NAME"
+          bash apps/OpcHub/setup/linux/build-deb.sh --build-dir "$BUILD_DIR" --web-dist "$RUNNER_TEMP/web" --ua-nodesets "$UA_NODE_SETS" \
+            --out-dir "$RUNNER_TEMP/setup" --version "$version" --maintainer "Jde-Cpp <noreply@jde-cpp.invalid>"
+
+      - name: Upload the package
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-package-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/setup/*.deb
+            ${{ runner.temp }}/setup/*.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+      # A tag run publishes the package on the tag's GitHub release - created here if the Windows workflow has not
+      # already, the files replaced when the run is repeated.
+      - name: Release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ runner.temp }}/setup/*.deb
+            ${{ runner.temp }}/setup/*.tar.gz
+          generate_release_notes: true

@@ -21,7 +21,7 @@ paths + {
 		dataPaths: [],
 		scriptPaths: [],
 		localhost:{
-			driver: "$(ExeDir)/Jde.DB.Sqlite.dll", //beside the exe, wherever the installer put it - settings.cpp builtIns.
+			driver: "$(ExeDir)/$(LibPrefix)Jde.DB.Sqlite$(LibExt)", //beside the exe, wherever the installer put it, spelled for the platform (Jde.DB.Sqlite.dll / libJde.DB.Sqlite.so) - settings.cpp builtIns.
 			connectionString: null,
 			username: null,
 			password: null,

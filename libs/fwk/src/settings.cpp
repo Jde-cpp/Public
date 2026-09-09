@@ -44,7 +44,16 @@ namespace Jde{
 			//the dir the running exe sits in:  the installed args find the db driver and its proc modules beside the exe with
 			//it, wherever the installer put them (Program Files, or a per-user Programs dir) - ExePath(), not argv[0], which
 			//is whatever the launcher spelled.
-			{ "ExeDir", []{ return Process::ExePath().parent_path().string(); } }
+			{ "ExeDir", []{ return Process::ExePath().parent_path().string(); } },
+			//the platform's shared-library spelling, so one installed args file names the driver and the proc modules on both:
+			//"$(ExeDir)/$(LibPrefix)Jde.DB.Sqlite$(LibExt)" - Jde.DB.Sqlite.dll on windows, libJde.DB.Sqlite.so on linux.
+#ifdef _WIN32
+			{ "LibPrefix", []{ return string{}; } },
+			{ "LibExt", []{ return string{".dll"}; } }
+#else
+			{ "LibPrefix", []{ return string{"lib"}; } },
+			{ "LibExt", []{ return string{".so"}; } }
+#endif
 		};
 		return y;
 	}
@@ -65,10 +74,10 @@ namespace Jde{
 			auto env = Process::GetEnv( group ).value_or( "" );
 			if( env.empty() ){
 				if( let p = builtIns().find( group ); p!=builtIns().end() )
-					env = p->second();
+					env = p->second(); //may legitimately be "" (LibPrefix on windows) - found, not missing.
+				else
+					DBG( "Environment variable '{}' not found", group );
 			}
-			if( env.empty() )
-				DBG( "Environment variable '{}' not found", group );
 			setting = Str::Replace( setting, match, env );
 		}
 		return setting;

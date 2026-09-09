@@ -1,0 +1,11 @@
+#!/bin/sh
+# jde-opchub prerm - stop and disable on removal; an upgrade keeps the services running (postinst restarts them).
+set -e
+case "$1" in
+	remove|deconfigure)
+		if [ -d /run/systemd/system ]; then
+			systemctl disable --now jde-opcserver.service jde-opchub.service || true
+		fi
+		;;
+esac
+exit 0

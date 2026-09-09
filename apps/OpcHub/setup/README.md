@@ -1,5 +1,7 @@
 # Jde OpcHub - Windows installer
 
+The Linux package - a `.deb` with systemd units, and a per-user tarball - is [`linux/`](linux/README.md) beside this.
+
 `OpcHubSetup.nsi` builds `OpcHubSetup-<version>.exe` (NSIS 3.11, Modern UI 2, `MultiUser.nsh`).  It installs the hub, optionally
 the OPC UA server and the Web UI files, as Windows services or as a per-user install without administrator rights, with
 sqlite as the database.

@@ -32,7 +32,8 @@ USER root
 # reference: libxml2 (LIBXML2_INCLUDE_DIR), liburing (fwk io_uring), OpenSSL, and
 # zstd + zlib static libs (open62541's export links static system OpenSSL, which
 # drags in -lzstd and libz.a). libbacktrace and libjitterentropy are built from
-# source below (no usable apt package on noble).
+# source below (no usable apt package on noble). binutils (objdump/strip) and
+# patchelf are for apps/OpcHub/setup/linux/build-deb.sh (linux-release.yml).
 RUN set -eux; \
     export DEBIAN_FRONTEND=noninteractive; \
     apt-get update; \
@@ -47,7 +48,8 @@ RUN set -eux; \
         libc++-${LLVM_VERSION}-dev \
         libc++abi-${LLVM_VERSION}-dev \
         ninja-build make git pkg-config \
-        libxml2-dev liburing-dev libssl-dev libzstd-dev zlib1g-dev; \
+        libxml2-dev liburing-dev libssl-dev libzstd-dev zlib1g-dev \
+        binutils patchelf; \
     rm -rf /var/lib/apt/lists/* /tmp/llvm.sh
 
 # libbacktrace (BOOST_STACKTRACE_USE_BACKTRACE / the presets' -lbacktrace): Ubuntu
