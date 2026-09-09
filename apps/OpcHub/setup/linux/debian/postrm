@@ -1,0 +1,20 @@
+#!/bin/sh
+# jde-opchub postrm.  dpkg has removed the programs, the units, the settings (on purge) and the meta/sql/nodesets it
+# installed under /var/lib/Jde-Cpp; what the products created there - OpcHub.db, OpcServer.db, ssl/ (certificates and
+# keys the OPC servers trust), the logs - stays, on purge too, as the Windows uninstaller leaves %ProgramData%\Jde-Cpp.
+# The jde-cpp account stays as well (it owns those files).
+set -e
+case "$1" in
+	remove|purge)
+		if [ -d /run/systemd/system ]; then
+			systemctl daemon-reload || true
+		fi
+		if [ "$1" = purge ]; then
+			rm -rf /etc/jde-cpp
+			if [ -d /var/lib/Jde-Cpp ]; then
+				echo "jde-opchub: /var/lib/Jde-Cpp (databases, certificates, logs) is left in place - delete it by hand for a clean slate."
+			fi
+		fi
+		;;
+esac
+exit 0

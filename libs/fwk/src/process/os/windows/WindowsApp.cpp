@@ -3,6 +3,7 @@
 #include <Psapi.h>
 #include <shellapi.h>
 #include <strsafe.h>
+#include <io.h> //_isatty
 //#include "WindowsDrive.h"
 #include "WindowsSvc.h"
 #include "WindowsWorker.h"
@@ -24,6 +25,7 @@ namespace Jde{
 	α Process::SetConsoleTitle( sv title )ι->void{
 		::SetConsoleTitleA( Jde::format("{}({})", title, ProcessId()).c_str() );
 	}
+	α Process::IsTerminal()ι->bool{ return ::_isatty(::_fileno(stdout))!=0; }
 
 	Ω handlerRoutine( DWORD ctrlType )->BOOL{
 		bool handled{ true };

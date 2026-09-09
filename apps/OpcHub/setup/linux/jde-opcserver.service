@@ -1,0 +1,29 @@
+# Jde OpcServer - Jde's own OPC UA server (opc.tcp 4840, http 1970) with the DI/IA nodesets and the pumps demo address
+# space; logs in to the hub with its certificate.  Installed by the jde-opchub package but left disabled - the hub can
+# connect to any OPC UA server:  `systemctl enable --now jde-opcserver`.
+[Unit]
+Description=Jde OpcServer - OPC UA server (opc.tcp 4840, http 1970)
+Documentation=https://github.com/Jde-cpp/opc-hub
+# The hub is its registry (the Windows service's `depend= Jde.OpcHub`): started with it, stopped with it.
+Requires=jde-opchub.service
+After=jde-opchub.service
+
+[Service]
+Type=simple
+User=jde-cpp
+Group=jde-cpp
+# The same data root as the hub's - /var/lib/Jde-Cpp/OpcServer (OpcServer.db, ssl/, the logs, the installed nodesets).
+StateDirectory=Jde-Cpp
+StateDirectoryMode=0750
+EnvironmentFile=-/etc/jde-cpp/env
+WorkingDirectory=/opt/jde-cpp/opcserver
+ExecStart=/opt/jde-cpp/opcserver/Jde.Opc.Server -c -settings=/etc/jde-cpp/apps/OpcServer/config/Opc.Server.Install.jsonnet -include=args/install -sync
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

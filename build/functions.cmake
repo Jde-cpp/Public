@@ -30,6 +30,13 @@ if( CMAKE_HOST_WIN32 )
 	set( CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" )
 	set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" )
 	set( CMAKE_PDB_OUTPUT_DIRECTORY     "${CMAKE_BINARY_DIR}/bin" )
+else()
+	#$ORIGIN first in every exe's and .so's RUNPATH.  The build tree still resolves through the absolute entries cmake
+	#appends after it (the build dirs, the $REPO_DIR deps); a staged tree - apps/OpcHub/setup/linux/build-deb.sh puts the
+	#exe, libJde*.so, the sqlite modules and the bundled third-party .so's in one dir - resolves beside the exe, with no
+	#patchelf pass needed.  BUILD_RPATH, not INSTALL_RPATH: the presets point CMAKE_INSTALL_PREFIX at the deps tree, so
+	#nothing here is ever `cmake --install`ed.
+	set( CMAKE_BUILD_RPATH "$ORIGIN" )
 endif()
 
 function(boost)

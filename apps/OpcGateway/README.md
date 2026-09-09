@@ -20,6 +20,17 @@ Rest/Websocket Application on top of [open62541.org](https://www.open62541.org/)
 
 3) To uninstall: Settings > Apps (a current-user install also has an Uninstall shortcut in its Start Menu folder). The database, certificates and logs under `C:\ProgramData\Jde-Cpp` are left in place.
 
+### Linux
+1) `sudo apt install ./jde-opchub_<version>_amd64.deb` - built from [`apps/OpcHub/setup/linux`](../OpcHub/setup/linux/README.md), which also documents the installed layout. Ubuntu 24.04 or later.
+   - The hub runs as the `jde-opchub` systemd service (port 1967, a `jde-cpp` account); the OPC UA server is installed but not enabled: `sudo systemctl enable --now jde-opcserver`.
+   - The database is sqlite, one file per product under `/var/lib/Jde-Cpp/<Product>`, created on first start.
+   - Without root: the tarball's `install.sh` installs under your account and runs the products as `systemctl --user` units.
+2) nginx - the site file is installed, not enabled:
+```
+    sudo ln -s /etc/jde-cpp/nginx-opchub.conf /etc/nginx/sites-enabled/jde-opchub && sudo systemctl reload nginx
+```
+3) To uninstall: `sudo apt remove jde-opchub` (`./install.sh --uninstall` for a per-user install). The database, certificates and logs under `/var/lib/Jde-Cpp` (`~/.config/Jde-Cpp`) are left in place.
+
 ## Running
 1) Start the service(s)
 ```

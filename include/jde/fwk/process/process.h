@@ -20,10 +20,12 @@ namespace Process{
 	Φ Executable()ι->fs::path;
 	Φ ExePath()ι->fs::path;
 	Φ HostName()ι->string;
+	/// How the process was launched. ie not a service.  Says nothing about where stdout actually goes.
 	Φ IsConsole()ι->bool;
 	Φ IsDebuggerPresent()ι->bool;
 	Φ SetConsole( bool isConsole )ι->void;
 	Φ SetConsoleTitle( sv title )ι->void;
+	Φ IsTerminal()ι->bool; // Where stdout goes.
 	Φ SetExecutor( up<IShutdown>&& executor )ι->void;
 	Φ MemorySize()ι->size_t;
 	Φ ProcessId()ι->uint32;
