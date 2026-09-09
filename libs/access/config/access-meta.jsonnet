@@ -47,7 +47,8 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				issuer: tables.users.columns.issuer,
 				subjectAlt: tables.users.columns.subjectAlt,
 				distinguished: tables.users.columns.distinguished,
-				expiration: tables.users.columns.expiration
+				expiration: tables.users.columns.expiration,
+				fingerprint: tables.users.columns.fingerprint
 			},
 			naturalKeys: tables.identities.naturalKeys,
 		}
@@ -74,7 +75,8 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				issuer: types.varchar+{ length: 1024, nullable: true, insertable: false, updateable: false, comment: "cert issuer DN (RFC2253) - key enrollment", i:104 },
 				subjectAlt: types.varchar+{ length: 1024, nullable: true, insertable: false, updateable: false, comment: "cert subjectAltName, openssl config syntax (URI:…,DNS:…) - key enrollment", i:105 },
 				distinguished: types.varchar+{ length: 1024, nullable: true, insertable: false, updateable: false, comment: "cert subject DN (RFC2253) - key enrollment", i:106 },
-				expiration: types.dateTime+{ nullable: true, insertable: false, updateable: false, comment: "cert notAfter - key enrollment", i:107 }
+				expiration: types.dateTime+{ nullable: true, insertable: false, updateable: false, comment: "cert notAfter - key enrollment", i:107 },
+				fingerprint: types.varchar+{ length: 95, nullable: true, insertable: false, updateable: false, comment: "cert sha-256 fingerprint, colon hex as openssl prints it - key enrollment", i:108 }
 			},
 			ops: ["Create", "Read", "Update", "Delete", "Purge", "Administer", "Execute"],
 			extends: "identities",

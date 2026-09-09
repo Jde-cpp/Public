@@ -19,7 +19,8 @@ import { MatButtonModule } from '@angular/material/button';
     //see _general.scss for the cap - every page that hosts this form gets it.  The 24px sides are the tab label's own inset, so the
     //fields line up under "Properties" instead of sitting on the sidenav divider; the 16px top clears the tab underline.  content-box,
     //so the cap is still the fields' width.
-    styles: ':host{ display: block; box-sizing: content-box; max-width: var(--jde-form-max-width); padding: 16px 24px 0; }',
+    //the readonly select look (mat-form-field.readonly) is in _general.scss - key-properties sets the same class.
+    styles: ":host{ display: block; box-sizing: content-box; max-width: var(--jde-form-max-width); padding: 16px 24px 0; }",
     imports: [CommonModule, MatButtonModule, MatChipsModule, MatChipGrid, MatInputModule, MatFormFieldModule, MatLabel, MatSelectModule],
 		schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })

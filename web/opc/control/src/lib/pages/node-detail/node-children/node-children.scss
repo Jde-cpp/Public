@@ -159,3 +159,10 @@ be held wider by a long description. */
 	padding-left: 5px;
 	padding-right: 5px;
 }
+
+/* the same dense rows as ql-table (graphql-table.scss), so every list in the app reads at one rhythm;  the tallest thing in a
+   cell here is a 40px checkbox */
+mat-table{
+	--mat-table-row-item-container-height: 40px;
+	--mat-table-header-container-height: 44px;
+}

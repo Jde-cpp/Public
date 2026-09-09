@@ -16,6 +16,19 @@ body {
   --jde-form-max-width: 720px;
 }
 
+// A select that cannot change (an existing user's provider) presents like a readonly input.  Material's 38% disabled
+// dimming says "not usable yet"; this says "a fact the server will not update", so the disabled tokens take the enabled
+// colours and the arrow goes transparent.  Tokens, not a selector:  they inherit through the form field's encapsulation
+// where a selector would not.  Global because the generic `properties` form (jde-framework) and key-properties (jde-access)
+// both set the class.
+mat-form-field.readonly {
+  --mat-form-field-filled-disabled-container-color: var(--mat-form-field-filled-container-color, var(--mat-sys-surface-variant));
+  --mat-form-field-filled-disabled-label-text-color: var(--mat-form-field-filled-label-text-color, var(--mat-sys-on-surface-variant));
+  --mat-form-field-filled-disabled-active-indicator-color: var(--mat-form-field-filled-active-indicator-color, var(--mat-sys-on-surface-variant));
+  --mat-select-disabled-trigger-text-color: var(--mat-select-enabled-trigger-text-color, var(--mat-sys-on-surface));
+  --mat-select-disabled-arrow-color: transparent;
+}
+
 .docs-button[md-button], .docs-button[md-raised-button] {
   text-transform: uppercase;
 }

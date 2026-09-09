@@ -8,13 +8,9 @@
 		<mat-label>Name</mat-label>
 		<input matInput type="text" [value]="record().name ?? ''" (input)="update( 'name', $any($event.target).value )">
 	</mat-form-field>
-	<mat-form-field appearance="fill">
-		<mat-label>Description</mat-label>
-		<textarea matInput [value]="record().description ?? ''" (input)="update( 'description', $any($event.target).value )"></textarea>
-	</mat-form-field>
-	<mat-form-field appearance="fill">
+	<mat-form-field appearance="fill" [class.readonly]="isReadonly('provider')"><!--fixed on an existing user for the logon form's reason, and one more:  a change here swaps this form for the generic one mid-edit-->
 		<mat-label>Provider</mat-label>
-		<mat-select [value]="providerId()" (selectionChange)="update( 'provider', $event.value )">
+		<mat-select [value]="providerId()" [disabled]="isReadonly('provider')" (selectionChange)="update( 'provider', $event.value )">
 			@for( option of providers(); track option.id ){
 				<mat-option [value]="option.id">{{option.name}}</mat-option>
 			}
@@ -24,13 +20,17 @@
 		<mat-label>Email</mat-label>
 		<input matInput type="email" [value]="record().email ?? ''" (input)="update( 'email', $any($event.target).value )">
 	</mat-form-field>
+	<mat-form-field appearance="fill"><!--last, like the logon form:  the identity fields together, the free text after them-->
+		<mat-label>Description</mat-label>
+		<textarea matInput [value]="record().description ?? ''" (input)="update( 'description', $any($event.target).value )"></textarea>
+	</mat-form-field>
 </section>
 
 <section class="section">
 	<h3 class="section-title">Public key</h3>
 	<dl class="facts">
-		<dt>Key size</dt>
-		<dd>{{ modulus() ? keyBits()+'-bit RSA' : '—' }}</dd>
+		<dt>Key</dt>
+		<dd>{{ keySummary() }}</dd>
 		<dt>Modulus</dt>
 		<dd>
 			@if( modulus() ){
@@ -42,8 +42,6 @@
 			}
 			@else { — }
 		</dd>
-		<dt>Exponent</dt>
-		<dd>{{ record().exponent ?? '—' }}</dd>
 	</dl>
 </section>
 
@@ -68,6 +66,14 @@
 					}
 				</dd>
 			}
+			<dt>Fingerprint</dt><!--the cert's sha-256 in openssl's colon form:  what an operator matches against `openssl x509 -fingerprint -sha256` or a browser's viewer, where a modulus cannot be compared by eye.  Enrollment-time like the rest of the section, so a row enrolled before the column shows a dash-->
+			<dd>
+				@if( record().fingerprint ){
+					<code class="mono fingerprint">@for( byte of fingerprintBytes(); track $index ){@if( $index ){:<wbr>}{{byte}}}</code>
+					<button mat-icon-button type="button" class="fact-button" aria-label="Copy fingerprint" (click)="copy( record().fingerprint!, 'Fingerprint' )"><mat-icon>content_copy</mat-icon></button>
+				}
+				@else { — }
+			</dd>
 			<dt>Subject Alt Names</dt>
 			<dd>
 				@if( subjectAltNames().length ){

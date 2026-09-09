@@ -15,6 +15,7 @@ namespace Jde::App::Client{
 	α IsSsl()ι->bool;
 	α Host()ι->string;
 	α Port()ι->PortType;
+	α InstanceName()ι->string;//settings "/instanceName", else Debug/Release - the name the AppServer registers this process under
 
 	struct ConnectAwait final : VoidAwait{
 		ConnectAwait( sp<IAppClient> appClient, bool retry, SRCE )ι;

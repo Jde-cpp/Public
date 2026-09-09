@@ -8,10 +8,12 @@ import { StringUtils } from '../utils/string-utils';
 import { MetaObject } from '../model/ql/schema/meta-object';
 import { Field } from '../model/ql/schema/field';
 import { RouteItem, ProfileStore, RouteStore } from 'jde-spa';
-import { FieldFilter, View, ViewFieldSettings } from '../model/ql/view';
+import { FieldFilter, View, ViewFieldSettings, ViewSettings } from '../model/ql/view';
 import { Sort } from '@angular/material/sort';
 
-export type TableSettings = {canPurge?:boolean,canAdd?:boolean, canNavigate?:boolean, excludedColumns?:string[], columns?:(string|ViewFieldSettings)[], sort?:Sort[]|string};//canNavigate: a collection with no ':target' detail route must not offer the row click-through
+//canNavigate: a collection with no ':target' detail route must not offer the row click-through
+//viewName: the toggle label of the default view ("default" when unset);  views: further system views, see ViewSettings
+export type TableSettings = {canPurge?:boolean,canAdd?:boolean, canNavigate?:boolean, excludedColumns?:string[], columns?:(string|ViewFieldSettings)[], sort?:Sort[]|string, viewName?:string, views?:ViewSettings[]};
 export type CollectionItem = string | { path:string, title?:string, data?:{summary:string, collectionName:string, tableSettings:TableSettings} };
 export class ListRoute extends RouteItem{
 	constructor( collection:string|CollectionItem ){
@@ -89,17 +91,22 @@ export class QLListResolver implements Resolve<QLListData> {
 		let pageSettings = new PageSettings( routing.tableSettings );
 		const collectionName = routing.collectionName;
 		const schema = await ql.schemaWithEnums( MetaObject.toTypeFromCollection(collectionName), (m)=>console.log(m) );
-		let defaultView = await QLListResolver.defaultView( schema, pageSettings.configColumns );
+		const systemViews = QLListResolver.systemViews( schema, routing.tableSettings );
 		var profile = new PageProfile();
-		profile.views.push( defaultView );
-		await profile.loadViews( collectionName, profileStore, schema, defaultView.sort );
+		profile.views.push( ...systemViews );
+		await profile.loadViews( collectionName, profileStore, schema, systemViews[0].sort );
 		profile.currentViewIndex = ProfileStore.viewIndex( collectionName );
 		profile.showDeleted = ProfileStore.showDeleted( collectionName );
 		return {pageSettings, profile, schema, results: null, routing, columns: QLListResolver.columns(schema, routing.tableSettings.columns!, routing.tableSettings.excludedColumns)};
 	}
-	private static async defaultView( schema:TableSchema, configColumns:(string|ViewFieldSettings)[] ):Promise<View>{
-		let defaultView = new View( {configColumns: configColumns, sort: [{active: "name", direction: "asc"}]}, schema );
-		return defaultView;
+	//the default view first, then the route's declared ones - each falling back to the default's columns and sort for what it leaves unset
+	static systemViews( schema:TableSchema, settings:TableSettings ):View[]{
+		const columns = settings.columns ?? [];
+		const defaultView = new View( {name: settings.viewName, configColumns: columns, sort: [{active: "name", direction: "asc"}]}, schema );
+		const views = [defaultView];
+		for( const v of settings.views ?? [] )
+			views.push( new View({name: v.name, configColumns: v.columns ?? columns, sort: View.toSort(v.sort) ?? [...defaultView.sort], filters: v.filters}, schema) );
+		return views;
 	}
 	static columns( schema:TableSchema, configColumns:(string|ViewFieldSettings)[], excluded: string[] ):Record<string,string>{
 		let columns: Record<string,string> = {};

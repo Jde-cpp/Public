@@ -1,3 +1,10 @@
+/* the same dense rows as ql-table (graphql-table.scss) - this table sits on the tab beside those selectors, and its cells are
+   the same 40px checkboxes */
+mat-table{
+	--mat-table-row-item-container-height: 40px;
+	--mat-table-header-container-height: 44px;
+}
+
 .mat-mdc-header-cell{
 	text-align: center;
 }

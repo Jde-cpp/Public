@@ -15,6 +15,7 @@ export class User extends TargetRow<User>{
 		this.email = obj.email;
 		this.expiration = obj.expiration;
 		this.exponent = obj.exponent;
+		this.fingerprint = obj.fingerprint;
 		this.groups = cloneClassArray( obj.groups, Group );
 		this.issuer = obj.issuer;
 		this.loginName = obj.loginName;
@@ -57,6 +58,7 @@ export class User extends TargetRow<User>{
 	email:string;
 	expiration:string;
 	exponent:number;
+	fingerprint:string;
 	groups: Group[];
 	issuer:string;
 	loginName: string;

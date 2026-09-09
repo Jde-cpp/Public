@@ -56,7 +56,8 @@ namespace Jde::Access::Server{
 				DB::Value{ move(_description) }, DB::Value{ move(info.Issuer) },
 				DB::Value{ move(info.SubjectAltName) },
 				DB::Value{ move(info.DistinguishedName) },
-				info.Email.empty() ? DB::Value{ nullptr } : DB::Value{ move(info.Email) }, DB::Value{ info.Expiration }} };
+				info.Email.empty() ? DB::Value{ nullptr } : DB::Value{ move(info.Email) }, DB::Value{ info.Expiration },
+				DB::Value{ move(info.Fingerprint) }} };
 		try{
 			UserPK userPK{ co_await DS().InsertSeq<UserPK::Type>(move(insert)) };
 			Authorizer().CreateUser( userPK );

@@ -1,3 +1,13 @@
+// the `properties` form's frame (server-properties.scss has the same block):  the cap and the 24px page inset, so this tab's
+// fields sit on the logon form's edges and the page's action row - sized to that width, Save under the field text - lines up
+// here too.  No top padding:  the first section's own 4px + 12px is the 16px that clears the tab underline.
+:host{
+	display: block;
+	box-sizing: content-box;
+	max-width: var(--jde-form-max-width);
+	padding: 0 24px;
+}
+
 .section {
 	padding: 4px 0 12px;
 }
@@ -10,13 +20,13 @@
 	color: var(--mat-sys-on-surface-variant);
 }
 
-// the form fields take the same inset as the fact rows, so a heading sits alone at the margin and owns everything beneath it
+// full width like the logon form's fields; the heading sits on the field's box edge, the text 16px inside it
 .section > mat-form-field {
-	width: calc(100% - 32px);
-	margin: 0 16px;
+	width: 100%;
 }
 
-// label/value pairs in a column, same shape as the application cards
+// label/value pairs in a column, same shape as the application cards.  The 16px sides are the fill field's text inset,
+// so the labels line up under the field text above them and over the Save button below
 .facts {
 	display: grid;
 	grid-template-columns: auto 1fr;
@@ -48,6 +58,14 @@
 .modulus {
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
+}
+
+// 95 chars overrun the value column at the form's cap.  The template puts a <wbr> after every byte, so it wraps at a
+// colon rather than mid-byte; flex:1 hands it the width the copy button leaves, so the button stays beside the block
+// instead of dropping under it
+.fingerprint {
+	flex: 1 1 0;
+	min-width: 0;
 }
 
 // the copy/show buttons sit inline with a text value, so the 40px default button would double the row height

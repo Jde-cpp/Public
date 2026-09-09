@@ -161,7 +161,13 @@ export class ViewField{
 	chip?:ChipTones;
 };
 
-type ViewConfigArgs = { configColumns:(string|ViewFieldSettings)[], sort:Sort[], filters?:{name: string, filter: Filter} };
+//A filter a route declares on a system view (TableSettings.views):  the column, the operator (In when unset) and the values,
+//in the same vocabulary the settings panel uses - "<null>"/"<not null>" included.
+export type ViewFilterSettings = { name:string, operator?:Operator, value:DbScalar[] };
+//A further system view a route declares beside the default one.  Whatever it leaves unset comes from the default view:  the
+//table's columns and its sort.  The default view itself is the TableSettings' own columns/sort under `viewName`.
+export type ViewSettings = { name:string, columns?:(string|ViewFieldSettings)[], sort?:Sort[]|string, filters?:ViewFilterSettings[] };
+type ViewConfigArgs = { name?:string, configColumns:(string|ViewFieldSettings)[], sort:Sort[], filters?:ViewFilterSettings[] };
 type ViewJson = { name:string|undefined, collectionName:string, fields:ViewFieldJson[], filters:{ field?: Field, name:string, filter: Filter }[], limit?:number, showSelector:boolean|undefined, sort:Sort[]|undefined };
 export type ViewSerializedArgs = { name:string|undefined, collectionName:string, fields:ViewField[], limit?:number, showSelector:boolean, sort?:Sort[], filters?:{name: string, filter: Filter}[] };//sort optional:  toJson omits one that matched the default view's
 export type FieldFilter = { field: Field, filter: Filter };
@@ -198,9 +204,14 @@ export class View{
 		this.type = view.type;
 	}
 	private configConstructor( config:ViewConfigArgs, schema:TableSchema ):void{
+		this.name = config.name;
 		this.sort = config.sort;
 		this.collectionName = schema.collectionName;
 		this.fields = this.columns( schema, config.configColumns, ["id", "attributes"] );
+		for( const f of config.filters ?? [] ){//a route's filter names a column that must exist - unlike a saved view's, which is dropped with a warning, this is a config error
+			const field = schema.fields.find( x=>x.name==f.name ); verify( field, `View '${config.name}' (${schema.collectionName}) filters on '${f.name}' - not in the schema.` );
+			this.fieldFilters.push( {field, filter: {operator: f.operator ?? Operator.In, value: [...f.value]}} );
+		}
 		this.appendAlwaysQueried( schema );
 	}
 	private serializedConstructor( config:ViewSerializedArgs, schema:TableSchema, defaultSort:Sort[]|undefined ):void{
@@ -236,8 +247,12 @@ export class View{
 	private tableConstructor(config:TableSettings, schema:TableSchema){
 		this.collectionName = schema.collectionName;
 		this.fields = this.columns( schema, config.columns!, config.excludedColumns ?? ["id", "attributes"] );
-		this.sort = typeof config.sort=="string" ? [{active: config.sort, direction: "asc"}] : config.sort ?? [];
+		this.sort = View.toSort( config.sort ) ?? [];
 		this.appendAlwaysQueried( schema );
+	}
+	//TableSettings/ViewSettings accept a bare column name as shorthand for an ascending sort on it
+	static toSort( sort:Sort[]|string|undefined ):Sort[]|undefined{
+		return typeof sort=="string" ? [{active: sort, direction: "asc"}] : sort;
 	}
 	//id is the mutation key, target the navigation key (ql-list.onRowActivate) and deleted drives show-deleted - query() asks for them whether or not they are displayed, so every view must carry them
 	private appendAlwaysQueried( schema:TableSchema ):void{

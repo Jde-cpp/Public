@@ -35,6 +35,8 @@ export class KeyProperties{
 
 	record = model.required<Partial<User>>();
 	schema = input.required<TableSchema>();
+	readonlyFields = input<string[]>( [] );//the generic form's input, same name:  the page passes one list to whichever form it shows
+	isReadonly( field:keyof User ){ return this.readonlyFields().includes( field ); }
 	showModulus = signal( false );
 
 	providers = computed( ()=>this.schema().enums.get("Provider") ?? [] );
@@ -45,10 +47,18 @@ export class KeyProperties{
 
 	modulus = computed( ()=>String(this.record().modulus ?? "") );
 	keyBits = computed( ()=>this.modulus().length*4 );
+	//"2048-bit RSA, e = 65537":  the exponent is 65537 on every key you will see, so it rides on the size line rather than owning a row
+	keySummary = computed( ()=>{
+		if( !this.modulus() )
+			return "—";
+		const e = this.record().exponent;
+		return `${this.keyBits()}-bit RSA${e ? `, e = ${e}` : ""}`;
+	});
 	modulusDisplay = computed( ()=>this.showModulus() ? this.modulus() : `${this.modulus().slice(0, 32)}…` );
 
-	hasCert = computed( ()=>!!(this.record().distinguished || this.record().issuer || this.record().subjectAlt || this.record().expiration) );
+	hasCert = computed( ()=>!!(this.record().distinguished || this.record().issuer || this.record().subjectAlt || this.record().expiration || this.record().fingerprint) );
 	selfSigned = computed( ()=>!!this.record().issuer && this.record().issuer==this.record().distinguished );
+	fingerprintBytes = computed( ()=>(this.record().fingerprint ?? "").split( ":" ).filter( (x)=>x.length ) );//one <wbr> per byte - the line breaks at a colon, never inside a byte
 	subjectAltNames = computed( ()=>(this.record().subjectAlt ?? "").split(",").map( (x)=>x.trim() ).filter( (x)=>x.length ) );
 	expiry = computed( ()=>{
 		const raw = this.record().expiration;
