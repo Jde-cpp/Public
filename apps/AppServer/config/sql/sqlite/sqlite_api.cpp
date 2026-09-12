@@ -14,6 +14,7 @@ void RegisterProcs( Jde::DB::Sqlite::IProcs& procs ){
 
 	AccessProcs::RegisterAccessAcInsertRole( procs );
 	AccessProcs::RegisterAccessAcUpsertPermission( procs );
+	AccessProcs::RegisterAccessGroupPurge( procs );
 	AccessProcs::RegisterAccessIdentityInsert( procs );
 	AccessProcs::RegisterAccessPermissionInsert( procs );
 	AccessProcs::RegisterAccessProviderInsert( procs );

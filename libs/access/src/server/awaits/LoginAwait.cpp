@@ -61,6 +61,7 @@ namespace Jde::Access::Server{
 		try{
 			UserPK userPK{ co_await DS().InsertSeq<UserPK::Type>(move(insert)) };
 			Authorizer().CreateUser( userPK );
+			PublishUserCreated( userPK );//the clients' caches - CreateUser is the server's own
 			ResumeScaler( userPK );
 		}
 		catch( runtime_error& e ){

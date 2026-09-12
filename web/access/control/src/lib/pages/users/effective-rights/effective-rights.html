@@ -1,0 +1,69 @@
+@if( !isLoading() ){
+	@if( !rows().length ){
+		<p class="empty">No resource is enforced and the user holds no grant - nothing restricts this user.</p>
+	}
+	@else{
+		<mat-table [dataSource]="displayRows()" class="mat-elevation-z8">
+			<ng-container matColumnDef="schema">
+				<mat-header-cell *matHeaderCellDef>Schema</mat-header-cell>
+				<mat-cell *matCellDef="let row">@if( !row.parent ){ {{row.resource.schema}} }</mat-cell><!--a child row's schema is its parent's - the indent already says so-->
+			</ng-container>
+			<ng-container matColumnDef="resource">
+				<mat-header-cell *matHeaderCellDef>Resource</mat-header-cell>
+				<!--no tooltip here - the marks carry the provenance, and this cell holds the expand button and the node link.  A root with
+					node rows gets the toggle and their count; a child shows only its criteria - its name is its parent's, and the indent says so-->
+				<mat-cell *matCellDef="let row" [class.lockout]="row.isLockout" [class.child]="!!row.parent">
+					@if( row.children.length ){
+						<button matIconButton class="expand" type="button" (click)="toggle(row)" [attr.aria-expanded]="isExpanded(row)" [attr.aria-label]="(isExpanded(row) ? 'Hide the ' : 'Show the ') + childrenLabel(row) + ' under ' + row.resource.name">
+							<mat-icon>{{isExpanded(row) ? "expand_more" : "chevron_right"}}</mat-icon>
+						</button>
+					}
+					<span class="text">
+						@if( row.parent ){
+							@if( link(row); as link ){
+								<a class="node" [routerLink]="link.route" [title]="linkTitle(link, row)" [attr.aria-label]="'Open node ' + (link.name ?? row.resource.criteria)">{{link.name ?? row.resource.criteria}}</a>
+							}
+							@else{
+								<span class="criteria">{{row.resource.criteria}}</span>
+							}
+						}
+						@else{
+							<span>{{row.resource.name}}</span>
+							@if( row.resource.criteria ){
+								<span class="criteria">{{row.resource.criteria}}</span>
+							}
+							@else if( row.children.length ){
+								<span class="count">{{childrenLabel(row)}}</span>
+							}
+						}
+					</span>
+				</mat-cell>
+			</ng-container>
+			<ng-container matColumnDef="enforced">
+				<mat-header-cell *matHeaderCellDef>Enforced</mat-header-cell>
+				<mat-cell *matCellDef="let row">
+					<mat-checkbox disabled [checked]="row.enforced" [aria-label]="row.enforced ? 'Enforced' : 'Not enforced'"></mat-checkbox>
+				</mat-cell>
+			</ng-container>
+			@for( kv of rightColumns; track kv.key; let i = $index ){
+				<ng-container [matColumnDef]="kv.value">
+					<mat-header-cell *matHeaderCellDef class="mat-column-permission" [class.mat-column-alt]="i%2==0">{{kv.value}}</mat-header-cell>
+					<mat-cell *matCellDef="let row" class="mat-column-permission" [class.mat-column-alt]="i%2==0">
+						<!--a denied mark wins, as the server's deny does; a lockout row marks every available right it has nothing for-->
+						@if( isDenied(row, kv.key) ){
+							<mat-icon class="denied" role="img" tabindex="0" [attr.aria-label]="kv.value + ' denied'" [matTooltip]="tooltip(row, kv.key)" matTooltipClass="effective-rights-tooltip">cancel</mat-icon>
+						}
+						@else if( isEffective(row, kv.key) ){
+							<mat-icon class="allowed" role="img" tabindex="0" [attr.aria-label]="kv.value + ' allowed'" [matTooltip]="tooltip(row, kv.key)" matTooltipClass="effective-rights-tooltip">check</mat-icon>
+						}
+						@else if( row.isLockout && isAvailable(row, kv.key) ){
+							<mat-icon class="lockout" role="img" tabindex="0" [attr.aria-label]="kv.value + ' denied, no grant'" [matTooltip]="tooltip(row, kv.key)" matTooltipClass="effective-rights-tooltip">block</mat-icon>
+						}
+					</mat-cell>
+				</ng-container>
+			}
+			<mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></mat-header-row>
+			<mat-row *matRowDef="let row; columns: displayedColumns;" [class.child]="!!row.parent"></mat-row>
+		</mat-table>
+	}
+}

@@ -27,12 +27,28 @@ namespace Jde::Access{
 		SchemaResources[schema][resourceTarget][criteria] = resourcePK;
 	}
 
+	//A bare target names a schema only when one schema carries it.  An app schema wins outright; an opc schema ("opc.<server>")
+	//answers only when it is the sole live one with the target, since every OpcServer registers the same `nodeIds`.  Callers that
+	//can be specific (the acl/role mutations, which have the resource's PK) should be - this is the fallback for those that cannot.
 	α Authorize::GetSchema( str resourceTarget, SL sl )ε->string{
 		Jde::sl _{ Mutex };
+		optional<string> qualified;
+		bool ambiguous{};
 		for( let& [_,resource] : Resources ){
-			if( resource.Target==resourceTarget && !resource.Schema.contains('.') ) //exclude opc schemas which can have same target
+			if( resource.Target!=resourceTarget )
+				continue;
+			if( !resource.Schema.contains('.') ) //an app schema's target is unique by construction
 				return resource.Schema;
+			if( resource.IsDeleted )
+				continue;
+			if( qualified && *qualified!=resource.Schema )
+				ambiguous = true;
+			else
+				qualified = resource.Schema;
 		}
+		THROW_IFSL( ambiguous, "Resource target '{}' exists in more than one schema; send the resource 'id' or a 'schemaName'.", resourceTarget );
+		if( qualified )
+			return *qualified;
 		THROWSL( "Schema not found for resource target '{}'.", resourceTarget );
 	}
 	α Authorize::Test( str schemaName, str resourceName, ERights rights, UserPK executer, SL sl )ε->void{
@@ -41,14 +57,18 @@ namespace Jde::Access{
 		if( !resourcePK )//not enabled
 			return;
 
+		//AccessException, as TestAdmin below throws:  a plain Exception carries no http status, so ServerImpl fell through to
+		//its InternalServerError branch and a denial reached the client as 500 "Query failed." - indistinguishable from a
+		//broken query.  Forbidden for what the executer may do, Unauthorized only for who they are (access-review3 #17).
+		//The executer is the exception's own field, not a "[{}]" prefix:  ServerImpl formats it through UserName().
 		if( auto user = Users.find(executer); user!=Users.end() ){
-			THROW_IFX( user->second.IsDeleted, Exception(sl, ELogLevel::Debug, "[{}]User is deleted.", executer.Value) );
+			THROW_IFX( user->second.IsDeleted, Access::AccessException(sl, executer, "User is deleted.") );
 			let configured = user->second.ResourceRights( *resourcePK );
-			THROW_IFX( !empty(configured.Denied & rights), Exception(sl, ELogLevel::Debug, "[{}]User denied '{}' access to '{}'.", executer.Value, ToString(rights), resourceName) );
-			THROW_IFX( empty(configured.Allowed & rights), Exception(sl, ELogLevel::Debug, "[{}]User does not have '{}' access to '{}'.", executer.Value, ToString(rights), resourceName) );
+			THROW_IFX( !empty(configured.Denied & rights), Access::AccessException(sl, executer, "User denied '{}' access to '{}'.", ToString(rights), resourceName) );
+			THROW_IFX( empty(configured.Allowed & rights), Access::AccessException(sl, executer, "User does not have '{}' access to '{}'.", ToString(rights), resourceName) );
 		}
 		else if( executer.Value!=UserPK::System )
-			throw Exception{ sl, ELogLevel::Debug, "[{}]User not found.", executer.Value };
+			throw Access::AccessException{ sl, executer, EHttpStatus::Unauthorized, "User not found." };//not a known user - anonymous or stale - the one case the client's 401 policy is for.
 	}
 	α Authorize::TestAdmin( ResourcePK resourcePK, UserPK executer, SL sl )ε->void{
 		Jde::sl _{ Mutex };
@@ -409,6 +429,11 @@ namespace Jde::Access{
 		std::shared_lock _{ Mutex };
 		THROW_IFX( isChild(child, parent), Exception(sl, ELogLevel::Debug, "Role '{}' cannot be a member of '{}' because it is a ancester.", child, parent) );
 	}
+	α Authorize::IsRoleMember( RolePK parent, RolePK child )Ι->bool{
+		Jde::sl _{ Mutex };
+		auto p = Roles.find( parent );
+		return p!=Roles.end() && p->second.Members.contains( PermissionRole{std::in_place_index<1>, child} );
+	}
 	α Authorize::AddRolePermission( RolePK rolePK, PermissionPK member, ERights allowed, ERights denied, const jobject& jResource )ι->void{
 		ul l{ Mutex };
 		Resource resource{ jResource };
@@ -527,5 +552,62 @@ namespace Jde::Access{
 	α Authorize::SetUserPermissions( flat_set<UserPK>&& users, const ul& l )ι->void{
 		for( let& [identityPK,permissionRole] : Acl )
 			AddPermission( identityPK, permissionRole, users, l );
+	}
+
+	//The guards are on the path, not visited sets:  a group or role reached two ways is two sources here, where enforcement
+	//expands it once - the OR'd bits are the same either way.  Deleted groups and roles stop the walk as AddPermission and
+	//AddUserPermissions do;  a deleted resource stays in the result - unenforced is what the reader is trying to see.
+	α Authorize::UserRights( UserPK userPK )Ι->vector<ResourceRights>{
+		Jde::sl _{ Mutex };
+		if( !Users.contains(userPK) )
+			return {};
+		flat_map<ResourcePK,ResourceRights> byResource;
+		vector<GroupPK> groups; vector<RolePK> roles;//the path so far
+		auto expand = [&]( this auto&& self, PermissionRole permissionRole )ι->void {
+			if( permissionRole.index()==0 ){
+				auto p = Permissions.find( get<0>(permissionRole) );
+				if( p==Permissions.end() )
+					return;
+				auto& resource = byResource.try_emplace( p->second.ResourcePK, ResourceRights{p->second.ResourcePK} ).first->second;
+				resource.Rights.Allowed |= p->second.Allowed;
+				resource.Rights.Denied |= p->second.Denied;
+				resource.Sources.emplace_back( RightsSource{p->first, p->second.Allowed, p->second.Denied, groups, roles} );
+			}
+			else{
+				let rolePK = get<1>( permissionRole );
+				auto role = Roles.find( rolePK );
+				if( role==Roles.end() || role->second.IsDeleted || std::ranges::find(roles, rolePK)!=roles.end() )
+					return;
+				roles.push_back( rolePK );
+				for( let& member : role->second.Members )
+					self( member );
+				roles.pop_back();
+			}
+		};
+		//does the acl identity reach the user - itself, or a live group whose members do - expanding the grant along each way in.
+		auto reach = [&]( this auto&& self, IdentityPK identity, PermissionRole permissionRole )ι->void {
+			if( identity.IsUser() ){
+				if( identity.UserPK()==userPK )
+					expand( permissionRole );
+				return;
+			}
+			let groupPK = identity.GroupPK();
+			auto group = Groups.find( groupPK );
+			if( group==Groups.end() || group->second.IsDeleted || std::ranges::find(groups, groupPK)!=groups.end() )
+				return;
+			groups.push_back( groupPK );
+			for( let& member : group->second.Members )
+				self( member, permissionRole );
+			groups.pop_back();
+		};
+		for( let& [identity, permissionRole] : Acl )
+			reach( identity, permissionRole );
+		vector<ResourceRights> y; y.reserve( byResource.size() );
+		for( auto&& [pk, resource] : byResource ){ //&&: flat_map iterates a proxy pair.
+			if( auto p = Resources.find(pk); p!=Resources.end() )
+				resource.Cached = p->second;
+			y.push_back( move(resource) );
+		}
+		return y;
 	}
 }

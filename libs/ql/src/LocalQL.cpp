@@ -62,6 +62,11 @@ namespace Jde::QL{
 		auto result = QL::Parse( move(query), variables, _schemas ); THROW_IF( !result.IsMutation(), "Query is not a mutation" );
 		jarray y;
 		for( auto&& m : result.Mutations() ){
+			if( m.Type==EMutationQL::Add ){//a membership or a permission, not a keyed row:  the key names the role it goes ON, which exists - so the create-if-missing rule below would skip every add.  The server's add is the idempotent half (access_role_add upserts per resource, RoleMAwait skips a member the role holds), so it always runs - and through this IQL, whose CustomMutation is what answers addRole; the create branch's QLAwait carries none and would fall to the stock add.
+				vector<MutationQL> one; one.push_back( move(m) );
+				y.push_back( BlockAwait<QLAwait<jvalue>,jvalue>(QLAwait<jvalue>{RequestQL{move(one)}, Creds{executer}, shared_from_this()}) );
+				continue;
+			}
 			auto key = m.FindKey();
 			if( !key ){
 				auto shift = m.TryNumber<uint8>( "shift" );

@@ -2,7 +2,7 @@ import { Injectable, InjectionToken, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Subject,Observable, finalize } from 'rxjs';
-import { AppService, AUTH_STORE, AuthStore, describeFetchError, Duration, ETransport, GoogleAuthService, Guid, IGraphQL, Instance, Log, Mutation, MutationSchema, ProtoService, ProtoUtils, Query, StringUtils, TableSchema, Timestamp, Type } from 'jde-framework';
+import { AppService, AUTH_STORE, AuthStore, Duration, ETransport, GoogleAuthService, Guid, IGraphQL, Instance, Log, Mutation, MutationSchema, ProtoService, ProtoUtils, Query, StringUtils, TableSchema, Timestamp, Type } from 'jde-framework';
 import { EProvider, User } from 'jde-spa';
 import { errorText } from 'jde-framework';
 
@@ -13,8 +13,7 @@ import * as Common from 'jde-proto/Opc.Common';
 import * as FromClient from 'jde-proto/Opc.FromClient';
 import * as FromServer from 'jde-proto/Opc.FromServer';
 import { OPC_STORE, OpcStore } from './opc-store';
-import { NodeRoute } from '../model/node-route';
-import { CnnctnTarget, ServerCnnctn } from "../model/server-cnnctn";
+import { CnnctnTarget } from "../model/server-cnnctn";
 import { NodeKey, NodeId } from '../model/node-id';
 import { ENodeClass, ObjectType, OpcObject, UaNode, Variable } from '../model/node';
 import { OpcId, scBadUnexpectedError, StatusCode } from '../model/types';
@@ -144,11 +143,11 @@ export class Gateway extends ProtoService<FromClient.Transmission,FromServer.Mes
 		super.instances = [gateway];
 		if( typeof location!="undefined" && gateway.host!=location.hostname )//the registry reports the machine hostname; a page served from another host fails the server's allowOrigin 'sameHost' check
 			console.warn( `Gateway '${gateway.instanceName}' is registered at host '${gateway.host}' but the app is served from '${location.hostname}' - requests will be CORS-blocked unless http/accessControl/allowOrigin is pinned or the app is browsed via '${gateway.host}'.` );
-		super.queryArray<ServerCnnctn>( `serverConnections{id target name url certificateUri defaultBrowseNs}`, null, (x)=>console.log(x) ).then( connections=>{
-			connections.forEach( c=>this.#connections.set(c.target, new ServerCnnctn(c as any)) );
-		}).catch( async e=>{
-			console.error( await describeFetchError(this.urlWithTarget("graphql"), e) );
-		});
+		//No connection warm-up here.  The navbar's search box injects SEARCH_PROVIDERS, which instantiates NodeSearchProvider,
+		//which injects GATEWAY_SERVICE - so a Gateway is built on EVERY page, and a `serverConnections{…}` in this constructor
+		//queried the gateway's whole connection list at bootstrap on /access/resources, /help, everywhere.  The list it cached
+		//had exactly one reader, a setRoute() nobody called.  OpcStore.getConnection is the real cache: one connection, on
+		//demand, memoized per gateway - which is what NodeResolver already uses.
 	}
 	async login( domain:string, username:string, password:string, log:Log ):Promise<void>{
 		let self = this;
@@ -230,11 +229,6 @@ export class Gateway extends ProtoService<FromClient.Transmission,FromServer.Mes
 			else
 				console.error( e );
 		}
-	}
-	private static toParams( obj:Record<string,unknown> ){
-		let params="";
-		Object.keys(obj).forEach( m=>{if(params.length)params+="&"; params+=`${m}=${obj[m]}`;} );
-		return params;
 	}
 	private static toNode( proto:Common.NodeId ):NodeId{
 		let node = new NodeId( {ns:proto.namespaceIndex} );
@@ -349,10 +343,6 @@ export class Gateway extends ProtoService<FromClient.Transmission,FromServer.Mes
 		this.updateErrorCodes();
 		//unwrap first, toValue last - mirroring read().  postQL returns the `data` object and the server keys a mutation payload by command name (QLAwait: `result[commandName]`, skipped only for `raw`, which this never requests), so toValue used to run on the wrapper and `["value"]` off its result was always undefined - blanking the cell.  `?? data` keeps the raw/unkeyed shape working too.
 		return toValue( (data?.["updateVariable"] ?? data)?.["value"] );
-	}
-
-	setRoute(route: NodeRoute){
-		this.store.setRoute( route, this.#connections.get(route.cnnctnTarget)?.defaultBrowseNs );
 	}
 
 	private onUnsubscriptionResult( requestId:number, result:FromServer.UnsubscribeAck ){
@@ -544,7 +534,6 @@ export class Gateway extends ProtoService<FromClient.Transmission,FromServer.Mes
 	}
 	get name():string{ return this.instances[0].instanceName!; }
 	get target():GatewayTarget{ return this.instances[0].instanceName!; }
-	#connections = new Map<CnnctnTarget, ServerCnnctn>();
 }
 export type SubscriptionResult = {opcId:string, node:NodeId, value:Value, sc?:StatusCode};//sc: the reading's quality; 0/undefined = Good.  Bad already arrives as an OpcError in `value`; sc mainly distinguishes Uncertain.
 //angular-review3 C13: a typed token in place of the string one - a typo now fails the build instead of resolving to nothing at runtime, and inject() can take it.

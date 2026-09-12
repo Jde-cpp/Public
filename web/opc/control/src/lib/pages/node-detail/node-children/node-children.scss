@@ -166,3 +166,9 @@ mat-table{
 	--mat-table-row-item-container-height: 40px;
 	--mat-table-header-container-height: 44px;
 }
+
+//a variable the server will not let this user read:  muted, and titled with what to ask for
+.no-access{
+	color: var(--mat-sys-on-surface-variant);
+	font-style: italic;
+}

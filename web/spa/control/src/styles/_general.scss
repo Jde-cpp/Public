@@ -16,6 +16,21 @@ body {
   --jde-form-max-width: 720px;
 }
 
+// The Save/Cancel/Delete row under a record's tabs - user, group and role (jde-access) and the gateway client (jde-opc)
+// share it verbatim, hence global like the width above.  The rule runs the page's width: a Groups/Roles/Effective rights
+// tab holds a table that does too, and without it the row read as the table's last line.  The buttons stay sized to the
+// form:  Save under the field text (the form's 24px page inset plus the fill field's 16px text inset), and the far-right
+// Delete under the text's right edge, which the padding-right works out from the row's own width (back to 40px once the
+// window is no wider than the form).
+.jde-detail-actions {
+  display: flex;
+  gap: 20px;
+  margin-top: 20px;
+  padding: 16px 40px 20px;
+  padding-right: max(40px, calc(100% - var(--jde-form-max-width) - 8px));
+  border-top: 1px solid var(--mat-sys-outline-variant);
+}
+
 // A select that cannot change (an existing user's provider) presents like a readonly input.  Material's 38% disabled
 // dimming says "not usable yet"; this says "a fact the server will not update", so the disabled tokens take the enabled
 // colours and the arrow goes transparent.  Tokens, not a selector:  they inherit through the form field's encapsulation
@@ -80,4 +95,23 @@ code {
 
 pre {
   font-size: 14px;
+}
+
+// What a page says instead of a bare table or an empty grid:  an icon, a one-line title, a line of what fills it or what to
+// ask for, and an optional action row (Retry, Help).  Global because every library has a list - ql-list (framework), the
+// apps page, the node browse (opc) - and the wording is theirs, the shape is one.  The muted colour is the same
+// on-surface-variant the row-count and the other component-local `.empty` classes settled on independently.
+.jde-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon { font-size: 40px; width: 40px; height: 40px; opacity: .6; }
+  .title { margin: 4px 0 0; font: var(--mat-sys-title-medium); color: var(--mat-sys-on-surface); }
+  .detail { margin: 0; max-width: 48em; font: var(--mat-sys-body-medium); }
+  .actions { display: flex; gap: 12px; margin-top: 12px; }
 }

@@ -4,11 +4,11 @@ import { MAT_TABS_CONFIG } from '@angular/material/tabs';
 import { MAT_NATIVE_DATE_FORMATS, MatDateFormats, provideNativeDateAdapter } from '@angular/material/core';
 import { provideRouter } from '@angular/router';
 import { APP_SERVICE, AppService, AUTH_STORE, AuthStore, frameworkHelpTopics, ProfileService } from 'jde-framework'
-import { GATEWAY_SERVICE, GatewayService, NodeSearchProvider, OPC_STORE, OpcAuthService, opcHelpTopics, OpcStore} from 'jde-opc';
+import { GATEWAY_SERVICE, GatewayService, NodeSearchProvider, OPC_STORE, OpcAuthService, opcHelpTopics, OpcNodeLinkResolver, OpcStore} from 'jde-opc';
 import { HELP_TOPICS, HelpTopic, IAUTH, IENVIRONMENT, IPROFILE_SERVICE, RouteSearchProvider, SEARCH_PROVIDERS, spaHelpTopics } from 'jde-spa';
 import {EnvironmentService} from './services/environment-service';
 import { routes } from './app.routes';
-import { ACCESS_SERVICE, accessHelpTopics, AccessSearchProvider, AccessService } from "jde-access";
+import { ACCESS_SERVICE, accessHelpTopics, AccessSearchProvider, AccessService, NODE_LINK_RESOLVER } from "jde-access";
 
 //the site's own help topics - the libraries export theirs.  Served from src/assets (web/opc/site/assets, linked by setup.sh).
 const siteOverview:HelpTopic[] = [ {id: 'overview', title: 'Overview', summary: 'What this site is and where to start', icon: 'menu_book', url: 'assets/site/help/overview.md'} ];
@@ -42,6 +42,7 @@ export const appConfig: ApplicationConfig = {
 		{provide: IENVIRONMENT, useClass: EnvironmentService},
 		{provide: GATEWAY_SERVICE, useExisting: GatewayService},//useExisting, not useClass:  useClass is a construction recipe, so each token would build its own GatewayService (and its own sockets/queries)
 		{provide: OPC_STORE, useExisting: OpcStore},//string-token writers (GatewayService, NodeResolver, NodeRoute) and class-token readers (ClientResolver) must share one store
+		{provide: NODE_LINK_RESOLVER, useExisting: OpcNodeLinkResolver},//jde-access's Effective rights tab links a node-scoped resource to its node page; only jde-opc can place a node
 		{provide: IPROFILE_SERVICE, useExisting: ProfileService},//ProfileStore (jde-spa) persists via this token; jde-spa can't import the framework implementation
 		//the navbar search (jde-spa) fans out through this multi token, same reason;  registration order is result precedence.
 		{provide: SEARCH_PROVIDERS, useExisting: RouteSearchProvider, multi: true},

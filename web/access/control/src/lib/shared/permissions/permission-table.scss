@@ -1,3 +1,12 @@
+/* The tab body carries no inset of its own, so each tab component provides one.  Same 16px 24px 0 as `properties`
+   (properties.ts :host), which was the only one of the three with padding - so Properties sat inset while this table and
+   the ql-selector tabs beside it ran flush to the tab edge.  No max-width/content-box here: those cap the form's field
+   width and a table wants to be as wide as it is. */
+:host{
+	display: block;
+	padding: 16px 24px 0;
+}
+
 /* the same dense rows as ql-table (graphql-table.scss) - this table sits on the tab beside those selectors, and its cells are
    the same 40px checkboxes */
 mat-table{

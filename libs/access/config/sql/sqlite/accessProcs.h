@@ -9,6 +9,7 @@ struct sqlite3;
 namespace Jde::DB::Sqlite::AccessProcs{
 	α RegisterAccessAcInsertRole( IProcs& procs )ι->void;
 	α RegisterAccessAcUpsertPermission( IProcs& procs )ι->void;
+	α RegisterAccessGroupPurge( IProcs& procs )ι->void;
 	α RegisterAccessIdentityInsert( IProcs& procs )ι->void;
 	α RegisterAccessPermissionInsert( IProcs& procs )ι->void;
 	α RegisterAccessProviderInsert( IProcs& procs )ι->void;

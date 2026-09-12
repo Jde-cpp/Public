@@ -2,6 +2,7 @@
 #include <jde/fwk/io/json.h>
 #include <jde/fwk/str.h>
 #include <jde/access/server/awaits/AclAwait.h>
+#include <jde/access/server/awaits/UserRightsAwait.h>
 #include <jde/access/Authorize.h>
 #include <jde/access/AccessListener.h>
 #include <jde/db/IDataSource.h>
@@ -408,6 +409,122 @@ namespace Jde::Access::Tests{
 		EXPECT_EQ( countRows("groups", "member_id"), 0u );
 		EXPECT_EQ( countRows("identities", "identity_id"), 0u );
 		PurgeGroup( group, root );
+	}
+	//The group half of the same shape:  a group holding an acl grant and nested inside a parent group left the identity row
+	//behind for the same reason - purgeGroup deleted only access_groups where identity_id=, then failed on access_identities'
+	//fk from the acl row and from its own member_id row in the parent.  access_group_purge takes both first.
+	TEST_F( AclTests, PurgeGroupWithGrantAndMembership ){
+		let root = GetRoot();
+		restoreResource( "groups", root );
+		const GroupPK group{ GetId(GetGroup("purgeGroupInUse", root)) };
+		const GroupPK parent{ GetId(GetGroup("purgeGroupInUseParent", root)) };
+		CreateAcl( IdentityPK{group}, ERights::All, ERights::None, "groups", root );
+		AddToGroup( parent, {group}, root );
+		auto countRows = [&]( str table, sv column ){ let& dbTable = *GetTable( table ); return dbTable.Schema->DS()->ScalerSync<uint>( DB::Sql{Ƒ("select count(*) from {} where {}=?", dbTable.SqlName(), column), {DB::Value{group.Value}}} ); };
+		ASSERT_EQ( countRows("acl", "identity_id"), 1u );
+		ASSERT_EQ( countRows("groups", "member_id"), 1u );
+
+		EXPECT_NO_THROW( PurgeGroup(group, root) );
+		EXPECT_TRUE( SelectGroup("purgeGroupInUse", root, true).empty() ) << "no orphaned identity row";
+		EXPECT_EQ( countRows("acl", "identity_id"), 0u );
+		EXPECT_EQ( countRows("groups", "member_id"), 0u );
+		EXPECT_EQ( countRows("identities", "identity_id"), 0u );
+		PurgeGroup( parent, root );
+	}
+	//userRights( id: ) - UserRightsAwait, the Effective rights tab's query.  The walk Authorize::UserRights makes has to say
+	//what Rights() enforces, source by source:  a role granted to the grandparent group whose child role holds the grant, and a
+	//direct deny on the same resource.
+	Ω userRights( UserPK user, UserPK executer )ε->jarray{
+		jobject vars{ {"id", user.Value} };
+		let q = "userRights( id:$id ){ resource{id} allowed denied effective sources{ permissionId allowed denied path{id type} } }";
+		return BlockTAwait<jvalue>( Server::UserRightsAwait{QL::ParseQuery(q, vars, Schemas()), executer} ).as_array();
+	}
+	Ω findResourceRights( const jarray& rows, ResourcePK resourcePK )ε->jobject{
+		auto p = find_if( rows, [=](const jvalue& row){ return AsNumber<ResourcePK>(Json::AsObject(row), "resource/id")==resourcePK; } );
+		return p==rows.end() ? jobject{} : p->as_object();
+	}
+	TEST_F( AclTests, UserRightsProvenance ){
+		let root = GetRoot();
+		restoreResource( "groups", root );
+		const UserPK user{ GetId(GetUser("userRightsUser", root)) };
+		let group = GetGroup( "userRightsGroup", root );
+		const GroupPK groupPK{ GetId(group) };
+		let parent = GetGroup( "userRightsParent", root );
+		const GroupPK parentPK{ GetId(parent) };
+		auto addMember = [&]( const jobject& g, GroupPK gPK, IdentityPK member ){ //addGroup is not idempotent - TestHierarchy's guard.
+			let members = AsArray( g, "groupMembers" );
+			if( find_if(members, [=](const jvalue& m){ return GetId(Json::AsObject(m))==member.Underlying(); })==members.end() )
+				AddToGroup( gPK, {member}, root );
+		};
+		addMember( group, groupPK, user );
+		addMember( parent, parentPK, groupPK );
+		let parentRolePK = GetId( Get("role", "userRightsParentRole", root) );
+		let childRolePK = GetId( Get("role", "userRightsChildRole", root) );
+		let permissionPK = GetId( AddRolePermission(childRolePK, "groups", ERights::Read|ERights::Update, ERights::None, root) );
+		AddRoleMember( parentRolePK, childRolePK, root );
+		CreateAcl( parentPK, parentRolePK, root );
+		let denyPK = GetId( GetAcl(user, "groups", ERights::None, ERights::Update) );
+
+		auto check = [&]( UserPK executer ){
+			let row = findResourceRights( userRights(user, executer), _resourcePK );
+			ASSERT_FALSE( row.empty() );
+			EXPECT_EQ( AsNumber<uint8>(row, "allowed"), underlying(ERights::Read|ERights::Update) );
+			EXPECT_EQ( AsNumber<uint8>(row, "denied"), underlying(ERights::Update) );
+			EXPECT_EQ( AsNumber<uint8>(row, "effective"), underlying(ERights::Read) );
+			EXPECT_EQ( Authorizer()->Rights("access", "groups", user), ERights::Read );//the guarantee:  the tab shows what enforcement answers.
+			let sources = AsArray( row, "sources" );
+			ASSERT_EQ( sources.size(), 2u );
+			auto source = [&]( PermissionPK pk )->jobject{
+				auto p = find_if( sources, [=](const jvalue& s){ return AsNumber<PermissionPK>(Json::AsObject(s), "permissionId")==pk; } );
+				return p==sources.end() ? jobject{} : p->as_object();
+			};
+			let viaRole = source( permissionPK );
+			ASSERT_FALSE( viaRole.empty() );
+			let path = AsArray( viaRole, "path" );
+			ASSERT_EQ( path.size(), 4u ) << "top-down: the granted group, the group holding the user, the assigned role, the role holding the permission";
+			const array<std::pair<uint32,string>,4> expected{ {{parentPK.Value, "group"}, {groupPK.Value, "group"}, {parentRolePK, "role"}, {childRolePK, "role"}} };
+			for( uint i=0; i<expected.size(); ++i ){
+				let step = Json::AsObject( path[i] );
+				EXPECT_EQ( GetId(step), expected[i].first ) << i;
+				EXPECT_EQ( AsString(step, "type"), expected[i].second ) << i;
+			}
+			let direct = source( denyPK );
+			ASSERT_FALSE( direct.empty() );
+			EXPECT_TRUE( AsArray(direct, "path").empty() );
+			EXPECT_EQ( AsNumber<uint8>(direct, "denied"), underlying(ERights::Update) );
+		};
+		check( root );
+		check( user );//one's own rights need no grant.
+
+		Delete( "groups", groupPK.Value, root );//a deleted group stops the walk, as it stops enforcement.
+		{
+			let row = findResourceRights( userRights(user, root), _resourcePK );
+			ASSERT_FALSE( row.empty() );
+			EXPECT_EQ( AsArray(row, "sources").size(), 1u ) << "only the direct deny";
+			EXPECT_EQ( AsNumber<uint8>(row, "effective"), 0u );
+			EXPECT_EQ( Authorizer()->Rights("access", "groups", user), ERights::None );
+		}
+		Restore( "groups", groupPK.Value, root );
+		check( root );
+
+		PurgeAcl( user, denyPK, root );
+		RemoveRoleMember( parentRolePK, childRolePK, root );
+	}
+	//The gate is acl( identityId: )'s - Read on the acl resource - except for one's own row.  Enabled for the test only:
+	//ReadAuthorization below asserts the row is disabled at its start, so this leaves it as the sync made it.
+	TEST_F( AclTests, UserRightsGate ){
+		auto resource = SelectResource( "acl", GetRoot(), true );
+		ASSERT_FALSE( resource.at("deleted").is_null() ) << "created disabled, like every synced resource";
+		let permissionPK = CreateAcl( GetRoot(), ERights::All, ERights::None, "acl", {UserPK::System} );
+		restoreResource( "acl", GetRoot() );
+		let intruder = _usersPKs["intruder"];
+		let reader = _usersPKs["reader"];
+		EXPECT_THROW( userRights(reader, intruder), Exception );
+		EXPECT_NO_THROW( userRights(reader, GetRoot()) );
+		EXPECT_NO_THROW( userRights(intruder, intruder) );
+		Delete( "resources", GetId(resource), GetRoot() );
+		EXPECT_NO_THROW( userRights(reader, intruder) );//fail-open when disabled, as the acl read is.
+		PurgeAcl( GetRoot(), permissionPK, GetRoot() );
 	}
 	//access-review3 #21:  acl was ops:["None"], so ResourceSync never created its resource row and the read gate below had nothing
 	//to gate with - this test used to hand-create the row, which is exactly what no deployment does.  acl has ops now, so the

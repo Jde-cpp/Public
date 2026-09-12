@@ -346,6 +346,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 	EAccess = EAccess;
 	ETypes = ETypes;
 	get _iot():Gateway{ return this.pageData.gateway; }
+	readDenied( r:UaNode ):boolean{ return NodeView.readDenied( r ); }//the Snapshot cell's "no read access" - the model's rule, reachable from the template
 	isLoading = signal<boolean>( true );
 	isRefreshing = signal<boolean>( false );
 	isSettings = signal<boolean>( false );

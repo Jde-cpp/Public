@@ -76,12 +76,14 @@ namespace Jde::Web::Server{
 	}
 
 	α IWebsocketSession::LogWriteException( const runtime_error& e, RequestId requestId, ELogLevel level, SL sl )ι->void{
-		if( let p = dynamic_cast<const Exception*>(&e); p )
+		if( let p = dynamic_cast<const Exception*>(&e); p ){
 			p->SetLevel( ELogLevel::NoLog );
-		Exception{ sl, level, "[{}.{}]{}", Ƒ("{:x}", Id()), Ƒ("{:x}", requestId), e.what() }; //:x doesn't work with exception formatter
+			sl = p->_sl;
+		}
+		Exception{ sl, level, "[{}.{}]{}", Ƒ("{:x}", Id()), hex(requestId), e.what() };
 	}
 	α IWebsocketSession::LogWriteException( str e, RequestId requestId, ELogLevel level, SL sl )ι->void{
-		Exception{ sl, level, "[{}.{}]{}", Ƒ("{:x}", Id()), Ƒ("{:x}", requestId), move(e) }; //:x doesn't work with exception formatter
+		Exception{ sl, level, "[{}.{}]{}", Ƒ("{:x}", Id()), hex(requestId), move(e) };
 	}
 
 	α IWebsocketSession::Close()ι->void{//safe from any thread (e.g. Internal::Stop's shutdown thread) - hops to the stream's strand; every close path ends in OnClose, which stops the listener.

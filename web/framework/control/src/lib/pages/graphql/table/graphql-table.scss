@@ -92,3 +92,7 @@ mat-cell mat-chip{
 .mat-column-description{
 	flex: 1 1 300px;
 }
+//The live-toggle switch:  off is the resting outline, on is the theme's primary, so a row's state reads down the column at
+//a glance rather than one icon at a time.
+.live-toggle mat-icon{ color: var(--mat-sys-outline); }
+.live-toggle.live mat-icon{ color: var(--mat-sys-primary); }

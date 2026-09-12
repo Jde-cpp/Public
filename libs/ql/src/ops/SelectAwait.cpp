@@ -246,7 +246,7 @@ namespace Jde::QL{
 	//#10: every table the client named is a read, not just the root - columnSql joins the fk children into this statement and
 	//SelectSubTables selects the rest, and neither authorized anything.  One walk covers both, before the data source is touched.
 	α SelectAwait::Authorize( const TableQL& qlTable )ε->void{
-		if( let dbTable = qlTable.DBTable(); dbTable )
+		if( let dbTable = qlTable.DBTable(); dbTable && !empty(dbTable->Operations & Access::ERights::Read) )
 			dbTable->Authorize( Access::ERights::Read, _executer, _sl );
 		for( let& child : qlTable.Tables )
 			Authorize( child );

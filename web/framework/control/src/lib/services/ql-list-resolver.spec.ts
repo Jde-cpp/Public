@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { Operator, View } from '../model/ql/view';
 import { TableSchema } from '../model/ql/schema/table-schema';
-import { QLListResolver, TableSettings } from './ql-list-resolver';
+import { ListRoute, QLListData, QLListResolver, TableSettings } from './ql-list-resolver';
+import { PageProfile } from '../pages/graphql/model/page-settings';
 
 const schema = new TableSchema( {
 	name: "Thing",
@@ -47,6 +48,28 @@ describe( 'QLListResolver.systemViews', ()=>{
 		expect( newest.sort ).toEqual( [{active: "target", direction: "asc"}] );
 	} );
 
+	it( "sorts the default view by the route's own sort, multi-column and all", ()=>{
+		const sort = [{active: "kind", direction: "asc" as const}, {active: "name", direction: "asc" as const}];
+		const [all] = QLListResolver.systemViews( schema, { columns: ["kind", "name", "description"], sort } );
+		expect( all.sort ).toEqual( sort );
+		expect( all.query(false, 0).text ).toContain( 'orderBy:[{kind:"asc"},{name:"asc"}]' );
+	} );
+
+	it( 'falls back to an ascending name sort when the route declares none', ()=>{
+		const [all] = QLListResolver.systemViews( schema, { columns: ["name", "description"] } );
+		expect( all.sort ).toEqual( [{active: "name", direction: "asc"}] );
+	} );
+
+	//A live-toggle column switches the DELETED rows, so its page has to query them.  On `resources` every row ships deleted
+	//(unenforced), so without this the page opens empty with all the work hidden behind a checkbox called "Show deleted".
+	it( 'reports a live-toggle column wherever a route declares one', ()=>{
+		const toggle = {name:"deleted", displayName:"Enforced", liveToggle:{enable:"Enforce", disable:"Stop enforcing"}};
+		expect( QLListResolver.hasLiveToggle({ columns: ["name", toggle] }) ).toBe( true );
+		expect( QLListResolver.hasLiveToggle({ columns: ["name"], views: [{name:"All", columns: ["name", toggle]}] }) ).toBe( true );
+		expect( QLListResolver.hasLiveToggle({ columns: ["name", "deleted"] }) ).toBe( false );
+		expect( QLListResolver.hasLiveToggle({}) ).toBe( false );
+	} );
+
 	it( 'turns a declared filter into the query the settings panel would have built', ()=>{
 		const [, kinds] = QLListResolver.systemViews( schema, { columns: ["name"], views: [
 			{ name: "Kinds", filters: [{name: "kind", value: ["a", "<null>"]}] }
@@ -59,7 +82,48 @@ describe( 'QLListResolver.systemViews', ()=>{
 		expect( q.vars["kind"] ).toEqual( ["a", null] );//"<null>" leaves as a JSON null, as the panel's does
 	} );
 
+	//The default view can be the filtered one - resources opens on its table rows and keeps an unfiltered 'All' beside it.
+	it( 'filters the default view when the route declares filters, and not the views beside it', ()=>{
+		const [tables, all] = QLListResolver.systemViews( schema, { viewName: "Tables", columns: ["name"], filters: [{name: "kind", value: ["<null>"]}], views: [{name: "All"}] } );
+		expect( tables.name ).toBe( "Tables" );
+		expect( tables.query(false, 0).vars["kind"] ).toEqual( [null] );
+		expect( all.fieldFilters ).toHaveLength( 0 );
+		expect( displayed(all) ).toEqual( displayed(tables) );
+	} );
+
 	it( 'refuses a filter on a column the schema does not have', ()=>{
 		expect( ()=>QLListResolver.systemViews(schema, { columns: ["name"], views: [{name: "Bad", filters: [{name: "nope", value: [1]}]}] }) ).toThrow( /nope/ );
+	} );
+} );
+
+//MVP first-run:  what a list says when the query returns nothing.  The route's own words win; otherwise the collection's
+//name, and a pointer at Add only where the route offers one.
+describe( 'QLListResolver.emptyState', ()=>{
+	it( 'names the collection and points at Add by default', ()=>{
+		expect( QLListResolver.emptyState(new ListRoute("users")) ).toEqual( {title: "No users yet.", detail: "Use Add to create the first one.", icon: "inbox"} );
+	} );
+	it( 'drops the Add pointer where the route offers no Add', ()=>{
+		expect( QLListResolver.emptyState(new ListRoute({path: "resources", data: {tableSettings: {canAdd: false}} as any})).detail ).toBe( "" );
+	} );
+	it( "takes the route's own words", ()=>{
+		const own = QLListResolver.emptyState( new ListRoute({path: "roles", data: {tableSettings: {empty: {title: "Nothing.", detail: "Yet."}}} as any}) );
+		expect( own ).toEqual( {title: "Nothing.", detail: "Yet.", icon: "inbox"} );
+	} );
+} );
+
+//A refused rows query used to reject the resolve, which the router turned into a NavigationError nobody saw.  It is the
+//page's own state now, so a user without Read on the collection lands on the page and reads why.
+describe( 'QLListResolver.loadOrFail', ()=>{
+	it( "turns a refused rows query into the page's error state with no rows", async ()=>{
+		const refused = new Error( "no" );
+		const ql = { query: async ()=>{ throw refused; } } as any;
+		const profile = new PageProfile();
+		profile.views = [ new View({columns: ["name"], sort: "name"}, schema) ];
+		profile.showDeleted = false;
+		const data = { schema, profile, routing: new ListRoute("things"), columns: {}, pageSettings: {} } as unknown as QLListData;
+		const y = await QLListResolver.loadOrFail( ql, data, null );
+		expect( y.error ).toBe( refused );
+		expect( y.results ).toEqual( {[schema.collectionName]: []} );
+		expect( y.schema ).toBe( schema );
 	} );
 } );

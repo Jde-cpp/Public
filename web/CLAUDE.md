@@ -69,3 +69,24 @@ Run `ng` from `web/opc/my-workspace`.
 - `ng build <lib>` works, but only in dependency order — a library whose dependencies are not yet
   in `dist/` fails with `Cannot find module 'jde-spa'`. Build `jde-spa` first, or just build the
   application (`ng build my-workspace`), which compiles every library from the symlinked sources.
+
+## Verifying in the browser (claude-in-chrome)
+
+The extension drives the user's own Chrome profile, which is signed into Google as the app's owner account. Nothing needs
+configuring — no Claude Code permission rule, no extension site setting — but the sign-in only happens on `/login`, so
+**navigate the tab to `http://localhost:4200/login` first** (backend up per the `run-services` skill — `driver.sh start
+appserver gateway` or `hub` — and `ng serve` on 4200). Google Identity Services runs with `auto_select` and the saved
+`googleLoginHint`, so the sign-in completes with no click in ~3–5 s. Confirm it, then go to the route under test:
+
+```js
+JSON.parse( localStorage.getItem('user') )?.email   // the owner's address when signed in (works on any route)
+```
+
+- After the sign-in the page may stay on `/login` (silent renewal) or land on `/` (credential path) — don't infer
+  anything from that; check `localStorage.user` / `user()` and navigate explicitly to the route under test.
+- The One Tap / FedCM prompt is browser UI and never appears in a CDP screenshot; read state through `javascript_tool`
+  (dev mode exposes `ng.getComponent`), not screenshots. Screenshots inside a detail page's `mat-tab`s also time out
+  with the page alive, and the first click after a navigation often only hovers — click again.
+- Never type Google credentials. If `user()` is still `undefined` after ~10 s, stop and ask the user to sign into Google
+  in that Chrome profile once by hand — Google blocks *interactive* sign-in under any DevTools-driven browser; only the
+  already-signed-in silent path works.

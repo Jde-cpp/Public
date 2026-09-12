@@ -1,5 +1,6 @@
 #pragma once
 #include <jde/db/awaits/ExecuteAwait.h>
+#include <jde/db/awaits/ScalerAwait.h>
 //#include <jde/ql/QLHook.h>
 #include <jde/ql/QLAwait.h>
 
@@ -18,19 +19,30 @@ namespace Jde::Access::Server{
 		α Select()ι->QL::QLAwait<>::Task;
 	};
 
+	//addRole/removeRole.  The role by id, or by target - a seed file (libs/access/config/release.roles) names the roles it created
+	//a line earlier and cannot know their pks - and a member role likewise:  role:{id:N} or role:{target:"viewer"}.  Each target
+	//is a lookup, so the chain is Start → [Resolve] → Add/Remove → [ResolveChildren] → AddMembers/RemoveMembers, state on the
+	//members between hand-offs.
 	struct RoleMAwait final : TAwait<jvalue>{
 		RoleMAwait( const QL::MutationQL& m, UserPK userPK, SRCE )ι:TAwait<jvalue>{ sl }, _mutation{m}, _userPK{userPK}{}
-		α Suspend()ι->void override{ if(_mutation.Type==QL::EMutationQL::Remove) Remove(); else Add(); }
+		α Suspend()ι->void override{ Start(); }
 	private:
-		α Add()ι->void;
-		α AddRole( RolePK parentRolePK, const jobject& childRole )ι->DB::ExecuteAwait::Task;
+		α Start()ι->void;
+		α Resolve( string target )ι->DB::ScalerAwaitOpt<RolePK>::Task;
+		α Dispatch( RolePK rolePK )ι->void;
+		α Add( RolePK rolePK )ι->void;
+		α AddRole( RolePK parentRolePK, const jobject& childRole )ι->void;
+		α ResolveChildren( RolePK parentRolePK, vector<string> targets )ι->DB::ScalerAwaitOpt<RolePK>::Task;
+		α AddMembers( RolePK parentRolePK )ι->DB::ExecuteAwait::Task;
 		α AddPermission( RolePK parentRolePK, const jobject& permissionRights )ι->TAwait<PermissionRightsPK>::Task;
-		α Remove()ι->void;
-		α RemoveRole( RolePK parentRolePK, const jobject& childRole )ι->DB::ExecuteAwait::Task;
+		α Remove( RolePK rolePK )ι->void;
+		α RemoveRole( RolePK parentRolePK, const jobject& childRole )ι->void;
+		α RemoveMembers( RolePK parentRolePK )ι->DB::ExecuteAwait::Task;
 		α RemovePermission( RolePK parentRolePK )ι->DB::ExecuteAwait::Task;
 
 		QL::MutationQL _mutation;
-		jobject _args; //ExtrapolateVariables() - AddRole/AddPermission/RemoveRole reference into it across their suspensions.
+		jobject _args; //ExtrapolateVariables() - AddPermission references into it across its suspensions.
+		vector<RolePK> _children; //the member roles of an add/remove, once resolved.
 		UserPK _userPK;
 	};
 }

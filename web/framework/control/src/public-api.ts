@@ -37,6 +37,7 @@ export * from './lib/shared/snackbar/snackbar-service';
 export * from './lib/services/ql-list-resolver';
 export * from './lib/services/detail-resolver';
 export * from './lib/services/resolvers/app-resolver';
+export * from './lib/shared/confirm/confirm-dialog';
 export * from './lib/shared/date-range/date-range'
 export * from './lib/shared/link-select/link-select'
 export * from './lib/shared/paginator/paginator'

@@ -228,6 +228,40 @@ namespace Jde::App::Server::Tests{
 		BlockVoidAwait( other->Close(true, SRCE_CUR) );
 	}
 
+	Ω probeRole( sv target )->Access::RolePK{//find-or-create: roles.target is uniquely indexed, so a persisted db would trip createRole on the second run.
+		auto existing = systemQL( Ƒ(R"(role( target:"{0}" ){{id}})", target) );
+		let found = existing.is_object() && existing.get_object().contains( "id" );
+		return QL::AsId<Access::RolePK>( found ? existing : systemQL(Ƒ(R"(mutation createRole( target:"{0}", name:"{0}" ){{id}})", target)) );
+	}
+	//The delegated admin check end to end:  granting a role rights on ANOTHER schema's resource asks that schema's registered
+	//instance, over the socket, whether the executer may grant it (appserver-review3 #13).  The AppServer parses the `adminCheck`
+	//query HERE before writing it, so the name must be one of Configure's system tables - it owns no view, and without that
+	//registration the mutation died at its own parse with "Could not find view 'admin_checks'", never reaching the instance.
+	TEST_F( ProcessTransmissionTests, ADelegatedAdminCheckReachesTheInstance ){
+		constexpr sv schema{ "opc.delegate" };
+		let admin = probeUser( "delegate-admin" );
+		if( systemQL(Ƒ(R"(resources( schemaName:"{}", target:"nodeIds" ){{id}})", schema)).as_array().empty() )
+			systemQL( Ƒ(R"(mutation createResource( schemaName:"{}", name:"delegate nodes", target:"nodeIds", allowed:255 ))", schema) );
+		systemQL( Ƒ(R"(mutation createAcl( identity:{{id:{}}}, permissionRight:{{ allowed:{}, denied:0, resource:{{schemaName:"{}", target:"nodeIds"}} }} ))", admin.Value, underlying(Access::ERights::Administer), schema) );
+		let registered = RegisterInstance( *_session, "Tests.Delegate", "delegate", "auth-host", 0, 1234, string{schema}, admin );
+		ASSERT_TRUE( registered.AuthResult ) << "the registrant administers the schema's root resource";
+
+		let grant = Ƒ( R"(addRole( id:{}, permissionRight:{{ allowed:{}, denied:0, resource:{{ schemaName:"{}", target:"nodeIds" }} }} ))", probeRole("delegate-role"), underlying(Access::ERights::Read), schema );
+		string failure;
+		std::thread mutation{ [&]{ try{ systemQL( grant ); }catch( const std::exception& e ){ failure = e.what(); } } };//systemQL blocks on the reply this thread has to send.
+		auto query = _session->WaitFor( [](let& m){ return m.value_case()==FromServerMessage::kClientQuery && m.client_query().query().contains("adminCheck"); } );
+		if( query ){
+			FromClientTrans t;
+			auto& m = *t.add_messages();
+			m.set_request_id( query->request_id() );
+			m.set_query_result( R"({"adminCheck":{"isAdmin":true}})" );
+			_session->Write( move(t) );
+		}
+		mutation.join();//unconditional - the mutation times out on its own when nothing answered.
+		ASSERT_TRUE( query ) << "the check never reached the instance:  " << failure;
+		EXPECT_TRUE( failure.empty() ) << failure;
+	}
+
 	//#16:  kSessionId recorded the session *id* and nothing else, so a socket that had adopted a session went on acting as
 	//user 0 - it passed the forward guard (which tests the id) and the request went out as kExecuteAnonymous with the
 	//caller's identity silently dropped.  Identity now comes from the SessionInfo the adoption installs.

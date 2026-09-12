@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ViewChild, input, signal, model, computed, Injectable, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {ActivatedRoute, Route, Router, Routes, UrlSegment} from '@angular/router';
+import {ActivatedRoute, Route, Router, RouterLink, Routes, UrlSegment} from '@angular/router';
 import {Sort} from '@angular/material/sort';
 import { MatTable } from '@angular/material/table';
 import { QLListSettings } from './ql-list-settings/ql-list-settings';
@@ -10,7 +10,7 @@ import {Field} from '../../../model/ql/schema/field';
 import {TableSchema}  from '../../../model/ql/schema/table-schema';
 import {MetaObject}  from '../../../model/ql/schema/meta-object';
 
-import { ComponentPageTitle, RouteItem, RouteStore, IRouteService, RouteService } from 'jde-spa';
+import { ComponentPageTitle, RouteItem, RouteStore, IRouteService, RouteService, HELP_TOPICS, helpTopics, helpTopicFor } from 'jde-spa';
 import { MatIcon } from '@angular/material/icon';
 import { MatIconButton, MatButton } from '@angular/material/button';
 import { MatButtonToggle, MatButtonToggleGroup } from '@angular/material/button-toggle';
@@ -20,9 +20,12 @@ import { MatToolbar } from '@angular/material/toolbar';
 import { MatTooltip } from '@angular/material/tooltip';
 import { ProfileStore } from 'jde-spa';
 import { GraphQLTable } from '../../graphql/table/graphql-table';
-import { QLListData, QLListResolver, TableSettings } from '../../../services/ql-list-resolver';
+import { EmptyState, QLListData, QLListResolver, TableSettings } from '../../../services/ql-list-resolver';
+import { errorText, httpStatus } from '../../../utils/errors';
 import { SelectionModel } from '@angular/cdk/collections';
 import { View, ViewField, ViewType } from '../../../model/ql/view';
+import { MatDialog } from '@angular/material/dialog';
+import { confirm } from '../../../shared/confirm/confirm-dialog';
 import { QLRow } from '../../../model/ql/target-row';
 import { PageProfile } from '../../graphql/model/page-settings';
 import { verify } from '../../../utils/utils';
@@ -32,7 +35,7 @@ import { verify } from '../../../utils/utils';
 	styleUrls: ['ql-list.scss'],
 	templateUrl: './ql-list.html',
 	host: {class:'main-content mat-drawer-container my-content'},
-	imports: [CommonModule, GraphQLTable, MatButton, MatButtonToggle, MatButtonToggleGroup, MatCheckbox, MatIcon, MatIconButton, MatProgressBar, MatToolbar, MatTooltip, QLListSettings]
+	imports: [CommonModule, GraphQLTable, MatButton, MatButtonToggle, MatButtonToggleGroup, MatCheckbox, MatIcon, MatIconButton, MatProgressBar, MatToolbar, MatTooltip, QLListSettings, RouterLink]
 })
 export class QLList implements OnInit, OnDestroy{
 	private route = inject( ActivatedRoute );
@@ -40,10 +43,13 @@ export class QLList implements OnInit, OnDestroy{
 	private componentPageTitle = inject( ComponentPageTitle );
 	private ql:IGraphQL = inject( IGRAPHQL );
 	private snackbar = inject( SnackbarService );
+	private dialog = inject( MatDialog );
 
 	ngOnDestroy(){
 		//this.profileStore.save(this.collectionName(), this.profile);
-		if( !this.selector() )//the selector forces showDeleted off and hides the toggle - saving that would reset the collection's own list page
+		//The selector forces showDeleted off and a live-toggle page forces it on - both hide the checkbox, and saving either
+		//forced value would reset the collection's own list page to something the user never chose.
+		if( !this.selector() && !this.liveToggleField() )
 			ProfileStore.setShowDeleted( this.collectionName(), this.showDeleted() );
 	}
 
@@ -70,6 +76,7 @@ export class QLList implements OnInit, OnDestroy{
 			selected = selected.slice( 0, 1 );//SelectionModel throws on multiple values in single-select mode
 		this.selections.set( new SelectionModel<QLRow>(multiple, selected) );
 		this.data.set( rows );
+		this.error.set( data.error );//a good load clears the last failure; a resolver that caught the rows query sets it
 		this.sideNav.set( data.routing );
 		let paths = [];
 		for( let x = this.route; x.routeConfig?.data && x.routeConfig?.data["name"]; x = x.parent! )
@@ -89,6 +96,35 @@ export class QLList implements OnInit, OnDestroy{
 		let newView = new View( this.view() );
 		newView.sort = [sort, ...newView.sort.filter(s=>s.active!=sort.active)];
 		this.onViewShow( newView );
+	}
+
+	//The soft-delete switch a route can put in the row (ViewFieldSettings.liveToggle).  Where `deleted` is the feature rather
+	//than a trash can - a deleted `resource` is one the authorizer does not enforce - the flag is the page's whole point and
+	//belongs in the row.  Both directions are confirmed:  enabling enforcement can lock the operator out of the very table
+	//they are editing, and disabling it opens one up to everybody.
+	async onToggleLive( row:QLRow ){
+		const field = this.liveToggleField();
+		const settings = field?.liveToggle;
+		if( !field || !settings || this.pendingLive().includes(row.id) )
+			return;
+		const live = row[field.name]==null;
+		const name = row["name"] ?? row["target"] ?? `${row.id}`;
+		const verb = live ? settings.disable : settings.enable;
+		const message = (live ? settings.disableMessage : settings.enableMessage) ?? `${name} will be changed.`;
+		if( !await confirm(this.dialog, {title: `${verb} ${name}?`, message, confirm: verb}) )
+			return;
+		this.pendingLive.update( ids=>[...ids, row.id] );
+		try{
+			await this.ql.mutate( `${live ? "delete" : "restore"}${this.type()}(id:${row.id})`, (m)=>console.log(m) );
+			row[field.name] = live ? new Date() : null;
+			this.data.set( [...this.data()] );//a new array:  the row object is mutated in place, and the table only re-renders off the reference
+		}
+		catch( e ){
+			this.snackbar.exception( `${verb} failed.`, e );
+		}
+		finally{
+			this.pendingLive.update( ids=>ids.filter(id=>id!=row.id) );
+		}
 	}
 
 	restore(){
@@ -120,11 +156,18 @@ export class QLList implements OnInit, OnDestroy{
 	//empty or stale table with nothing said.  Every re-query reports through one of these two now.
 	async #refresh( profile: PageProfile ){
 		try{ await this.refresh( profile ); }
-		catch( e ){ this.snackbar.exception( "Could not refresh data.", e ); }
+		catch( e ){ this.#fail( e ); }
 	}
 	async #reload(){
 		try{ await this.reload(); }
-		catch( e ){ this.snackbar.exception( "Could not refresh data.", e ); }
+		catch( e ){ this.#fail( e ); }
+	}
+	//the snackbar goes in ten seconds; the page keeps saying it.  The rows are dropped too:  a refresh keeps them on screen
+	//while it runs, and leaving stale rows under a failure reads as "current".
+	#fail( e:unknown ){
+		this.snackbar.exception( "Could not refresh data.", e );
+		this.error.set( e );
+		this.data.set( [] );
 	}
 
 	async delete(){
@@ -254,6 +297,10 @@ export class QLList implements OnInit, OnDestroy{
 	displayedFields = computed<ViewField[]>( ()=>{
 		return this.view().fields.filter( v=>v.displayed );
 	});
+	//The one column the route declared as a switch, if any.  Its presence is also what hides Show-deleted:  the switch acts
+	//ON the deleted rows, so the resolver queries them unconditionally and the checkbox would only offer to hide half the work.
+	liveToggleField = computed<ViewField|undefined>( ()=>this.view()?.fields.find(f=>f.liveToggle) );
+	pendingLive = signal<unknown[]>( [] );
 	@ViewChild('mainTable',{static: false}) _table!:MatTable<any>;
 	canPurge = computed<boolean>( ()=>this.tableSettings().canPurge ?? false );
 	collectionName = computed<string>( ()=>this.schema().collectionName );
@@ -274,4 +321,29 @@ export class QLList implements OnInit, OnDestroy{
 	type = computed<string>( ()=>MetaObject.toTypeFromCollection(this.collectionName()) );
 	view = signal<View>( null as any );
 	profileStore = inject(ProfileStore);
+
+	//MVP first-run:  a list with nothing in it, or one the user may not read, showed a bare header.  Three states below the
+	//table now - the route's empty-state words, "no access" for a 403 (the server's line plus what to ask for), and a
+	//could-not-load with Retry for anything else - each with the page's help topic where one is registered.
+	error = signal<unknown>( undefined );//the rows query was refused or failed:  set by the resolver (QLListData.error) or a re-query, cleared by the next good load
+	failure = computed<{kind:"forbidden"|"failed", title:string, detail:string}|undefined>( ()=>{
+		const e = this.error();
+		if( e===undefined )
+			return undefined;
+		const noun = this.resolvedData().routing.title.toLowerCase();
+		const what = errorText( e )?.replace( /^\(\d+\)/, "" ) ?? "";//errorText prefixes the status; the title already says which
+		return httpStatus( e )==403
+			? { kind: "forbidden", title: `No access to ${noun}.`, detail: `${what}  Ask an administrator for a role that can read ${noun}.`.trim() }
+			: { kind: "failed", title: `Could not load ${noun}.`, detail: what };
+	});
+	emptyState = computed<Required<EmptyState>>( ()=>QLListResolver.emptyState(this.resolvedData().routing) );
+	showEmpty = computed<boolean>( ()=>!this.isRefreshing() && this.error()===undefined && !this.data().length );//not while a reload has the rows cleared
+	//the help topic for wherever the list is showing - its own page or a detail page's tab - resolved as the navbar's ? does;
+	//the fallback topic (the '' route) is navigation help, not this page's, so it is left out
+	#helpTopics = helpTopics( inject(HELP_TOPICS, {optional: true}) );
+	helpRoute = computed<string[]|undefined>( ()=>{
+		const segments = (this.router.url ?? "").split( "?" )[0].split( "/" ).filter( s=>s.length );
+		const topic = helpTopicFor( this.#helpTopics, segments );
+		return topic && topic.routes?.some( r=>r.length ) ? ['/help', topic.id] : undefined;
+	});
 }

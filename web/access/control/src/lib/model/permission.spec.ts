@@ -35,4 +35,15 @@ describe( 'Permission.roleMutations', ()=>{
 		expect( mutations[0].type ).toBe( MutationType.Add );
 		expect( mutations[0].args.permissionRight ).toMatchObject( {allowed: Rights.Read, denied: Rights.None} );
 	} );
+
+	//the server's Authorize::GetSchema cannot resolve a bare "nodeIds" - it lives once per opc.<server> schema - so the PK travels.
+	it( 'names the new row\'s resource by PK', ()=>{
+		const mutations = Permission.roleMutations( 5, [new Permission({allowed:Rights.Read, denied:Rights.None, resource:{id:9, schemaName:"opc.default", target:"nodeIds"}})], [] );
+		expect( (mutations[0].args.permissionRight as any).resource ).toEqual( {id:9} );
+	} );
+
+	it( 'falls back to schemaName+target when the resource has no PK', ()=>{
+		const mutations = Permission.roleMutations( 5, [new Permission({allowed:Rights.Read, denied:Rights.None, resource:{schemaName:"opc.default", target:"nodeIds"}})], [] );
+		expect( (mutations[0].args.permissionRight as any).resource ).toEqual( {schemaName:"opc.default", target:"nodeIds"} );
+	} );
 } );

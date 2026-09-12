@@ -374,12 +374,12 @@ namespace Jde::App::Server{
 		LogWrite( "Complete", requestId );
 		Write( FromServer::Complete(requestId) );
 	}
-	α ServerSocketSession::WriteException( runtime_error&& e, RequestId requestId )ι->void{
-		LogWriteException( e, requestId );
+	α ServerSocketSession::WriteException( runtime_error&& e, RequestId requestId, SL sl )ι->void{
+		LogWriteException( e, requestId, ELogLevel::Debug, sl );
 		Write( FromServer::Exception(move(e), requestId) );
 	}
-	α ServerSocketSession::WriteException( std::string&& e, Jde::RequestId requestId )ι->void{
-		LogWriteException( e, requestId );
+	α ServerSocketSession::WriteException( std::string&& e, Jde::RequestId requestId, SL sl )ι->void{
+		LogWriteException( e, requestId, ELogLevel::Debug, sl );
 		Write( FromServer::Exception(move(e), requestId) );
 	}
 	α ServerSocketSession::WriteSubscriptionAck( flat_set<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->void{

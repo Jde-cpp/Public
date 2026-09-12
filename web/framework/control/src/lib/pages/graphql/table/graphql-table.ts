@@ -8,6 +8,8 @@ import {FieldKind} from '../../../model/ql/schema/field';
 import { MatCheckbox } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIcon } from '@angular/material/icon';
+import { MatIconButton } from '@angular/material/button';
+import { MatTooltip } from '@angular/material/tooltip';
 import { StringUtils } from '../../../utils/string-utils';
 import { ViewField } from '../../../model/ql/view';
 import { QLRow } from '../../../model/ql/target-row';
@@ -16,7 +18,7 @@ import { QLRow } from '../../../model/ql/target-row';
 	selector: 'ql-table',
 	styleUrls: ['./graphql-table.scss'],
 	templateUrl: './graphql-table.html',
-	imports: [CommonModule, MatCheckbox, MatChipsModule, MatIcon, MatTableModule, MatSortModule]
+	imports: [CommonModule, MatCheckbox, MatChipsModule, MatIcon, MatIconButton, MatTableModule, MatSortModule, MatTooltip]
 })
 export class GraphQLTable{
 	private cnsle:SnackbarService = inject( SnackbarService );
@@ -97,6 +99,17 @@ export class GraphQLTable{
 	}
 	sortable( colName:string ){ return this.displayedFields().find(f=>f.name===colName)?.type.underlyingKind!=FieldKind.OBJECT; }//orderBy on a grafted object field is a server error.
 
+	//A live-toggle cell (ViewFieldSettings.liveToggle).  Deliberately an icon button and not a mat-slide-toggle:  a slide
+	//toggle keeps its own checked state, so a mutation that FAILS would leave the switch showing the state the row never
+	//reached.  An icon renders straight off the row, so there is nothing to desync - the cell only ever shows what the
+	//server confirmed.
+	isLive( column:string, row:QLRow ):boolean{ return row[column]==null; }
+	//The verb for the direction a click would take this row - what the tooltip, the aria-label and the confirmation all read.
+	liveToggleLabel( column:string, row:QLRow ):string{
+		const settings = this.displayedFields().find( f=>f.name===column )?.liveToggle;
+		return (this.isLive(column,row) ? settings?.disable : settings?.enable) ?? "";
+	}
+
 	//The tone class for a chip cell.  The column names the tones, the stylesheet owns the colours, so a value the column did
 	//not list simply gets the theme's default chip rather than the wrong colour.
 	chipClass( colName:string, row:QLRow ):string{
@@ -110,17 +123,22 @@ export class GraphQLTable{
 	selections=model.required<SelectionModel<QLRow>>();
 	//showDeleted = input<boolean>( false );
 	sort = model<Sort>();
+	pendingLive = input<unknown[]>( [] );//row ids whose live-toggle mutation is in flight - the switch is disabled until the server answers
 	onSortChange = output<Sort>();
 	onRowActivate = output<QLRow>();
+	onToggleLive = output<QLRow>();
 
 	get displayedColumnNames(){ return (this.selections().isMultipleSelection() ? ["select"] : []).concat( this.displayedFields().filter((x)=>x.displayed).map((x)=>x.name) ); };
 	//A chip column is whatever kind it always was - it just renders as a chip, so it has to leave the bucket it would
 	//otherwise fall in or the same matColumnDef is declared twice and the table throws.
 	get chipColumnNames(){ return this.displayedFields().filter( (x)=>x.chip ).map( (x)=>x.name ); }
+	//As chipColumnNames: a switch column leaves the bucket it would otherwise fall in (`deleted` is a DateTime) or the same
+	//matColumnDef is declared twice and mat-table throws.
+	get liveToggleColumnNames(){ return this.displayedFields().filter( (x)=>x.liveToggle ).map( (x)=>x.name ); }
 	get stringColumnNames(){ return this.displayedFields().filter( (x)=>!x.chip && ((x.type.underlyingKind==FieldKind.SCALAR && x.type.underlyingName=="String") || x.type.underlyingKind==FieldKind.ENUM) ).map( (x)=>x.name ); }
 	get objectColumnNames(){ return this.displayedFields().filter( (x)=>!x.chip && x.type.underlyingKind==FieldKind.OBJECT ).map( (x)=>x.name ); }
 	get listColumnNames(){ return this.displayedFields().filter( (x)=>x.type.underlyingKind==FieldKind.LIST ).map( (x)=>x.name ); }
-	get dateColumnNames(){ return this.displayedFields().filter( (x)=>x.type.underlyingName=="DateTime" ).map( (x)=>x.name ); }
+	get dateColumnNames(){ return this.displayedFields().filter( (x)=>!x.liveToggle && x.type.underlyingName=="DateTime" ).map( (x)=>x.name ); }
 	get boolColumnNames(){ return this.displayedFields().filter( (x)=>x.type.underlyingName=="Boolean" ).map( (x)=>x.name ); }
 	get uintColumnNames(){ return this.displayedFields().filter( (x)=>["UInt", "ID"].includes(x.type.underlyingName) ).map( (x)=>x.name ); }
 }

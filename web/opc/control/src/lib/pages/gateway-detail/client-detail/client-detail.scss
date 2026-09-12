@@ -4,11 +4,4 @@
 .my-content{
 	flex: 1 1 100%;
 }
-// Sized to the form above it (see _general.scss):  the side margin is the form's 24px page inset plus the fill field's 16px
-// text inset, so Save lines up under the field text and the far-right Delete under its right edge rather than out at the window's.
-.actions{
-	display: flex;
-	gap: 20px;
-	margin: 20px 40px;
-	max-width: calc(var(--jde-form-max-width) - 32px);
-}
+// The Save/Cancel/Delete row is `.jde-detail-actions` in jde-spa's _general.scss - one rule for every detail page.

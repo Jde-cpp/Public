@@ -48,8 +48,15 @@ export enum Operator{
 //falls back to the theme's default chip.
 export type ChipTone = "ok"|"neutral"|"error";
 export type ChipTones = Record<string,ChipTone>;
-export type ViewFieldSettings = {name?:string, displayName?:string, style?:Style, defaultView?:boolean/*=!hidden*/, hidden?:boolean, selection?:string/*OBJECT/UNION sub-selection, e.g. "count" -> `name{count}`; defaults to "id name"/"id"*/, chip?:ChipTones};
-type ViewFieldJson = {name:string, hidden?:boolean, displayName?:string, style?:Style, selection?:string, chip?:ChipTones};
+//The `deleted` column rendered as a switch in the row rather than as a timestamp.  The switch is ON for a LIVE row, so the
+//column is named for what being live MEANS on that table - on `resources` a live row is an ENFORCED one, since the
+//authorizer skips a deleted resource (Authorize::Test, "not enabled") - and flipping it runs the same restore/delete
+//mutations the detail pages use.  For a table whose soft-delete flag is the feature rather than a trash can, and where
+//there is consequently no detail page to put a Delete button on.  `enable`/`disable` are the verbs the confirmation,
+//tooltip and aria-label read; the messages spell out the consequence, which is domain wording the framework cannot guess.
+export type LiveToggle = { enable:string, disable:string, enableMessage?:string, disableMessage?:string };
+export type ViewFieldSettings = {name?:string, displayName?:string, style?:Style, defaultView?:boolean/*=!hidden*/, hidden?:boolean, selection?:string/*OBJECT/UNION sub-selection, e.g. "count" -> `name{count}`; defaults to "id name"/"id"*/, chip?:ChipTones, liveToggle?:LiveToggle};
+type ViewFieldJson = {name:string, hidden?:boolean, displayName?:string, style?:Style, selection?:string, chip?:ChipTones, liveToggle?:LiveToggle};
 export type Filter = { operator: Operator, value: DbScalar[] };
 export class Flex{
 	constructor( value:string|number ){
@@ -111,6 +118,7 @@ export class ViewField{
 			this.displayName = copyFrom.displayName;
 			this.selection = copyFrom.selection;
 			this.chip = copyFrom.chip;
+			this.liveToggle = copyFrom.liveToggle;
 		}else if( "qlField" in args ){
 			const settings = args.settings;
 			this.qlField = args.qlField;
@@ -119,6 +127,7 @@ export class ViewField{
 			this.displayName = settings?.displayName ?? StringUtils.idToDisplay( this.name );
 			this.selection = settings?.selection;
 			this.chip = settings?.chip;
+			this.liveToggle = settings?.liveToggle;
 		}else{
 			const serialized = args as {field: ViewFieldJson, schema: TableSchema};
 			const json = serialized.field;
@@ -128,6 +137,7 @@ export class ViewField{
 			this.displayName = json.displayName ?? StringUtils.idToDisplay( this.name );
 			this.selection = json.selection;
 			this.chip = json.chip;
+			this.liveToggle = json.liveToggle;
 		}
 	}
 	toJson( customDisplay:boolean=false ):ViewFieldJson{
@@ -142,6 +152,8 @@ export class ViewField{
 			y["selection"] = this.selection;
 		if( this.chip )
 			y["chip"] = this.chip;
+		if( this.liveToggle )
+			y["liveToggle"] = this.liveToggle;//persisted like `chip`:  a user view saved off the resources list has to come back still holding its Enforced switch, not a bare timestamp
 		return y;
 	}
 	//what query() emits for this field: composite kinds need a sub-selection - an explicit one from settings, else the framework's {id name}/{id} convention (proto.service.fieldColumns).
@@ -159,6 +171,7 @@ export class ViewField{
 	style?: Style;
 	selection?:string;
 	chip?:ChipTones;
+	liveToggle?:LiveToggle;
 };
 
 //A filter a route declares on a system view (TableSettings.views):  the column, the operator (In when unset) and the values,
@@ -184,9 +197,8 @@ export class View{
 			this.configConstructor( value as ViewConfigArgs, schema! );
 		else if( (value as ViewSerializedArgs).fields )
 			this.serializedConstructor( value as ViewSerializedArgs, schema!, defaultSort );
-		else if( (value as TableSettings).columns ){
-			this.tableConstructor(value, schema!);
-		}
+		else if( (value as TableSettings).columns )
+			this.tableConstructor( value as TableSettings, schema! );//the cast, as above: TableSettings.filters and ViewSerializedArgs.filters differ in shape, so the union no longer narrows by itself
 	}
 	//The settings dialog edits filters in place, so Cancel is only honest if the dialog never holds the live view's Filter objects.  structuredClone is unusable: it flattens Days into a plain object and breaks the `instanceof` checks in the filter UI and query().
 	static copyFilter( filter:Filter ):Filter{

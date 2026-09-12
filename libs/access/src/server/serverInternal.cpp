@@ -5,11 +5,15 @@
 #include <jde/fwk/crypto/TrustStore.h>
 #include <jde/fwk/settings.h>
 #include <jde/ql/LocalQL.h>
+#include <jde/ql/LocalSubscriptions.h>
+#include <jde/ql/ql.h>
+#include <jde/ql/types/MutationQL.h>
 #include <jde/access/awaits/ConfigureAwait.h>
 #include "serverInternal.h"
 #include "jde/access/server/awaits/AclAwait.h"
 #include "jde/access/server/awaits/RoleAwait.h"
 #include "jde/access/server/awaits/ProfileAwait.h"
+#include "jde/access/server/awaits/UserRightsAwait.h"
 #include "awaits/GroupAwait.h"
 #include "awaits/UserAwait.h"
 #include "../accessInternal.h"
@@ -56,6 +60,21 @@ namespace Jde::Access{
 	}
 	α Server::AccessSchema()ι->DB::AppSchema&{ return GetSchema(); }
 	α Server::LocalQL()ι->QL::LocalQL&{ ASSERT(_ql);  return *_ql; }
+	//The login procs (user_insert_login, user_insert_key) create users outside the mutation path, so the userCreated event every
+	//client's AccessListener subscribes to (EventsSubscribeAwait) never fired for them - a user born after a client's Configure
+	//was absent from that client's snapshot, and denied on a protected node tree, until the client restarted (opcserver-review3
+	//#16's user-snapshot gap).  The same fan-out the createUser mutation gets from IMutationAwait::Publish, by hand:  the id in
+	//the args is what the subscription's `{id}` is trimmed from.  Called after the server's own CreateUser, so an in-process
+	//listener finds the user already there.
+	α Server::PublishUserCreated( UserPK userPK )ι->void{
+		try{
+			QL::MutationQL m{ "createUser", jobject{{"id", userPK.Value}}, ms<jobject>(), {}, false, LocalQL().Schemas(), false };
+			QL::Subscriptions::OnMutation( m, jvalue{userPK.Value} );
+		}
+		catch( const std::exception& e ){
+			WARNT( _tags, "[{}]userCreated not published - a client configured before this login will not see the user until it reloads: {}", userPK.Value, e.what() );
+		}
+	}
 	α Server::Authorizer()ι->Access::Authorize&{ return LocalQL().Authorizer(); }
 
 	α Server::Authenticate( str loginName, uint providerId, str opcServer, SL sl )ι->AuthenticateAwait{
@@ -90,11 +109,14 @@ namespace Jde::Access{
 		SetSchema( *accessSchema );
 		_ql = localQL;
 		QL::Hook::Add( mu<GroupHook>() );//add before
+		QL::SetSystemTables( {"userRights"} );//no view of its own - the parser admits the name and CustomQuery answers it (UserRightsAwait); here so the AppServer, the hub and the tests all get it.
 		return ConfigureAwait{ localQL, move(schemas), authorizer, executer, move(listener), {}, false, true };//allSchemas: the server's cache is everyone's authority.
 	}
 	α Server::CustomQuery( QL::TableQL& q, QL::Creds creds, SL sl )ι->up<TAwait<jvalue>>{
 		up<TAwait<jvalue>> y;
-		if( q.DBTableName()=="acl" )
+		if( q.JsonName=="userRights" )//before the starts_with("user") branch below.
+			y = mu<UserRightsAwait>( q, creds.UserPK(), sl );
+		else if( q.DBTableName()=="acl" )
 			y = mu<AclQLSelectAwait>( q, creds.UserPK(), sl );
 		else if( q.JsonName.starts_with("role") && (q.FindTable("roles") || q.FindTable("permissionRights")) )
 			y = mu<RoleAwait>( q, creds.UserPK(), sl );

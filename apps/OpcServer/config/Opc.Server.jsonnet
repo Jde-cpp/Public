@@ -33,14 +33,14 @@ function( sync=false )
 				sql: "Information",
 				threads: "Warning",
 				"opc.access": "Trace",
-				uaEvent: "Debug",
+				uaEvent: "Information",
 				uaNet: "Information",
-				uaSession: "Trace",
-				uaServer: "Trace",
-				uaUser: "Trace",
-				uaSecurity: "Trace",
-				uaClient: "Trace",
-				uaSecure: "Trace"
+				uaSession: "Information",
+				uaServer: "Information",
+				uaUser: "Information",
+				uaSecurity: "Information",
+				uaClient: "Information",
+				uaSecure: "Information"
 			},
 			sinks:{
 				console:{},

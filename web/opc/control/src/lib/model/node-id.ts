@@ -62,6 +62,19 @@ export class NodeId implements INodeId{
 	}
 	toJSON():NodeIdJson{ return this.toJson(); }//serialize NodeId[] (e.g. saved subscriptions) in the NodeIdJson form the constructor can revive
 	toString():string{ return JSON.stringify( this.toJson() ); }//stable + unique per node (was "[object Object]", collapsing every node onto one profile key)
+	//the inverse of uaString - a resource's `criteria` back to a NodeId (b= is base64, as uaString writes it)
+	static fromUaString( s:string ):NodeId{
+		const m = /^(?:ns=(\d+);)?([isgb])=(.*)$/.exec( s.trim() );
+		if( !m )
+			throw new Error( `'${s}' is not a NodeId.` );
+		const ns = m[1] ? +m[1] : 0;
+		switch( m[2] ){
+			case "i": return new NodeId( {ns, i: +m[3]} );
+			case "s": return new NodeId( {ns, s: m[3]} );
+			case "g": return new NodeId( {ns, g: m[3]} );
+			default:  return new NodeId( {ns, b: m[3]} );
+		}
+	}
 	uaString():string{//OPC-UA standard NodeId string, e.g. "ns=4;i=6020" (ns=0 omitted, per open62541) — matches the server's resource `criteria`
 		const p = this.ns ? `ns=${this.ns};` : "";
 		if( typeof this.id === "number" )        return `${p}i=${this.id}`;

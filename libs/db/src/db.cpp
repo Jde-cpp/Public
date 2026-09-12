@@ -80,6 +80,9 @@ namespace Jde{
 	α DB::SyncSchema( const AppSchema& schema, sp<QL::IQL> ql )ε->void{
 		SchemaDdl::Sync( schema, ql );
 	}
+	α DB::SyncData( const AppSchema& schema, sp<QL::IQL> ql, sv extension )ε->void{
+		SchemaDdl::SeedData( schema, extension, ql );
+	}
 }
 
 #ifndef PROD

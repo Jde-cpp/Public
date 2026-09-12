@@ -15,6 +15,8 @@ import { SnackbarService } from 'jde-framework';
 import { GATEWAY_SERVICE, GatewayService, SubscriptionResult } from '../../../services/gateway-service';
 import { NodeId } from '../../../model/node-id';
 import { Variable } from '../../../model/node';
+import { NodeView } from '../../../model/node-view';
+import { EAccess } from '../../../model/types';
 import { NodeChildren } from './node-children';
 
 //Variable's json arg is the wire shape; the UaNode base reads ns/i/name/browse straight off it.
@@ -116,5 +118,17 @@ describe( 'NodeChildren subscription values', ()=>{
 		page.onSubscriptionChange( {added: [X], removed: []} as any );
 		pushes.complete();
 		expect( page.subscription ).toBeUndefined();
+	} );
+} );
+
+//MVP first-run:  an identity with no role gets userAccessLevel 0 on every node, and the Snapshot cell showed a blank that
+//read as a null value.  A row the browse never gave a level is not a denial.
+describe( 'NodeView.readDenied', ()=>{
+	it( 'flags a variable the server reports no Read right on, and nothing else', ()=>{
+		const denied = new Variable( <any>{ns:2, i:3, name:"d", browse:{ns:2, name:"d"}, userAccessLevel: EAccess.None} );
+		const readable = new Variable( <any>{ns:2, i:4, name:"r", browse:{ns:2, name:"r"}, userAccessLevel: EAccess.Read} );
+		expect( NodeView.readDenied(denied) ).toBe( true );
+		expect( NodeView.readDenied(readable) ).toBe( false );
+		expect( NodeView.readDenied(variable(5, "u")) ).toBe( false );//no level in the row
 	} );
 } );

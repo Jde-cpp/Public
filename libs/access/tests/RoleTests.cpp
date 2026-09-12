@@ -193,6 +193,93 @@ namespace Jde::Access::Tests{
 		EXPECT_FALSE( QL().QuerySync<jarray>(R"(roles( target:"rolePurgeNestedParent" ){ id })", {}, root).empty() ) << "the parent survives";
 		Purge( "role", parent, root );
 	}
+	//Purging a role stripped every direct grant of its child roles:  access_role_purge deleted the acl rows of every member of the
+	//role, and a member that is itself a role is shared - its grants are its own, not the parent's.  The cache never dropped them
+	//(Authorize::PurgeRole sweeps the references to the purged role only), so the loss surfaced at the next restart.  The
+	//parent's own permission rows still go with it - a purge leaves no orphans behind.
+	TEST_F( RoleTests, PurgeParentKeepsChildGrants ){
+		let root = GetRoot();
+		restoreResource( "groups", root );
+		const RolePK parent{ (RolePK)GetId(getRole("rolePurgeParentGrants", root)) };
+		const RolePK child{ (RolePK)GetId(getRole("rolePurgeChildGrants", root)) };
+		ASSERT_FALSE( AddRoleMember(parent, child, root).empty() );
+		let parentPermission = GetId( AddRolePermission(parent, "groups", ERights::Update, ERights::None, root) );
+		let childPermission = GetId( AddRolePermission(child, "groups", ERights::Read, ERights::None, root) );
+		const UserPK user{ GetId(GetUser("rolePurgeChildGrantsUser", root)) };
+		CreateAcl( user, parent, root );
+		CreateAcl( user, child, root ); //the child is granted directly as well as through its parent.
+		ASSERT_EQ( Authorizer()->Rights("access", "groups", user), ERights::Read|ERights::Update );
+		let permissionRow = [&]( uint id ){ return QL().QuerySync<jarray>( Ƒ("permissionRights( id:{} ){{ id }}", id), {}, root ); };
+		ASSERT_EQ( permissionRow(parentPermission).size(), 1u );
+
+		EXPECT_NO_THROW( Purge("role", parent, root) );
+		EXPECT_TRUE( SelectAcl(user, parent).empty() ) << "the parent's own grant went with it";
+		EXPECT_FALSE( SelectAcl(user, child).empty() ) << "the child's direct grant survives its parent";
+		EXPECT_FALSE( GetRolePermission(child, "groups", root).empty() ) << "and so do the child's rights";
+		EXPECT_EQ( permissionRow(childPermission).size(), 1u );
+		EXPECT_TRUE( permissionRow(parentPermission).empty() ) << "the parent's own permission row is gone - no orphan";
+		EXPECT_EQ( Authorizer()->Rights("access", "groups", user), ERights::Read ) << "the cache agrees with the db";
+
+		Purge( "role", child, root );
+		EXPECT_TRUE( SelectAcl(user, child).empty() );
+		EXPECT_TRUE( permissionRow(childPermission).empty() );
+	}
+
+	//The seed's spelling - libs/access/config/release.roles, applied by DB::SyncData(".roles") through LocalQL::Upsert once the
+	//access server is up:  createRole by target, addRole naming the role and its member roles by target (a file cannot know the
+	//pks it just created), permissions by schema+target.  Upsert skips a createRole whose target exists and always runs an
+	//addRole - so a second pass over the same text (every -sync start) changes nothing and fails nothing.
+	TEST_F( RoleTests, SeedByTarget ){
+		let root = GetRoot();
+		for( let target : {"seedAdmin", "seedViewer"} ){//a previous run's rows would make the first pass a rerun.
+			for( let& v : QL().QuerySync<jarray>(Ƒ(R"(roles( target:"{}" ){{ id }})", target), {}, root) )
+				Purge( "role", GetId(Json::AsObject(v)), root );
+		}
+		constexpr sv seed = R"(mutation{
+			createRole( target:"seedViewer", name:"Seed Viewer", description:"seed" )
+			addRole( target:"seedViewer", permissionRight:{ allowed:2, denied:0, resource:{ schemaName:"access", target:"groups" } } )
+			createRole( target:"seedAdmin", name:"Seed Admin", description:"seed" )
+			addRole( target:"seedAdmin", role:{ target:"seedViewer" } )
+			addRole( target:"seedAdmin", permissionRight:{ allowed:32, denied:0, resource:{ schemaName:"access", target:"groups" } } )
+		})";
+		const UserPK system{ UserPK::System };
+		for( uint pass=0; pass<2; ++pass ){
+			ASSERT_NO_THROW( QL().Upsert(string{seed}, {}, system) ) << "pass " << pass;
+			const RolePK viewer{ (RolePK)GetId(getRole("seedViewer", root)) }, admin{ (RolePK)GetId(getRole("seedAdmin", root)) };
+			EXPECT_EQ( ToRights(Json::AsArray(GetRolePermission(viewer, "groups", root), "allowed")), ERights::Read ) << "pass " << pass;
+			EXPECT_EQ( ToRights(Json::AsArray(GetRolePermission(admin, "groups", root), "allowed")), ERights::Administer ) << "pass " << pass;
+			EXPECT_FALSE( GetRoleChild(admin, viewer, root).empty() ) << "pass " << pass;//and the second pass did not insert the membership twice - a duplicate key would have thrown above.
+		}
+		const RolePK admin{ (RolePK)GetId(getRole("seedAdmin", root)) };
+		Purge( "role", admin, root );
+		Purge( "role", (RolePK)GetId(getRole("seedViewer", root)), root );
+	}
+
+	//The shipped seed itself - libs/access/config/release.roles, installed as access.roles (setup/OpcHubSetup.nsi) - applied the way
+	//the hub applies it, twice:  the six roles, Owner over System Administrator over Viewer, Viewer reading and the administrator
+	//administering every table, Owner holding what neither may.  The resources it grants on that no server has registered here
+	//(opc.install) are created by access_role_add as the mutation names them.
+	TEST_F( RoleTests, ReleaseRolesSeed ){
+		let root = GetRoot();
+		let& scriptPaths = Settings::FindDefaultArray( "/dbServers/scriptPaths" ); //<repo>/libs/access/config/sql/<dialect>
+		ASSERT_FALSE( scriptPaths.empty() );
+		let seed = IO::Load( fs::path{string{Json::AsSV(scriptPaths[0])}}.parent_path().parent_path()/"release.roles" );
+		const UserPK system{ UserPK::System };
+		for( uint pass=0; pass<2; ++pass )
+			ASSERT_NO_THROW( QL().Upsert(seed, {}, system) ) << "pass " << pass;
+		const RolePK viewer{ (RolePK)GetId(getRole("viewer", root)) }, sa{ (RolePK)GetId(getRole("sa", root)) }, owner{ (RolePK)GetId(getRole("owner", root)) };
+		EXPECT_FALSE( GetRoleChild(sa, viewer, root).empty() );
+		EXPECT_FALSE( GetRoleChild(owner, sa, root).empty() );
+		EXPECT_FALSE( GetRoleChild(owner, viewer, root).empty() );
+		for( let target : {"engineer", "operator", "maint-tech"} )
+			EXPECT_FALSE( GetRoleChild((RolePK)GetId(getRole(target, root)), viewer, root).empty() ) << target;
+		EXPECT_EQ( ToRights(Json::AsArray(GetRolePermission(viewer, "users", root), "allowed")), ERights::Read );
+		EXPECT_EQ( ToRights(Json::AsArray(GetRolePermission(sa, "users", root), "allowed")), ERights::Administer );
+		EXPECT_EQ( ToRights(Json::AsArray(GetRolePermission(owner, "users", root), "allowed")), ERights::Create|ERights::Update|ERights::Delete|ERights::Purge|ERights::Subscribe|ERights::Execute );
+		EXPECT_EQ( ToRights(Json::AsArray(GetRolePermission(owner, "resources", root), "allowed")), ERights::Delete|ERights::Subscribe );
+		for( let target : {"owner", "engineer", "operator", "maint-tech", "sa", "viewer"} )//parents before children - a purge strips the parent's memberships, the children survive.
+			Purge( "role", (RolePK)GetId(getRole(target, root)), root );
+	}
 
 	//access-review3 #15:  sqlServer/access_role_add.sql inserted the resource name as sent, where mysql and sqlite coalesce it over
 	//the target - and the live grant-a-role-on-this-node path sends no name, into a not-null column.  Source parity, since no

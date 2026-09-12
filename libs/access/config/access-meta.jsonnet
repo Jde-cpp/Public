@@ -78,7 +78,7 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				expiration: types.dateTime+{ nullable: true, insertable: false, updateable: false, comment: "cert notAfter - key enrollment", i:107 },
 				fingerprint: types.varchar+{ length: 95, nullable: true, insertable: false, updateable: false, comment: "cert sha-256 fingerprint, colon hex as openssl prints it - key enrollment", i:108 }
 			},
-			ops: ["Create", "Read", "Update", "Delete", "Purge", "Administer", "Execute"],
+			ops: ["Create", "Read", "Update", "Delete", "Purge", "Administer", "Execute", "Subscribe"],
 			extends: "identities",
 			purgeProc: "user_purge", //profiles, acl and group rows reference the identity with no cascade - the proc takes them first (access-review3 #14).
 			qlView: "users_ql"
@@ -89,7 +89,8 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				memberId: 	tables.identities.columns.identityId+{ pkTable: "identities", name: "member_id", sk: 1, i:1 },
 			},
 			map: {parentId:"identity_id", childId:"member_id"},
-			extends: "identities"
+			extends: "identities",
+			purgeProc: "group_purge", //acl grants and the group's rows on both sides of access_groups reference the identity with no cascade - the proc takes them first, as users' does.
 		},
 		providerTypes:{
 			columns: {
@@ -121,7 +122,7 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				criteria: types.varchar+{ nullable: true, length:672, i:100 },
 				allowed: types.ulong+{ pkTable: "rights", i:101, nullable:true, comment: "available rights for this resource" }
 			},
-			ops: ["Delete"],
+			ops: ["Delete", "Subscribe"],
 			naturalKeys: [["schema_name", "target", "criteria"]],
 		},
 		permissions:{
@@ -148,7 +149,8 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 			purgeProc: "role_purge",
 			addProc: "role_add",
 			removeProc: "role_remove",
-			naturalKeys: targetNKs
+			naturalKeys: targetNKs,
+			ops: ["Create", "Read", "Update", "Delete", "Purge", "Administer", "Subscribe"],
 		},
 		roleMembers:{
 			columns: {
@@ -174,7 +176,7 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 			},
 			customInsertProc: true,
 			map:: { parentId:"identity_id", childId:"permission_id" },//not a map, but connector.
-			ops: ["Read", "Administer"] //the mutations gate on TestAdmin of the target resource; Read is what AclQLSelectAwait gates on, and with no ops ResourceSync never made a row for it to gate with, so the acl was enumerable by anyone (access-review3 #21).  Created disabled like every synced resource - restore it to enforce.
+			ops: ["Read", "Administer", "Subscribe"] //the mutations gate on TestAdmin of the target resource; Read is what AclQLSelectAwait gates on, and with no ops ResourceSync never made a row for it to gate with, so the acl was enumerable by anyone (access-review3 #21).  Created disabled like every synced resource - restore it to enforce.
 		},
 		profiles:{
 			comment: "Per-user UI profile blobs, keyed by page/component",

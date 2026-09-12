@@ -59,7 +59,7 @@ namespace Jde::Opc::Gateway{
 			if( client )
 				CreateSubscription( move(client), move(nodes), requestId );
 			else
-				WriteException( Ƒ("Client not found: opcId: '{}'", move(opcId)), requestId );
+				WriteException( Ƒ("Client not found: opcId: '{}'", move(opcId)), requestId, SRCE_CUR );
 		}
 		catch( runtime_error& e ){
 			WriteException( move(e), requestId );
@@ -134,7 +134,7 @@ namespace Jde::Opc::Gateway{
 			if( anyClient )
 				Write( FromServer::UnsubscribeTrans(requestId, move(successes), move(remaining)) );
 			else
-				WriteException( Ƒ("Client not found: opcId: '{}'", opcId), requestId );
+				WriteException( Ƒ("Client not found: opcId: '{}'", opcId), requestId, SRCE_CUR );
 		}
 		catch( runtime_error& e ){
 			WriteException( move(e), requestId );
@@ -150,12 +150,12 @@ namespace Jde::Opc::Gateway{
 		ASSERT_DESC( false, "Not Implemented" );
 	}
 
-	α GatewaySocketSession::WriteException( runtime_error&& e, Jde::RequestId requestId )ι->void{
-		LogWriteException( e, requestId );
+	α GatewaySocketSession::WriteException( runtime_error&& e, Jde::RequestId requestId, SL sl )ι->void{
+		LogWriteException( e, requestId, ELogLevel::Debug, sl );
 		Write( FromServer::ExceptionTrans(move(e), requestId) );
 	}
-	α GatewaySocketSession::WriteException( string&& e, Jde::RequestId requestId )ι->void{
-		LogWriteException( move(e), requestId );
+	α GatewaySocketSession::WriteException( string&& e, Jde::RequestId requestId, SL sl )ι->void{
+		LogWriteException( move(e), requestId, ELogLevel::Debug, sl );
 		Write( FromServer::ExceptionTrans(Exception(move(e)), requestId) );
 	}
 
