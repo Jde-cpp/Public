@@ -16,7 +16,7 @@ Prerequisites on the build machine:
 | the release build tree | `$env:JDE_RBUILD_DIR\clang++\<repo dir>\release` (`-BuildDir`): `bin\Jde.Opc.Hub\`, `bin\Jde.Opc.Server\` and, in `bin\`, `Jde.DB.Sqlite.dll`, `sqlite3.dll`, `Jde.DB.Sqlite.AppServer.dll`, `Jde.DB.Sqlite.OpcGateway.dll` |
 | the Angular site | `web\opc\my-workspace\dist\my-workspace\browser` - `web/opc/scripts/setup.sh` runs `ng build` (`-WebDist`, or `-SkipWeb`) |
 | [OPCFoundation/UA-Nodeset](https://github.com/OPCFoundation/UA-Nodeset) | `$env:UA_NODE_SETS` (`-UaNodeSets`) - DI/IA nodesets for the OpcServer |
-| `vc_redist.x64.exe` | the VS install's `VC\Redist\MSVC\v14x\` (`-VcRedist`); bundled for the all-users mode, skipped with a warning if missing |
+| `vc_redist.x64.exe` | the VS 2026 install's `VC\Redist\MSVC\v145\` (`-VcRedist`), or https://aka.ms/vs/18/release/vc_redist.x64.exe - 14.50 or later, the installer's gate: the exes are built with the 14.51 toolset and Microsoft's rule is a redistributable at least as new as the toolset (the VS 2022 line's 14.44 happens to export every symbol they import, checked 09-12, but only by luck); bundled for the all-users mode, skipped with a warning if missing |
 
 ```powershell
 .\build-setup.ps1                              # -> <BuildDir>\setup\OpcHubSetup-<git describe>.exe
@@ -38,7 +38,7 @@ too and publishes the installer as that tag's GitHub release.
 | rights | administrator (UAC prompt) | none - a standard user never sees a prompt; an administrator sees one and may still pick this mode |
 | program dir | `C:\Program Files\Jde-Cpp` | `%LOCALAPPDATA%\Programs\Jde-Cpp` |
 | how the products run | Windows services `Jde.OpcHub`, `Jde.OpcServer` (auto start; `net start`/`net stop`) | Start Menu folder `Jde-Cpp`: a shortcut per product, each a console window (`-c`); optional "Start at logon" component (HKCU Run) |
-| VC++ 2015-2022 x64 runtime | installed when missing | must be present already (installing it needs administrator rights) |
+| VC++ v14 x64 runtime, 14.50 or later | installed, or upgraded when older | must be present already (installing it needs administrator rights) |
 | Add/Remove Programs | HKLM | HKCU (`Jde OpcHub (current user)`) |
 | data | `C:\ProgramData\Jde-Cpp\<Product>` in both modes - the apps hardcode it (`Process::ProgramDataFolder()`, `libs/db/config/paths-common.libsonnet`).  A standard user can create the tree and owns it; one created by an all-users install is read-only to them, so the installer refuses the current-user mode in that case. | |
 

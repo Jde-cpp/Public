@@ -240,32 +240,36 @@ SectionEnd
 ;--------------------------------------------------------------------------------------------------------------------------
 ; Hidden steps
 ;--------------------------------------------------------------------------------------------------------------------------
-;the exes import the VS2022 runtime (msvcp140, vcruntime140_1, msvcp140_atomic_wait)
+;the exes import the v14 runtime (msvcp140, vcruntime140_1, msvcp140_atomic_wait) of the toolset that built them - VS 2026's
+;14.51, on CI (win2025-build.yml) and the dev box alike.  Microsoft's rule is a redistributable at least as new as the
+;toolset, so the gate is 14.50 and VC_REDIST defaults to the v145 one (Add/Remove Programs names it "Microsoft Visual C++
+;v14 Redistributable (x64) - 14.5x"; https://aka.ms/vs/18/release/vc_redist.x64.exe).  The 14.44 redist happened to export
+;every symbol the exes import (checked 09-12), but only by luck.
 Section -VCRedist
 	ReadRegDWORD $0 HKLM "SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64" "Installed"
 	ReadRegDWORD $1 HKLM "SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64" "Major"
 	ReadRegDWORD $2 HKLM "SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64" "Minor"
 	${If} $0 == 1
 	${AndIf} $1 >= 14
-	${AndIf} $2 >= 30
+	${AndIf} $2 >= 50
 		DetailPrint "Visual C++ runtime $1.$2 present"
 	${ElseIf} $MultiUser.InstallMode == "AllUsers"
 !if /FileExists "${VC_REDIST}"
-		DetailPrint "Installing the Visual C++ 2015-2022 x64 runtime..."
+		DetailPrint "Installing the Visual C++ v14 x64 runtime (14.51)..."
 		SetOutPath "$TEMP"
 		File "${VC_REDIST}"
 		ExecWait '"$TEMP\vc_redist.x64.exe" /install /quiet /norestart' $0
 		Delete "$TEMP\vc_redist.x64.exe"
 		${If} $0 != 0
 		${AndIf} $0 != 3010
-			MessageBox MB_OK|MB_ICONEXCLAMATION "The Visual C++ runtime installer returned $0.  Install the Microsoft Visual C++ 2015-2022 x64 Redistributable before starting ${PRODUCT}." /SD IDOK
+			MessageBox MB_OK|MB_ICONEXCLAMATION "The Visual C++ runtime installer returned $0.  Install the Microsoft Visual C++ v14 x64 Redistributable, 14.50 or later, before starting ${PRODUCT}." /SD IDOK
 		${EndIf}
 !else
 	!warning "VC_REDIST not found - the installer will not bundle the Visual C++ runtime"
-		MessageBox MB_OK|MB_ICONEXCLAMATION "The Microsoft Visual C++ 2015-2022 x64 Redistributable is not installed.  Install it (vc_redist.x64.exe) before starting ${PRODUCT}." /SD IDOK
+		MessageBox MB_OK|MB_ICONEXCLAMATION "The Microsoft Visual C++ v14 x64 Redistributable, 14.50 or later, is not installed.  Install it (vc_redist.x64.exe, https://aka.ms/vs/18/release/vc_redist.x64.exe) before starting ${PRODUCT}." /SD IDOK
 !endif
 	${Else}
-		MessageBox MB_OK|MB_ICONEXCLAMATION "The Microsoft Visual C++ 2015-2022 x64 Redistributable is not installed, and a current-user install cannot add it.  Install it (vc_redist.x64.exe) before starting ${PRODUCT}." /SD IDOK
+		MessageBox MB_OK|MB_ICONEXCLAMATION "The Microsoft Visual C++ v14 x64 Redistributable, 14.50 or later, is not installed, and a current-user install cannot add it.  Install it (vc_redist.x64.exe, https://aka.ms/vs/18/release/vc_redist.x64.exe) before starting ${PRODUCT}." /SD IDOK
 	${EndIf}
 SectionEnd
 
