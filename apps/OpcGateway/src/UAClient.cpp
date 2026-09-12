@@ -21,30 +21,30 @@
 namespace Jde::Opc::Gateway{
 	constexpr ELogTags _tags{ (ELogTags)EOpcLogTags::Opc };
 	flat_map<ServerCnnctnNK,flat_map<Credential,sp<UAClient>>> _clients; shared_mutex _clientsMutex;
-	//Why the last connect attempt on a target failed.  Keyed by target, not by credential: the connection list is per target and a
-	//failure that is credential-specific still leaves the target unusable for that caller.  Its own mutex - the status query reads it
+	//Why the last connect attempt on a slug failed.  Keyed by slug, not by credential: the connection list is per slug and a
+	//failure that is credential-specific still leaves the slug unusable for that caller.  Its own mutex - the status query reads it
 	//without touching _clients, and StateCallback writes it while unlocked.
 	flat_map<ServerCnnctnNK,string> _connectErrors; mutex _connectErrorMutex;
 	α UAClient::ConnectErrors()ι->flat_map<ServerCnnctnNK,string>{
 		lg _{ _connectErrorMutex };
 		return _connectErrors;
 	}
-	α UAClient::SetConnectError( const ServerCnnctnNK& target, string message )ι->void{
+	α UAClient::SetConnectError( const ServerCnnctnNK& slug, string message )ι->void{
 		lg _{ _connectErrorMutex };
-		_connectErrors.insert_or_assign( target, move(message) );
+		_connectErrors.insert_or_assign( slug, move(message) );
 	}
-	α UAClient::ClearConnectError( const ServerCnnctnNK& target )ι->void{
+	α UAClient::ClearConnectError( const ServerCnnctnNK& slug )ι->void{
 		lg _{ _connectErrorMutex };
-		_connectErrors.erase( target );
+		_connectErrors.erase( slug );
 	}
 	α UAClient::RemoveClient( sp<UAClient>&& client )ι->bool{
 		client->Connected = false;
 		client->StopProcessing();//cancels the ping timer & processing loop; otherwise _pingTimer stays pending on the io_context (and the ping coroutine keeps a UAClient ref), blocking shutdown.
 		bool erased{};
 		ul _{ _clientsMutex };
-		if( auto serverCreds = _clients.find(client->Target()); serverCreds!=_clients.end() ){
+		if( auto serverCreds = _clients.find(client->Slug()); serverCreds!=_clients.end() ){
 			if( auto cred = serverCreds->second.find(client->Credential); cred!=serverCreds->second.end() && cred->second==client ){
-				DBG( "[{}]Removing client: '{}'.", hex(client->Handle()), client->Target() );
+				DBG( "[{}]Removing client: '{}'.", hex(client->Handle()), client->Slug() );
 				serverCreds->second.erase( cred );
 				erased = true;
 				if( serverCreds->second.empty() )
@@ -52,10 +52,10 @@ namespace Jde::Opc::Gateway{
 
 			}
 			else if( cred!=serverCreds->second.end() )
-				DBG( "[{}] - already replaced by [{}] for '{}' - leaving it.", hex(client->Handle()), hex(cred->second->Handle()), client->Target() );
+				DBG( "[{}] - already replaced by [{}] for '{}' - leaving it.", hex(client->Handle()), hex(cred->second->Handle()), client->Slug() );
 		}
 		if( !erased )
-			DBG( "[{}] - could not find client='{}'.", hex(client->Handle()), client->Target() );
+			DBG( "[{}] - could not find client='{}'.", hex(client->Handle()), client->Slug() );
 		client = nullptr;
 		return erased;
 	}
@@ -77,15 +77,15 @@ namespace Jde::Opc::Gateway{
 	α UAClient::ConnectionCounts()ι->flat_map<ServerCnnctnNK,uint32>{
 		flat_map<ServerCnnctnNK,uint32> y;
 		sl _{ _clientsMutex };
-		for( let& [target, creds] : _clients )
-			y[target] = (uint32)creds.size();
+		for( let& [slug, creds] : _clients )
+			y[slug] = (uint32)creds.size();
 		return y;
 	}
 	α UAClient::StatusCounts()ι->tuple<uint,uint>{
 		vector<sp<UAClient>> clients;
 		{
 			sl _{ _clientsMutex };
-			for( let& [target, creds] : _clients )
+			for( let& [slug, creds] : _clients )
 				for( let& [cred, client] : creds )
 					clients.push_back( client );
 		}
@@ -95,9 +95,9 @@ namespace Jde::Opc::Gateway{
 		return { clients.size(), monitored };
 	}
 	concurrent_flat_map<uint32_t, uint32_t> _handles;
-	α createHandle( const ServerCnnctn& target )ι->Jde::Handle{
+	α createHandle( const ServerCnnctn& slug )ι->Jde::Handle{
 		//Handle packs the server id into its top 32 bits, so fold the 64-bit hash rather than truncating it (xor high^low keeps more entropy). A collision only merges two servers' connection-index counters, which are purely for log correlation - benign.
-		uint32_t serverHash = target.Id ? target.Id : []( size_t h )ι{ return (uint32_t)h ^ (uint32_t)(h>>32); }( std::hash<string>{}(target.Url) );
+		uint32_t serverHash = slug.Id ? slug.Id : []( size_t h )ι{ return (uint32_t)h ^ (uint32_t)(h>>32); }( std::hash<string>{}(slug.Url) );
 		uint32_t connectionIndex{};
 		auto increment = [&connectionIndex]( auto& last ){ connectionIndex = ++last.second; };
 		_handles.try_emplace_and_visit( serverHash, 0, increment, increment );
@@ -119,7 +119,7 @@ namespace Jde::Opc::Gateway{
 		try{
 			//Configuration() must run BEFORE setDefault: it installs the custom security policies (and asserts securityPoliciesSize==0 first). setDefault then only back-fills fields left unset — its own None-policy install is guarded by securityPoliciesSize==0, so it won't clobber ours (open62541 ua_config_default.c). Reversing the order would trip Configuration()'s assert and leak the default policy.
 			let sc = UA_ClientConfig_setDefault( Configuration() ); THROW_IFX( sc, UAClientException(sc, Handle()) );
-			INFO( "[{}]Creating UAClient target: '{}' url: '{}' credential: '{}' )", hex(Handle()), Target(), Url(), Credential.ToString() );
+			INFO( "[{}]Creating UAClient slug: '{}' url: '{}' credential: '{}' )", hex(Handle()), Slug(), Url(), Credential.ToString() );
 			LogClientEndpoints();
 		}
 		catch( ... ){
@@ -150,24 +150,24 @@ namespace Jde::Opc::Gateway{
 	}
 
 	//for soak
-	α UAClient::CryptoSettings( const ServerCnnctnNK& target, sv certificateUri )ι->Crypto::CryptoSettings{
-		auto settings = Settings::FindDefaultObject( "/gateway/issuedCerts" );//a copy - the SAN below is per-target.
+	α UAClient::CryptoSettings( const ServerCnnctnNK& slug, sv certificateUri )ι->Crypto::CryptoSettings{
+		auto settings = Settings::FindDefaultObject( "/gateway/issuedCerts" );//a copy - the SAN below is per-slug.
 		if( certificateUri.size() ){
 			//the client cert's SAN uri is what a server matches against the applicationUri we advertise (Configuration()
-			//sets both from the target's certificateUri), so it cannot come from a single config-wide constant.
+			//sets both from the slug's certificateUri), so it cannot come from a single config-wide constant.
 			auto certificate = Json::FindDefaultObject( settings, "certificate" );
 			certificate["subjectAltName"] = Ƒ( "URI:{}", Str::Replace(string{certificateUri}, " ", "%20") );
 			settings["certificate"] = move( certificate );
 		}
-		return Crypto::CryptoSettings{ settings, target };
+		return Crypto::CryptoSettings{ settings, slug };
 	}
 
-	//the file name keys on the target but the SAN on the certificateUri, so an existing file is not proof it is the
+	//the file name keys on the slug but the SAN on the certificateUri, so an existing file is not proof it is the
 	//cert this config describes; a changed uri would otherwise be rejected as BadCertificateUriInvalid forever with
 	//nothing naming the file to delete.  ReissueReason compares only the SAN entry types that round-trip byte-for-byte
 	//through the der ctor (URI among them; otherName is excluded on both sides), so a lossy rendering cannot re-issue in a loop.
-	α UAClient::EnsureCertificate( const ServerCnnctnNK& target, sv uri, SL sl )ε->void{
-		let& settings = CryptoSettings( target, uri );
+	α UAClient::EnsureCertificate( const ServerCnnctnNK& slug, sv uri, SL sl )ε->void{
+		let& settings = CryptoSettings( slug, uri );
 		//the same predicate EnsureKeyCertificate uses for the web certificates - missing, expired or expiring, or the SAN (here the
 		//certificateUri the server matches against our applicationUri) drifted - so the two paths cannot diverge again:  this
 		//one compared the SAN uri alone and let an issued certificate run until the peer rejected it as expired (web-certs3 #17).
@@ -186,7 +186,7 @@ namespace Jde::Opc::Gateway{
 		auto certAuth = Credential.Type()==ETokenType::Certificate;
 		//TODO - test no security also
 		if( addSecurity && !certAuth )
-			EnsureCertificate( Target(), uri );
+			EnsureCertificate( Slug(), uri );
 		auto config = UA_Client_getConfig( _ptr );
 		ServerTrust::Install( *config, "/gateway/verifyServerCertificate", Handle(), Url() );//before setDefault, which would otherwise install AcceptAll;  applies to every endpoint that carries a certificate, secured or not.
 		const uint size = addSecurity ? 2 : 1; ASSERT( !config->securityPoliciesSize );
@@ -313,9 +313,9 @@ namespace Jde::Opc::Gateway{
 					client->LogClientEndpoints();
 					//open62541 reports "No suitable endpoint found" as BadIdentityTokenRejected, so the usual cause - our
 					//configured applicationUri filtering out every endpoint (matchEndpoint) - reads as a credential problem.
-					//Name both uris; the fix is the target's certificateUri, which is what Configuration() puts in the filter.
+					//Name both uris; the fix is the slug's certificateUri, which is what Configuration() puts in the filter.
 					if( let clientUri = client->ApplicationUri(); clientUri.size() && !serverUri.empty() && clientUri!=serverUri ){
-						detail = Ƒ( "client applicationUri '{}' does not match the server's '{}' at '{}' - every endpoint is filtered out; correct the target's certificateUri", clientUri, serverUri, client->Url() );
+						detail = Ƒ( "client applicationUri '{}' does not match the server's '{}' at '{}' - every endpoint is filtered out; correct the slug's certificateUri", clientUri, serverUri, client->Url() );
 						ERR( "[{}]{}", hex(client->Handle()), detail );
 					}
 				}
@@ -326,12 +326,12 @@ namespace Jde::Opc::Gateway{
 
 				client->ClearRequest( ConnectRequestId );//previous clear didn't have client
 				if( sessionState == UA_SESSIONSTATE_ACTIVATED ){
-					ClearConnectError( client->Target() );//a reachable target - whatever the previous attempt failed on no longer applies.
+					ClearConnectError( client->Slug() );//a reachable slug - whatever the previous attempt failed on no longer applies.
 					client->_asyncRequest.RequestDrain();//open62541 fires its namespace-array read right after this callback returns; ProcessingLoop must keep pumping until the reply is serviced (OnServiceBegin).
 					{
 						ul _{ _clientsMutex };
 						client->Connected = true;
-						auto& opcCreds = _clients.try_emplace( client->Target() ).first->second;
+						auto& opcCreds = _clients.try_emplace( client->Slug() ).first->second;
 						let inserted = opcCreds.try_emplace( client->Credential, client ).second;
 						ASSERT( inserted ); // not sure why we would already have a record.
 					}
@@ -341,15 +341,15 @@ namespace Jde::Opc::Gateway{
 				}
 				else{
 					//Remembered for serverConnections{connectionStatus}: the waiting requests get the reason once, the list has no other
-					//way to learn the target is broken.  Named by status where there is no richer detail - the caller's exception
+					//way to learn the slug is broken.  Named by status where there is no richer detail - the caller's exception
 					//carries the code separately, but a stored "Connection Failed" would say nothing about what went wrong.
-					SetConnectError( client->Target(), detail.size() ? detail : string{UAException::Message(connectStatus)} );
+					SetConnectError( client->Slug(), detail.size() ? detail : string{UAException::Message(connectStatus)} );
 					string message{ detail.size() ? move(detail) : string{"Connection Failed"} };
 					client->StopProcessing();// Break the UAClient<->_asyncRequest._client self-reference; on the failure path the client never enters _clients, so Shutdown would never Stop() it and the UAClient (and its UA_Client) would leak.
 					Post(
 						[client,connectStatus,message=move(message)]()ι->void {
 							ConnectAwait::Resume(
-								client->Target(),
+								client->Slug(),
 								client->Credential,
 								UAClientException{connectStatus, client->Handle(), message}
 							);
@@ -493,12 +493,12 @@ namespace Jde::Opc::Gateway{
 	}
 
 	α UAClient::RetryVoid( function<void(sp<UAClient>&&) > f, UAException&& e, sp<UAClient>&& client )ι->ConnectAwait::Task{
-		let target = client->Target();
+		let slug = client->Slug();
 		let credential = client->Credential;
 		RemoveClient( move(client) );
 		if( e.Code()==UA_STATUSCODE_BADCONNECTIONCLOSED || e.Code()==UA_STATUSCODE_BADSERVERNOTCONNECTED ){
 			try{
-				client = co_await GetClient( move(target), move(credential) );
+				client = co_await GetClient( move(slug), move(credential) );
 				f( move(client) );
 			}
 			catch( UAException& retryEx ){
@@ -569,6 +569,6 @@ namespace Jde::Opc::Gateway{
 
 	UAClient::~UAClient() {
 		UA_Client_delete( _ptr );
-		INFO( "[{}]~UAClient( '{}', '{}' )", hex(Handle()), Target(), Url() );
+		INFO( "[{}]~UAClient( '{}', '{}' )", hex(Handle()), Slug(), Url() );
 	}
 }

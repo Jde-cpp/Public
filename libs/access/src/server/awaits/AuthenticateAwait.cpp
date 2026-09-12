@@ -33,11 +33,11 @@ namespace Jde::Access::Server{
 		DB::WhereClause where;
 		where.Add( usersTable.GetColumnPtr("login_name"), _loginName );
 		where.Add( providerFK, _providerId );
-		auto targetColumn = providers.GetColumnPtr("target");
+		auto slugColumn = providers.GetColumnPtr("slug");
 		if( _opcServer.size() )
-			where.Add( targetColumn, _opcServer );
+			where.Add( slugColumn, _opcServer );
 		else
-			where.Add( targetColumn, nullptr );
+			where.Add( slugColumn, nullptr );
 		auto sql = DB::Statement{ move(select), move(from), move(where) }.Move();
 		try{
 			auto params = sql.Params;

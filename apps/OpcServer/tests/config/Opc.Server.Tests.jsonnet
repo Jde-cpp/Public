@@ -23,7 +23,7 @@ local embeddedAppServer = true; //false = run against a live AppServer on localh
 		]
 	},
 	opcServer:{
-		target: "TestServer",
+		slug: "TestServer",
 		resource: "test",
 		description: "Test OPC",
 		port: 4840,

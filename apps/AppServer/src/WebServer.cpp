@@ -68,10 +68,10 @@ namespace Jde::App{
 		EndConnection( connectionPK );
 	}
 
-	α Server::GetJwt( UserPK userPK, string name, string target, string endpoint, SessionPK sessionId, TimePoint expires, string description )ε->Web::Jwt{
+	α Server::GetJwt( UserPK userPK, string name, string slug, string endpoint, SessionPK sessionId, TimePoint expires, string description )ε->Web::Jwt{
 		auto requestHandler = _requestHandler;
 		THROW_IF( !requestHandler, "No request Handler." );
-		return requestHandler->Jwt( userPK, move(name), move(target), move(endpoint), sessionId, expires, move(description) );
+		return requestHandler->Jwt( userPK, move(name), move(slug), move(endpoint), sessionId, expires, move(description) );
 	}
 
 	α Server::StopWebServer( bool terminate, SL sl )ι->void{
@@ -166,8 +166,8 @@ namespace Jde::App::Server{
 		IRequestHandler{ move(settings), Server::AppClient() }
 	{}
 
-	α RequestHandler::Jwt( UserPK userPK, string&& name, string&& target, string&& endpoint, SessionPK sessionId, TimePoint expires, string&& description )ε->Web::Jwt{
-		return Web::Jwt{ AppClient()->PublicKey(), userPK, move(name), move(target), sessionId, move(endpoint), expires, move(description), Settings().Crypto().PrivateKey };
+	α RequestHandler::Jwt( UserPK userPK, string&& name, string&& slug, string&& endpoint, SessionPK sessionId, TimePoint expires, string&& description )ε->Web::Jwt{
+		return Web::Jwt{ AppClient()->PublicKey(), userPK, move(name), move(slug), sessionId, move(endpoint), expires, move(description), Settings().Crypto().PrivateKey };
 	}
 
 

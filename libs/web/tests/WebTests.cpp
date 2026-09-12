@@ -457,18 +457,18 @@ namespace Jde::Web{
 	//message without repeating the policy - and #5 stays honoured: the statement is not part of that detail.
 	TEST( RestExceptionTests, AppDetailReachesBody ){
 		DB::Sql sql; sql.Text = "exec access_user_insert_key ?,?";
-		DB::DBException inner{ DB::EDbError::App, move(sql), "Target 'x' already exists.", {0}, SRCE_CUR };
+		DB::DBException inner{ DB::EDbError::App, move(sql), "Slug 'x' already exists.", {0}, SRCE_CUR };
 		Server::RestException e{ EHttpStatus::Unauthorized, move(inner), Server::HttpRequest{Server::TRequestType{}, tcp::endpoint{}, false, 0}, "Could not get sessionInfo." };
 
 		let body = e.Response().body();
 		EXPECT_TRUE( body.contains("Could not get sessionInfo.") ) << body;
-		EXPECT_TRUE( body.contains("Target 'x' already exists.") ) << body;
+		EXPECT_TRUE( body.contains("Slug 'x' already exists.") ) << body;
 		EXPECT_FALSE( body.contains("access_user_insert_key") ) << body; //#5: the statement is not client text.
 	}
 
 	//engine errors name our schema, so only the proc-raised class is surfaced.
 	TEST( RestExceptionTests, NonAppDetailWithheld ){
-		DB::DBException inner{ DB::EDbError::Duplicate, DB::Sql{}, "UNIQUE constraint failed: access_identities.target", {ELogLevel::NoLog, {}, 2067}, SRCE_CUR };
+		DB::DBException inner{ DB::EDbError::Duplicate, DB::Sql{}, "UNIQUE constraint failed: access_identities.slug", {ELogLevel::NoLog, {}, 2067}, SRCE_CUR };
 		Server::RestException e{ EHttpStatus::Unauthorized, move(inner), Server::HttpRequest{Server::TRequestType{}, tcp::endpoint{}, false, 0}, "Could not get sessionInfo." };
 
 		let body = e.Response().body();
@@ -477,7 +477,7 @@ namespace Jde::Web{
 
 	//the DB classification and http status have to survive the AppServer round trip - the type itself cannot; ServerImpl answers with the reconstructed exception's EHttpStatus().
 	TEST( AppExceptionProtoTests, DbErrorSurvivesRoundTrip ){
-		DB::DBException source{ DB::EDbError::App, DB::Sql{}, "Target 'x' already exists.", {ELogLevel::NoLog, {}, 0}, SRCE_CUR };
+		DB::DBException source{ DB::EDbError::App, DB::Sql{}, "Slug 'x' already exists.", {ELogLevel::NoLog, {}, 0}, SRCE_CUR };
 		let t = App::FromServer::Exception( source, RequestId{1} );
 		auto e = App::ProtoUtils::ToException( Jde::Proto::Exception{t.messages(0).exception()} );
 

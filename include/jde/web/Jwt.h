@@ -10,8 +10,8 @@ namespace Jde::Web{
 		static constexpr time_t MaxAgeWithoutExpiration{ 60*10 };
 		Jwt()ι{ ASSERT(false); }
 		Jwt( sv encoded, SRCE )ε;
-		Jwt( Crypto::PublicKey publicKey, Jde::UserPK userPK, str userName, str userTarget, SessionPK sessionId, str endpoint, TimePoint expires, str description, const struct Crypto::PrivateKeySettings& privateKey, vector<byte> certificate={}, SRCE )ε;
-		Jwt( Crypto::PublicKey publicKey, Jde::UserPK userPK, str userName, str userTarget )ι: PublicKey{move(publicKey)}, UserPK{userPK}, UserName{userName}, UserTarget{userTarget}{}
+		Jwt( Crypto::PublicKey publicKey, Jde::UserPK userPK, str userName, str userSlug, SessionPK sessionId, str endpoint, TimePoint expires, str description, const struct Crypto::PrivateKeySettings& privateKey, vector<byte> certificate={}, SRCE )ε;
+		Jwt( Crypto::PublicKey publicKey, Jde::UserPK userPK, str userName, str userSlug )ι: PublicKey{move(publicKey)}, UserPK{userPK}, UserName{userName}, UserSlug{userSlug}{}
 		α Payload()Ι->string;
 		α Aud()Ε->string{ return Json::AsString( Body, "aud" ); }
 		α Iss()Ι->sv{ return Json::FindDefaultSV( Body, "iss" ); }
@@ -27,7 +27,7 @@ namespace Jde::Web{
 		string SessionId;
 		Jde::UserPK UserPK;
 		string UserName;
-		string UserTarget;
+		string UserSlug;
 		string Description;
 		α SetModulus( str encoded )ι->void;
 		α SetExponent( str encoded )ι->void;

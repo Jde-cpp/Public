@@ -86,12 +86,12 @@ namespace Jde::Access::Tests{
 	//clause sqlite refuses throws inside the fire-and-forget Task rather than in Query()'s synchronous prologue.  With the
 	//catch removed this does not fail, it hangs - hence the deadline.
 	TEST_F( SelectSurfaceTests, AParentFilterSqliteRefusesThrowsRatherThanHangingTheSubTableSelect ){
-		let outcome = queryWithin( R"(roles( target:{regex:"a"} ){ id permissions{ id } })", GetRoot() );
+		let outcome = queryWithin( R"(roles( slug:{regex:"a"} ){ id permissions{ id } })", GetRoot() );
 		ASSERT_TRUE( outcome ) << "the request never came back - SelectSubTables swallowed the throw again (#12)";
 		ASSERT_NE( *outcome, "" ) << "sqlite has no regexp; the sub-table select cannot have succeeded";
 		EXPECT_NE( outcome->find("regex"), string::npos ) << *outcome;
 		//the control: the same shape with an operator sqlite does have still answers, so the guard did not break sub-tables.
-		let control = queryWithin( R"(roles( target:{glob:"*"} ){ id permissions{ id } })", GetRoot() );
+		let control = queryWithin( R"(roles( slug:{glob:"*"} ){ id permissions{ id } })", GetRoot() );
 		ASSERT_TRUE( control );
 		EXPECT_EQ( *control, "" ) << *control;
 	}
@@ -115,8 +115,8 @@ namespace Jde::Access::Tests{
 	TEST_F( SelectSurfaceTests, LimitOffsetAndSkipPageTheResult ){
 		let root = GetRoot();
 		vector<uint32> created;
-		for( let& target : {"review60-page-1","review60-page-2","review60-page-3"} )
-			created.push_back( GetId(GetUser(target, root)) );
+		for( let& slug : {"review60-page-1","review60-page-2","review60-page-3"} )
+			created.push_back( GetId(GetUser(slug, root)) );
 		const string all{ R"(users( loginName:{glob:"review60-page-*"}, orderBy:"loginName")" };
 
 		EXPECT_EQ( names(all+R"( ){ id loginName })"), (vector<string>{"review60-page-1","review60-page-2","review60-page-3"}) );

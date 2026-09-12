@@ -51,8 +51,8 @@ namespace Jde::Opc::Gateway{
 				jobject row;
 				if( connectionQL ){
 					jobject connection;
-					if( connectionQL->FindColumn("target") )
-						connection["target"] = c.Connection;
+					if( connectionQL->FindColumn("slug") )
+						connection["slug"] = c.Connection;
 					row["connection"] = move( connection );
 				}
 				if( _query.FindColumn("type") )
@@ -92,7 +92,7 @@ namespace Jde::Opc::Gateway{
 			auto sessionsQL = _query.ExtractTable( "opcSessions" ); //before the select: SelectAwait derefs every child's DBTable(), and these have none.
 			auto connectionsQL = _query.ExtractTable( "opcConnections" );
 			auto statusQL = _query.ExtractTable( "connectionStatus" );
-			let addedTarget = _query.AddColumn( "target" ); //the join key - both totals are per target.
+			let addedSlug = _query.AddColumn( "slug" ); //the join key - both totals are per slug.
 			_query.ReturnRaw = true;
 			auto rows = co_await QL::QLAwait{ move(_query), UserPK(), _sl }; //UserPK ctor: no IQL, so CustomQuery is not re-entered; SelectAwait still authorizes the read.
 			flat_map<ServerCnnctnNK,uint32> sessionTotals;
@@ -102,19 +102,19 @@ namespace Jde::Opc::Gateway{
 			}
 			let connectionTotals = connectionsQL || statusQL ? UAClient::ConnectionCounts() : flat_map<ServerCnnctnNK,uint32>{};
 			let connectErrors = statusQL ? UAClient::ConnectErrors() : flat_map<ServerCnnctnNK,string>{};
-			auto graft = []( const flat_map<ServerCnnctnNK,uint32>& totals, const QL::TableQL& child, str target )ι->jobject {
+			auto graft = []( const flat_map<ServerCnnctnNK,uint32>& totals, const QL::TableQL& child, str slug )ι->jobject {
 				jobject y;
 				if( child.FindColumn("count") ){
-					let p = totals.find( target );
+					let p = totals.find( slug );
 					y["count"] = p==totals.end() ? 0 : p->second;
 				}
 				return y;
 			};
 			//An open client wins over a remembered failure: the error is only the *last* attempt, and a later one succeeding clears it anyway.
-			auto graftStatus = [&connectionTotals, &connectErrors]( const QL::TableQL& child, str target )ι->jobject {
+			auto graftStatus = [&connectionTotals, &connectErrors]( const QL::TableQL& child, str slug )ι->jobject {
 				jobject y;
-				let client = connectionTotals.find( target );
-				let error = connectErrors.find( target );
+				let client = connectionTotals.find( slug );
+				let error = connectErrors.find( slug );
 				if( child.FindColumn("name") )
 					y["name"] = client!=connectionTotals.end() && client->second ? "Connected" : error!=connectErrors.end() ? "Error" : "Idle";
 				if( child.FindColumn("error") ){
@@ -126,15 +126,15 @@ namespace Jde::Opc::Gateway{
 				return y;
 			};
 			Json::Visit( rows, [&]( jobject& o ){
-				let target = Json::AsString( o, "target" );
-				if( addedTarget )
-					o.erase( "target" );
+				let slug = Json::AsString( o, "slug" );
+				if( addedSlug )
+					o.erase( "slug" );
 				if( sessionsQL )
-					o["opcSessions"] = graft( sessionTotals, *sessionsQL, target );
+					o["opcSessions"] = graft( sessionTotals, *sessionsQL, slug );
 				if( connectionsQL )
-					o["opcConnections"] = graft( connectionTotals, *connectionsQL, target );
+					o["opcConnections"] = graft( connectionTotals, *connectionsQL, slug );
 				if( statusQL )
-					o["connectionStatus"] = graftStatus( *statusQL, target );
+					o["connectionStatus"] = graftStatus( *statusQL, slug );
 			} );
 			Resume( move(rows) );
 		}

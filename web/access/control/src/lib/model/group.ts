@@ -1,4 +1,4 @@
-import { cloneClassArray, Mutation, TargetRow } from "jde-framework";
+import { cloneClassArray, Mutation, SlugRow } from "jde-framework";
 import { Role } from "./role";
 import { Permission } from "./permission";
 import { User } from "./user";
@@ -6,7 +6,7 @@ import { Acl } from "./acl";
 
 export type GroupPK = number;
 
-export class Group extends TargetRow<Group>{
+export class Group extends SlugRow<Group>{
 	constructor( obj:any ){
 		super(Group.typeName, obj);
 		if( obj.acl ){

@@ -21,7 +21,7 @@ namespace Jde::Opc::Gateway{
 		bool IsDefault;
 		string Name;
 		optional<TimePoint> Deleted;
-		ServerCnnctnNK Target;
+		ServerCnnctnNK Slug;
 	};
 
 	struct ServerCnnctnAwait final: TAwait<vector<ServerCnnctn>>{

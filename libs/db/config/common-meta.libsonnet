@@ -43,15 +43,15 @@
 	valuesColumns: { name: types.varchar+{ length: 256, i:10 } },
 	valuesNK: ["name"],
 
-	targetColumns: valuesColumns+{
-		target: types.varchar+{ length: valuesColumns.name.length, i:20 },
+	slugColumns: valuesColumns+{
+		slug: types.varchar+{ length: valuesColumns.name.length, i:20 },
 		attributes: types.uint16+{ nullable: true, i:30 },
 		created: types.dateTime+{ insertable: false, updateable: false, default: sqlFunctions.now.name, i:40 },
 		updated: types.dateTime+{ nullable: true, insertable: false, updateable: false, i:50 },
 		deleted:types.dateTime+{ nullable: true, insertable: false, updateable: false, i:60 },
 		description: types.varchar+{ length: 2048, nullable: true, i:70 }
 	},
-	targetNKs: [self.valuesNK, ["target"]],
+	slugNKs: [self.valuesNK, ["slug"]],
 
 	filter(obj, ignore)::
     std.foldl(

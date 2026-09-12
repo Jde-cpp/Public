@@ -319,7 +319,7 @@ namespace Jde::Opc::Emulator{
 			using enum Access::ERights;
 			constexpr uint plcAccess{ underlying(Read | Update | Subscribe) };
 			client->QuerySync<jvalue>(
-				"createAcl( identity:{id:$userId}, permissionRight:{ allowed:$allowed, denied:0, resource:{schemaName:$schemaName, target:\"nodeIds\"}} )",
+				"createAcl( identity:{id:$userId}, permissionRight:{ allowed:$allowed, denied:0, resource:{schemaName:$schemaName, slug:\"nodeIds\"}} )",
 				{{"userId", client->UserPK().Value}, {"allowed", plcAccess}, {"schemaName", schema}} );
 			INFO( "Granted OPC node access for user {} on '{}' - restart the OpcServer to load it.", client->UserPK().Value, schema );
 		}

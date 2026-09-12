@@ -7,7 +7,7 @@ namespace Jde::Opc::Gateway::Tests{
 	ETokenType Auth::Tokens{};
 	α Auth::SetUp()ε->void{
 		if( !Connection )
-			Connection = GetConnection( OpcServerTarget );
+			Connection = GetConnection( OpcServerSlug );
 		if( empty(Tokens) )
 			Tokens = AvailableUserTokens( Connection->Url );
 		if( empty(Tokens & ETokenType(TokenType)) ){
@@ -15,7 +15,7 @@ namespace Jde::Opc::Gateway::Tests{
 		}
 	}
 	α Auth::TearDownTestSuite()->void{
-		if( auto client = SelectServerCnnctn(OpcServerTarget); client ){
+		if( auto client = SelectServerCnnctn(OpcServerSlug); client ){
 			PurgeServerCnnctn( client->Id );
 			Connection = nullopt;
 		}

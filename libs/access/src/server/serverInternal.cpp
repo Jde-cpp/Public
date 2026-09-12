@@ -135,7 +135,7 @@ namespace Jde::Access{
 			y = mu<Access::Server::AclQLAwait>( move(m), creds.UserPK(), sl );
 		else if( (m.Type==Add || m.Type==Remove) && m.TableName()=="roles" )
 			y = mu<Access::Server::RoleMAwait>( move(m), creds.UserPK(), sl );
-		else if( m.TableName()=="profiles" )//all types - stock UpdateAwait would fall back to an unscoped `target=` where clause.
+		else if( m.TableName()=="profiles" )//all types - stock UpdateAwait keys on id/name/slug, none of which profiles has - url is scoped to the executer here.
 			y = mu<Access::Server::ProfileAwait>( move(m), creds.UserPK(), sl );
 		return y;
 	}

@@ -11,8 +11,8 @@
 namespace Jde::Opc::Gateway{
 	α ProviderAwait::Execute()ι->TAwait<jobject>::Task{
 		try{
-			constexpr auto q = "provider(name:$opcTarget){ id }";
-			jobject vars{ {"opcTarget", _opcId} };
+			constexpr auto q = "provider(name:$opcSlug){ id }";
+			jobject vars{ {"opcSlug", _opcId} };
 			let j = co_await *AppClient()->Query( q, move(vars) );
 			let providerId = Json::FindNumber<Access::ProviderPK>( j, "id" ).value_or(0);
 			ResumeScaler( providerId );
@@ -27,16 +27,16 @@ namespace Jde::Opc::Gateway{
 			auto server = co_await ServerCnnctnAwait{ opcPK, true };
 			THROW_IF( server.empty(), "[{}]Could not find OpcServer", opcPK );
 			if( _insert )
-				Insert( move(server.front().Target) );
+				Insert( move(server.front().Slug) );
 			else
-				Purge( move(server.front().Target) );
+				Purge( move(server.front().Slug) );
 		}
 		catch( runtime_error& e ){
 			ResumeExp( move(e) );
 		}
 	}
-	α ProviderMAwait::Insert( str target )ι->TAwait<jobject>::Task{
-		let q = Ƒ( "createProvider( target:\"{}\", providerType:\"OpcServer\" ){{id}}", target );
+	α ProviderMAwait::Insert( str slug )ι->TAwait<jobject>::Task{
+		let q = Ƒ( "createProvider( slug:\"{}\", providerType:\"OpcServer\" ){{id}}", slug );
 		try{
 			auto appClient = AppClient();
 			let j = co_await *appClient->QLServer()->QueryObject( q, {}, appClient->UserPK() );
@@ -48,9 +48,9 @@ namespace Jde::Opc::Gateway{
 		}
 	}
 
-	α ProviderMAwait::Purge( str target )ι->ProviderAwait::Task{
+	α ProviderMAwait::Purge( str slug )ι->ProviderAwait::Task{
 		try{
-			let providerPK = co_await ProviderAwait{ target };
+			let providerPK = co_await ProviderAwait{ slug };
 			if( !providerPK )
 				ResumeScaler( providerPK );
 			else

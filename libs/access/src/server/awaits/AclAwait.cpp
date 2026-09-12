@@ -108,14 +108,14 @@ namespace Jde::Access::Server{
 				auto criteria = Json::FindString( resource, "criteria" );
 				auto dbCriteria = criteria ? DB::Value{move(*criteria)} : DB::Value{nullptr};
 				auto resPK = co_await DS().ScalerOpt<ResourcePK>({
-					Ƒ( "select resource_id from {} where schema_name=? and target=? and coalesce(criteria, '')=coalesce(?, '')", GetTable("resources").DBName ),
+					Ƒ( "select resource_id from {} where schema_name=? and slug=? and coalesce(criteria, '')=coalesce(?, '')", GetTable("resources").DBName ),
 					{ DB::Value{Json::AsString(resource, "schemaName")}, DB::Value::FromKey(key.NK()), dbCriteria }
 				});
 				if( resPK ){
 					key = *resPK;
 					_mutation.Args.at("permissionRight").at("resource").as_object()["id"] = key.PK(); //for subscriptions
 				}else
-					THROW( "Resource not found for target '{}' schema '{}'", key.NK(), Json::AsString(resource, "schemaName") );//TODO implement TestAdmin for this
+					THROW( "Resource not found for slug '{}' schema '{}'", key.NK(), Json::AsString(resource, "schemaName") );//TODO implement TestAdmin for this
 			}
 			InsertPermission( allowed, denied, key.PK() );
 		}

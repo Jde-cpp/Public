@@ -24,19 +24,19 @@ namespace Jde::Opc::Gateway{
 			*m.mutable_query() = App::ProtoUtils::ToQuery( move(query), move(variables), returnRaw );
 		});
 	}
-	α FromClientUtils::Subscription( ServerCnnctnNK&& target, const vector<NodeId>& nodes, RequestId requestId )ι->string{
+	α FromClientUtils::Subscription( ServerCnnctnNK&& slug, const vector<NodeId>& nodes, RequestId requestId )ι->string{
 		return setMessage( requestId, [&](FromClient::Message& m){
 			auto& s = *m.mutable_subscribe();
-			s.set_opc_id( move(target) );
+			s.set_opc_id( move(slug) );
 			for( let& n : nodes )
 				*s.add_nodes() = ProtoUtils::ToNodeId( n );
 		});
 	}
 
-	α FromClientUtils::Unsubscription( ServerCnnctnNK&& target, const vector<NodeId>& nodes, RequestId requestId )ι->string{
+	α FromClientUtils::Unsubscription( ServerCnnctnNK&& slug, const vector<NodeId>& nodes, RequestId requestId )ι->string{
 		return setMessage( requestId, [&](FromClient::Message& m){
 			auto& u = *m.mutable_unsubscribe();
-			u.set_opc_id( move(target) );
+			u.set_opc_id( move(slug) );
 			for( let& n : nodes )
 				*u.add_nodes() = ProtoUtils::ToNodeId( n );
 		});

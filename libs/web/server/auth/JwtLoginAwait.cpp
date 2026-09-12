@@ -12,7 +12,7 @@ namespace Jde::Web::Server{
 					userPK = co_await GoogleLoginAwait( move(_jwt) );
 				else{
 					Crypto::Verify( _jwt.PublicKey, _jwt.HeaderBodyEncoded, _jwt.Signature );
-					userPK = co_await Access::Server::LoginAwait( move(_jwt.PublicKey), move(_jwt.Certificate), move(_jwt.Description), {} );//name/target derive from the certificate at enrollment.
+					userPK = co_await Access::Server::LoginAwait( move(_jwt.PublicKey), move(_jwt.Certificate), move(_jwt.Description), {} );//name/slug derive from the certificate at enrollment.
 				}
 				ResumeScaler( userPK );
 			}

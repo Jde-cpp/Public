@@ -8,13 +8,13 @@ if( typeof globalThis.localStorage=="undefined" ){
 	};
 }
 import { vi } from 'vitest';
-import { DetailRoute, SnackbarService, TargetNotFoundError } from 'jde-framework';
+import { DetailRoute, SnackbarService, SlugNotFoundError } from 'jde-framework';
 import { Gateway } from '../gateway-service';
 import { OpcStore } from '../opc-store';
 import { ClientResolver } from './client-resolver';
 
 //review3 L14: ClientResolver.load drifted from DetailResolver.load - it never got the null guard.  The server answers
-//{"data":{"serverConnection":null}} for a target it does not have, and the null then TypeError'd on obj["id"] in the
+//{"data":{"serverConnection":null}} for a slug it does not have, and the null then TypeError'd on obj["id"] in the
 //subQueries loop, so a missing row and a malformed query arrived at the catch as the same throw.
 describe( 'ClientResolver.load', ()=>{
 	const routing = new DetailRoute( 'plc1', undefined, [], <any>{path:'.', title:'gw'} );
@@ -23,25 +23,25 @@ describe( 'ClientResolver.load', ()=>{
 
 	const gateway = ( querySingle:()=>Promise<any> )=>(<unknown>{
 		schemaWithEnums: async ()=>({collectionName:'serverConnections', type:'ServerConnection'}),
-		targetQuery: ()=>'serverConnection(...)',
+		slugQuery: ()=>'serverConnection(...)',
 		subQueries: ()=>['opcSessions{count}'],
 		querySingle,
 		query: async ()=>({opcSessions: []})
 	}) as Gateway;
 
-	it( 'throws TargetNotFoundError for a row the server does not have', async ()=>{
+	it( 'throws SlugNotFoundError for a row the server does not have', async ()=>{
 		const ql = gateway( async ()=>null );
-		await expect( ClientResolver.load(ql, opcStore, 'plc1', routing, snackbar) ).rejects.toBeInstanceOf( TargetNotFoundError );
+		await expect( ClientResolver.load(ql, opcStore, 'plc1', routing, snackbar) ).rejects.toBeInstanceOf( SlugNotFoundError );
 	} );
 
 	it( 'lets a real query failure through as itself', async ()=>{
 		const ql = gateway( async ()=>{ throw new Error("(500)malformed query"); } );
-		//the point of the guard: this must NOT be reported as "target not found"
-		await expect( ClientResolver.load(ql, opcStore, 'plc1', routing, snackbar) ).rejects.not.toBeInstanceOf( TargetNotFoundError );
+		//the point of the guard: this must NOT be reported as "slug not found"
+		await expect( ClientResolver.load(ql, opcStore, 'plc1', routing, snackbar) ).rejects.not.toBeInstanceOf( SlugNotFoundError );
 	} );
 
 	it( 'still resolves a row that exists', async ()=>{
-		const ql = gateway( async ()=>({id: 4, target: 'plc1'}) );
+		const ql = gateway( async ()=>({id: 4, slug: 'plc1'}) );
 		const data = await ClientResolver.load( ql, opcStore, 'plc1', routing, snackbar );
 		expect( data.row.id ).toBe( 4 );
 		expect( data.row.opcSessions ).toEqual( [] );
@@ -63,9 +63,9 @@ describe( 'ClientResolver.load delegation', ()=>{
 
 	const spyGateway = ( calls:any[] )=>(<unknown>{
 		schemaWithEnums: async ()=>({collectionName:'serverConnections', type:'ServerConnection'}),
-		targetQuery: ( _s:any, target:string )=>`serverConnection(target:"${target}")`,
+		slugQuery: ( _s:any, slug:string )=>`serverConnection(slug:"${slug}")`,
 		subQueries: ()=>[],
-		querySingle: async ( ql:string, vars:any )=>{ calls.push({ql, vars}); return {id: 4, target:'plc1'}; },
+		querySingle: async ( ql:string, vars:any )=>{ calls.push({ql, vars}); return {id: 4, slug:'plc1'}; },
 		query: async ()=>({})
 	}) as Gateway;
 

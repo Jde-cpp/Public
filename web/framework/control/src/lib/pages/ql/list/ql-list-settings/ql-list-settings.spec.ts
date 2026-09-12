@@ -15,7 +15,7 @@ import { QLListSettings } from './ql-list-settings';
 const schema = new TableSchema( { name: "User", fields: [
 	{ name: "id", type: { kind: "NON_NULL", name: null, ofType: { kind: "SCALAR", name: "ID" } } },
 	{ name: "name", type: { kind: "NON_NULL", name: null, ofType: { kind: "SCALAR", name: "String" } } },
-	{ name: "target", type: { kind: "SCALAR", name: "String" } },
+	{ name: "slug", type: { kind: "SCALAR", name: "String" } },
 	{ name: "deleted", type: { kind: "SCALAR", name: "DateTime" } }
 ] } );
 

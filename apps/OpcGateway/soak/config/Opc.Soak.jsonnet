@@ -51,14 +51,14 @@ local gatewayProduct = "OpcGateway"; //must match the gateway process's ProductN
 		quietPeriod: "PT10M",
 		servers: [
 			{
-				target: "OpcSoak", name: "Soak test server", description: "Soak test connection",
+				slug: "OpcSoak", name: "Soak test server", description: "Soak test connection",
 				certificateUri: "urn:open62541.server.application",
 				url: "opc.tcp://127.0.0.1:4840",
 				nodes: [ { ns: 4, id: 6017 } ] //writable numeric var from IA examples nodeset - same node SubscribeTests uses.
 			},
 			{
 				flag: "-external", //leg active only when this CLI arg is present.
-				target: "ExternalSoak", name: "External soak server",
+				slug: "ExternalSoak", name: "External soak server",
 				description: "Externally-managed OPC-UA server (not launched/monitored by soak.sh)",
 				certificateUri: "", //set via -externalUri= to the server's application URI (raw; %20-encoded at use) - required for Basic256Sha256; empty falls back to SecurityPolicy None and no client cert.
 				url: "opc.tcp://127.0.0.1:49320",

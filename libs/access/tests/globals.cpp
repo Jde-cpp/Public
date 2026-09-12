@@ -28,19 +28,19 @@ namespace Jde::Access{
 
 namespace Tests{
 	α CreateAcl( IdentityPK identityPK, ERights allowed, ERights denied, string resource, UserPK executer )ε->PermissionRightsPK;
-	Ω testUnauthGet( str table, str target, UserPK executer, sv cols, bool includeDeleted )ε->jobject{
-		auto y = Select( table, target, GetRoot(), cols, includeDeleted );
+	Ω testUnauthGet( str table, str slug, UserPK executer, sv cols, bool includeDeleted )ε->jobject{
+		auto y = Select( table, slug, GetRoot(), cols, includeDeleted );
 		if( y.empty() ){
 			try{
-				Create(table, target, executer);
+				Create(table, slug, executer);
 				throw std::runtime_error( "Should not be able to create." );
 			}
 			catch( Exception& e ){
 				e.SetLevel(ELogLevel::NoLog);
 			}
-			Create( table, target, GetRoot() );
-			EXPECT_THROW( Select(table, target, executer, cols, includeDeleted), Exception );
-			y = Select( table, target, GetRoot(), cols, includeDeleted );
+			Create( table, slug, GetRoot() );
+			EXPECT_THROW( Select(table, slug, executer, cols, includeDeleted), Exception );
+			y = Select( table, slug, GetRoot(), cols, includeDeleted );
 		}
 		return y;
 	}
@@ -112,25 +112,25 @@ namespace Tests{
 	}
 
 
-	α Tests::Create( str table, sv target, UserPK executer, str input, SL sl )ε->uint{
-		let create = Ƒ( "create{0}(  target:'{1}', name:'{1} - name', description:'{1} - description' {2} ){{id}}", Capitalize(table), target, input.size() ? ","s+input : "" );
+	α Tests::Create( str table, sv slug, UserPK executer, str input, SL sl )ε->uint{
+		let create = Ƒ( "create{0}(  slug:'{1}', name:'{1} - name', description:'{1} - description' {2} ){{id}}", Capitalize(table), slug, input.size() ? ","s+input : "" );
 		let createJson = QL().QuerySync( Str::Replace(create, '\'', '"'), {}, executer, true, sl );
 		return GetId( createJson );//{"user":{"id":7}}
 	}
 	using Tests::QL;
-	Ω createUser( str target, ProviderPK providerId, UserPK executer )ε->UserPK{
-		jobject vars{ {"target", target}, {"provider",providerId}, {"name", target+" - name "}, {"description", target+" - desc"} };
-		let q = "createUser(  loginName:$target, target:$target, providerId:$provider, name:$name, description:$description ){{id}}";
+	Ω createUser( str slug, ProviderPK providerId, UserPK executer )ε->UserPK{
+		jobject vars{ {"slug", slug}, {"provider",providerId}, {"name", slug+" - name "}, {"description", slug+" - desc"} };
+		let q = "createUser(  loginName:$slug, slug:$slug, providerId:$provider, name:$name, description:$description ){{id}}";
 		let createJson = QL().QuerySync( q, vars, executer );
 		return { Tests::GetId(createJson) };//{"user":{"id":7}}}
 	}
-	α createGroup( str target, UserPK executer )ε->GroupPK{
-		let create = Ƒ( "mutation createGroup(  target:'{0}', name:'{0} - name', description:'{0} - description' ){{id}}", target );
+	α createGroup( str slug, UserPK executer )ε->GroupPK{
+		let create = Ƒ( "mutation createGroup(  slug:'{0}', name:'{0} - name', description:'{0} - description' ){{id}}", slug );
 		let createJson = QL().QuerySync( Str::Replace(create, '\'', '"'), {}, executer );
 		return {AsNumber<GroupPK::Type>( createJson, "id")};
 	}
 	α columns( sv cols, bool includeDeleted )ε->string{
-		return Ƒ( "id name attributes created updated target description {} {}", cols, includeDeleted ? "deleted" : "" );
+		return Ƒ( "id name attributes created updated slug description {} {}", cols, includeDeleted ? "deleted" : "" );
 	}
 	Ω select( sv table, str filter, str cols, UserPK executer, SRCE )ε->jobject{
 		let ql = Ƒ( "{}({}){{ {} }}", table, filter, cols );
@@ -141,12 +141,12 @@ namespace Tests{
 		return select( DB::Names::ToSingular(table), Ƒ("id:{} ", id), columns(cols, includeDeleted), executer, sl );
 	}
 
-	α Tests::Select( sv table, str target, UserPK executer, sv cols, bool includeDeleted, SL sl )ε->jobject{
-		return select( DB::Names::ToSingular(table), Ƒ("target:\"{}\" ", target), columns(cols, includeDeleted), executer, sl );
+	α Tests::Select( sv table, str slug, UserPK executer, sv cols, bool includeDeleted, SL sl )ε->jobject{
+		return select( DB::Names::ToSingular(table), Ƒ("slug:\"{}\" ", slug), columns(cols, includeDeleted), executer, sl );
 	}
 
-	α Tests::SelectGroup( str target, UserPK executer, bool includeDeleted )ε->jobject{
-		let ql = Ƒ( "group(target:\"{}\"){{ id name attributes created updated target description {} groupMembers{{id name}} }}", target, includeDeleted ? "deleted" : "" );
+	α Tests::SelectGroup( str slug, UserPK executer, bool includeDeleted )ε->jobject{
+		let ql = Ƒ( "group(slug:\"{}\"){{ id name attributes created updated slug description {} groupMembers{{id name}} }}", slug, includeDeleted ? "deleted" : "" );
 		return QL().QuerySync( ql, {}, executer );
 	}
 	α Tests::SelectPermission( ResourcePK resourcePK, UserPK executer )ε->jobject{
@@ -154,26 +154,26 @@ namespace Tests{
 		return QL().QuerySync( ql, {}, executer );
 	}
 
-	α Tests::SelectResource( str target, UserPK executer, bool includeDeleted, SL sl )ε->jobject{
-		let ql = Ƒ( "resource( schemaName:\"access\", target:\"{}\", criteria:null ){{ id schemaName allowed name attributes created {} updated target description }}", target, includeDeleted ? "deleted" : "" );
+	α Tests::SelectResource( str slug, UserPK executer, bool includeDeleted, SL sl )ε->jobject{
+		let ql = Ƒ( "resource( schemaName:\"access\", slug:\"{}\", criteria:null ){{ id schemaName allowed name attributes created {} updated slug description }}", slug, includeDeleted ? "deleted" : "" );
 		return QL().QuerySync( ql, {}, executer, true, sl );
 	}
-	α Tests::SelectUser( str target, UserPK executer, optional<ProviderPK> provider, bool includeDeleted )->jobject{
-		jobject vars{ {"target", target} };
+	α Tests::SelectUser( str slug, UserPK executer, optional<ProviderPK> provider, bool includeDeleted )->jobject{
+		jobject vars{ {"slug", slug} };
 		string providerQL;
 		if( provider ){
 			vars["provider"] = *provider;
 			providerQL = ", provider_id:$provider";
 		}
-		auto selectAll = Ƒ( "user(target:$target {}){{ id name attributes created updated target description provider {} }}", move(providerQL), includeDeleted ? "deleted" : "" );
+		auto selectAll = Ƒ( "user(slug:$slug {}){{ id name attributes created updated slug description provider {} }}", move(providerQL), includeDeleted ? "deleted" : "" );
 		return QL().QuerySync( move(selectAll), vars, executer );
 	}
 
-	α Tests::Get( str table, str target, UserPK executer, sv cols, bool includeDeleted )ε->jobject{
-		auto y = Select( table, target, executer, cols, includeDeleted );
+	α Tests::Get( str table, str slug, UserPK executer, sv cols, bool includeDeleted )ε->jobject{
+		auto y = Select( table, slug, executer, cols, includeDeleted );
 		if( y.empty() ){
-			Create( table, target, executer );
-			y = Select( table, target, executer, cols, includeDeleted );
+			Create( table, slug, executer );
+			y = Select( table, slug, executer, cols, includeDeleted );
 		}
 		return y;
 	}
@@ -187,29 +187,29 @@ namespace Tests{
 			_root = createUser( "root", (ProviderPK)EProviderType::Google, {UserPK::System} );
 			let resourcePermissions = BlockAwait<ResourceLoadAwait,ResourcePermissions>( ResourceLoadAwait(_localQL, {GetTable("acl")->Schema}, {}, {UserPK::System}) );
 			for( let& [pk,resource] : resourcePermissions.Resources )
-				CreateAcl( *_root, ERights::All, ERights::None, resource.Target, {UserPK::System} );
+				CreateAcl( *_root, ERights::All, ERights::None, resource.Slug, {UserPK::System} );
 		}
 		else
 			_root = UserPK{ GetId(root) };
 		return *_root;
 	}
 
-	α Tests::GetUser( str target, UserPK executer, bool includeDeleted, ProviderPK provider )ε->jobject{
+	α Tests::GetUser( str slug, UserPK executer, bool includeDeleted, ProviderPK provider )ε->jobject{
 		if( executer==UserPK{0} )
 			executer = GetRoot();
-		auto user = SelectUser( target, executer, provider, includeDeleted );
+		auto user = SelectUser( slug, executer, provider, includeDeleted );
 		if( user.empty() ){
-			createUser( target, provider, executer );
-			user = SelectUser( target, executer, provider, includeDeleted );
+			createUser( slug, provider, executer );
+			user = SelectUser( slug, executer, provider, includeDeleted );
 		}
 		return user;
 	}
-	α Tests::GetGroup( str target, UserPK executer )ε->jobject{
-		auto y = SelectGroup( target, executer, true );
+	α Tests::GetGroup( str slug, UserPK executer )ε->jobject{
+		auto y = SelectGroup( slug, executer, true );
 		TRACE( "{}", serialize(y) );
 		if( y.empty() ){
-			createGroup( target, executer );
-			y = SelectGroup( target, executer, false );
+			createGroup( slug, executer );
+			y = SelectGroup( slug, executer, false );
 		}
 		return y;
 	}
@@ -263,8 +263,8 @@ namespace Tests{
 }
 
 namespace Jde::Access{
-	α Tests::TestCrud( str table, str target, UserPK executer )ε->uint{
-		let row = Get( table, target, executer, {}, true );
+	α Tests::TestCrud( str table, str slug, UserPK executer )ε->uint{
+		let row = Get( table, slug, executer, {}, true );
 		let id = GetId( row );
 		testUpdateName( table, id, executer, "newName" );
 		testDeleteRestore( table, id, executer );
@@ -275,8 +275,8 @@ namespace Jde::Access{
  		ASSERT_TRUE( Select(table, id, executer, {}, true).empty() );
 	}
 
-	α Tests::TestUnauthCrud( str table, str target, UserPK executer )ε->uint{
-		let row = testUnauthGet( table, target, executer, {}, true );
+	α Tests::TestUnauthCrud( str table, str slug, UserPK executer )ε->uint{
+		let row = testUnauthGet( table, slug, executer, {}, true );
 		let id = GetId( row );
 		TestUnauthUpdateName( table, id, executer, "newName" );
 		TestUnauthDeleteRestore( table, id, executer );

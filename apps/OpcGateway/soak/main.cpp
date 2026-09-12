@@ -27,14 +27,14 @@ namespace Jde::Opc::Gateway::Soak{
 	Ω createGatewayCerts()ε->void{
 		for( let& leg : ActiveServers() ){
 			if( leg.CertificateUri.empty() ){//no uri -> the gateway connects with SecurityPolicy None and never presents a cert.
-				INFO( "No certificateUri for '{}' - skipping certificate.", leg.Target );
+				INFO( "No certificateUri for '{}' - skipping certificate.", leg.Slug );
 				continue;
 			}
-			UAClient::EnsureCertificate( leg.Target, leg.CertificateUri );
-			let certificateFile = UAClient::CryptoSettings( leg.Target, leg.CertificateUri ).Certificate.Path;
+			UAClient::EnsureCertificate( leg.Slug, leg.CertificateUri );
+			let certificateFile = UAClient::CryptoSettings( leg.Slug, leg.CertificateUri ).Certificate.Path;
 			INFO( "Gateway certificate ready: {}.", certificateFile.string() );
 			if( leg.User.size() )
-				INFO( "External server '{}': trust {} in its server configuration before the run.", leg.Target, certificateFile.string() );
+				INFO( "External server '{}': trust {} in its server configuration before the run.", leg.Slug, certificateFile.string() );
 		}
 	}
 }

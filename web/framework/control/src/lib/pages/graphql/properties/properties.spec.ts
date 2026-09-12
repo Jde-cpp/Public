@@ -70,7 +70,7 @@ describe( 'Properties field order', ()=>{
 		{ name: "url", type: {kind: "SCALAR", name: "String"} },
 		{ name: "name", type: {kind: "NON_NULL", ofType: {kind: "SCALAR", name: "String"}} },
 		{ name: "certificateUri", type: {kind: "SCALAR", name: "String"} },
-		{ name: "target", type: {kind: "NON_NULL", ofType: {kind: "SCALAR", name: "String"}} },
+		{ name: "slug", type: {kind: "NON_NULL", ofType: {kind: "SCALAR", name: "String"}} },
 		{ name: "description", type: {kind: "SCALAR", name: "String"} },
 		{ name: "defaultBrowseNs", type: {kind: "SCALAR", name: "Int"} }
 	] } );
@@ -92,11 +92,11 @@ describe( 'Properties field order', ()=>{
 	};
 
 	it( 'defaults to Id, Name, then alphabetical', ()=>{
-		expect( names() ).toEqual( ["target", "name", "certificateUri", "defaultBrowseNs", "description", "url"] );
+		expect( names() ).toEqual( ["slug", "name", "certificateUri", "defaultBrowseNs", "description", "url"] );
 	} );
 
 	it( 'follows the given order and appends the unlisted alphabetically', ()=>{
-		expect( names(["target", "name", "description", "url"]) ).toEqual( ["target", "name", "description", "url", "certificateUri", "defaultBrowseNs"] );
+		expect( names(["slug", "name", "description", "url"]) ).toEqual( ["slug", "name", "description", "url", "certificateUri", "defaultBrowseNs"] );
 	} );
 } );
 
@@ -112,7 +112,7 @@ describe( 'Properties field labels', ()=>{
 		const fixture = TestBed.createComponent( Properties );
 		fixture.componentRef.setInput( 'ctor', Widget );
 		fixture.componentRef.setInput( 'schema', new TableSchema( { name: "Widget", enums: new Map(), fields: [
-			{ name: "target", type: {kind: "NON_NULL", ofType: {kind: "SCALAR", name: "String"}} },
+			{ name: "slug", type: {kind: "NON_NULL", ofType: {kind: "SCALAR", name: "String"}} },
 			{ name: "certificateUri", type: {kind: "SCALAR", name: "String"} },
 			{ name: "url", type: {kind: "SCALAR", name: "String"} }
 		] } ) );
@@ -121,7 +121,7 @@ describe( 'Properties field labels', ()=>{
 		fixture.componentRef.setInput( 'displayNames', {url: "URL"} );
 		fixture.detectChanges();
 		const labels = [...fixture.nativeElement.querySelectorAll('mat-label')].map( (l:Element)=>l.textContent!.trim() );
-		expect( labels ).toEqual( ["Id", "Certificate Uri", "URL"] );
+		expect( labels ).toEqual( ["Slug", "Certificate Uri", "URL"] );
 	} );
 } );
 

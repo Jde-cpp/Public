@@ -61,13 +61,13 @@ namespace Jde::Access::Tests{
 	TEST( ConfigureReloadTests, LoadsRightsOnAnUnenforcedResource ){
 		let root = GetRoot();
 		const UserPK system{ UserPK::System };
-		const string target{ "providerTypes" };//a synced table nothing here grants on but root.
+		const string slug{ "providerTypes" };//a synced table nothing here grants on but root.
 		const UserPK user{ GetId(GetUser("unenforced-grantee", root)) };
-		let resource = SelectResource( target, root, true );
+		let resource = SelectResource( slug, root, true );
 		ASSERT_FALSE( resource.empty() );
 		const ResourcePK resourcePK{ GetId(resource) };
 		let wasActive = resource.at("deleted").is_null();
-		let grant = CreateAcl( user, ERights::Read, ERights::None, target, root );
+		let grant = CreateAcl( user, ERights::Read, ERights::None, slug, root );
 		if( wasActive )
 			Delete( "resources", resourcePK, root );//the shipped state:  every row unenforced.
 
@@ -78,8 +78,8 @@ namespace Jde::Access::Tests{
 		auto listener = ms<Access::AccessListener>( QLPtr() );
 		reload( authorizer, listener );
 		authorizer->UpdateResourceDeleted( resourcePK, "access", {}, true );//what AccessListener applies on restoreResource - the Enforced toggle.
-		EXPECT_EQ( authorizer->Rights("access", target, user), ERights::Read ) << "enforced live against rights that were never loaded";
-		EXPECT_NO_THROW( authorizer->Test("access", target, ERights::Read, user) );
+		EXPECT_EQ( authorizer->Rights("access", slug, user), ERights::Read ) << "enforced live against rights that were never loaded";
+		EXPECT_NO_THROW( authorizer->Test("access", slug, ERights::Read, user) );
 
 		QL::Subscriptions::StopListen( listener );
 		PurgeAcl( user, grant, root );

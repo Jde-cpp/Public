@@ -69,18 +69,18 @@ namespace Jde::DB::Sqlite::Tests{
 
 	//InsertSeq dispatches to the native twin, whose OUT row is the only source of the new pk (see InsertSeqSyncThroughProcTwin).
 	TEST_P( AwaitTests, InsertSeqThroughProcTwinAndDuplicate ){
-		let insert = []( string target ){
+		let insert = []( string slug ){
 			return DB::InsertClause{ "access_identity_insert",
-				vector<Value>{Value{string{"zz_62"}}, Value{}, Value{move(target)}, Value{}, Value{}, Value{false}, Value{}} };
+				vector<Value>{Value{string{"zz_62"}}, Value{}, Value{move(slug)}, Value{}, Value{}, Value{false}, Value{}} };
 		};
-		let seq = [&]( string target ){ return BlockAwait<ScalerAwait<uint>,uint>( _ds->InsertSeq<uint>(insert(move(target))) ); };
+		let seq = [&]( string slug ){ return BlockAwait<ScalerAwait<uint>,uint>( _ds->InsertSeq<uint>(insert(move(slug))) ); };
 
 		let id1 = seq( "zz_62_a" );
 		let id2 = seq( "zz_62_b" );
 		EXPECT_GT( id1, 0u );
 		EXPECT_EQ( id2, id1+1 ); //each call gets its own pk - not the shared rows-affected of 1.
 
-		try{ //the unique natural key on target: a duplicate has to arrive classified, not as a bare Exception.
+		try{ //the unique natural key on slug: a duplicate has to arrive classified, not as a bare Exception.
 			seq( "zz_62_a" );
 			ADD_FAILURE() << "expected a duplicate";
 		}

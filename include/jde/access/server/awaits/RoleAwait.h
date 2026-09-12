@@ -19,8 +19,8 @@ namespace Jde::Access::Server{
 		α Select()ι->QL::QLAwait<>::Task;
 	};
 
-	//addRole/removeRole.  The role by id, or by target - a seed file (libs/access/config/release.roles) names the roles it created
-	//a line earlier and cannot know their pks - and a member role likewise:  role:{id:N} or role:{target:"viewer"}.  Each target
+	//addRole/removeRole.  The role by id, or by slug - a seed file (libs/access/config/release.roles) names the roles it created
+	//a line earlier and cannot know their pks - and a member role likewise:  role:{id:N} or role:{slug:"viewer"}.  Each slug
 	//is a lookup, so the chain is Start → [Resolve] → Add/Remove → [ResolveChildren] → AddMembers/RemoveMembers, state on the
 	//members between hand-offs.
 	struct RoleMAwait final : TAwait<jvalue>{
@@ -28,11 +28,11 @@ namespace Jde::Access::Server{
 		α Suspend()ι->void override{ Start(); }
 	private:
 		α Start()ι->void;
-		α Resolve( string target )ι->DB::ScalerAwaitOpt<RolePK>::Task;
+		α Resolve( string slug )ι->DB::ScalerAwaitOpt<RolePK>::Task;
 		α Dispatch( RolePK rolePK )ι->void;
 		α Add( RolePK rolePK )ι->void;
 		α AddRole( RolePK parentRolePK, const jobject& childRole )ι->void;
-		α ResolveChildren( RolePK parentRolePK, vector<string> targets )ι->DB::ScalerAwaitOpt<RolePK>::Task;
+		α ResolveChildren( RolePK parentRolePK, vector<string> slugs )ι->DB::ScalerAwaitOpt<RolePK>::Task;
 		α AddMembers( RolePK parentRolePK )ι->DB::ExecuteAwait::Task;
 		α AddPermission( RolePK parentRolePK, const jobject& permissionRights )ι->TAwait<PermissionRightsPK>::Task;
 		α Remove( RolePK rolePK )ι->void;

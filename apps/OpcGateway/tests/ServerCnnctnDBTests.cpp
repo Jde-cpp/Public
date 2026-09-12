@@ -28,8 +28,8 @@ namespace Jde::Opc::Gateway::Tests{
 	};
 	uint ServerCnnctnDBTests::OpcProviderId{};
 
-	α GetProviderPK( string target )ε->Access::ProviderPK{
-		return BlockTAwait<Access::ProviderPK>( ProviderAwait{target} );
+	α GetProviderPK( string slug )ε->Access::ProviderPK{
+		return BlockTAwait<Access::ProviderPK>( ProviderAwait{slug} );
 	}
 	α GetOpcServers( optional<DB::Key> key=nullopt, bool includeDeleted=false )->vector<ServerCnnctn>{
 		return BlockAwait<ServerCnnctnAwait,vector<ServerCnnctn>>( ServerCnnctnAwait{key, includeDeleted} );
@@ -37,12 +37,12 @@ namespace Jde::Opc::Gateway::Tests{
 
 	TEST_F( ServerCnnctnDBTests, InsertFailed ){
 		TRACE( "InsertFailed::Started" );
-		let target = OpcServerTarget;
-		auto jInsert = Json::Parse( Ƒ("{{\"target\":\"{}\"}}", target) );
+		let slug = OpcServerSlug;
+		auto jInsert = Json::Parse( Ƒ("{{\"slug\":\"{}\"}}", slug) );
 		QL::MutationQL insert{ "createServerConnection", move(jInsert), {}, nullopt, true, QL().Schemas(), false };
 
-		let existingProviderPK = GetProviderPK( target );
-		let existingServer = SelectServerCnnctn( target );
+		let existingProviderPK = GetProviderPK( slug );
+		let existingServer = SelectServerCnnctn( slug );
 		let existingOpcPK = existingServer ? existingServer->Id : 0;
 		let& table = GetViewPtr( "server_connections" );
 		if( !existingOpcPK && !existingProviderPK ){
@@ -54,31 +54,31 @@ namespace Jde::Opc::Gateway::Tests{
 				DS()->ExecuteSync( {Ƒ("delete from {} where server_connection_id='{}'", table->DBName, existingOpcPK)} ); //InsertFailed checks if failure occurs because exists.
 		}
 		BlockAwait<TAwait<jvalue>,jvalue>( move(*OpcQLHook{}.InsertFailure(insert, {UserPK::System})) );
-		ASSERT_EQ( 0, GetProviderPK(target) );
+		ASSERT_EQ( 0, GetProviderPK(slug) );
 	}
 
 	TEST_F( ServerCnnctnDBTests, PurgeFailed ){
-		let existingServer = SelectServerCnnctn( OpcServerTarget );
+		let existingServer = SelectServerCnnctn( OpcServerSlug );
 		auto opcPK = existingServer ? existingServer->Id : 0;
 		if( !opcPK )
 			opcPK = BlockAwait<CreateServerCnnctnAwait,ServerCnnctnPK>( CreateServerCnnctnAwait{} );
 		Id = opcPK;
-		BlockTAwait<Access::ProviderPK>( ProviderMAwait{OpcServerTarget, false} );//BeforePurge mock.
+		BlockTAwait<Access::ProviderPK>( ProviderMAwait{OpcServerSlug, false} );//BeforePurge mock.
 
 		QL::MutationQL purge{ "purgeServerConnection", { {"id", opcPK} }, {}, nullopt, true, QL().Schemas(), false };
 		BlockAwait<TAwait<jvalue>,jvalue>( move(*OpcQLHook{}.PurgeFailure(purge, {UserPK::System})) );
-		let providerPK = GetProviderPK( OpcServerTarget );
+		let providerPK = GetProviderPK( OpcServerSlug );
 		ASSERT_NE( 0, providerPK );
 		PurgeServerCnnctn();
 	}
 
 	α ServerCnnctnDBTests::CrudImpl()ε->Access::ProviderPK{
-		let existingServer = SelectServerCnnctn( OpcServerTarget );
+		let existingServer = SelectServerCnnctn( OpcServerSlug );
 		let existingOpcPK = existingServer ? existingServer->Id : 0;
 		if( existingOpcPK )
 			PurgeServerCnnctn( existingOpcPK );
 		let createdId = BlockAwait<CreateServerCnnctnAwait,ServerCnnctnPK>( CreateServerCnnctnAwait{} );
-		let selectAll = "serverConnections{ id name attributes created updated deleted target description certificateUri isDefault url opcSessions{ count } }";
+		let selectAll = "serverConnections{ id name attributes created updated deleted slug description certificateUri isDefault url opcSessions{ count } }";
 		let selectAllJson = QL().QuerySync<jarray>( selectAll, {}, {UserPK::System} );
 		TRACET( _tags, "selectAllJson={}", serialize(selectAllJson) );
 		let id = Json::AsNumber<ServerCnnctnPK>( Json::AsObject(selectAllJson[0]), "id" );
@@ -88,11 +88,11 @@ namespace Jde::Opc::Gateway::Tests{
 	}
 
 	α ServerCnnctnDBTests::CrudImpl2( ServerCnnctnPK id )ε->Access::ProviderPK{
-		auto conn = SelectServerCnnctn( OpcServerTarget );
+		auto conn = SelectServerCnnctn( OpcServerSlug );
 		THROW_IF( conn->Id!=id, "id={} readJson={}", id, serialize(conn->ToJson()) );
-		let target = conn->Target;
+		let slug = conn->Slug;
 
-		let providerId = BlockTAwait<Access::ProviderPK>( ProviderAwait{target} );
+		let providerId = BlockTAwait<Access::ProviderPK>( ProviderAwait{slug} );
 		THROW_IF( providerId==0, "providerId==0" );
 
 		let description = "new description";
@@ -102,15 +102,15 @@ namespace Jde::Opc::Gateway::Tests{
 		let updated = SelectServerCnnctn( id );
 		THROW_IF( updated->Description!=description, "description={} updated={}", description, serialize(updated->ToJson()) );
 
-		//target is the connection's identity - the url segment, the key the live UAClient sits under - so the meta marks it
+		//slug is the connection's identity - the url segment, the key the live UAClient sits under - so the meta marks it
 		//updateable:false.  createUpdate skips the column, the statement has nothing to set, and the mutation is refused.
-		let rename = Ƒ( "mutation updateServerConnection( id:{}, target:\"renamed\" ) }}", id );
+		let rename = Ƒ( "mutation updateServerConnection( id:{}, slug:\"renamed\" ) }}", id );
 		bool refused{};
 		try{ QL().QuerySync<jvalue>( rename, {}, {UserPK::System} ); }
 		catch( const std::exception& e ){ refused = true; TRACET( _tags, "rename refused: {}", e.what() ); }
-		THROW_IF( !refused, "a target rename was accepted" );
+		THROW_IF( !refused, "a slug rename was accepted" );
 		let renamed = SelectServerCnnctn( id );
-		THROW_IF( renamed->Target!=target, "target='{}' should still be '{}'", renamed->Target, target );
+		THROW_IF( renamed->Slug!=slug, "slug='{}' should still be '{}'", renamed->Slug, slug );
 
 		let del = Ƒ( "deleteServerConnection(\"id\":{})", id );
 		let deleteJson = QL().QuerySync<jvalue>( del, {}, {UserPK::System} );
@@ -125,7 +125,7 @@ namespace Jde::Opc::Gateway::Tests{
 		BlockAwait<PurgeServerCnnctnAwait,uint>( PurgeServerCnnctnAwait{ id } );
 		let opcServers = GetOpcServers( id, true );
 		THROW_IF( opcServers.size(), "Purge Failed" );
-		return GetProviderPK( OpcServerTarget );
+		return GetProviderPK( OpcServerSlug );
 	}
 
 	TEST_F( ServerCnnctnDBTests, Crud ){

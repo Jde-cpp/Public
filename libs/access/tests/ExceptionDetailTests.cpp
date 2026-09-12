@@ -12,9 +12,9 @@ namespace Jde::Access::Tests{
 	//the write-up's own case: two users with the same natural key.
 	TEST( ExceptionDetailTests, DuplicateInsertKeepsItsDbClassification ){
 		let root = GetRoot();
-		let target = "review28-duplicate";
-		let existing = UserPK{ GetId(GetUser(target, root)) };
-		let m = "mutation createUser( name:\""+string{target}+"\", target:\""+string{target}+"\", providerId:1 )";
+		let slug = "review28-duplicate";
+		let existing = UserPK{ GetId(GetUser(slug, root)) };
+		let m = "mutation createUser( name:\""+string{slug}+"\", slug:\""+string{slug}+"\", providerId:1 )";
 		try{
 			QL().QuerySync<jvalue>( m, {}, root );
 			ADD_FAILURE() << "the duplicate was accepted";

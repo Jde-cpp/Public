@@ -3,7 +3,7 @@
 #include <jde/ql/QLAwait.h>
 
 namespace Jde::Access::Server{
-	//userRights( id: ){ resource{id schemaName target criteria deleted} allowed denied effective sources{ permissionId allowed denied path{id type} } }
+	//userRights( id: ){ resource{id schemaName slug criteria deleted} allowed denied effective sources{ permissionId allowed denied path{id type} } }
 	//One user's rights source by source, from the server's cache (Authorize::UserRights) - so the numbers are the ones Test and
 	//Rights enforce.  A system table (Configure registers the name):  no view, so the shape is fixed and emitted whole as
 	//adminCheck's is - TableQL::TrimColumns cannot keep array children, so the selection set is not applied.  Rights are the

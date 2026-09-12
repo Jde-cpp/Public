@@ -15,13 +15,13 @@ namespace Jde::Access::Tests{
 			let user = Select( "user", identity.Value, GetRoot(), "id loginName", true );
 			return user.empty() || !user.contains("loginName") || user.at("loginName").is_null() ? string{} : string{ user.at("loginName").as_string() };
 		}
-		//the created row is looked up by target rather than read out of the mutation's result: a multi-statement insert
+		//the created row is looked up by slug rather than read out of the mutation's result: a multi-statement insert
 		//answers with one entry per statement, and which one carries the id is not this test's subject.
 		α create( str extraArg )ε->uint{
-			let target = "review24-"+std::to_string( ++_n );
-			let m = "mutation createUser( "+extraArg+"name:\""+target+"\", target:\""+target+"\", loginName:\""+target+"-login\", providerId:1 )";
+			let slug = "review24-"+std::to_string( ++_n );
+			let m = "mutation createUser( "+extraArg+"name:\""+slug+"\", slug:\""+slug+"\", loginName:\""+slug+"-login\", providerId:1 )";
 			QL().QuerySync<jvalue>( m, {}, GetRoot() );
-			let id = GetId( Select("user", target, GetRoot(), "id", true) );
+			let id = GetId( Select("user", slug, GetRoot(), "id", true) );
 			_created.push_back( UserPK{id} );
 			return id;
 		}

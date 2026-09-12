@@ -36,7 +36,7 @@ export class Server extends ServerDesc{
 		this.mode = obj.mode;
 		this.namespaces = obj.namespaces ?? [];
 	}
-	get opcTarget():string{ return this.connection.target; }
+	get opcSlug():string{ return this.connection.slug; }
 	uri( ns:number ):string|undefined{ return this.namespaces.find( (x)=>x.index==ns )?.uri; }
 	connection: ServerCnnctn;
 	policy: string;

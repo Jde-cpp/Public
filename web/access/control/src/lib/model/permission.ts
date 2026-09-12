@@ -70,18 +70,18 @@ export class Permission{
 			}else{
 				verify( !altered.id );
 				//addRole( id:42, allowed:255, denied:0, resource:{id:9} )
-				//The resource PK, as aclMutations sends:  `target` alone cannot name an opc resource - "nodeIds" exists once per
+				//The resource PK, as aclMutations sends:  `slug` alone cannot name an opc resource - "nodeIds" exists once per
 				//opc.<server> schema, and Authorize::GetSchema refuses to guess among them ("Schema not found for resource
-				//target 'nodeIds'").  schemaName+target is the fallback for a row the server has not given a PK.
+				//slug 'nodeIds'").  schemaName+slug is the fallback for a row the server has not given a PK.
 				mutations.push( new Mutation(Role.typeName, rolePK, {permissionRight:{allowed:altered.allowed ?? 0, denied:altered.denied ?? 0, resource:Permission.resourceKey(altered.resource)}}, MutationType.Add) );
 			}
 		}
 		return mutations;
 	}
 	//The unambiguous identity of a resource for a mutation:  its PK when the server has given it one, else the
-	//(schemaName,target) pair the server can look it up by.
+	//(schemaName,slug) pair the server can look it up by.
 	private static resourceKey( resource:Resource ):Record<string,unknown>{
-		return resource.id ? {id:resource.id} : {schemaName:resource.schema, target:resource.target};
+		return resource.id ? {id:resource.id} : {schemaName:resource.schema, slug:resource.slug};
 	}
 	mutation( original:Permission ):Mutation|null{
 		const args:Record<string,unknown> = {};

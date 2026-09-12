@@ -17,10 +17,10 @@ namespace Jde::Opc::Gateway::Tests{
 				_jwt = BlockAwait<Web::Client::ClientSocketAwait<Jde::Web::Jwt>,Web::Jwt>( AppClient()->Jwt() );
 				auto sessionId = *Str::TryTo<SessionPK>(_jwt->SessionId, nullptr, 16);
 				TRACE( "UserPK: {:x}, SessionId: {:x}", _jwt->UserPK.Value, sessionId );
-				auto con = GetConnection( OpcServerTarget );
+				auto con = GetConnection( OpcServerSlug );
 				Credential cred{ _jwt->Payload() }; cred.SetUserPK( _jwt->UserPK );
-				_client = BlockAwait<TAwait<sp<UAClient>>,sp<UAClient>>( ConnectAwait{move(con.Target), cred} );
-				AddSession( sessionId, OpcServerTarget, move(cred) );
+				_client = BlockAwait<TAwait<sp<UAClient>>,sp<UAClient>>( ConnectAwait{move(con.Slug), cred} );
+				AddSession( sessionId, OpcServerSlug, move(cred) );
 			}
 			catch( runtime_error& e ){
 				INFOT( ELogTags::Test, "Failed to connect to gateway: {}", e.what() );
@@ -41,7 +41,7 @@ namespace Jde::Opc::Gateway::Tests{
 
 	TEST_F( BrowseTests, NodeId ){
 		auto query = "node( opc: $opc, path:$path ){ id name parents{id name path} }";
-		jobject variables{ {"opc", OpcServerTarget}, {"path", "4~Examples/4~Stacklights/4~ExampleStacklight/4~Lamp1"} };
+		jobject variables{ {"opc", OpcServerSlug}, {"path", "4~Examples/4~Stacklights/4~ExampleStacklight/4~Lamp1"} };
 		auto ql = QL::Parse( move(query), move(variables), Schemas(), true );
 		auto value = BlockAwait<NodeQLAwait, jvalue>( NodeQLAwait{move(ql.Queries().front()), _client} );
 		TRACE( "value: {}", serialize(value) );
@@ -56,20 +56,20 @@ namespace Jde::Opc::Gateway::Tests{
 	//resource ("ns=4;i=…") with.  The Objects folder itself has an empty path; a node outside its tree (a type) has none.
 	TEST_F( BrowseTests, PathFromId ){
 		constexpr sv path{ "4~Examples/4~Stacklights/4~ExampleStacklight/4~Lamp1" };
-		auto byPath = QL::Parse( "node( opc: $opc, path:$path ){ id parents{ id } }", jobject{{"opc", OpcServerTarget}, {"path", path}}, Schemas(), true );//parents{}: the lamp hangs off a HasComponent, which the plain translate (Organizes only) cannot follow - the parents walk can, as NodeId above relies on.
+		auto byPath = QL::Parse( "node( opc: $opc, path:$path ){ id parents{ id } }", jobject{{"opc", OpcServerSlug}, {"path", path}}, Schemas(), true );//parents{}: the lamp hangs off a HasComponent, which the plain translate (Organizes only) cannot follow - the parents walk can, as NodeId above relies on.
 		let lamp = ExNodeId{ BlockAwait<NodeQLAwait, jvalue>( NodeQLAwait{move(byPath.Queries().front()), _client} ) };
-		auto byId = QL::Parse( "node( opc: $opc, id:$id ){ id name path }", jobject{{"opc", OpcServerTarget}, {"id", NodeId{lamp.nodeId}.ToJson()}}, Schemas(), true );
+		auto byId = QL::Parse( "node( opc: $opc, id:$id ){ id name path }", jobject{{"opc", OpcServerSlug}, {"id", NodeId{lamp.nodeId}.ToJson()}}, Schemas(), true );
 		let value = BlockAwait<NodeQLAwait, jvalue>( NodeQLAwait{move(byId.Queries().front()), _client} );
 		TRACE( "value: {}", serialize(value) );
 		EXPECT_EQ( Json::AsSV(value.as_object(), "path"), path );
 		EXPECT_EQ( Json::AsSV(value.as_object(), "name"), "Lamp1" ) << "the read still answers alongside";
 		EXPECT_TRUE( ExNodeId{value}.Numeric().has_value() );
 
-		auto objects = QL::Parse( "node( opc: $opc, id:$id ){ path }", jobject{{"opc", OpcServerTarget}, {"id", NodeId::ObjectsFolder().ToJson()}}, Schemas(), true );
+		auto objects = QL::Parse( "node( opc: $opc, id:$id ){ path }", jobject{{"opc", OpcServerSlug}, {"id", NodeId::ObjectsFolder().ToJson()}}, Schemas(), true );
 		let objectsValue = BlockAwait<NodeQLAwait, jvalue>( NodeQLAwait{move(objects.Queries().front()), _client} );//locals:  the template comma is one argument too many for the gtest macros
 		EXPECT_EQ( Json::AsSV(objectsValue.as_object(), "path"), "" );
 
-		auto type = QL::Parse( "node( opc: $opc, id:$id ){ path }", jobject{{"opc", OpcServerTarget}, {"id", NodeId{0, UA_NS0ID_BASEOBJECTTYPE}.ToJson()}}, Schemas(), true );
+		auto type = QL::Parse( "node( opc: $opc, id:$id ){ path }", jobject{{"opc", OpcServerSlug}, {"id", NodeId{0, UA_NS0ID_BASEOBJECTTYPE}.ToJson()}}, Schemas(), true );
 		let typeValue = BlockAwait<NodeQLAwait, jvalue>( NodeQLAwait{move(type.Queries().front()), _client} );
 		EXPECT_TRUE( typeValue.as_object().at("path").is_null() ) << "the Types tree has no page";
 	}
@@ -100,24 +100,24 @@ namespace Jde::Opc::Gateway::Tests{
 		ASSERT_EQ( visits, 0u );
 	}
 
-	//RemoveClient erased whatever occupied the (Target,Credential) key without checking it was the client being removed.
+	//RemoveClient erased whatever occupied the (Slug,Credential) key without checking it was the client being removed.
 	//A stale second remove of A - the UAClientException ctor's BadServerNotConnected path feeds them - then evicted the
 	//replacement B that had reconnected under the same key, leaving B connected but unreachable through Find, holding its
 	//monitored items, NodeIndex and EnumTypeCache (review3 #12).
 	TEST( RemoveClientTests, StaleRemoveKeepsTheReplacement ){
 		let jwt = BlockAwait<Web::Client::ClientSocketAwait<Jde::Web::Jwt>,Web::Jwt>( AppClient()->Jwt() );
 		Credential cred{ jwt.Payload() }; cred.SetUserPK( jwt.UserPK );//the only credential this server accepts - anonymous is BadIdentityTokenRejected.
-		auto a = BlockTAwait<sp<UAClient>>( ConnectAwait{string{OpcServerTarget}, cred} );
+		auto a = BlockTAwait<sp<UAClient>>( ConnectAwait{string{OpcServerSlug}, cred} );
 		ASSERT_TRUE( a );
 		ASSERT_TRUE( UAClient::RemoveClient(sp<UAClient>{a}) );
 
-		auto b = BlockTAwait<sp<UAClient>>( ConnectAwait{string{OpcServerTarget}, cred} );
+		auto b = BlockTAwait<sp<UAClient>>( ConnectAwait{string{OpcServerSlug}, cred} );
 		ASSERT_TRUE( b );
 		ASSERT_NE( a, b ) << "expected a fresh client at the same key";
-		ASSERT_EQ( UAClient::Find(OpcServerTarget, cred), b );
+		ASSERT_EQ( UAClient::Find(OpcServerSlug, cred), b );
 
 		UAClient::RemoveClient( sp<UAClient>{a} );//the stale double-remove of the predecessor
-		ASSERT_EQ( UAClient::Find(OpcServerTarget, cred), b ) << "a stale remove of the predecessor evicted the replacement";
+		ASSERT_EQ( UAClient::Find(OpcServerSlug, cred), b ) << "a stale remove of the predecessor evicted the replacement";
 		UAClient::RemoveClient( move(b) );
 	}
 

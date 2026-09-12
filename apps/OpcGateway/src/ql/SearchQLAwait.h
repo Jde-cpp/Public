@@ -4,7 +4,7 @@
 
 namespace Jde::Opc::Gateway{
 	struct UAClient;
-	//search( opc?, text, limit?, refresh? ){ connection{target name} id path name browse{ns name} nodeClass depth } - node names
+	//search( opc?, text, limit?, refresh? ){ connection{slug name} id path name browse{ns name} nodeClass depth } - node names
 	//matched (case-insensitive substring on display and browse name) against the per-connection NodeIndex.
 	//Never connects:  an explicit opc uses the session's live client for that connection (none ⇒ []);  no opc fans out over
 	//every live client whose credential is the one ConnectAwait would hand this session (SessionCredential) - clients other

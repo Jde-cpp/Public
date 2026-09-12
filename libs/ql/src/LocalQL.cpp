@@ -76,10 +76,10 @@ namespace Jde::QL{
 			}
 			auto input = key->IsPK()
 				? "id:"+std::to_string(key->PK())
-				: "target:\""+move(key->NK())+'"';
+				: "slug:\""+move(key->NK())+'"';
 			auto ql = Ƒ( "{}({}){{ id }}", DB::Names::ToSingular(m.JsonTableName), move(input) );
 			if( auto existing = BlockAwait<TAwait<jobject>,jobject>(move(*QueryObject(move(ql), variables, executer))); existing.empty() ){
-				if( auto name = m.Args.contains("name") ? nullptr : m.Args.if_contains("target"); name )
+				if( auto name = m.Args.contains("name") ? nullptr : m.Args.if_contains("slug"); name )
 					m.Args["name"] = Json::AsString( *name );
 				if( auto t = key->IsPK() ? GetTablePtr(m.TableName()) : nullptr; t && t->SequenceColumn() )
 					y.push_back( BlockAny<InsertAwait>({t, move(m), executer, true}) );

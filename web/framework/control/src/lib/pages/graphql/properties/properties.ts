@@ -78,9 +78,9 @@ export class Properties implements OnInit{
 
 	ctor = input.required<new (item: any) => any>();
 	excludedColumns = input<string[]>([]);
-	order = input<string[]>( ["target", "name"] );//field names to show first, in this order; anything unlisted follows alphabetically
+	order = input<string[]>( ["slug", "name"] );//field names to show first, in this order; anything unlisted follows alphabetically
 	displayNames = input<Record<string,string>>( {} );//label overrides by field name, for the ones the camelCase split gets wrong ("Url", "Certificate Uri")
-	readonlyFields = input<string[]>( [] );//shown but not editable - a key the server will not update (client-detail's target on an existing connection)
+	readonlyFields = input<string[]>( [] );//shown but not editable - a key the server will not update (client-detail's slug on an existing connection)
 	isReadonly( field:PropertyField ){ return this.readonlyFields().includes( field.name ); }
 	record = model.required<any>();
 	schema = input.required<TableSchema>();
@@ -103,7 +103,7 @@ class PropertyField{
 	constructor( private field:Field, public options?:Array<EnumValue>, private label?:string )
 	{}
 	get name(){ return this.field.name; }
-	get displayName(){ return this.label ?? (this.field.name=="target" ? "Id" : StringUtils.idToDisplay( this.field.name )); }
+	get displayName(){ return this.label ?? StringUtils.idToDisplay( this.field.name ); }
 	get nullable(){ return this.field.type.kind!=FieldKind.NON_NULL; }
 	get type():InputTypes{
 		let type = InputTypes.None;

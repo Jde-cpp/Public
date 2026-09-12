@@ -3,14 +3,14 @@
 #define let const auto
 
 //Twin of ../mysql/access_role_add.sql - mysql's null-safe `criteria <=> _criteria` becomes sqlite's `criteria is ?`.
-//	params: [0]=_role_id, [1]=_allowed, [2]=_denied, [3]=_resourceTarget, [4]=_schema, [5]=_resourceName, [6]=_criteria;
+//	params: [0]=_role_id, [1]=_allowed, [2]=_denied, [3]=_resourceSlug, [4]=_schema, [5]=_resourceName, [6]=_criteria;
 //	out _permission_id returned as the result row.
 namespace Jde::DB::Sqlite::AccessProcs{
 	α RegisterAccessRoleAdd( IProcs& procs )ι->void{
 		procs.RegisterProc( "access_role_add", [&procs]( sqlite3& db, const vector<Value>& params, RowΛ* onRow, SL sl )->uint{
-			auto resourceId = procs.ScalarUInt( db, "select resource_id from access_resources where target=? and schema_name=coalesce(?, schema_name) and criteria is ?", {params[3], params[4], params[6]}, sl );
+			auto resourceId = procs.ScalarUInt( db, "select resource_id from access_resources where slug=? and schema_name=coalesce(?, schema_name) and criteria is ?", {params[3], params[4], params[6]}, sl );
 			if( !resourceId ){
-				procs.ExecuteStatement( db, "insert into access_resources( target, schema_name, name, criteria ) values( ?, ?, coalesce(?, ?), ? )", {params[3], params[4], params[5], params[3], params[6]}, nullptr, sl );
+				procs.ExecuteStatement( db, "insert into access_resources( slug, schema_name, name, criteria ) values( ?, ?, coalesce(?, ?), ? )", {params[3], params[4], params[5], params[3], params[6]}, nullptr, sl );
 				resourceId = procs.LastInsertRowId( db );
 			}
 			auto permissionId = procs.ScalarUInt( db,

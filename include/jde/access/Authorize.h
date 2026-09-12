@@ -18,20 +18,20 @@ namespace Jde::Access{
 		α Rights( str schemaName, str resourceName, UserPK executer )ι->ERights override;
 		α UserName( UserPK userPK )ι->string override;
 
-		α AddResource( ResourcePK resourcePK, string schema, string resourceTarget, string criteria )ι->void;
+		α AddResource( ResourcePK resourcePK, string schema, string resourceSlug, string criteria )ι->void;
 		//By value:  the protected overload's pointer aliases Resources, a flat_map any concurrent insert reallocates, so nothing may
 		//carry it past the lock (access-review3 #19).  A shared lock, as this reads only.
 		α FindResource( const Resource& resource )Ι->optional<Resource>{ Jde::sl l{Mutex}; auto p = FindResource( resource, l ); return p ? optional<Resource>{*p} : optional<Resource>{}; }
 		α FindActiveResourcePK( string schema, str resourceName, str criteria )ι->optional<ResourcePK>{ Jde::sl _{Mutex}; return FindActiveResourcePK(schema, resourceName, criteria, _); }
-		α GetSchema( str resourceTarget, SL sl )ε->string;
+		α GetSchema( str resourceSlug, SL sl )ε->string;
 
 		α TestAdmin( str resource, UserPK userPK, SRCE )ε->void;
-		//The gate on a role/acl grant for (schema, target, criteria).  Remote - the schema's registered IAdminAcl, the OpcServer,
+		//The gate on a role/acl grant for (schema, slug, criteria).  Remote - the schema's registered IAdminAcl, the OpcServer,
 		//which alone knows which resource governs a node - when one is registered and its registrant still passes TestSchemaAdmin;
 		//else TestAdminLocal, pre-completed (appserver-review3 #13).
 		α TestAdmin( str schema, str resource, str criteria, UserPK userPK, SRCE )ι->up<AnyVoidAwait>;
-		//The flat rule, on this cache alone:  the active (schema,target,criteria) row when there is one - a mapped criteria is its
-		//own resource, root does not inherit down - else the target's criteria-less root row, which an unmapped criteria inherits
+		//The flat rule, on this cache alone:  the active (schema,slug,criteria) row when there is one - a mapped criteria is its
+		//own resource, root does not inherit down - else the slug's criteria-less root row, which an unmapped criteria inherits
 		//as an unmapped node inherits it in OpcAuthorize::UserRights.  Neither active = not enabled, passes as Test does.
 		α TestAdminLocal( str schema, str resource, str criteria, UserPK userPK, SRCE )ε->void;
 		α TestAdmin( ResourcePK resourcePK, UserPK userPK, SRCE )ε->void;
@@ -125,28 +125,28 @@ namespace Jde::Access{
 
 	Ŧ Authorize::FindResource( const Resource& resource, T& l )Ι->const Resource*{
 		auto pk = resource.PK;
-		if( !pk && resource.Schema.size() && resource.Target.size() )
-			pk = FindActiveResourcePK( resource.Schema, resource.Target, resource.Criteria, l ).value_or( 0 );
+		if( !pk && resource.Schema.size() && resource.Slug.size() )
+			pk = FindActiveResourcePK( resource.Schema, resource.Slug, resource.Criteria, l ).value_or( 0 );
 		if( auto p = pk ? Resources.find(pk) : Resources.end(); p!=Resources.end() )
 			return &p->second;
 		//Only a criteria-less request may fall back to the criteria-less row.  Without that guard a *criteria-scoped* lookup
 		//that missed - its row not cached yet, which is the ordinary case for a resource created by the same mutation that
-		//grants on it - resolved to the target's root row instead, and AddRolePermission then wrote the node's rights over
+		//grants on it - resolved to the slug's root row instead, and AddRolePermission then wrote the node's rights over
 		//the root's.  A node-scoped grant silently rewriting the root grant is the opposite of what it says (opcserver-review3
 		//L30, found fixing that test).  Missing now returns null, and AddRolePermission's `new resource` branch caches the
 		//row from the payload, which carries its pk.
-		if( resource.Target.size() && resource.Criteria.empty() ){
+		if( resource.Slug.size() && resource.Criteria.empty() ){
 			for( const auto& [existingPK,existing] : Resources ){
-				if( (resource.Schema.empty() || existing.Schema==resource.Schema) && existing.Target==resource.Target && existing.Criteria.empty() )
+				if( (resource.Schema.empty() || existing.Schema==resource.Schema) && existing.Slug==resource.Slug && existing.Criteria.empty() )
 					return &existing;
 			}
 		}
 		return nullptr;
 	}
-	Ŧ Authorize::FindActiveResourcePK( str schemaName, str resourceTarget, str criteria, T& /*lock*/ )Ι->optional<ResourcePK>{
+	Ŧ Authorize::FindActiveResourcePK( str schemaName, str resourceSlug, str criteria, T& /*lock*/ )Ι->optional<ResourcePK>{
 		if( auto schemaResources = SchemaResources.find(schemaName); schemaResources!=SchemaResources.end() ){
-			if( auto targetResources = schemaResources->second.find(resourceTarget); targetResources!=schemaResources->second.end() ){
-				auto& criteras = targetResources->second;
+			if( auto slugResources = schemaResources->second.find(resourceSlug); slugResources!=schemaResources->second.end() ){
+				auto& criteras = slugResources->second;
 				if( criteras.contains({}) )// if permisions are enabled
 					return Find(criteras, criteria);
 			}

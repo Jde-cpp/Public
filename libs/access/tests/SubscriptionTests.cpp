@@ -35,16 +35,16 @@ namespace Jde::Access::Tests{
 		BlockTAwait<vector<QL::SubscriptionId>>( move(*await) );
 		return y;
 	}
-	Ω listen()ε->sp<TestListener>{ return listenTo( "subscription ResourcesDeleted{ resourcesDeleted(subscriptionId:$id){id target} }" ); }
-	Ω createResource( sv target, sv extraArgs="" )ε->void{
-		let ql = Ƒ( R"(mutation createResource( schemaName:"{0}", name:"{1} - name", target:"{1}", description:"{1} - description"{2} ))", Schema, target, extraArgs );
+	Ω listen()ε->sp<TestListener>{ return listenTo( "subscription ResourcesDeleted{ resourcesDeleted(subscriptionId:$id){id slug} }" ); }
+	Ω createResource( sv slug, sv extraArgs="" )ε->void{
+		let ql = Ƒ( R"(mutation createResource( schemaName:"{0}", name:"{1} - name", slug:"{1}", description:"{1} - description"{2} ))", Schema, slug, extraArgs );
 		QL().QuerySync<jvalue>( ql, {}, GetRoot() );
 	}
-	Ω deleteResource( sv target, sv extraArgs="" )ε->void{
-		QL().QuerySync<jvalue>( Ƒ(R"(mutation deleteResource( target:"{}"{} ))", target, extraArgs), {}, GetRoot() );
+	Ω deleteResource( sv slug, sv extraArgs="" )ε->void{
+		QL().QuerySync<jvalue>( Ƒ(R"(mutation deleteResource( slug:"{}"{} ))", slug, extraArgs), {}, GetRoot() );
 	}
-	Ω resourceIds( sv target )ε->vector<uint32>{
-		let ql = Ƒ( R"(resources( schemaName:"{}", target:"{}" ){{ id target deleted }})", Schema, target );
+	Ω resourceIds( sv slug )ε->vector<uint32>{
+		let ql = Ƒ( R"(resources( schemaName:"{}", slug:"{}" ){{ id slug deleted }})", Schema, slug );
 		vector<uint32> y;
 		for( let& v : QL().QuerySync<jarray>(ql, {}, GetRoot()) )
 			y.push_back( Json::AsNumber<uint32>(Json::AsObject(v), "id") );
@@ -58,29 +58,29 @@ namespace Jde::Access::Tests{
 	//shape findId actually has to survive is spelled literally.  It also used to be `created:null`, which CreateDeleteRestore ands
 	//into the where clause - `created` is server-defaulted, so that deleted 0 rows and #47 now suppresses its notification.
 	TEST( SubscriptionTests, NullArgDoesNotDropTheNotification ){
-		constexpr sv target{ "subNullArg" };
-		createResource( target );
-		let ids = resourceIds( target ); ASSERT_EQ( ids.size(), 1u );
+		constexpr sv slug{ "subNullArg" };
+		createResource( slug );
+		let ids = resourceIds( slug ); ASSERT_EQ( ids.size(), 1u );
 
 		auto listener = listen();
-		deleteResource( target, ", criteria:null" );//criteria is nullable and this row has none, so the delete matches - #47: a
+		deleteResource( slug, ", criteria:null" );//criteria is nullable and this row has none, so the delete matches - #47: a
 		                                              //statement that matches nothing no longer notifies, so the null has to be a real one.
 		QL::Subscriptions::StopListen( listener );
 
 		ASSERT_EQ( listener->Changes.size(), 1u );
 		let& resource = listener->Resource( 0 );
-		EXPECT_EQ( Json::AsSV(resource, "target"), target );
+		EXPECT_EQ( Json::AsSV(resource, "slug"), slug );
 		EXPECT_EQ( Json::AsNumber<uint32>(resource, "id"), ids[0] ); //recovered from the remaining args, the null skipped.
 	}
 
 	//The ordinary shape: the args identify exactly one row.
 	TEST( SubscriptionTests, IdRecoveredFromTheArgs ){
-		constexpr sv target{ "subPlain" };
-		createResource( target );
-		let ids = resourceIds( target ); ASSERT_EQ( ids.size(), 1u );
+		constexpr sv slug{ "subPlain" };
+		createResource( slug );
+		let ids = resourceIds( slug ); ASSERT_EQ( ids.size(), 1u );
 
 		auto listener = listen();
-		deleteResource( target );
+		deleteResource( slug );
 		QL::Subscriptions::StopListen( listener );
 
 		ASSERT_EQ( listener->Changes.size(), 1u );
@@ -116,18 +116,18 @@ namespace Jde::Access::Tests{
 	//An ambiguous lookup used to broadcast whichever row the driver returned last; now the notification goes out without an id
 	//(and logs a warning) rather than naming a row at random.  `criteria` is part of the natural key, so the two rows differ only there.
 	TEST( SubscriptionTests, AmbiguousLookupNotifiesWithoutAnId ){
-		constexpr sv target{ "subAmbiguous" };
-		createResource( target, R"(, criteria:"a")" );
-		createResource( target, R"(, criteria:"b")" );
-		ASSERT_EQ( resourceIds(target).size(), 2u );
+		constexpr sv slug{ "subAmbiguous" };
+		createResource( slug, R"(, criteria:"a")" );
+		createResource( slug, R"(, criteria:"b")" );
+		ASSERT_EQ( resourceIds(slug).size(), 2u );
 
 		auto listener = listen();
-		deleteResource( target ); //by target: both rows match, so the id lookup can't pick one.
+		deleteResource( slug ); //by slug: both rows match, so the id lookup can't pick one.
 		QL::Subscriptions::StopListen( listener );
 
 		ASSERT_EQ( listener->Changes.size(), 1u ); //the notification still went out.
 		EXPECT_FALSE( listener->Resource(0).contains("id") );
-		EXPECT_EQ( Json::AsSV(listener->Resource(0), "target"), target );
+		EXPECT_EQ( Json::AsSV(listener->Resource(0), "slug"), slug );
 	}
 
 	//ql-review3 #43: the resources subscriptions prefixed their schema predicate to the *column* list, where LoadTable turned it
@@ -136,7 +136,7 @@ namespace Jde::Access::Tests{
 	//This is that text, in the shape the await emits it;  the parse itself is the pin, since the guard added with #43 refuses
 	//the old spelling outright (Access.Tests would not have started).
 	TEST( SubscriptionTests, TheSchemaPredicateIsAnArgumentNotAColumn ){
-		let text = R"(subscription ResourcesCreated{ resourcesCreated(subscriptionId:$id, schemaName:$schemas){ id schemaName target criteria deleted } })";
+		let text = R"(subscription ResourcesCreated{ resourcesCreated(subscriptionId:$id, schemaName:$schemas){ id schemaName slug criteria deleted } })";
 		auto subs = QL::ParseSubscriptions( string{text}, jobject{{"id",7717},{"schemas",jarray{Schema}}}, Schemas() );
 		ASSERT_EQ( subs.size(), 1u );
 		let& fields = subs[0].Fields;
@@ -153,7 +153,7 @@ namespace Jde::Access::Tests{
 	}
 	//and the shape it replaced is now refused rather than silently mis-parsed.
 	TEST( SubscriptionTests, ThePredicateInTheColumnListIsRefused ){
-		let text = R"(subscription ResourcesCreated{ resourcesCreated(subscriptionId:$id){ (schemaName:$schemas)id target } })";
+		let text = R"(subscription ResourcesCreated{ resourcesCreated(subscriptionId:$id){ (schemaName:$schemas)id slug } })";
 		try{
 			QL::ParseSubscriptions( string{text}, jobject{{"id",7717},{"schemas",jarray{Schema}}}, Schemas() );
 			ADD_FAILURE() << "the misplaced predicate parsed";
@@ -169,27 +169,27 @@ namespace Jde::Access::Tests{
 	//"User is deleted", until restart, with the db row untouched.  CreateDeleteRestore ands every extra column arg into the
 	//where clause, which is how a delete matches nothing while still looking like one.
 	TEST( SubscriptionTests, AZeroRowDeleteDoesNotNotify ){
-		constexpr sv target{ "subZeroRow" };
-		createResource( target );
-		let ids = resourceIds( target ); ASSERT_EQ( ids.size(), 1u );
+		constexpr sv slug{ "subZeroRow" };
+		createResource( slug );
+		let ids = resourceIds( slug ); ASSERT_EQ( ids.size(), 1u );
 
 		auto listener = listen();
 		//`name`, not `schemaName`:  CreateDeleteRestore looks the extra arg up with Table::FindColumn, which takes the sql name, so
 		//only args whose json and sql spellings coincide ever reach the where clause.  That is the finding's own `name:"nomatch"`.
-		deleteResource( target, ", name:\"nomatch\"" );//matches no row - and is reported as success.
+		deleteResource( slug, ", name:\"nomatch\"" );//matches no row - and is reported as success.
 		QL::Subscriptions::StopListen( listener );
 
 		EXPECT_TRUE( listener->Changes.empty() ) << "a statement that matched nothing was published as an event";
-		EXPECT_EQ( resourceIds(target).size(), 1u ) << "the row really was untouched - that is the point";//soft-deleted rows drop out.
+		EXPECT_EQ( resourceIds(slug).size(), 1u ) << "the row really was untouched - that is the point";//soft-deleted rows drop out.
 	}
 	//the control, on the same row: the delete that does match still notifies.
 	TEST( SubscriptionTests, TheSameDeleteWithoutTheExtraPredicateDoesNotify ){
-		constexpr sv target{ "subZeroRowControl" };
-		createResource( target );
-		ASSERT_EQ( resourceIds(target).size(), 1u );
+		constexpr sv slug{ "subZeroRowControl" };
+		createResource( slug );
+		ASSERT_EQ( resourceIds(slug).size(), 1u );
 
 		auto listener = listen();
-		deleteResource( target );
+		deleteResource( slug );
 		QL::Subscriptions::StopListen( listener );
 		EXPECT_EQ( listener->Changes.size(), 1u );
 	}
@@ -198,24 +198,24 @@ namespace Jde::Access::Tests{
 	//column - so a client that asked for one schema was delivered every schema's events.  End to end here because the values the
 	//predicate is tested against are the mutation's args, which only a real mutation produces.
 	TEST( SubscriptionTests, ASubscriptionsOwnArgsScopeIt ){
-		constexpr sv target{ "subFiltered" };
-		auto match = listenTo( Ƒ(R"(subscription ResourcesCreated{{ resourcesCreated(subscriptionId:$id, schemaName:"{}"){{ id target schemaName }} }})", Schema) );
-		auto miss = listenTo( R"(subscription ResourcesCreated{ resourcesCreated(subscriptionId:$id, schemaName:"nomatch"){ id target schemaName } })" );
+		constexpr sv slug{ "subFiltered" };
+		auto match = listenTo( Ƒ(R"(subscription ResourcesCreated{{ resourcesCreated(subscriptionId:$id, schemaName:"{}"){{ id slug schemaName }} }})", Schema) );
+		auto miss = listenTo( R"(subscription ResourcesCreated{ resourcesCreated(subscriptionId:$id, schemaName:"nomatch"){ id slug schemaName } })" );
 
-		createResource( target );
+		createResource( slug );
 		QL::Subscriptions::StopListen( match );
 		QL::Subscriptions::StopListen( miss );
 
 		ASSERT_EQ( match->Changes.size(), 1u );
-		EXPECT_EQ( Json::AsSV(match->Resource(0), "target"), target );
+		EXPECT_EQ( Json::AsSV(match->Resource(0), "slug"), slug );
 		EXPECT_TRUE( miss->Changes.empty() ) << "the subscriber asked for one schema and was given another's event";
 	}
 
 	//ql-review3 #55: the fan-out delivers without an id on purpose when the lookup was ambiguous or found nothing (ql-review2 #7),
 	//and AccessListener::OnChange read that id with Json::AsNumber, which throws - into the fan-out's catch, which was empty.  So
 	//the real listener in this binary skipped those events and its cache went stale with nothing in the log.  Since access-review3
-	//#22 a resources event without an id is resolved by target instead (IdLessResourceDeleteReachesTheCache below); one naming a
-	//target the cache does not hold is refused by name - the mirror of the unknown-pk case - and an event with neither is the
+	//#22 a resources event without an id is resolved by slug instead (IdLessResourceDeleteReachesTheCache below); one naming a
+	//slug the cache does not hold is refused by name - the mirror of the unknown-pk case - and an event with neither is the
 	//one that says the cache is stale and returns.  Called directly rather than through a mutation, because a throw here is
 	//invisible from the outside - ql swallows it either way, which is the other half (SubscriptionsTests.AThrowingListenerIsWarnedAbout).
 	TEST( SubscriptionTests, AnIdLessNotificationDoesNotThrowOutOfTheListener ){
@@ -223,10 +223,10 @@ namespace Jde::Access::Tests{
 		let deleted = (QL::SubscriptionId)underlying( ESubscription::Resources|ESubscription::Deleted );
 		jvalue nameless{ jobject{ {"resources", jobject{{"description","nothing to find it by"}}} } };
 		EXPECT_NO_THROW( listener->OnChange(nameless, deleted) );
-		jvalue idLess{ jobject{ {"resources", jobject{{"target","subStaleCache"}}} } };//exactly what AmbiguousLookupNotifiesWithoutAnId delivers.
+		jvalue idLess{ jobject{ {"resources", jobject{{"slug","subStaleCache"}}} } };//exactly what AmbiguousLookupNotifiesWithoutAnId delivers.
 		try{
 			listener->OnChange( idLess, deleted );
-			ADD_FAILURE() << "an id-less event naming a target the cache does not hold was accepted";
+			ADD_FAILURE() << "an id-less event naming a slug the cache does not hold was accepted";
 		}
 		catch( const Exception& e ){
 			EXPECT_NE( string{e.what()}.find("subStaleCache"), string::npos ) << e.what();//dispatched and refused by name, not skipped.
@@ -234,7 +234,7 @@ namespace Jde::Access::Tests{
 
 		//and a payload that does carry one is still dispatched - the tolerance must not swallow the ordinary case.  An id nothing
 		//is registered under reaches ResourceChanged and is refused *there*, by pk, which is the proof that it got that far.
-		jvalue withId{ jobject{ {"resources", jobject{{"id",987654321},{"target","subStaleCache"}}} } };
+		jvalue withId{ jobject{ {"resources", jobject{{"id",987654321},{"slug","subStaleCache"}}} } };
 		try{
 			listener->OnChange( withId, deleted );
 			ADD_FAILURE() << "an unknown resource pk was accepted";
@@ -278,17 +278,17 @@ namespace Jde::Access::Tests{
 	}
 
 	//access-review3 #22 (with #23's column):  tolerating the id-less event was half of it - the cache still kept enforcing rows the
-	//admin had just deleted.  Resources recover by schemaName+target, for every row the by-target delete hit, through the startup
+	//admin had just deleted.  Resources recover by schemaName+slug, for every row the by-slug delete hit, through the startup
 	//listener's own subscription - which asked for a column called `schema` that no table has, so the name could never match.
 	//In `access`, where that subscription's schema predicate lets the events through; criteria-scoped, so CheckDefaults is untouched.
 	TEST( SubscriptionTests, IdLessResourceDeleteReachesTheCache ){
 		let root = GetRoot();
-		constexpr sv target{ "subIdLessDelete" };
-		let select = Ƒ( R"(resources( schemaName:"access", target:"{}" ){{ id }})", target );
+		constexpr sv slug{ "subIdLessDelete" };
+		let select = Ƒ( R"(resources( schemaName:"access", slug:"{}" ){{ id }})", slug );
 		for( let& v : QL().QuerySync<jarray>(select, {}, root) ) //a previous run's rows.
 			Purge( "resource", GetId(Json::AsObject(v)), root );
 		for( sv criteria : {"a", "b"} )
-			QL().QuerySync<jvalue>( Ƒ(R"(mutation createResource( schemaName:"access", name:"{0}", target:"{0}", description:"{0}", criteria:"{1}", allowed:255 ))", target, criteria), {}, root );
+			QL().QuerySync<jvalue>( Ƒ(R"(mutation createResource( schemaName:"access", name:"{0}", slug:"{0}", description:"{0}", criteria:"{1}", allowed:255 ))", slug, criteria), {}, root );
 		vector<uint32> ids;
 		for( let& v : QL().QuerySync<jarray>(select, {}, root) )
 			ids.push_back( Json::AsNumber<uint32>(Json::AsObject(v), "id") );
@@ -297,7 +297,7 @@ namespace Jde::Access::Tests{
 		for( let id : ids )
 			EXPECT_THROW( Authorizer()->TestAdmin((ResourcePK)id, nobody), Exception ) << "active in the cache, so enforced";
 
-		deleteResource( target ); //by target:  both rows, and a notification with no id.
+		deleteResource( slug ); //by slug:  both rows, and a notification with no id.
 		for( let id : ids )
 			EXPECT_NO_THROW( Authorizer()->TestAdmin((ResourcePK)id, nobody) ) << "deleted in the cache as well - a deleted resource fail-opens";
 
@@ -312,14 +312,14 @@ namespace Jde::Access::Tests{
 	//the row never reached the cache, so a nobody passed TestAdmin on it.
 	TEST( SubscriptionTests, OtherSchemasResourcesReachTheStartupCache ){
 		let root = GetRoot();
-		constexpr sv target{ "subAllSchemas" };
-		for( let id : resourceIds(target) )//a previous run's row.
+		constexpr sv slug{ "subAllSchemas" };
+		for( let id : resourceIds(slug) )//a previous run's row.
 			Purge( "resource", id, root );
-		createResource( target, ", allowed:255" );
-		let ids = resourceIds( target ); ASSERT_EQ( ids.size(), 1u );
+		createResource( slug, ", allowed:255" );
+		let ids = resourceIds( slug ); ASSERT_EQ( ids.size(), 1u );
 		const UserPK nobody{ GetId(GetUser("subAllSchemasNobody", root)) };
 		EXPECT_THROW( Authorizer()->TestAdmin((ResourcePK)ids[0], nobody), Exception ) << "created in the cache, so enforced";
-		deleteResource( target );
+		deleteResource( slug );
 		EXPECT_NO_THROW( Authorizer()->TestAdmin((ResourcePK)ids[0], nobody) ) << "deleted in the cache as well";
 		Purge( "resource", ids[0], root );
 		PurgeUser( nobody, root );
@@ -331,17 +331,17 @@ namespace Jde::Access::Tests{
 	//admin check has something to enforce - System grants, as root holds nothing on a new row.
 	TEST( SubscriptionTests, OtherSchemasRoleGrantsReachTheStartupCache ){
 		let root = GetRoot();
-		constexpr sv target{ "subAllSchemasRole" };
-		for( let id : resourceIds(target) )//a previous run's row.
+		constexpr sv slug{ "subAllSchemasRole" };
+		for( let id : resourceIds(slug) )//a previous run's row.
 			Purge( "resource", id, root );
-		createResource( target, ", allowed:255" );
-		let ids = resourceIds( target ); ASSERT_EQ( ids.size(), 1u );
+		createResource( slug, ", allowed:255" );
+		let ids = resourceIds( slug ); ASSERT_EQ( ids.size(), 1u );
 		let resourcePK = (ResourcePK)ids[0];
 		const RolePK rolePK{ (RolePK)GetId(Get("role", "subAllSchemasRole", root)) };
 		const UserPK holder{ GetId(GetUser("subAllSchemasHolder", root)) };
 		QL().QuerySync<jvalue>( Ƒ("mutation createAcl( identity:{{id:{}}}, role:{{id:{}}} )", holder.Value, rolePK), {}, root );
 		EXPECT_THROW( Authorizer()->TestAdmin(resourcePK, holder), Exception ) << "no grant yet";
-		let grant = Ƒ( R"(addRole( id:{}, permissionRight:{{ allowed:{}, denied:0, resource:{{ schemaName:"{}", target:"{}" }} }} ))", rolePK, underlying(ERights::Administer), Schema, target );
+		let grant = Ƒ( R"(addRole( id:{}, permissionRight:{{ allowed:{}, denied:0, resource:{{ schemaName:"{}", slug:"{}" }} }} ))", rolePK, underlying(ERights::Administer), Schema, slug );
 		let added = BlockTAwait<jvalue>( Server::RoleMAwait{QL::ParseM(grant, {}, Schemas()), UserPK{UserPK::System}} ).as_object();
 		EXPECT_NO_THROW( Authorizer()->TestAdmin(resourcePK, holder) ) << "roleAdded did not reach the cache - the holder's role does not carry the grant";
 

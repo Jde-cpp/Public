@@ -68,7 +68,7 @@ local logsDir = args.logsDir;
 		search:{ maxDepth: 12, maxNodes: 25000, limit: 20, includeServer: false }
 	},
 	opcServer:{
-		target: "TestServer",
+		slug: "TestServer",
 		description: "Test OPC",
 		configFiles: [
 			"$(UA_NODE_SETS)/DI/Opc.Ua.Di.NodeSet2.xml",

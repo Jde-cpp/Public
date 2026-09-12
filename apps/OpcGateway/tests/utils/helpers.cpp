@@ -16,8 +16,8 @@ namespace Jde::Opc::Gateway::Tests{
 		try{
 			let certificateUri{ Settings::FindSV("/opc/urn").value_or("urn:open62541.server.application") };
 			let url{ Settings::FindSV("/opc/url").value_or( "opc.tcp://127.0.0.1:4840") };
-			let create = Ƒ( "mutation createServerConnection( target:'{}', name:'My Test Server', certificateUri:'{}', description:'Test basic functionality', url:'{}', isDefault:false ){{id}}",
-				OpcServerTarget,
+			let create = Ƒ( "mutation createServerConnection( slug:'{}', name:'My Test Server', certificateUri:'{}', description:'Test basic functionality', url:'{}', isDefault:false ){{id}}",
+				OpcServerSlug,
 				certificateUri,
 				url
 			);
@@ -31,7 +31,7 @@ namespace Jde::Opc::Gateway::Tests{
 
 	α PurgeServerCnnctnAwait::Execute()ι->QL::QLAwait<>::Task{
 		if( !_pk.has_value() )
-			_pk = SelectServerCnnctn( OpcServerTarget )->Id;
+			_pk = SelectServerCnnctn( OpcServerSlug )->Id;
 		let q = Ƒ( "{{ mutation purgeServerConnection('id':{}) }}", *_pk );
 		let result = co_await *QL().Query( Str::Replace(q, '\'', '"'), {}, {UserPK::System}, true, _sl );
 		ResumeScaler( 1 );
@@ -48,15 +48,15 @@ namespace Jde::Opc::Gateway{
 	}
 
 	α Tests::SelectServerCnnctn( DB::Key id )ι->optional<ServerCnnctn>{
-		let select = Ƒ( "serverConnection({}){{ id name attributes created updated deleted target description certificateUri isDefault url }}", id.QLInput() );
+		let select = Ƒ( "serverConnection({}){{ id name attributes created updated deleted slug description certificateUri isDefault url }}", id.QLInput() );
 		auto o = QL().QuerySync<jobject>( select, id.QLVariables(), {UserPK::System} );
 		return o.empty() ? optional<ServerCnnctn>{} : ServerCnnctn( move(o) );
 	}
 
-	α Tests::GetConnection( str target )ε->ServerCnnctn{
-		auto con = SelectServerCnnctn( {target} );
+	α Tests::GetConnection( str slug )ε->ServerCnnctn{
+		auto con = SelectServerCnnctn( {slug} );
 		if( !con ){
-			BlockTAwait<Access::ProviderPK>( ProviderMAwait{target, false} );
+			BlockTAwait<Access::ProviderPK>( ProviderMAwait{slug, false} );
 			let id = BlockTAwait<ServerCnnctnPK>( CreateServerCnnctnAwait{} );
 			con = SelectServerCnnctn( id );
 		}

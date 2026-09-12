@@ -1,12 +1,12 @@
 import { Permission } from "./permission";
-import { cloneClassArray, Mutation, MutationType, TargetRow } from "jde-framework";
+import { cloneClassArray, Mutation, MutationType, SlugRow } from "jde-framework";
 import { User, UserPK } from "./user";
 import { Group, GroupPK } from "./group";
 import { Acl } from "./acl";
 
 export type RolePK = number;
 export type RoleNK = string;
-export class Role extends TargetRow<Role>{
+export class Role extends SlugRow<Role>{
 	constructor( obj:any ){
 		super( Role.typeName, obj );
 		this.permissions = cloneClassArray( obj.permissionRights ?? obj.permissions, Permission ) ?? [];
@@ -42,7 +42,7 @@ export class Role extends TargetRow<Role>{
 		return [...propertyies, ...permissions, ...childRoles, ...groups, ...users];
 	}
 
-	private aclMutations<T extends TargetRow<T>>( modified:TargetRow<T>[], original:TargetRow<T>[] ):Mutation[]{
+	private aclMutations<T extends SlugRow<T>>( modified:SlugRow<T>[], original:SlugRow<T>[] ):Mutation[]{
 		let y = [];
 		for( let mod of modified ){
 			if( !original.find(x=>x.id==mod.id) )

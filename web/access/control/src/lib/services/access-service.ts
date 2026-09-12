@@ -19,7 +19,7 @@ export class AccessService extends AppService implements OnDestroy{
 		return this.#resources ??= this.#queryResources().catch( (e)=>{ this.#resources = undefined; throw e; } );//never cache a failure: a rejected promise would be handed to every later caller
 	}
 	async #queryResources():Promise<Resource[]>{
-		const resources = (await this.queryArray<Partial<Resource>>( `resources(criteria:null){ id schemaName allowed name deleted target }` )).map( (r)=>new Resource(r) );//criteria:null - the node resources are known only through effectiveRights' rows
+		const resources = (await this.queryArray<Partial<Resource>>( `resources(criteria:null){ id schemaName allowed name deleted slug }` )).map( (r)=>new Resource(r) );//criteria:null - the node resources are known only through effectiveRights' rows
 		this.#resourceSignal.set( resources );//the public `resources` signal was never written, so it read empty forever
 		return resources;
 	}
@@ -27,7 +27,7 @@ export class AccessService extends AppService implements OnDestroy{
 	//joined here to what its cache does not hold:  resource names/available rights from loadResources(), and the group and role
 	//names the paths need, from the two lists.  The executer reads their own freely; another user's takes Read on acl.
 	async effectiveRights( userId:number ):Promise<EffectiveRight[]>{
-		const q = `userRights( id:$id ){ resource{ id schemaName target criteria deleted } allowed denied effective sources{ permissionId allowed denied path{ id type } } }`;
+		const q = `userRights( id:$id ){ resource{ id schemaName slug criteria deleted } allowed denied effective sources{ permissionId allowed denied path{ id type } } }`;
 		const [rows, resources, groups, roles] = await Promise.all( [
 			this.queryArray<UserRightsRow>( q, {id: userId} ),
 			this.loadResources(),
@@ -37,15 +37,15 @@ export class AccessService extends AppService implements OnDestroy{
 		const names:Names = { groups: new Map( groups.map(g=>[g.id, g.name]) ), roles: new Map( roles.map(r=>[r.id, r.name]) ) };
 		return EffectiveRight.fromRows( rows, resources, names );
 	}
-	async getResource( target:string ):Promise<Resource|undefined>{
+	async getResource( slug:string ):Promise<Resource|undefined>{
 		const resources = await this.loadResources();//was `await this.#resources` - the field, not the loader, so this threw on `.find` unless something else had already loaded
-		return resources.find( r=>r.target==target );
+		return resources.find( r=>r.slug==slug );
 	}
 
 	//excludedColumns is the collection's tableSettings list, forwarded by DetailResolver.  Hardcoding [] here dropped it:
 	//Role's introspected 'permissions' is the extends-base link (roles.role_id -> permissions.permission_id) and the
 	//permissions table has no name column, so the generated `permissions{id name}` failed the whole query with a 500.
-	override targetQuery( schema: TableSchema, target: string, showDeleted:boolean, excludedColumns:string[]=[] ):string{
+	override slugQuery( schema: TableSchema, slug: string, showDeleted:boolean, excludedColumns:string[]=[] ):string{
 		let fields = super.fieldColumns( schema, showDeleted, excludedColumns );
 		switch( schema.collectionName ){
 			case "users":
@@ -65,7 +65,7 @@ export class AccessService extends AppService implements OnDestroy{
 			default:
 				throw new Error( `Unknown table: ${schema.collectionDisplay}` );
 		}
-		return `${schema.singular}( target:${StringUtils.qlString(target)} ){ ${fields.join(" ")} }`;
+		return `${schema.singular}( slug:${StringUtils.qlString(slug)} ){ ${fields.join(" ")} }`;
 	}
 	override subQueries( typeName: string, id: number ):string[]{
 		let queries = new Array<string>();

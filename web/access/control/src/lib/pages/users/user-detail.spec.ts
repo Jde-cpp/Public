@@ -92,7 +92,7 @@ describe( 'UserDetail excluded columns', ()=>{
 	} );
 } );
 
-//review3 L6: 'resources' is the one collection under access's ':collectionDisplay' with no sibling ':target' detail
+//review3 L6: 'resources' is the one collection under access's ':collectionDisplay' with no sibling ':slug' detail
 //route, so a row click there dead-ended in a NavigationError.  QLList honours canNavigate; this is the wiring.
 describe( 'resourceTableSettings', ()=>{
 	const column = ( name:string )=>resourceTableSettings.columns!.find( c=>typeof c!="string" && c.name==name ) as ViewFieldSettings;
@@ -124,13 +124,13 @@ describe( 'resourceTableSettings', ()=>{
 		expect( resourceTableSettings.canPurge ).toBe( false );
 	} );
 
-	//A node-scoped resource (criteria set) is minted when a role is granted on a node and shares its table's target, so on a
+	//A node-scoped resource (criteria set) is minted when a role is granted on a node and shares its table's slug, so on a
 	//page with no criteria column it reads as a duplicate row.  The page lists the table rows only - one view, no way to the node rows.
 	it( 'lists only the criteria-less rows, as a single Tables view', ()=>{
 		const scalar = ( name:string, type:string="String" )=>({ name, type: { kind: "SCALAR", name: type } });
 		const schema = new TableSchema( { name: "Resource", fields: [
 			{ name: "id", type: { kind: "NON_NULL", name: null, ofType: { kind: "SCALAR", name: "ID" } } },
-			{ name: "target", type: { kind: "NON_NULL", name: null, ofType: { kind: "SCALAR", name: "String" } } },
+			{ name: "slug", type: { kind: "NON_NULL", name: null, ofType: { kind: "SCALAR", name: "String" } } },
 			scalar("schemaName"), scalar("name"), scalar("criteria"), scalar("deleted", "DateTime"), scalar("description")
 		] } );
 		const views = QLListResolver.systemViews( schema, resourceTableSettings );
@@ -148,7 +148,7 @@ describe( 'userTableSettings views', ()=>{
 	const schema = new TableSchema( { name: "User", fields: [
 		{ name: "id", type: { kind: "NON_NULL", name: null, ofType: { kind: "SCALAR", name: "ID" } } },
 		{ name: "name", type: { kind: "NON_NULL", name: null, ofType: { kind: "SCALAR", name: "String" } } },
-		{ name: "target", type: { kind: "NON_NULL", name: null, ofType: { kind: "SCALAR", name: "String" } } },
+		{ name: "slug", type: { kind: "NON_NULL", name: null, ofType: { kind: "SCALAR", name: "String" } } },
 		{ name: "provider", type: { kind: "OBJECT", name: "Provider" } },
 		scalar("email"), scalar("loginName"), scalar("modulus"), scalar("issuer"), scalar("distinguished"), scalar("subjectAlt"),
 		scalar("expiration", "DateTime"), scalar("deleted", "DateTime"), scalar("description"), scalar("isGroup", "Boolean")
@@ -170,8 +170,8 @@ describe( 'userTableSettings views', ()=>{
 	} );
 
 	it( 'Certs lists the key identities with their certificate columns', ()=>{
-		expect( displayed(byName("Certs")) ).toEqual( ["target", "modulus", "issuer", "distinguished", "subjectAlt", "expiration", "description"] );
+		expect( displayed(byName("Certs")) ).toEqual( ["slug", "modulus", "issuer", "distinguished", "subjectAlt", "expiration", "description"] );
 		expect( byName("Certs").fieldFilters.map(f=>[f.field.name, f.filter.operator, f.filter.value]) ).toEqual( [["provider", Operator.In, ["Key"]]] );
-		expect( byName("Certs").sort ).toEqual( [{active: "target", direction: "asc"}] );//name is not a displayed column there
+		expect( byName("Certs").sort ).toEqual( [{active: "slug", direction: "asc"}] );//name is not a displayed column there
 	} );
 } );

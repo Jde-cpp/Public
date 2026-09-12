@@ -20,7 +20,7 @@ namespace Jde::Access{
 				schemaNames.push_back( {getSchemaName(schema, _opcServerInstance)} );
 			auto vars = _allSchemas ? jobject{} : jobject{ {"schemaNames", move(schemaNames)} };//explicit now - "app" in the list used to mean this.
 			auto input = _allSchemas ? "" : "(schemaName:$schemaNames)";
-			let resources = co_await *_qlServer->QueryArray( Ƒ("resources{}{{ id schemaName target criteria deleted }}", input), vars, _executer );
+			let resources = co_await *_qlServer->QueryArray( Ƒ("resources{}{{ id schemaName slug criteria deleted }}", input), vars, _executer );
 			for( auto&& value : resources ){
 				auto resource = Resource{ Json::AsObject(move(value)) };
 				y.Resources.emplace( resource.PK, move(resource) );
@@ -46,21 +46,21 @@ namespace Jde::Access{
 		try{
 			for( let& schema : _schemas ){
 				let schemaName = getSchemaName(schema, _opcServerInstance);
-				auto q = Ƒ( "resources( schemaName:[\"{}\"] ){{id target deleted description}}", schemaName );
+				auto q = Ƒ( "resources( schemaName:[\"{}\"] ){{id slug deleted description}}", schemaName );
 				auto existing = Json::AsArray( co_await *_qlServer->Query(move(q), {}, _executer) );
-				flat_set<string> targets;
+				flat_set<string> slugs;
 				for( auto& value : existing ){
 					let& resource = Json::AsObject( value );
-					targets.emplace( Json::AsString(resource, "target") );
+					slugs.emplace( Json::AsString(resource, "slug") );
 					//A row a sync created and never got to disable:  the disable is a second call, and a failure between the two left the
-					//table denying every non-System user - for good, since a target with a row was then skipped here (access-review3 #24).
+					//table denying every non-System user - for good, since a slug with a row was then skipped here (access-review3 #24).
 					//Its signature is the sync's own description and not one right on it; an operator who enabled a resource granted something.
 					let deleted = resource.if_contains( "deleted" );
 					if( !(deleted && deleted->is_null()) || Json::FindDefaultSV(resource, "description")!="From installation" )
 						continue;
 					let id = Json::AsNumber<ResourcePK>( resource, "id" );
 					if( Json::AsArray(co_await *_qlServer->Query(Ƒ("permissionRights( resourceId:{} ){{ id }}", id), {}, _executer)).empty() ){
-						INFOT( ELogTags::Access, "[{}.{}]resource {} is active with no rights on it - disabling it, as the installation that created it meant to.", schemaName, Json::AsString(resource, "target"), id );
+						INFOT( ELogTags::Access, "[{}.{}]resource {} is active with no rights on it - disabling it, as the installation that created it meant to.", schemaName, Json::AsString(resource, "slug"), id );
 						co_await *_qlServer->Query( Ƒ("deleteResource( id:{} )", id), {}, _executer );
 					}
 				}
@@ -76,10 +76,10 @@ namespace Jde::Access{
 
 				for( let& [name,ops] : declared ){
 					auto jsonName = DB::Names::ToJson( name );
-					if( empty(ops) || targets.contains(jsonName) )
+					if( empty(ops) || slugs.contains(jsonName) )
 						continue;
 
-					auto create = Ƒ( "createResource( schemaName:\"{}\", name:\"{}\", target:\"{}\", allowed:{}, description:\"From installation\" ){{id}}",
+					auto create = Ƒ( "createResource( schemaName:\"{}\", name:\"{}\", slug:\"{}\", allowed:{}, description:\"From installation\" ){{id}}",
 						schemaName, name, move(jsonName), underlying(ops) );
 					let resourceId = QL::AsId<UserPK::Type>( co_await *_qlServer->Query(move(create), {}, _executer) );
 					co_await *_qlServer->Query( Ƒ("deleteResource( id:{} )", resourceId), {}, _executer );

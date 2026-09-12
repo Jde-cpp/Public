@@ -39,7 +39,7 @@ namespace Jde::DB{
 		flat_map<string,sp<Table>> Views; //db-refactor B4: the same type as Tables - membership here is what makes an entry a view.
 		//Access resources the schema declares outright, as `resources:{ <jsonName>:{ ops:[…] } }`, keyed by the same
 		//internal name a table of that name would carry.  ResourceSyncAwait creates a row for each exactly as it does
-		//for a table with ops - for a target that names something the schema governs without owning a table for it
+		//for a table with ops - for a slug that names something the schema governs without owning a table for it
 		//(the OpcServer's `nodeIds`: its address space is NodeSet2 xml, but every node acl still hangs off that resource).
 		flat_map<string,Access::ERights> Resources;
 	private:

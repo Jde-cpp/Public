@@ -16,7 +16,7 @@ namespace Jde::Opc::Gateway::Tests{
 	Ω addSession( string token )ι->SessionPK{
 		auto session = Web::Server::Sessions::Add( AppClient()->UserPK(), string{"127.0.0.1"}, false );
 		Credential cred{ move(token) }; cred.SetUserPK( AppClient()->UserPK() );
-		AddSession( session->SessionId, OpcServerTarget, move(cred) );
+		AddSession( session->SessionId, OpcServerSlug, move(cred) );
 		return session->SessionId;
 	}
 	Ω removeSession( SessionPK sessionId )ι->void{
@@ -27,14 +27,14 @@ namespace Jde::Opc::Gateway::Tests{
 	struct QLTests : ::testing::Test{
 	protected:
 		Ω SetUpTestCase()ε->void{ //ε: CreateServerCnnctn throws - under ι gtest never sees it and the whole binary terminates.
-			if( !SelectServerCnnctn( OpcServerTarget ) )
+			if( !SelectServerCnnctn( OpcServerSlug ) )
 				CreateServerCnnctn();
 		};
 	};
 
 	TEST_F( QLTests, ServerDescriptionTest ){
 		let q = "serverDescription( opc: $opc ){ applicationUri productUri applicationName applicationType gatewayServerUri discoveryProfileUri discoveryUrls }";
-		const jobject vars{ {"opc", OpcServerTarget} };
+		const jobject vars{ {"opc", OpcServerSlug} };
 		let value = BlockAwait<Web::Client::ClientSocketAwait<jvalue>,jvalue>(	Socket().Query(q, vars, true) );
 		//{"applicationUri":"urn:open62541.server.application","productUri":"http://open62541.org","applicationName":"Jde-Cpp OpcServer","applicationType":"Server","gatewayServerUri":"","discoveryProfileUri":"","discoveryUrls":["opc.tcp://workstation25:4840","opc.tcp://127.0.0.1:4840"]}.
 		TRACE( "ServerDescription: {}.", serialize(value) );
@@ -50,7 +50,7 @@ namespace Jde::Opc::Gateway::Tests{
 
 	TEST_F( QLTests, namespaces ){
 		let q = "namespaces( opc: $opc ){ index uri }";
-		const jobject vars{ {"opc", OpcServerTarget} };
+		const jobject vars{ {"opc", OpcServerSlug} };
 		let value = BlockAwait<Web::Client::ClientSocketAwait<jvalue>,jvalue>( Socket().Query(q, vars, true) );
 		//[{"index":0,"uri":"http://opcfoundation.org/UA/"},{"index":1,"uri":"urn:open62541.server.application"},...].
 		TRACE( "namespaces: {}.", serialize(value) );
@@ -63,7 +63,7 @@ namespace Jde::Opc::Gateway::Tests{
 
 	TEST_F( QLTests, securityPolicyUri ){
 		let q = "securityPolicyUri( opc: $opc )";
-		const jobject vars{ {"opc", OpcServerTarget} };
+		const jobject vars{ {"opc", OpcServerSlug} };
 		let value = BlockAwait<Web::Client::ClientSocketAwait<jvalue>,jvalue>(	Socket().Query(q, vars, true) );
 		TRACE( "securityPolicyUri: {}.", serialize(value) );
 		ASSERT_TRUE( serialize(value).size() );
@@ -71,14 +71,14 @@ namespace Jde::Opc::Gateway::Tests{
 
 	TEST_F( QLTests, securityMode ){
 		let q = "securityMode( opc: $opc )";
-		const jobject vars{ {"opc", OpcServerTarget} };
+		const jobject vars{ {"opc", OpcServerSlug} };
 		let value = BlockAwait<Web::Client::ClientSocketAwait<jvalue>,jvalue>(	Socket().Query(q, vars, true) );
 		TRACE( "securityMode: {}.", serialize(value) );
 		ASSERT_TRUE( serialize(value).size() );
 	}
 	TEST_F( QLTests, opcSessions ){
 		let sessionId = addSession( "opcSessionsTestToken" );
-		let q = "opcSessions{ connection{target} type user{id target name} count }";
+		let q = "opcSessions{ connection{slug} type user{id slug name} count }";
 		let value = BlockAwait<Web::Client::ClientSocketAwait<jvalue>,jvalue>( Socket().Query(q, {}, true) );
 		TRACE( "opcSessions: {}.", serialize(value) );
 		let projected = BlockAwait<Web::Client::ClientSocketAwait<jvalue>,jvalue>( Socket().Query("opcSessions{ count }", {}, true) );
@@ -88,11 +88,11 @@ namespace Jde::Opc::Gateway::Tests{
 		let userPK = AppClient()->UserPK().Value;
 		auto row = find_if( rows, [&](let& r){
 			let& o = r.as_object();
-			return Json::AsSVPath(o, "connection/target")==OpcServerTarget && Json::AsSV(o, "type")=="IssuedToken" && Json::FindNumberPath<Jde::UserPK::Type>(o, "user/id")==userPK; //user may be null for anonymous rows.
+			return Json::AsSVPath(o, "connection/slug")==OpcServerSlug && Json::AsSV(o, "type")=="IssuedToken" && Json::FindNumberPath<Jde::UserPK::Type>(o, "user/id")==userPK; //user may be null for anonymous rows.
 		} );
 		ASSERT_NE( row, rows.end() ) << serialize( value );
 		let& user = Json::AsObject( row->as_object(), "user" );
-		EXPECT_TRUE( user.contains("name") && user.contains("target") ) << serialize( user ); //fetched from AppServer's users table.
+		EXPECT_TRUE( user.contains("name") && user.contains("slug") ) << serialize( user ); //fetched from AppServer's users table.
 		EXPECT_GE( Json::AsNumber<uint32>(row->as_object(), "count"), 1u );
 
 		ASSERT_FALSE( projected.as_array().empty() );
@@ -103,28 +103,28 @@ namespace Jde::Opc::Gateway::Tests{
 	}
 
 	TEST_F( QLTests, webSessionCounted ){ //no manual AddSession: a jwt-backed web session's connect must register itself (ConnectAwait::await_resume).
-		const jobject vars{ {"opc", OpcServerTarget} };
+		const jobject vars{ {"opc", OpcServerSlug} };
 		BlockAwait<Web::Client::ClientSocketAwait<jvalue>,jvalue>( Socket().Query("serverDescription( opc: $opc ){ applicationUri }", vars, true) );//forces a ConnectAwait for this socket's session.
-		let value = BlockAwait<Web::Client::ClientSocketAwait<jvalue>,jvalue>( Socket().Query("opcSessions{ connection{target} type user{id} count }", {}, true) );
+		let value = BlockAwait<Web::Client::ClientSocketAwait<jvalue>,jvalue>( Socket().Query("opcSessions{ connection{slug} type user{id} count }", {}, true) );
 		TRACE( "webSessionCounted: {}.", serialize(value) );
 		let userPK = AppClient()->UserPK().Value;
 		let& rows = value.as_array();
 		let row = find_if( rows, [&](let& r){
 			let& o = r.as_object();
-			return Json::AsSVPath(o, "connection/target")==OpcServerTarget && Json::AsSV(o, "type")=="IssuedToken" && Json::FindNumberPath<Jde::UserPK::Type>(o, "user/id")==userPK;
+			return Json::AsSVPath(o, "connection/slug")==OpcServerSlug && Json::AsSV(o, "type")=="IssuedToken" && Json::FindNumberPath<Jde::UserPK::Type>(o, "user/id")==userPK;
 		} );
 		ASSERT_NE( row, rows.end() ) << serialize( value );
 		EXPECT_GE( Json::AsNumber<uint32>(row->as_object(), "count"), 1u );
 	}
 
 	//A session that ends without a /logout - a timeout, a purge, a browser that never came back - must stop being counted.
-	//Nothing but that logout ever removed an entry, so opcSessions reported every session that had touched the target since
+	//Nothing but that logout ever removed an entry, so opcSessions reported every session that had touched the slug since
 	//startup, an ever-climbing number that opcConnections (drained by the idle ttl) never matched.
 	TEST_F( QLTests, deadSessionsAreNotCounted ){
 		let count = []ι->uint32{
 			uint32 y{};
 			for( let& c : SessionCounts() ){
-				if( c.Connection==OpcServerTarget )
+				if( c.Connection==OpcServerSlug )
 					y += c.Count;
 			}
 			return y;
@@ -134,26 +134,26 @@ namespace Jde::Opc::Gateway::Tests{
 		EXPECT_EQ( count(), before+1 );
 		Web::Server::Sessions::Remove( sessionId ); //the session ends;  nothing tells the gateway.
 		EXPECT_EQ( count(), before );
-		EXPECT_FALSE( GetCredential(sessionId, OpcServerTarget) ) << "the swept entry takes its cached credential with it.";
+		EXPECT_FALSE( GetCredential(sessionId, OpcServerSlug) ) << "the swept entry takes its cached credential with it.";
 	}
 
 	TEST_F( QLTests, serverConnectionSessions ){
 		let sessionId = addSession( "serverConnectionSessionsTestToken" );
-		BlockAwait<Web::Client::ClientSocketAwait<jvalue>,jvalue>( Socket().Query("serverDescription( opc: $opcTarget ){ applicationUri }", {{"opcTarget", OpcServerTarget}}, true) );//ensure a live UAClient so opcConnections has something to count.
+		BlockAwait<Web::Client::ClientSocketAwait<jvalue>,jvalue>( Socket().Query("serverDescription( opc: $opcSlug ){ applicationUri }", {{"opcSlug", OpcServerSlug}}, true) );//ensure a live UAClient so opcConnections has something to count.
 		//the exact shape View.query() emits for the Connections list - args must survive the graft's DB pass.
-		let listQL = "serverConnections(limit:25,orderBy:[{name:\"asc\"}],deleted:$deleted){ id connectionStatus{name} name certificateUri url opcSessions{count} opcConnections{count} description target }";
+		let listQL = "serverConnections(limit:25,orderBy:[{name:\"asc\"}],deleted:$deleted){ id connectionStatus{name} name certificateUri url opcSessions{count} opcConnections{count} description slug }";
 		let rows = BlockAwait<Web::Client::ClientSocketAwait<jvalue>,jvalue>( Socket().Query(listQL, {{"deleted",nullptr}}, true) );
 		TRACE( "serverConnections: {}.", serialize(rows) );
-		const jobject vars{ {"opc", OpcServerTarget} };
-		let single = BlockAwait<Web::Client::ClientSocketAwait<jvalue>,jvalue>( Socket().Query("serverConnection( target: $opc ){ name opcSessions{count} }", vars, true) );
+		const jobject vars{ {"opc", OpcServerSlug} };
+		let single = BlockAwait<Web::Client::ClientSocketAwait<jvalue>,jvalue>( Socket().Query("serverConnection( slug: $opc ){ name opcSessions{count} }", vars, true) );
 		TRACE( "serverConnection: {}.", serialize(single) );
 		removeSession( sessionId );
 
-		let connection = SelectServerCnnctn( OpcServerTarget ); ASSERT_TRUE( connection );
+		let connection = SelectServerCnnctn( OpcServerSlug ); ASSERT_TRUE( connection );
 		bool found{};
 		for( let& r : rows.as_array() ){
 			let& o = r.as_object();
-			EXPECT_TRUE( o.contains("target") ) << serialize( o ); //requested explicitly here, so it must not be erased.
+			EXPECT_TRUE( o.contains("slug") ) << serialize( o ); //requested explicitly here, so it must not be erased.
 			let count = Json::FindNumberPath<uint32>( o, "opcSessions/count" );
 			ASSERT_TRUE( count ) << serialize( o );
 			let connectionCount = Json::FindNumberPath<uint32>( o, "opcConnections/count" );
@@ -163,7 +163,7 @@ namespace Jde::Opc::Gateway::Tests{
 			if( Json::AsNumber<ServerCnnctnPK>(o, "id")==connection->Id ){
 				found = true;
 				EXPECT_GE( *count, 1u );
-				EXPECT_GE( *connectionCount, 1u ) << "a UAClient for the target is live - the serverDescription above connected it.";
+				EXPECT_GE( *connectionCount, 1u ) << "a UAClient for the slug is live - the serverDescription above connected it.";
 				EXPECT_EQ( *status, "Connected" ) << serialize( o ); //the same live client the count above sees.
 			}
 			else
@@ -171,12 +171,12 @@ namespace Jde::Opc::Gateway::Tests{
 		}
 		EXPECT_TRUE( found ) << serialize( rows );
 		let& o = single.as_object();
-		EXPECT_FALSE( o.contains("target") ) << serialize( o );
+		EXPECT_FALSE( o.contains("slug") ) << serialize( o );
 		EXPECT_GE( Json::FindNumberPath<uint32>(o, "opcSessions/count").value_or(0), 1u ) << serialize( o );
 	}
 
 	TEST_F( QLTests, search ){
-		const jobject vars{ {"opc", OpcServerTarget} };
+		const jobject vars{ {"opc", OpcServerSlug} };
 		Socket().QuerySync( "serverDescription( opc: $opc ){ applicationUri }", vars );//search never connects - give this socket's session a live client first.
 		constexpr sv lampPath{ "4~Examples/4~Stacklights/4~ExampleStacklight/4~Lamp1" };//BrowseTests.NodeId resolves the same path.
 		auto rows = [&]( string q ){
@@ -186,12 +186,12 @@ namespace Jde::Opc::Gateway::Tests{
 		};
 		auto find = [&]( const jarray& rows, sv path ){ return find_if( rows, [&](let& r){ return Json::AsSV(r.as_object(), "path")==path; } ); };
 
-		let first = rows( "search( opc: $opc, text: \"lamp1\" ){ connection{ target name } id path name browse{ ns name } nodeClass depth }" );//the first search crawls.
+		let first = rows( "search( opc: $opc, text: \"lamp1\" ){ connection{ slug name } id path name browse{ ns name } nodeClass depth }" );//the first search crawls.
 		auto lamp = find( first, lampPath );
 		ASSERT_NE( lamp, first.end() ) << serialize( first );
 		let& o = lamp->as_object();
 		EXPECT_EQ( Json::AsSV(o, "name"), "Lamp1" );
-		EXPECT_EQ( Json::AsSVPath(o, "connection/target"), OpcServerTarget );
+		EXPECT_EQ( Json::AsSVPath(o, "connection/slug"), OpcServerSlug );
 		EXPECT_EQ( Json::AsSVPath(o, "browse/name"), "Lamp1" );
 		EXPECT_EQ( Json::AsNumber<uint16>(o.at("browse").as_object(), "ns"), 4 );
 		EXPECT_EQ( Json::AsNumber<uint8>(o, "depth"), 4 );
@@ -205,7 +205,7 @@ namespace Jde::Opc::Gateway::Tests{
 		ASSERT_NE( find(again, lampPath), again.end() ) << serialize( again );
 		EXPECT_EQ( again.front().as_object().size(), 1u ) << "projection: only the requested column";
 
-		let fanout = rows( "search( text: \"lamp1\" ){ connection{ target } path }" );//no opc: every client this session already holds.
+		let fanout = rows( "search( text: \"lamp1\" ){ connection{ slug } path }" );//no opc: every client this session already holds.
 		ASSERT_NE( find(fanout, lampPath), fanout.end() ) << serialize( fanout );
 
 		let unknown = rows( "search( opc: \"noSuchConnection\", text: \"lamp1\" ){ path }" );//no live client ⇒ empty, and no ConnectAwait (which would throw 'not found').
@@ -277,7 +277,7 @@ namespace Jde::Opc::Gateway::Tests{
 	}
 
 	TEST_F( QLTests, enumTypes ){//an enumeration DataType's definition comes from the server (src/EnumTypeCache), not a config table.
-		const jobject vars{ {"opc", OpcServerTarget} };
+		const jobject vars{ {"opc", OpcServerSlug} };
 		auto enumType = [&]( uint16 ns, uint32 i ){
 			auto value = Socket().QuerySync( Ƒ("__type( opc: $opc, ns:{}, i:{} ){{ name enumValues{{ id name description }} }}", ns, i), vars );
 			TRACE( "__type(ns={};i={}): {}.", ns, i, serialize(value) );
@@ -309,12 +309,12 @@ namespace Jde::Opc::Gateway::Tests{
 
 	TEST_F( QLTests, multipleQueries ){
 		let q =
-			"connection: serverConnection( target: $opc ){ id name target url certificateUri defaultBrowseNs }"
+			"connection: serverConnection( slug: $opc ){ id name slug url certificateUri defaultBrowseNs }"
 			"server: serverDescription( opc: $opc ){ applicationUri productUri applicationName applicationType gatewayServerUri discoveryProfileUri discoveryUrls }"
 			"policy: securityPolicyUri( opc: $opc )"
 			"mode: securityMode( opc: $opc )"
 			"namespaces( opc: $opc ){ index uri }";//unaliased, as the ui sends it - the result is keyed by the query name.
-		const jobject vars{ {"opc", OpcServerTarget} };
+		const jobject vars{ {"opc", OpcServerSlug} };
 		let value = BlockAwait<Web::Client::ClientSocketAwait<jvalue>,jvalue>(	Socket().Query(q, vars, false) );
 		TRACE( "multipleQueries: {}.", serialize(value) );
 		ASSERT_TRUE( serialize(value).size() );

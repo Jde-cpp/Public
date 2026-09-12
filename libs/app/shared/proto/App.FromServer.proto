@@ -50,7 +50,7 @@ message Strings{
 	map<uint32,string> files = 2;
 	map<uint32,string> functions = 3;
 	map<uint32,string> threads = 4;
-	map<uint32,string> user_targets = 5; //targets for web.
+	map<uint32,string> user_slugs = 5; //slugs for web.
 }
 message SubscriptionAck{
 	repeated uint32 server_ids = 1;

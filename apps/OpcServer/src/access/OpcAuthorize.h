@@ -47,7 +47,7 @@ namespace Jde::Opc::Server{
 		//UserRights applies, which only this server can make.  Other targets take the generic flat rule.  Throws AccessException
 		//on denial;  a plain Exception before AssignRights has run, so a check that races startup (the socket registers before
 		//Configure and AssignRights) is a denial, never a guess.
-		α TestAdminNode( str target, str criteria, UserPK user, SRCE )ε->void;
+		α TestAdminNode( str slug, str criteria, UserPK user, SRCE )ε->void;
 
 		β CreateResource( Access::Resource&& resource )ε->void override;
 		β UpdateResourceDeleted( Access::ResourcePK pk, sv schemaName, const jobject& args, bool restored )ε->void override;

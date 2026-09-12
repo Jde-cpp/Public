@@ -13,7 +13,7 @@ import * as Common from 'jde-proto/Opc.Common';
 import * as FromClient from 'jde-proto/Opc.FromClient';
 import * as FromServer from 'jde-proto/Opc.FromServer';
 import { OPC_STORE, OpcStore } from './opc-store';
-import { CnnctnTarget } from "../model/server-cnnctn";
+import { CnnctnSlug } from "../model/server-cnnctn";
 import { NodeKey, NodeId } from '../model/node-id';
 import { ENodeClass, ObjectType, OpcObject, UaNode, Variable } from '../model/node';
 import { OpcId, scBadUnexpectedError, StatusCode } from '../model/types';
@@ -24,9 +24,9 @@ import { Enum } from '../model/enum';
 interface IError{ requestId:number; message: string; }
 type Owner = any;
 
-export type GatewayTarget = string;
+export type GatewaySlug = string;
 //app.routes.ts: 'gateways/:gateway[/:connection/**]' and 'apps/gateways/:instance[/:connection]'.  Both segments hold a
-//Gateway.target (== instances[0].instanceName), so one pattern covers the lot.  Module scope, not a static #field:  a
+//Gateway.slug (== instances[0].instanceName), so one pattern covers the lot.  Module scope, not a static #field:  a
 //decorated class cannot carry a static private identifier (TS18036).
 const gatewayUrl = /^\/(?:apps\/)?gateways\/([^/?#]+)/;
 @Injectable( {providedIn: 'root'} )
@@ -95,7 +95,7 @@ export class GatewayService implements IGraphQL{
 	}
 	async mutations():Promise<MutationSchema[]>{ return (await this.defaultGatewayAsync()).mutations(); }
 
-	targetQuery( schema:TableSchema, target: string, showDeleted:boolean ):string{ return null as any; }
+	slugQuery( schema:TableSchema, slug: string, showDeleted:boolean ):string{ return null as any; }
 	subQueries( typeName: string, id: number ):string[]{ return []; }
 	excludedColumns( tableName:string ):string[]{ return []; }
 	toCollectionName( collectionDisplay:string ):string{ return collectionDisplay; }
@@ -115,8 +115,8 @@ export class GatewayService implements IGraphQL{
 	#urlGateway():Gateway|undefined{
 		const navigation = this.router.getCurrentNavigation();//guards/resolvers run BEFORE activation, so routerState still holds the route being left
 		const url = navigation ? this.router.serializeUrl( navigation.finalUrl ?? navigation.extractedUrl ) : this.router.url;
-		const target = gatewayUrl.exec( url )?.[1];
-		return target ? this.#gateways?.find( gateway=>gateway.target==decodeURIComponent(target) ) : undefined;
+		const slug = gatewayUrl.exec( url )?.[1];
+		return slug ? this.#gateways?.find( gateway=>gateway.slug==decodeURIComponent(slug) ) : undefined;
 	}
 	get defaultGateway():Gateway{
 		//?? gateways[0]: 'default' means "when nothing names one" - loginPassword already treats gateways[0] as the one to use.
@@ -283,7 +283,7 @@ export class Gateway extends ProtoService<FromClient.Transmission,FromServer.Mes
 		return `(${sc.toString(16)})${text}`;
 	}
 
-	public async browseObjectsFolder( cnnctn:CnnctnTarget, parent:UaNode, snapshot:boolean, log:Log ):Promise<UaNode[]>{
+	public async browseObjectsFolder( cnnctn:CnnctnSlug, parent:UaNode, snapshot:boolean, log:Log ):Promise<UaNode[]>{
 		if( parent.isVariable )
 			throw new EvalError( `Cannot browse children of variable node.`, {cause:"Invalid Operation"} );
 		const vars = { opc: cnnctn, id: parent.nodeId.toJson() };
@@ -315,11 +315,11 @@ export class Gateway extends ProtoService<FromClient.Transmission,FromServer.Mes
 			if( child )
 				y.push( child );
 		}
-		this.store.setNodes( this.target, cnnctn, parent, y );
+		this.store.setNodes( this.slug, cnnctn, parent, y );
 		this.updateErrorCodes();
 		return y;
 	}
-	async snapshot( opcId:CnnctnTarget, nodes:NodeId[] ):Promise<Map<NodeId,Value>>{
+	async snapshot( opcId:CnnctnSlug, nodes:NodeId[] ):Promise<Map<NodeId,Value>>{
 		const results = await super.queryArray<{id:NodeId,value:Value}>( `nodes( opc: ${StringUtils.qlString(opcId)}, id:[${NodeId.qlArgsArray(nodes)}]){id value}` );
 		var y = new Map<NodeId,Value>();
 		for( const snapshot of results )
@@ -327,7 +327,7 @@ export class Gateway extends ProtoService<FromClient.Transmission,FromServer.Mes
 		this.updateErrorCodes();
 		return y;
 	}
-	async read( opcId:CnnctnTarget, n:NodeId ):Promise<Value>{
+	async read( opcId:CnnctnSlug, n:NodeId ):Promise<Value>{
 		//`id` has to be an OBJECT argument: NodeId::ParseQL (libs/opc/src/uatypes/NodeId.cpp) reads FindPtr<jvalue>("id")
 		//and accepts only an object or an array of them, so the flat `ns:…,i:…` qlArgs() form matched nothing, the server
 		//answered {"node":{}}, and read() returned undefined for every node - silently blanking the cell on changeDouble's
@@ -336,7 +336,7 @@ export class Gateway extends ProtoService<FromClient.Transmission,FromServer.Mes
 		const v = await super.querySingle<{value:any}>( `node( opc: $opc, id: $id ){value}`, {opc: opcId, id: n.toJson()} );
 		return toValue( v["value"] );
 	}
-	async write( opcId:CnnctnTarget, n:NodeId, v:Value, log:Log ):Promise<Value>{
+	async write( opcId:CnnctnSlug, n:NodeId, v:Value, log:Log ):Promise<Value>{
 		const q = `updateVariable( opc: $opc, id: $id, value: $value ){ value }`;
 		const vars = { opc: opcId, id: n.toJson(), value: valueJson(v) };
 		const data:any = await super.postQL<any>( q, vars, log );
@@ -533,7 +533,7 @@ export class Gateway extends ProtoService<FromClient.Transmission,FromServer.Mes
 			return Promise.resolve();
 	}
 	get name():string{ return this.instances[0].instanceName!; }
-	get target():GatewayTarget{ return this.instances[0].instanceName!; }
+	get slug():GatewaySlug{ return this.instances[0].instanceName!; }
 }
 export type SubscriptionResult = {opcId:string, node:NodeId, value:Value, sc?:StatusCode};//sc: the reading's quality; 0/undefined = Good.  Bad already arrives as an OpcError in `value`; sc mainly distinguishes Uncertain.
 //angular-review3 C13: a typed token in place of the string one - a typo now fails the build instead of resolving to nothing at runtime, and inject() can take it.

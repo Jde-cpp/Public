@@ -298,8 +298,8 @@ namespace Jde::QL::Tests{
 	}
 
 	TEST( MutationQLTests, ToStringRoundTripsArgs ){
-		MutationQL m{ "createUser", Parser::ParseArgs(R"({target: "bob"})"), ms<jobject>(), optional<TableQL>{}, true, vector<sp<DB::AppSchema>>{}, true };
-		EXPECT_EQ( m.ToString(), R"(createUser("target":"bob"))" );
+		MutationQL m{ "createUser", Parser::ParseArgs(R"({slug: "bob"})"), ms<jobject>(), optional<TableQL>{}, true, vector<sp<DB::AppSchema>>{}, true };
+		EXPECT_EQ( m.ToString(), R"(createUser("slug":"bob"))" );
 		EXPECT_EQ( m.JTableName(), "user" );
 	}
 }

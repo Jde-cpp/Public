@@ -12,19 +12,19 @@ export const routes: Routes = [
 			children :[
 			{ path: '', title: "Access", component: ComponentCategoryList },
 			{
-				path: 'users/:target',
+				path: 'users/:slug',
 				component: UserDetail,
 				providers: [ DetailResolver<User>, accessProvider ],
 				resolve: { pageData: DetailResolver<User> }
 			},
 			{
-				path: 'groups/:target',
+				path: 'groups/:slug',
 				component: GroupDetail,
 				providers: [ DetailResolver<Group>, accessProvider ],
 				resolve: { pageData: DetailResolver<Group> }
 			},
 			{
-				path: 'roles/:target',
+				path: 'roles/:slug',
 				component: RoleDetail,
 				providers: [ DetailResolver<Role>, accessProvider ],
 				data: { summary: "Role Detail" },

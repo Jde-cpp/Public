@@ -175,7 +175,7 @@ namespace Jde::DB::Sqlite::Tests{
 			catch( const Exception& e ){ y = e.what(); }
 			return y;
 		};
-		//name, provider_id(1 is seeded by access.mutation), target, attributes, description, is_group, email, + the out slot.
+		//name, provider_id(1 is seeded by access.mutation), slug, attributes, description, is_group, email, + the out slot.
 		let identityInsert = []( uint descriptionSize ){
 			vector<Value> params{ Value{string{"zz_43"}}, Value{1}, Value{string{"zz_43"}}, Value{0},
 				Value{string( descriptionSize, 'x' )}, Value{false}, Value{string{"zz_43@nowhere"}}, Value{} };
@@ -191,7 +191,7 @@ namespace Jde::DB::Sqlite::Tests{
 		_ds->ExecuteSync( DB::Sql{Ƒ("pragma max_page_count={}", pages)} );
 		let full = message( identityInsert(4*1024*1024) );
 		_ds->ExecuteSync( DB::Sql{"pragma max_page_count=1073741823"} );
-		_ds->ExecuteSync( DB::Sql{"delete from access_identities where target='zz_43'"} ); //in case it fit after all.
+		_ds->ExecuteSync( DB::Sql{"delete from access_identities where slug='zz_43'"} ); //in case it fit after all.
 
 		EXPECT_EQ( full.find("no transaction is active"), string::npos ) << full; //the bug: the real error was replaced.
 		EXPECT_NE( full.find("full"), string::npos ) << full;                     //"database or disk is full" survives.
@@ -226,11 +226,11 @@ namespace Jde::DB::Sqlite::Tests{
 		EXPECT_FALSE( named->PrimaryKey );
 		EXPECT_EQ( named->Columns, (vector<string>{"name", "provider_id"}) );
 
-		//the access_user_insert_key twins document this index as the thing enforcing target uniqueness - their pre-check only supplies the message.
-		let target = find_if( indexes, [](let& i){ return i.Name=="access_identities_nk1"; } );
-		ASSERT_NE( target, indexes.end() );
-		EXPECT_TRUE( target->Unique );
-		EXPECT_EQ( target->Columns, (vector<string>{"target"}) );
+		//the access_user_insert_key twins document this index as the thing enforcing slug uniqueness - their pre-check only supplies the message.
+		let slug = find_if( indexes, [](let& i){ return i.Name=="access_identities_nk1"; } );
+		ASSERT_NE( slug, indexes.end() );
+		EXPECT_TRUE( slug->Unique );
+		EXPECT_EQ( slug->Columns, (vector<string>{"slug"}) );
 
 		//rowid-alias single-integer pk is omitted by pragma_index_list; a composite pk surfaces as an autoindex, origin 'pk'.
 		let pk = find_if( indexes, [](let& i){ return i.TableName=="access_role_members" && i.PrimaryKey; } );

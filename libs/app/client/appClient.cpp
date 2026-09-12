@@ -61,7 +61,7 @@ namespace Jde::App::Client{
 
 	Ω getJwt( const Crypto::CryptoSettings& cryptoSettings )ε->Web::Jwt{
 		auto certificate = Crypto::ReadCertificate( cryptoSettings.Certificate.Path );//sole key material - the jwt derives the public key from it; the server's TrustStore chains it at enrollment.
-		const Crypto::Certificate info{ certificate };//the cert is also the identity authority - claims mirror the server's enrollment derivation (name: UPN → email → CN, target: CN) so they can't disagree with what enrollment records.
+		const Crypto::Certificate info{ certificate };//the cert is also the identity authority - claims mirror the server's enrollment derivation (name: UPN → email → CN, slug: CN) so they can't disagree with what enrollment records.
 		auto name = info.Upn.size() ? info.Upn : info.Email.size() ? info.Email : info.CommonName;
 		//what the certificate cannot say:  which program this is and where it runs.  Enrollment records it as users.description
 		//(the cert's own fields have their own columns there); later logins skip the insert, so an admin's edit stays.

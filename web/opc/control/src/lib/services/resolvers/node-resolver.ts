@@ -25,18 +25,18 @@ export class NodeResolver implements Resolve<NodePageData> {
 
 	async load( route:NodeRoute ):Promise<NodePageData>{
 		try{
-			let gateway = await this.gatewayService.gateway( route.gatewayTarget );
-			const server = await this.opcStore.getConnection( gateway, route.cnnctnTarget );
+			let gateway = await this.gatewayService.gateway( route.gatewaySlug );
+			const server = await this.opcStore.getConnection( gateway, route.cnnctnSlug );
 			const defaultBrowseNs = server.connection.defaultBrowseNs;
 			if( !route.node ){
-				const vars = { opc: route.cnnctnTarget, path: route.browsePath };
+				const vars = { opc: route.cnnctnSlug, path: route.browsePath };
 				const node = (await gateway.query<any>(`node( opc: $opc, path:$path ){id name parents{id name path}}`, vars, (m)=>console.log(m)) )["node"];
 				if( node.sc )
 					throw new EvalError( (await gateway.errorCodeText(node.sc)), {cause:"Opc Interface"} );
 				route.node = new OpcObject( {...node, browse: route.browse(defaultBrowseNs)} );
 				this.opcStore.insertNode( route, node.parents, defaultBrowseNs );
 			}
-			let references = await gateway.browseObjectsFolder( route.cnnctnTarget, route.node, true, (m)=>console.log(m) );
+			let references = await gateway.browseObjectsFolder( route.cnnctnSlug, route.node, true, (m)=>console.log(m) );
 			let displayed = references.filter( (r)=>r.displayed );
 			if( !this.opcStore.nodeView() ){//a load straight onto a node page:  NodeChildren has not read the views yet, and the sidenav order is fixed here.  ProfileStore caches the row, so the component's own read is a hit.
 				const {views, index} = await NodeView.loadActive( this.profileStore );

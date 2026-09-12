@@ -148,7 +148,7 @@ namespace Jde::DB::MySql::Tests{
 	//the only guard this form gets; `values(col)` rather than the 8.0.19 `as new` alias, which MariaDB does not accept.
 	TEST( SyntaxTests, UpsertSuffix ){
 		const auto& my = MySqlSyntax::Instance();
-		EXPECT_EQ( my.UpsertSuffix({"identity_id","target"}, {"value"}), " on duplicate key update value=values(value)" );
+		EXPECT_EQ( my.UpsertSuffix({"identity_id","url"}, {"value"}), " on duplicate key update value=values(value)" );
 		EXPECT_EQ( my.UpsertSuffix({"a"}, {"b","c"}), " on duplicate key update b=values(b), c=values(c)" );
 
 		const Syntax base;

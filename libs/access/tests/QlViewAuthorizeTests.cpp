@@ -1,5 +1,5 @@
 //ql-review3 #10:  SelectAwait authorized _qlTable.DBTable(), which for a table declaring `qlView` is the *view* - users ->
-//users_ql -> resource "usersQl", a name ResourceLoadAwait never creates (it makes one per table, target ToJson(table->Name)).
+//users_ql -> resource "usersQl", a name ResourceLoadAwait never creates (it makes one per table, slug ToJson(table->Name)).
 //Authorize::Test returns early for a resource it cannot find, so Read on users/providers/connections was never enforced.
 //View now carries an owner back-pointer and tests the owner's name, and SelectAwait authorizes the whole requested tree
 //rather than only its root.  This is the suite with a real authorizer and a real schema, so the coverage lives here.
@@ -43,34 +43,34 @@ namespace Jde::Access::Tests{
 		let wasDeleted = !resource.at( "deleted" ).is_null();
 		if( wasDeleted )
 			Restore( "resources", GetId(resource), GetRoot() );
-		EXPECT_THROW( QL().QuerySync<jarray>("groups{ id target }", {}, _intruder), Exception );
+		EXPECT_THROW( QL().QuerySync<jarray>("groups{ id slug }", {}, _intruder), Exception );
 		if( wasDeleted )
 			Delete( "resources", GetId(resource), GetRoot() );
 	}
 
 	//#10's other half:  columnSql joins the fk children into the parent's statement and SelectSubTables selects the rest -
 	//neither authorized anything, so a child table was readable through a parent the caller could read.
-	//permissionRights, not users{ groups{} }:  Access::Server::CustomQuery intercepts user*/group*/role*/acl/profiles before
-	//SelectAwait ever sees them, so those pairs prove nothing about this path.  permissionRights reaches the stock select, and
-	//its `resource` child is the fk join columnSql builds into the same statement.
+	//providers{ providerType{} }, not users{ groups{} } or permissionRights{ resource{} }:  Access::Server::CustomQuery intercepts
+	//user*/group*/role*/acl/profiles before SelectAwait ever sees them, so those pairs prove nothing about this path;  and since
+	//71e94e8a a read is tested only on a table that declares Read among its ops - resources declares Delete/Subscribe alone, so its
+	//rows are readable by design.  providers (ops None - the root lets the intruder past) reaches the stock select, and its
+	//`providerType` child is the fk join columnSql builds into the same statement, on a table with the default ops.
 	TEST_F( QlViewAuthorizeTests, ChildTableIsAuthorizedToo ){
-		let resource = SelectResource( "resources", GetRoot(), true );
+		let resource = SelectResource( "providerTypes", GetRoot(), true );
 		let wasDeleted = !resource.at( "deleted" ).is_null();
 		if( wasDeleted )
 			Restore( "resources", GetId(resource), GetRoot() );
-		Delete( "resources", _resourcePK, GetRoot() );//the parent is not the point:  let the intruder past the root of the query.
 
-		constexpr sv ql{ "permissionRights{ id resource{ id target } }" };
+		constexpr sv ql{ "providers{ id providerType{ id name } }" };
 		EXPECT_NO_THROW( QL().QuerySync<jarray>(string{ql}, {}, GetRoot()) ) << "the query itself has to be valid, or the throw below proves nothing";
 		try{
 			QL().QuerySync<jarray>( string{ql}, {}, _intruder );
 			ADD_FAILURE() << "the child table was read without authorization";
 		}
 		catch( const Exception& e ){
-			EXPECT_NE( string{e.what()}.find("resources"), string::npos ) << e.what(); //refused for the child, not for something else.
+			EXPECT_NE( string{e.what()}.find("providerTypes"), string::npos ) << e.what(); //refused for the child, not for something else.
 		}
 
-		Restore( "resources", _resourcePK, GetRoot() );
 		if( wasDeleted )
 			Delete( "resources", GetId(resource), GetRoot() );
 	}

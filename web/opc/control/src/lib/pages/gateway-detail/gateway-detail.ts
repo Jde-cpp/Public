@@ -60,7 +60,7 @@ export const gatewayTableSettings:TableSettings = {
 	//label ("Connected"), and the cell's own 40px of padding on top of that, so a narrower column ellipsises it to "Connec...".
 	//opcConnections shows as "Clients", not "Connections":  a row *is* a connection, so a column of that name under a tab of
 	//that name read as a contradiction next to Sessions (16 sessions, 0 connections).  What it counts is the live UAClients
-	//the gateway holds against the target, which is what the gateway itself calls them.
+	//the gateway holds against the slug, which is what the gateway itself calls them.
 	//`description` is listed last for readability only - View.columns() moves it there whatever position it is given.
 	columns: [{name:"connectionStatus", displayName:"Status", selection:"name", style: new Style(130), chip:{Connected:"ok", Idle:"neutral", Error:"error"}}, "name", {name:"opcSessions", displayName:"Sessions", selection:"count", style: new Style({flex: new Flex(130), align:"right"})}, {name:"opcConnections", displayName:"Clients", selection:"count", style: new Style({flex: new Flex(130), align:"right"})}, {name:"url", displayName:"URL"}, {name:"certificateUri", displayName:"Certificate URI"}, "description" ],
 	sort: "name"

@@ -117,7 +117,7 @@ namespace Jde::Opc::Gateway{
 		if( auto pSubscription = _subscriptions.find(h); client && pSubscription!=_subscriptions.end() ){
 			auto& args = pSubscription->second;
 			calls = args.ClientCalls.size();
-			for_each( args.ClientCalls, [&opcId=client->Target(),&value,&args](let& x){x->SendDataChange(opcId, args.Node, value);} );
+			for_each( args.ClientCalls, [&opcId=client->Slug(),&value,&args](let& x){x->SendDataChange(opcId, args.Node, value);} );
 		}
 		else
 			TRACE( "Could not find subscription:  {}.", hex(h) );

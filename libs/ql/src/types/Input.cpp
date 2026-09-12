@@ -57,7 +57,7 @@ namespace Jde::QL{
 			return p ? *p : jvalue{};
 		});
 	}
-	//#36: an unbound $name extrapolated to json null, and null is a value - `users(target:$targt)` became `target is null` and
+	//#36: an unbound $name extrapolated to json null, and null is a value - `users(slug:$targt)` became `slug is null` and
 	//returned 0 rows with nothing said, while `updateGroup(name:$typo)` wrote one.  The name itself is only knowable before the
 	//substitution, so the check is here rather than at the predicate.  Variables may be null on a hand-built Input: then nothing
 	//is bound.
@@ -72,15 +72,15 @@ namespace Jde::QL{
 	}
 	α Input::GetKey( SL sl )Ε->DB::Key{
 		let y = FindKey();
-		THROW_IFSL( !y, "Could not find id or target in mutation  query: {}, variables: {}", serialize(Args), serialize(*Variables) );
+		THROW_IFSL( !y, "Could not find id or slug in mutation  query: {}, variables: {}", serialize(Args), serialize(*Variables) );
 		return *y;
 	}
 	α Input::FindKey()Ι->optional<DB::Key>{
 		optional<DB::Key> y;
 		if( let id = FindId<uint>(); id )
 			y = DB::Key{ *id };
-		else if( let target = FindPtr<jstring>("target"); target )
-			y = DB::Key{ string{*target} };
+		else if( let slug = FindPtr<jstring>("slug"); slug )
+			y = DB::Key{ string{*slug} };
 		return y;
 	}
 	α Input::OrderByJson()Ι->const vector<std::pair<string,bool>>&{	//[column,asc]

@@ -31,24 +31,24 @@ namespace Jde::QL::Tests{
 
 	TEST( MutationsAwaitTests, ResultIsTrimmedToTheRequest ){
 		auto ql = ms<AnsweringQL>();
-		let y = run( "mutation createStatus( target:\"x\" ){ id name }", ql );
+		let y = run( "mutation createStatus( slug:\"x\" ){ id name }", ql );
 		EXPECT_EQ( y, (jvalue{ jobject{{"id",7},{"name","seven"}} }) ) << serialize(y);//rowCount and the arg are not asked for.
 		EXPECT_EQ( ql->Answered, 1u );
 	}
 	TEST( MutationsAwaitTests, ANonRawDocumentWrapsInTheCommandName ){
 		auto ql = ms<AnsweringQL>();
-		let y = run( "mutation createStatus( target:\"x\" ){ id }", ql, false );
+		let y = run( "mutation createStatus( slug:\"x\" ){ id }", ql, false );
 		EXPECT_EQ( y, (jvalue{ jobject{{"createStatus", jobject{{"id",7}}}} }) ) << serialize(y);
 	}
 	TEST( MutationsAwaitTests, SeveralMutationsAreAList ){
 		auto ql = ms<AnsweringQL>();
-		let y = run( "mutation createStatus( target:\"x\" ){ id } updateStatus( id:7 ){ name }", ql );
+		let y = run( "mutation createStatus( slug:\"x\" ){ id } updateStatus( id:7 ){ name }", ql );
 		EXPECT_EQ( y, (jvalue{ jarray{ jobject{{"id",7}}, jobject{{"name","seven"}} } }) ) << serialize(y);
 		EXPECT_EQ( ql->Answered, 2u );
 	}
 	TEST( MutationsAwaitTests, NoResultRequestNoResult ){
 		auto ql = ms<AnsweringQL>();
-		let y = run( "mutation createStatus( target:\"x\" )", ql );
+		let y = run( "mutation createStatus( slug:\"x\" )", ql );
 		EXPECT_TRUE( y.is_array() && y.get_array().empty() ) << serialize(y);//asked for nothing back; the mutation still ran.
 		EXPECT_EQ( ql->Answered, 1u );
 	}

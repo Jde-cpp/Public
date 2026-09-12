@@ -17,7 +17,7 @@ export interface IGraphQL{
 	mutate<T>( ql: string|Mutation|Mutation[], log:Log ):Promise<T>;
 	mutations( log:Log ):Promise<MutationSchema[]>;
 
-	targetQuery( schema:TableSchema, target: string, showDeleted:boolean, excludedColumns:string[] ):string;
+	slugQuery( schema:TableSchema, slug: string, showDeleted:boolean, excludedColumns:string[] ):string;
 	subQueries( typeName: string, id: number ):string[];
 	toCollectionName( collectionDisplay:string ):string;
 }

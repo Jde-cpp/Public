@@ -98,7 +98,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 		if( !resubscribe && this.subscription ){
 			const orphaned = this.profile.subscriptions.filter( s=>!nodes.some(n=>n.key==s.key) );
 			if( orphaned.length )
-				this._iot.unsubscribe( this.cnnctnTarget, orphaned, this.Key ).catch( e=>this.snackbar.exception("Could not remove subscription.", e) );
+				this._iot.unsubscribe( this.cnnctnSlug, orphaned, this.Key ).catch( e=>this.snackbar.exception("Could not remove subscription.", e) );
 		}
 		this.selections = new SelectionModel<UaNode>( true, resubscribe ? [] : persisted );
 		this.selections.changed.subscribe( this.onSubscriptionChange.bind(this) );
@@ -108,7 +108,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 	async onRefresh(){
 		this.isRefreshing.set( true );
 		try{
-			const references = await this._iot.browseObjectsFolder( this.cnnctnTarget, this.node(), true, (m)=>console.log(m) );
+			const references = await this._iot.browseObjectsFolder( this.cnnctnSlug, this.node(), true, (m)=>console.log(m) );
 			this.setNodes( references.filter( r=>r.displayed ), false );
 		}
 		catch( e ){
@@ -234,7 +234,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 				const unsaved = nodes.filter( n=>!this.profile.subscriptions.some(s=>s.key==n.key) );
 				this.profile.subscriptions.push( ...unsaved );//`nodes` (not `unsaved`) still drives the gateway calls below - after a reload the live subscription does not exist yet even for persisted keys
 				if( !this.subscription){
-					this.subscription = this._iot.subscribe( this.cnnctnTarget, nodes, this.Key ).subscribe({
+					this.subscription = this._iot.subscribe( this.cnnctnSlug, nodes, this.Key ).subscribe({
 						next:(value: SubscriptionResult) =>{
 							const row = this.variables.find( (r)=>r.nodeId.equals(value.node) );
 							if( !row )
@@ -254,7 +254,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 					});
 				}
 				else
-					this._iot.addToSubscription( this.cnnctnTarget, nodes, this.Key );
+					this._iot.addToSubscription( this.cnnctnSlug, nodes, this.Key );
 			} catch (e) {
 				this.snackbar.exception( "Could not add subscription.", e );
 			}
@@ -266,7 +266,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 				this.subscription = undefined;
 			else{
 				try{
-					this._iot.unsubscribe( this.cnnctnTarget, nodes, this.Key );
+					this._iot.unsubscribe( this.cnnctnSlug, nodes, this.Key );
 				}
 				catch( e ) {
 					this.snackbar.exception( "Could not remove subscription.", e );
@@ -288,7 +288,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 	async toggleValue( x:Variable, e:MatCheckboxChange ){
 		e.source.checked = !e.source.checked;
 		try {
-			x.value = await this._iot.write( this.cnnctnTarget, x.nodeId, !x.value, (x)=>console.log(x) );
+			x.value = await this._iot.write( this.cnnctnSlug, x.nodeId, !x.value, (x)=>console.log(x) );
 			this.cdRef.detectChanges();
 		}
 		catch (e) {
@@ -297,18 +297,18 @@ export class NodeChildren implements OnInit, OnDestroy {
 	}
 	async changeDouble( x:Variable, e:Event ){
 		try {
-			x.value = await this._iot.write( this.cnnctnTarget, x.nodeId, +(<HTMLInputElement>e.target).value, (x)=>console.log(x) );
+			x.value = await this._iot.write( this.cnnctnSlug, x.nodeId, +(<HTMLInputElement>e.target).value, (x)=>console.log(x) );
 		}
 		catch (e) {
 			this.snackbar.exception( "Could not change double value.", e );
-			x.value = await this._iot.read( this.cnnctnTarget, x.nodeId );
+			x.value = await this._iot.read( this.cnnctnSlug, x.nodeId );
 			console.log(x.value);
 		}
 		this.#repaint();
 	}
 	async changeString( n:Variable, e:Event ){
 		try{
-			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, (<HTMLInputElement>e.target).value, (x)=>console.log(x) );
+			n.value = await this._iot.write( this.cnnctnSlug, n.nodeId, (<HTMLInputElement>e.target).value, (x)=>console.log(x) );
 		}
 		catch(err){
 			(<HTMLInputElement>e.target).value = String( n.value );
@@ -318,7 +318,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 	}
 	async changeEnum( n:Variable, e:MatSelectChange<number> ){
 		try{
-			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, e.value, (x)=>console.log(x) );
+			n.value = await this._iot.write( this.cnnctnSlug, n.nodeId, e.value, (x)=>console.log(x) );
 		}
 		catch(err){
 			e.source.value = <number>n.value;
@@ -330,7 +330,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 		if( !e.value )//unparseable text, or a cleared box:  beginningOfDay(null) is TODAY, and the old value would have been overwritten with it
 			return this.#repaint( n );
 		try{
-			n.value = await this._iot.write( this.cnnctnTarget, n.nodeId, <Timestamp>ProtoUtils.fromDate(DateUtils.beginningOfDay(e.value)), (x)=>console.log(x) );
+			n.value = await this._iot.write( this.cnnctnSlug, n.nodeId, <Timestamp>ProtoUtils.fromDate(DateUtils.beginningOfDay(e.value)), (x)=>console.log(x) );
 			this.#repaint();
 		}
 		catch( err ){
@@ -354,7 +354,7 @@ export class NodeChildren implements OnInit, OnDestroy {
 	node = model.required<UaNode>();
 	get nodeId(){ return this.node().nodeId; }
 	get server():Server{ return this.pageData.server; }
-	get cnnctnTarget():string{ return this.server.connection.target; }
+	get cnnctnSlug():string{ return this.server.connection.slug; }
 	pageData!:NodePageData;
 	profile!:UserSettings;
 	nodes = signal<UaNode[]>( [] );//every child the browse returned;  rows() is the view's cut of them

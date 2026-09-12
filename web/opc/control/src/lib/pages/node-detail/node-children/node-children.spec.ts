@@ -44,7 +44,7 @@ describe( 'NodeChildren subscription values', ()=>{
 			{ provide: ComponentPageTitle, useValue: {} }
 		]});
 		page = TestBed.createComponent( NodeChildren ).componentInstance;
-		page.pageData = { gateway, route: {profileKey: 'k'}, server: {connection: {target: 'local', defaultBrowseNs: 2}}, nodes: [] } as any;
+		page.pageData = { gateway, route: {profileKey: 'k'}, server: {connection: {slug: 'local', defaultBrowseNs: 2}}, nodes: [] } as any;
 		page.profile = { subscriptions: [] } as any;
 	} );
 	const setNodes = ( nodes:Variable[], resubscribe:boolean )=>(<any>page).setNodes( nodes, resubscribe );

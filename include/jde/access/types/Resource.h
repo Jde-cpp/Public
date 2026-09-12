@@ -11,7 +11,7 @@ namespace Jde::Access{
 		Resource( jobject j )ι;
 		Access::ResourcePK PK{};
 		string Schema;
-		string Target;
+		string Slug;
 		string Criteria;
 		optional<TimePoint> IsDeleted;
 	};

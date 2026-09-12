@@ -30,7 +30,7 @@
 							[required]="!field.nullable"
 							[readonly]="isReadonly(field)"
 							[type]="field.name=='url' ? 'url' : 'text'"
-							[attr.cdkFocusInitial]="field.name=='target' ? '' : null"
+							[attr.cdkFocusInitial]="field.name=='slug' ? '' : null"
 							[value]="record()[field.name] ?? ''"
 							[tabIndex]=tab+1
 							(input)="onChange( field.name, $any($event.target).value )" >

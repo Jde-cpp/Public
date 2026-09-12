@@ -1,8 +1,8 @@
 <section class="section">
 	<h3 class="section-title">Identity</h3>
 	<mat-form-field appearance="fill">
-		<mat-label>Id</mat-label>
-		<input matInput type="text" cdkFocusInitial [value]="record().target ?? ''" (input)="update( 'target', $any($event.target).value )">
+		<mat-label>Slug</mat-label>
+		<input matInput type="text" cdkFocusInitial [value]="record().slug ?? ''" (input)="update( 'slug', $any($event.target).value )">
 	</mat-form-field>
 	<mat-form-field appearance="fill">
 		<mat-label>Name</mat-label>

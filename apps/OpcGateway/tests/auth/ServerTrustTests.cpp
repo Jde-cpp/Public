@@ -2,7 +2,7 @@
 //must accept a server certificate that is under a trusted directory, reject one that is not with a reason that names the
 //server and the fix, and accept anything when /gateway/verifyServerCertificate is off.  No connection:  the group is
 //installed on a bare UA_ClientConfig and its verifyCertificate called directly, on two certificates the harness already
-//issued - the gateway's app certificate and the per-target issued certificate (tests/main.cpp EnsureCertificate).
+//issued - the gateway's app certificate and the per-slug issued certificate (tests/main.cpp EnsureCertificate).
 #include <open62541/client_config_default.h>
 #include <jde/fwk/crypto/OpenSsl.h>
 #include <jde/opc/uatypes/Logger.h>
@@ -25,7 +25,7 @@ namespace Jde::Opc::Gateway::Tests{
 		α SetUp()->void override{
 			_config.logging = &_logger;
 			_trusted = AppClient()->SslSettings->Certificate.Path;
-			_other = UAClient::CryptoSettings( ServerCnnctnNK{OpcServerTarget} ).Certificate.Path;
+			_other = UAClient::CryptoSettings( ServerCnnctnNK{OpcServerSlug} ).Certificate.Path;
 			ASSERT_TRUE( fs::exists(_trusted) ) << _trusted;
 			ASSERT_TRUE( fs::exists(_other) ) << _other;
 			ASSERT_NE( Crypto::ReadCertificate(_trusted), Crypto::ReadCertificate(_other) );
@@ -76,7 +76,7 @@ namespace Jde::Opc::Gateway::Tests{
 
 	//The live half:  a connect to the embedded OpcServer with no anchors must be refused by OUR verifier, with the detail
 	//naming the server and the switch, and leave nothing behind - the same credential connects once the anchors are back.
-	//IssuedToken, as TrustReloadTests:  the per-target issued cert is what every non-certificate credential presents, and
+	//IssuedToken, as TrustReloadTests:  the per-slug issued cert is what every non-certificate credential presents, and
 	//the OpcServer offers no Username policy.  The anchors are swapped through ServerTrust's seam rather than the setting -
 	///access/trustedCertDirs is also the in-process AppServer's enrollment anchor (see the header).
 	class ServerTrustLiveTests : public Auth{
@@ -91,7 +91,7 @@ namespace Jde::Opc::Gateway::Tests{
 		α Connect( atomic_flag& flag )ι->ConnectAwait::Task{
 			try{
 				_exception = nullptr;
-				_client = co_await UAClient::GetClient( Connection->Target, Credential{_jwt->Payload()} );
+				_client = co_await UAClient::GetClient( Connection->Slug, Credential{_jwt->Payload()} );
 			}
 			catch( Exception& e ){
 				_exception = e.Move();
@@ -106,7 +106,7 @@ namespace Jde::Opc::Gateway::Tests{
 	optional<Web::Jwt> ServerTrustLiveTests::_jwt;
 
 	TEST_F( ServerTrustLiveTests, RejectsAServerOutsideTheTrustedDirs ){
-		if( auto cached = UAClient::Find(Connection->Target, Credential{_jwt->Payload()}); cached )
+		if( auto cached = UAClient::Find(Connection->Slug, Credential{_jwt->Payload()}); cached )
 			UAClient::RemoveClient( move(cached) );//a client another suite left cached would skip Configuration() - the next connect must build a fresh one.
 		ServerTrust::OverrideTrustedCertDirs( vector<fs::path>{ fs::temp_directory_path()/"jde-servertrust-no-anchors" } );
 

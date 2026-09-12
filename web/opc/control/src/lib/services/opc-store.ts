@@ -1,11 +1,11 @@
 import { Injectable, InjectionToken, signal } from "@angular/core";
-import { CnnctnTarget, ServerCnnctn } from "../model/server-cnnctn";
+import { CnnctnSlug, ServerCnnctn } from "../model/server-cnnctn";
 import { browseEq, ETypes, Ns, toBrowse } from '../model/types';
 import { NodeRoute } from "../model/node-route";
 import { OpcObject, UaNode, ENodeClass } from "../model/node";
 import { NodeId, NodeKey } from "../model/node-id";
 import { RouteItem } from "jde-spa";
-import { Gateway, GatewayTarget } from "./gateway-service";
+import { Gateway, GatewaySlug } from "./gateway-service";
 import { Server, ServerProps } from "../model/server";
 import { NodeView } from "../model/node-view";
 
@@ -27,16 +27,16 @@ export class OpcStore{
 	//the resolver - before the component hears of the new route - so the view has to already be here rather than asked for.
 	nodeView = signal<NodeView|undefined>( undefined );
 
-	public async getConnection( gatewayService:Gateway, cnnctn:CnnctnTarget ):Promise<Server>{
-		//#connections = new Map<GatewayTarget,Map<CnnctnTarget, ServerCnnctn>>();
-		const gateway = gatewayService.target;
+	public async getConnection( gatewayService:Gateway, cnnctn:CnnctnSlug ):Promise<Server>{
+		//#connections = new Map<GatewaySlug,Map<CnnctnSlug, ServerCnnctn>>();
+		const gateway = gatewayService.slug;
 		let gatewayConnections = this.#connections.get( gateway );
 		if( !gatewayConnections )
-			this.#connections.set( gateway, gatewayConnections = new Map<CnnctnTarget, Server>() );
+			this.#connections.set( gateway, gatewayConnections = new Map<CnnctnSlug, Server>() );
 		if( gatewayConnections.has(cnnctn) )
 			return gatewayConnections.get(cnnctn)!;
 		let q = `\
-			connection: serverConnection( target: $opc ){ id name target url certificateUri defaultBrowseNs }
+			connection: serverConnection( slug: $opc ){ id name slug url certificateUri defaultBrowseNs }
 			desc: serverDescription( opc: $opc ){ applicationUri productUri applicationName applicationType gatewayServerUri discoveryProfileUri discoveryUrls }
 			policy: securityPolicyUri( opc: $opc )
 			mode: securityMode( opc: $opc )
@@ -47,10 +47,10 @@ export class OpcStore{
 		return server;
 	}
 
-	private getNodes( gateway:GatewayTarget, cnnctn:CnnctnTarget ):Map<NodeKey,StoreNode>{
+	private getNodes( gateway:GatewaySlug, cnnctn:CnnctnSlug ):Map<NodeKey,StoreNode>{
 		let gatewayNodes = this.#nodes.get( gateway );
 		if( !gatewayNodes )
-			this.#nodes.set( gateway, gatewayNodes = new Map<CnnctnTarget, Map<NodeKey,StoreNode>>() );
+			this.#nodes.set( gateway, gatewayNodes = new Map<CnnctnSlug, Map<NodeKey,StoreNode>>() );
 		let nodes = gatewayNodes.get( cnnctn );
 		if( !nodes ){
 			gatewayNodes.set( cnnctn, nodes = new Map<NodeKey,StoreNode>() );
@@ -58,7 +58,7 @@ export class OpcStore{
 		}
 		return nodes;
 	}
-	private findStore( gateway:GatewayTarget, cnnctn:CnnctnTarget, node:NodeId ):StoreNode|undefined{
+	private findStore( gateway:GatewaySlug, cnnctn:CnnctnSlug, node:NodeId ):StoreNode|undefined{
 		const opcNodes = this.#nodes.get( gateway )?.get( cnnctn );
 		let store:StoreNode|undefined;
 		if( opcNodes )
@@ -99,7 +99,7 @@ export class OpcStore{
 		return parent?.node;
 	}
 	insertNode( route:NodeRoute, parents:any, defaultNs:Ns ):void{
-		let opcNodes = this.getNodes( route.gatewayTarget, route.cnnctnTarget );
+		let opcNodes = this.getNodes( route.gatewaySlug, route.cnnctnSlug );
 		for( let parent of parents ){
 			parent.browse = toBrowse( parent.path, defaultNs );
 			let obj = new OpcObject( parent );
@@ -115,7 +115,7 @@ export class OpcStore{
 			this.addChildren( opcNodes, route.node.parent!, [route.node] );
 	}
 
-	setNodes( gateway:GatewayTarget, cnnctn:CnnctnTarget, parent:UaNode, children:UaNode[] ){
+	setNodes( gateway:GatewaySlug, cnnctn:CnnctnSlug, parent:UaNode, children:UaNode[] ){
 		let opcNodes = this.getNodes( gateway, cnnctn );
 		this.addChildren( opcNodes, parent, children );
 	}
@@ -130,7 +130,7 @@ export class OpcStore{
 		}
 	}
 
-	cnnctnName( gateway:GatewayTarget, cnnctn:CnnctnTarget ):string{
+	cnnctnName( gateway:GatewaySlug, cnnctn:CnnctnSlug ):string{
 		return this.#connections.get( gateway )?.get( cnnctn )?.connection.name ?? cnnctn;
 	}
 	//ComponentNav renders each sibling as parent.path + '/' + sibling.path, so the parent must be the absolute url and the
@@ -140,14 +140,14 @@ export class OpcStore{
 	//The siblings come in the node table's order - the active view's sort, without its filters - so the sidenav lists them as
 	//the parent page did;  in browse order a name-sorted table's last row could land anywhere.
 	setRoute(route: NodeRoute, defaultBrowseNs:Ns|undefined ):void{
-		const cnnctnName = this.cnnctnName( route.gatewayTarget, route.cnnctnTarget );
+		const cnnctnName = this.cnnctnName( route.gatewaySlug, route.cnnctnSlug );
 		if( route.node.equals(OpcObject.rootNode) ){
-			route.parent = new RouteItem( {path: route.gatewayUrl, title: route.gatewayTarget} );//set even here:  ComponentNav only recomputes parentUrl from the parent, so without one the connection page kept whatever the last node page left behind
-			route.siblings = [new RouteItem({title: cnnctnName, path: route.cnnctnTarget})]; //TODO add all connections.
+			route.parent = new RouteItem( {path: route.gatewayUrl, title: route.gatewaySlug} );//set even here:  ComponentNav only recomputes parentUrl from the parent, so without one the connection page kept whatever the last node page left behind
+			route.siblings = [new RouteItem({title: cnnctnName, path: route.cnnctnSlug})]; //TODO add all connections.
 			return;
 		}
 		let findStore = (node:NodeId|undefined):StoreNode|undefined => {
-			return node ? this.findStore( route.gatewayTarget, route.cnnctnTarget, node ) : undefined;
+			return node ? this.findStore( route.gatewaySlug, route.cnnctnSlug, node ) : undefined;
 		};
 		const store = findStore( route.nodeId );
 		let parentPaths = [];
@@ -158,7 +158,7 @@ export class OpcStore{
 		if( !parent )
 			throw new EvalError( `Parent not found for ${store?.node.browse}`, {cause:"Internal Error"} );
 
-		//the root store node is named after the target, so the connection level takes the display name instead
+		//the root store node is named after the slug, so the connection level takes the display name instead
 		const parentTitle = parent.node.equals( OpcObject.rootNode ) ? cnnctnName : (parent.node.name ?? cnnctnName);
 		route.parent = new RouteItem( {path: [route.cnnctnUrl, ...parentPaths.reverse()].join('/'), title: parentTitle} );
 		const siblings:UaNode[] = [];
@@ -172,12 +172,12 @@ export class OpcStore{
 		route.siblings = view.sortNodes( siblings ).map( n=>new RouteItem({path: n.browseFQ(defaultBrowseNs), title: n.name}) );
 	}
 
-	findNodeId( gateway:string, cnnctnTarget:string, browsePath:string ):UaNode|undefined{
-		const nodes = this.getNodes( gateway, cnnctnTarget );
+	findNodeId( gateway:string, cnnctnSlug:string, browsePath:string ):UaNode|undefined{
+		const nodes = this.getNodes( gateway, cnnctnSlug );
 		let storeNode = nodes.get( OpcObject.rootNode.key );
 		if( !storeNode )
 			return undefined;
-		const cnnctn = this.#connections.get( gateway )?.get( cnnctnTarget );
+		const cnnctn = this.#connections.get( gateway )?.get( cnnctnSlug );
 		const segments = browsePath.split( "/" );
 		let uaNode: UaNode|undefined;
 		for( let i=0; i<segments.length; ++i ){
@@ -186,7 +186,7 @@ export class OpcStore{
 				return undefined;
 			if( i+1==segments.length )
 				break;//the last segment is the answer;  its own store entry is not needed and may legitimately be absent
-			storeNode = this.findStore( gateway, cnnctnTarget, uaNode.nodeId );
+			storeNode = this.findStore( gateway, cnnctnSlug, uaNode.nodeId );
 			if( !storeNode )
 				return undefined;//a known child with no store entry of its own - the rest of the path cannot be walked
 		}
@@ -194,8 +194,8 @@ export class OpcStore{
 	}
 
 	#serverCnnctnRoutes!: RouteItem[];
-	#nodes = new Map<GatewayTarget,Map<CnnctnTarget, Map<NodeKey,StoreNode>>>();
-	#connections = new Map<GatewayTarget,Map<CnnctnTarget, Server>>();
+	#nodes = new Map<GatewaySlug,Map<CnnctnSlug, Map<NodeKey,StoreNode>>>();
+	#connections = new Map<GatewaySlug,Map<CnnctnSlug, Server>>();
 }
 //angular-review3 C13: a typed token in place of the string one - a typo now fails the build instead of resolving to nothing at runtime, and inject() can take it.
 export const OPC_STORE = new InjectionToken<OpcStore>( 'OpcStore' );

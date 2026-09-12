@@ -4,13 +4,13 @@ import { EffectiveRight, RightsSource, UserRightsRow } from './effective-right';
 
 const names = { groups: new Map([[7, "Ops"], [3, "Ops-EU"]]), roles: new Map([[9, "Owner"], [11, "Viewer"]]) };
 const resources = [
-	new Resource( {id: 12, schemaName: "access", target: "groups", name: "groups", allowed: Rights.Create|Rights.Read|Rights.Update, deleted: undefined} ),
-	new Resource( {id: 13, schemaName: "access", target: "users", name: "users", allowed: Rights.All, deleted: undefined} ),//enforced, no grant
-	new Resource( {id: 14, schemaName: "access", target: "roles", name: "roles", allowed: Rights.All, deleted: "2026-09-01T00:00:00Z"} ),//unenforced, no grant
+	new Resource( {id: 12, schemaName: "access", slug: "groups", name: "groups", allowed: Rights.Create|Rights.Read|Rights.Update, deleted: undefined} ),
+	new Resource( {id: 13, schemaName: "access", slug: "users", name: "users", allowed: Rights.All, deleted: undefined} ),//enforced, no grant
+	new Resource( {id: 14, schemaName: "access", slug: "roles", name: "roles", allowed: Rights.All, deleted: "2026-09-01T00:00:00Z"} ),//unenforced, no grant
 ];
 const source = ( allowed:Rights, denied:Rights, path:RightsSource["path"]=[] ):RightsSource=>({ permissionId: 1, allowed, denied, path });
 const nested:RightsSource["path"] = [ {id:7, type:"group"}, {id:3, type:"group"}, {id:9, type:"role"}, {id:11, type:"role"} ];
-const row:UserRightsRow = { resource: {id: 12, schemaName: "access", target: "groups", criteria: "", deleted: null}, allowed: Rights.Read|Rights.Update, denied: Rights.Update, effective: Rights.Read,
+const row:UserRightsRow = { resource: {id: 12, schemaName: "access", slug: "groups", criteria: "", deleted: null}, allowed: Rights.Read|Rights.Update, denied: Rights.Update, effective: Rights.Read,
 	sources: [ { permissionId: 42, allowed: Rights.Read|Rights.Update, denied: Rights.None, path: nested }, { permissionId: 43, allowed: Rights.None, denied: Rights.Update, path: [] } ] };
 
 describe( 'EffectiveRight.describe', ()=>{
@@ -45,8 +45,8 @@ describe( 'EffectiveRight.fromRows', ()=>{
 		expect( users.isLockout ).toBe( true );
 		expect( users.effective ).toBe( Rights.None );
 	} );
-	const node:UserRightsRow = { resource: {id: 30, schemaName: "opc.debug", target: "nodeIds", criteria: "ns=4;i=6020", deleted: null}, allowed: Rights.Read, denied: Rights.None, effective: Rights.Read, sources: [ {permissionId: 5, allowed: Rights.Read, denied: Rights.None, path: []} ] };
-	it( 'keeps a node resource the cache never had, top-level and named by its target when its table row is absent', ()=>{
+	const node:UserRightsRow = { resource: {id: 30, schemaName: "opc.debug", slug: "nodeIds", criteria: "ns=4;i=6020", deleted: null}, allowed: Rights.Read, denied: Rights.None, effective: Rights.Read, sources: [ {permissionId: 5, allowed: Rights.Read, denied: Rights.None, path: []} ] };
+	it( 'keeps a node resource the cache never had, top-level and named by its slug when its table row is absent', ()=>{
 		const r = EffectiveRight.fromRows( [node], resources, names ).find( r=>r.resource.id==30 )!;
 		expect( r.resource.name ).toBe( "nodeIds" );
 		expect( r.resource.criteria ).toBe( "ns=4;i=6020" );
@@ -55,9 +55,9 @@ describe( 'EffectiveRight.fromRows', ()=>{
 		expect( r.parent ).toBeUndefined();
 	} );
 	//A node row replaces its table's row for its subtree (OpcAuthorize resolves a node to the nearest configured ancestor), so it
-	//nests under it - and takes its name:  its own is the QL target access_role_add coalesced, "nodeIds" under the synced "node_ids".
+	//nests under it - and takes its name:  its own is the QL slug access_role_add coalesced, "nodeIds" under the synced "node_ids".
 	it( 'nests a node resource under its table row, named after it, in criteria order', ()=>{
-		const table = new Resource( {id: 20, schemaName: "opc.debug", target: "nodeIds", name: "node_ids", allowed: Rights.All, deleted: undefined} );
+		const table = new Resource( {id: 20, schemaName: "opc.debug", slug: "nodeIds", name: "node_ids", allowed: Rights.All, deleted: undefined} );
 		const second:UserRightsRow = { ...node, resource: {...node.resource, id: 31, criteria: "ns=4;i=6010"} };
 		const rights = EffectiveRight.fromRows( [node, second], [...resources, table], names );
 		expect( rights.map(r=>r.resource.id) ).toEqual( [12, 13, 20] );//the two enforced access tables as lockouts, then the node table; no node at the top level

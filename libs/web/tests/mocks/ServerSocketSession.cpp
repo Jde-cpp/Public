@@ -28,7 +28,7 @@ namespace Jde::Web::Mock{
 		}
 	}
 
-	α ServerSocketSession::WriteException( runtime_error&& e, RequestId )ι->void{
+	α ServerSocketSession::WriteException( runtime_error&& e, RequestId, SL )ι->void{
 		Proto::FromServerTransmission t;
 		auto m = t.add_messages();
 		m->set_exception( e.what() );

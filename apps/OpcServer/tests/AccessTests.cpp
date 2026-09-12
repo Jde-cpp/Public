@@ -27,36 +27,36 @@ namespace Jde::Opc::Server::Tests{
 		//browse actually reaches it, and it is not a node the other tests assert on.
 		constexpr static ERights _nodeDenied = ERights::All;
 		Ω criteriaNode()ι->UA_NodeId{ return UA_NODEID_NUMERIC( 0, UA_NS0ID_SERVER_SERVERSTATUS ); }
-		Ω roleTarget( const string& target )ι->string{ return DB::Names::Capitalize( target ); }
+		Ω roleSlug( const string& slug )ι->string{ return DB::Names::Capitalize( slug ); }
 
-		Ω addRole( const string& target, ERights allowed, ERights denied )ε->void{
-			let userTarget = Ƒ( "{}User", target );
+		Ω addRole( const string& slug, ERights allowed, ERights denied )ε->void{
+			let userSlug = Ƒ( "{}User", slug );
 
-			auto user = _app->QuerySync( "user(target:$target){id}", {{"target", userTarget}} );
+			auto user = _app->QuerySync( "user(slug:$slug){id}", {{"slug", userSlug}} );
 			if( user.empty() )
-				user = _app->QuerySync<jobject>( "createUser( target:$target, name:$name ){id}", {{"target", userTarget}, {"name", userTarget+" name"}} );
+				user = _app->QuerySync<jobject>( "createUser( slug:$slug, name:$name ){id}", {{"slug", userSlug}, {"name", userSlug+" name"}} );
 			let userId = Json::AsNumber<uint>( user.at("id") );
-			_users.emplace( userTarget, userId );
+			_users.emplace( userSlug, userId );
 
-			let target_ = roleTarget( target );
-			//Find-or-create, as the user above already is:  createRole on a persisted db trips the roles.target unique index
+			let slug_ = roleSlug( slug );
+			//Find-or-create, as the user above already is:  createRole on a persisted db trips the roles.slug unique index
 			//and takes the whole suite with it, which is what a non-ctest re-run (recreateDB=false, the documented way to run
 			//beside live services) does every time (opcserver-review3 L30).
-			auto role = _app->QuerySync( "role(target:$target){id}", {{"target", target_}} );
+			auto role = _app->QuerySync( "role(slug:$slug){id}", {{"slug", slug_}} );
 			let existed = !role.empty();
 			if( !existed )
-				role = _app->QuerySync<jobject>( "createRole( target:$target, name:$name ){id}", {{"target",target_}, {"name", target_+" name"}} );
+				role = _app->QuerySync<jobject>( "createRole( slug:$slug, name:$name ){id}", {{"slug",slug_}, {"name", slug_+" name"}} );
 			let roleId = Json::AsNumber<Access::RolePK>( role.at("id") );
-			_roles.emplace( target_, roleId );//keyed as the db names it - the same key SetUpTestCase's roles() load uses, which is what made every guard below always-true.
+			_roles.emplace( slug_, roleId );//keyed as the db names it - the same key SetUpTestCase's roles() load uses, which is what made every guard below always-true.
 			if( existed )
 				return;//its permissions and acl are in the db already; re-adding them trips their unique indexes too.
 
 			jobject vars{ {"roleId", roleId}, {"allowed", underlying(allowed)}, {"denied", underlying(denied)}, {"schema", _resource} };
-			string query{ "addRole( id:$roleId, permissionRight:{allowed:$allowed, denied:$denied, resource:{schemaName:$schema, target:\"nodeIds\"}} )" };
+			string query{ "addRole( id:$roleId, permissionRight:{allowed:$allowed, denied:$denied, resource:{schemaName:$schema, slug:\"nodeIds\"}} )" };
 			_app->QuerySync<jvalue>( move(query), move(vars) );
 
 			vars = { {"roleId", roleId}, {"allowed", underlying(allowed)}, {"denied", underlying(_nodeDenied)}, {"schema", _resource}, {"criteria", NodeId{criteriaNode()}.ToString()}, {"resourceName", "ServerStatus"} };
-			query = "addRole( id:$roleId, permissionRight:{allowed:$allowed, denied:$denied, resource:{schemaName:$schema, target:\"nodeIds\", criteria:$criteria, name:$resourceName}} )";
+			query = "addRole( id:$roleId, permissionRight:{allowed:$allowed, denied:$denied, resource:{schemaName:$schema, slug:\"nodeIds\", criteria:$criteria, name:$resourceName}} )";
 			_app->QuerySync<jvalue>( move(query), move(vars) );
 
 			_app->QuerySync<jvalue>( "createAcl( identity:{ id:$userId }, role:{id:$roleId} )", {{"userId", userId}, {"roleId", roleId}} );
@@ -66,20 +66,20 @@ namespace Jde::Opc::Server::Tests{
 			_ua = &Server::GetUAServer();
 			_app = AppClient();
 
-			let nodeTarget = jobject{ {"target","nodeIds"} };
-			_app->QuerySync<jvalue>( "deleteResource( target:$target, criteria:null )", nodeTarget );
-			let jroles = _app->QuerySync<jarray>( "roles(){ id target }", {} );
+			let nodeSlug = jobject{ {"slug","nodeIds"} };
+			_app->QuerySync<jvalue>( "deleteResource( slug:$slug, criteria:null )", nodeSlug );
+			let jroles = _app->QuerySync<jarray>( "roles(){ id slug }", {} );
 			for( let& jrole : jroles )
-				_roles.emplace( jrole.at("target").get_string(), jrole.at("id").to_number<Access::RolePK>() );
-			if( !_roles.contains(roleTarget("reader")) )//this program's own acl, once - re-creating it trips the same indexes.
-				_app->QuerySync<jvalue>( "createAcl( identity:{id:$testProgUser}, permissionRight:{ allowed:$allowed, denied:0, resource:{schemaName: $schemaName, target:$nodeResTarget}} )",
-					{ {"testProgUser", AppClient()->UserPK().Value}, {"allowed", underlying(ERights::All)}, {"schemaName", _resource}, {"nodeResTarget", "nodeIds"} } );
+				_roles.emplace( jrole.at("slug").get_string(), jrole.at("id").to_number<Access::RolePK>() );
+			if( !_roles.contains(roleSlug("reader")) )//this program's own acl, once - re-creating it trips the same indexes.
+				_app->QuerySync<jvalue>( "createAcl( identity:{id:$testProgUser}, permissionRight:{ allowed:$allowed, denied:0, resource:{schemaName: $schemaName, slug:$nodeResSlug}} )",
+					{ {"testProgUser", AppClient()->UserPK().Value}, {"allowed", underlying(ERights::All)}, {"schemaName", _resource}, {"nodeResSlug", "nodeIds"} } );
 			//Unconditional now that addRole is find-or-create:  it is also the only thing that fills _users, which the guards
 			//used to skip on a re-run, leaving every _users.at() below to throw.
 			addRole( "reader", _readerAllowed, _readerDenied );
 			addRole( "writer", _writerAllowed, _writerDenied );
 			addRole( "admin", _adminAllowed, _adminDenied );
-			_app->QuerySync<jvalue>( "restoreResource( target:$target, criteria:null )", nodeTarget );
+			_app->QuerySync<jvalue>( "restoreResource( slug:$slug, criteria:null )", nodeSlug );
 		}
 		Ω TearDownTestCase()ι->void{}
 		α SetUp()ι->void{}
@@ -230,8 +230,8 @@ namespace Jde::Opc::Server::Tests{
 	}
 
 	TEST_F( AccessTests, Query ){
-		auto q = "roles{ id name permissionRight{id allowed denied resource(schemaName:$schemaName, target:$target, criteria:$criteria){id criteria}} }";
-		jobject vars{ {"schemaName", "opc.default"}, {"target", "nodeIds"}, {"criteria", jarray{jvalue{}}} };
+		auto q = "roles{ id name permissionRight{id allowed denied resource(schemaName:$schemaName, slug:$slug, criteria:$criteria){id criteria}} }";
+		jobject vars{ {"schemaName", "opc.default"}, {"slug", "nodeIds"}, {"criteria", jarray{jvalue{}}} };
 		TRACE( "{}", q );
 		TRACE( "{}", serialize(vars) );
 		let result = _app->QuerySync<jvalue>( move(q), move(vars) );
@@ -384,7 +384,7 @@ namespace Jde::Opc::Server::Tests{
 
 		ASSERT_EQ( auth.NodeRights(serverNode, reader), _readerAllowed ) << "before: the node inherits the root resource";
 
-		auth.CreateResource( Access::Resource{scratchPK, jobject{ {"schemaName",_resource}, {"target","nodeIds"}, {"criteria",serverNode.ToString()} }} );
+		auth.CreateResource( Access::Resource{scratchPK, jobject{ {"schemaName",_resource}, {"slug","nodeIds"}, {"criteria",serverNode.ToString()} }} );
 		EXPECT_EQ( auth.NodeRights(serverNode, reader), Access::ERights::None ) << "after: its own resource governs it, and the reader holds nothing on that one";
 		EXPECT_EQ( auth.NodeRights(NodeId::ObjectsFolder(), reader), _readerAllowed ) << "the root is untouched";
 

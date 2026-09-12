@@ -26,7 +26,7 @@ import { SelectionModel } from '@angular/cdk/collections';
 import { View, ViewField, ViewType } from '../../../model/ql/view';
 import { MatDialog } from '@angular/material/dialog';
 import { confirm } from '../../../shared/confirm/confirm-dialog';
-import { QLRow } from '../../../model/ql/target-row';
+import { QLRow } from '../../../model/ql/slug-row';
 import { PageProfile } from '../../graphql/model/page-settings';
 import { verify } from '../../../utils/utils';
 
@@ -84,7 +84,7 @@ export class QLList implements OnInit, OnDestroy{
 		if( paths.length )//guard:  QLList also renders inside a tab (GatewayDetail), where the route has no 'name' - the unguarded assignment wrote undefined over the host page's title
 			this.componentPageTitle.title = paths[0];//.join( " | " ); 	//this.componentPageTitle.title ? `${this.componentPageTitle.title} | ${title}` : title;
 
-/*		const order = ["name", "created", "updated", "deleted", "target", "description"];
+/*		const order = ["name", "created", "updated", "deleted", "slug", "description"];
 		this.displayedFields = Field.filterSort( this.schema().fields, order, [...this.excludedColumns(), "description"], this.showDeleted() );
 		if( !this.excludedColumns().find(x=>x=="description") )
 			this.displayedFields.push( this.schema().fields.find(x=>x.name=="description") );
@@ -108,7 +108,7 @@ export class QLList implements OnInit, OnDestroy{
 		if( !field || !settings || this.pendingLive().includes(row.id) )
 			return;
 		const live = row[field.name]==null;
-		const name = row["name"] ?? row["target"] ?? `${row.id}`;
+		const name = row["name"] ?? row["slug"] ?? `${row.id}`;
 		const verb = live ? settings.disable : settings.enable;
 		const message = (live ? settings.disableMessage : settings.enableMessage) ?? `${name} will be changed.`;
 		if( !await confirm(this.dialog, {title: `${verb} ${name}?`, message, confirm: verb}) )
@@ -132,14 +132,14 @@ export class QLList implements OnInit, OnDestroy{
 	}
 
 	//The try/catch was dead:  router.navigate is ASYNC, so a route that does not exist rejects the promise long after the
-	//block has returned.  /access/resources has no 'resources/:target' route, so every row click there dead-ended in a
+	//block has returned.  /access/resources has no 'resources/:slug' route, so every row click there dead-ended in a
 	//NavigationError the user never saw - hence both halves here:  don't offer the click where there is nowhere to go, and
 	//report it through the returned promise where the navigation still fails.
 	onRowActivate( row:QLRow ){
 		if( this.selector() || !this.canNavigate() )//ql-table already toggled the row; a selector has nowhere to navigate to
 			return;
-		this.router.navigate( [row.target], {relativeTo: this.route} )
-			.then( ok=>{ if( !ok ) this.snackbar.error( `Could not navigate to '${row.target}'.` ); } )
+		this.router.navigate( [row.slug], {relativeTo: this.route} )
+			.then( ok=>{ if( !ok ) this.snackbar.error( `Could not navigate to '${row.slug}'.` ); } )
 			.catch( e=>this.snackbar.exception("Could not navigate to properties", e) );
 	}
 

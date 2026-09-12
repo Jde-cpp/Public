@@ -12,12 +12,12 @@ namespace Jde::Opc::Hub::Tests{
 	constexpr sv Endpoint{ "127.0.0.1" };
 
 	struct HubClientTests : ::testing::Test{
-		Ω CreateProvider( str target )ε->Access::ProviderPK{
-			let j = Gateway::AppClient()->QuerySync<jobject>( Ƒ("createProvider( target:\"{}\", providerType:\"OpcServer\" ){{id}}", target), {} );
+		Ω CreateProvider( str slug )ε->Access::ProviderPK{
+			let j = Gateway::AppClient()->QuerySync<jobject>( Ƒ("createProvider( slug:\"{}\", providerType:\"OpcServer\" ){{id}}", slug), {} );
 			return QL::AsId<Access::ProviderPK>( j );
 		}
-		Ω FindProvider( str target )ε->Access::ProviderPK{
-			let j = Gateway::AppClient()->QuerySync<jobject>( "provider(name:$opcTarget){ id }", {{"opcTarget", target}} );
+		Ω FindProvider( str slug )ε->Access::ProviderPK{
+			let j = Gateway::AppClient()->QuerySync<jobject>( "provider(name:$opcSlug){ id }", {{"opcSlug", slug}} );
 			return Json::FindNumber<Access::ProviderPK>( j, "id" ).value_or( 0 );
 		}
 		Ω PurgeProvider( Access::ProviderPK pk )ε->void{
@@ -42,24 +42,24 @@ namespace Jde::Opc::Hub::Tests{
 
 	//GraphQL to the app db (the provider lookups the OPC login path makes) through the local QL, as System.
 	TEST_F( HubClientTests, ProviderRoundTrip ){
-		let target = "hubTestsProvider";
-		if( let existing = FindProvider(target); existing )
+		let slug = "hubTestsProvider";
+		if( let existing = FindProvider(slug); existing )
 			PurgeProvider( existing );
-		let pk = CreateProvider( target );
+		let pk = CreateProvider( slug );
 		ASSERT_NE( pk, 0u );
-		EXPECT_EQ( FindProvider(target), pk );
+		EXPECT_EQ( FindProvider(slug), pk );
 		PurgeProvider( pk );
-		EXPECT_EQ( FindProvider(target), 0u );
+		EXPECT_EQ( FindProvider(slug), 0u );
 	}
 
 	//OPC user/password login's AddSession: authenticate + mint a web session in-process (the kAddSession round trip).
 	TEST_F( HubClientTests, AddSession ){
-		let target = "hubTestsAddSession";
-		if( let existing = FindProvider(target); existing )
+		let slug = "hubTestsAddSession";
+		if( let existing = FindProvider(slug); existing )
 			PurgeProvider( existing );
-		let providerPK = CreateProvider( target );
+		let providerPK = CreateProvider( slug );
 		ASSERT_NE( providerPK, 0u );
-		auto await = Gateway::AppClient()->AddSession( target, "hubTestsUser", providerPK, string{Endpoint}, false );
+		auto await = Gateway::AppClient()->AddSession( slug, "hubTestsUser", providerPK, string{Endpoint}, false );
 		let info = BlockAwait<TAwait<SessionInfo>,SessionInfo>( move(*await) );
 		EXPECT_NE( info.session_id(), 0u );
 		EXPECT_NE( info.user_pk(), 0u );

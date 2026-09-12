@@ -14,18 +14,18 @@ import { Router } from '@angular/router';
 import { GATEWAY_SERVICE, NodeSearchProvider, NodeSearchRow } from 'jde-opc';
 
 type Call = { ql:string; vars:any };
-function gateway( target:string, rows:NodeSearchRow[]|Error ){
+function gateway( slug:string, rows:NodeSearchRow[]|Error ){
 	const calls:Call[] = [];
-	return { target, calls, queryArray: async ( ql:string, vars:any )=>{ calls.push( {ql, vars} ); if( rows instanceof Error ) throw rows; return rows; } };
+	return { slug, calls, queryArray: async ( ql:string, vars:any )=>{ calls.push( {ql, vars} ); if( rows instanceof Error ) throw rows; return rows; } };
 }
-const lamp:NodeSearchRow = { connection: {target: 'cn1', name: 'Line 1'}, path: '4~Examples/4~Lamp 1', name: 'Lamp 1', nodeClass: 1, depth: 2 };
-const rpm:NodeSearchRow = { connection: {target: 'cn2', name: 'Line 2'}, path: 'pump1/motorRpm', name: 'motorRpm', nodeClass: 2, depth: 2 };
+const lamp:NodeSearchRow = { connection: {slug: 'cn1', name: 'Line 1'}, path: '4~Examples/4~Lamp 1', name: 'Lamp 1', nodeClass: 1, depth: 2 };
+const rpm:NodeSearchRow = { connection: {slug: 'cn2', name: 'Line 2'}, path: 'pump1/motorRpm', name: 'motorRpm', nodeClass: 2, depth: 2 };
 
 describe('NodeSearchProvider', () => {
 	function setup( url:string, gateways:ReturnType<typeof gateway>[] ){
 		TestBed.configureTestingModule({ providers: [
 			{ provide: Router, useValue: {url} },
-			{ provide: GATEWAY_SERVICE, useValue: { gateway: async (t:string)=>gateways.find(g=>g.target==t), gateways: async ()=>gateways } },
+			{ provide: GATEWAY_SERVICE, useValue: { gateway: async (t:string)=>gateways.find(g=>g.slug==t), gateways: async ()=>gateways } },
 		]});
 		return TestBed.inject( NodeSearchProvider );
 	}

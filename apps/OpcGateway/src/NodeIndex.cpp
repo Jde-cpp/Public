@@ -125,10 +125,10 @@ namespace Jde::Opc::Gateway{
 				}
 			}
 			let ms = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now()-start ).count();
-			INFOT( BrowseTag, "[{}]Indexed {} nodes under Objects for '{}' (maxDepth={}) in {}ms{}.", hex(client->Handle()), entries.size(), client->Target(), maxDepth, ms, truncated ? " - truncated" : "" );
+			INFOT( BrowseTag, "[{}]Indexed {} nodes under Objects for '{}' (maxDepth={}) in {}ms{}.", hex(client->Handle()), entries.size(), client->Slug(), maxDepth, ms, truncated ? " - truncated" : "" );
 		}
 		catch( runtime_error& e ){
-			WARNT( BrowseTag, "[{}]search index for '{}' failed: {}", hex(client->Handle()), client->Target(), e.what() );
+			WARNT( BrowseTag, "[{}]search index for '{}' failed: {}", hex(client->Handle()), client->Slug(), e.what() );
 			if( auto p = dynamic_cast<Exception*>(&e); p )
 				error = p->Move();
 			else

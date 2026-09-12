@@ -112,9 +112,9 @@ namespace Browse{
 	α ObjectsFolderAwait::Snapshot( Browse::Response response )ι->TAwait<flat_map<NodeId, Value>>::Task{
 		try{
 			if( !_client->Connected ){
-				let target = _client->Target();
-				_client = UAClient::Find( target, _client->Credential );
-				THROW_IF( !_client, "Could not find UAClient for: {}", target );
+				let slug = _client->Slug();
+				_client = UAClient::Find( slug, _client->Credential );
+				THROW_IF( !_client, "Could not find UAClient for: {}", slug );
 			}
 			auto vars = response.Variables();
 			auto values = vars.size() ? co_await ReadValueAwait{ vars, _client } : flat_map<NodeId, Value>{};

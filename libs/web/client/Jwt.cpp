@@ -8,14 +8,14 @@
 #define let const auto
 
 namespace Jde::Web{
-	Jwt::Jwt( Crypto::PublicKey key, Jde::UserPK userPK, str userName, str userTarget, SessionPK sessionId, str endpoint, TimePoint expires, str description, const struct Crypto::PrivateKeySettings& privateKey, vector<byte> certificate, SL sl )ε:
-		PublicKey{ certificate.size() ? Crypto::ExtractPublicKey(certificate, sl) : move(key) }, Host{ endpoint }, Iat{ time(nullptr) }, UserPK{ userPK }, UserName{ userName }, UserTarget{ userTarget }, Description{ description }{
+	Jwt::Jwt( Crypto::PublicKey key, Jde::UserPK userPK, str userName, str userSlug, SessionPK sessionId, str endpoint, TimePoint expires, str description, const struct Crypto::PrivateKeySettings& privateKey, vector<byte> certificate, SL sl )ε:
+		PublicKey{ certificate.size() ? Crypto::ExtractPublicKey(certificate, sl) : move(key) }, Host{ endpoint }, Iat{ time(nullptr) }, UserPK{ userPK }, UserName{ userName }, UserSlug{ userSlug }, Description{ description }{
 		Body = jobject{
 			{ "iat", Iat },
 			{ "host", Host },
 			{ "sub", UserPK.Value },
 			{ "name", userName },
-			{ "target", userTarget },
+			{ "slug", userSlug },
 		};
 		if( certificate.size() ){ //the cert is the single source of key material - n/e derive from it on parse. Encode64 iterates elements - std::byte won't feed transform_width, so view as chars.
 			Body["x5c"] = Str::Encode64( sv{(const char*)certificate.data(), certificate.size()}, true );
@@ -79,7 +79,7 @@ namespace Jde::Web{
 		THROW_IFX( !exp && std::abs(now-Iat)>MaxAgeWithoutExpiration, Exception(sl, {EHttpStatus::Unauthorized}, "Invalid jwt.  No 'exp' claim and 'iat' '{}' is not within {}s of '{}'.", Iat, MaxAgeWithoutExpiration, ToIsoString(Clock::from_time_t(now))) );
 		UserPK = { Json::FindNumber<UserPK::Type>(Body, "sub").value_or(0) };
 		UserName = Json::FindString( Body, "name" ).value_or( fpKey ? Str::ToHex(*fpKey) : "" );
-		UserTarget = Json::FindString( Body, "target" ).value_or( UserName );
+		UserSlug = Json::FindString( Body, "slug" ).value_or( UserName );
 		Host = Json::FindString( Body, "host" ).value_or( "" );
 		SessionId = Json::FindDefaultSV( Body, "sid" );
 

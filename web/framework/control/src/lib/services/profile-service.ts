@@ -13,10 +13,10 @@ export class ProfileService implements IProfileService{
 		return u && (u.jwt || u.id) ? (u.id ?? u.email) : undefined;
 	} );
 	async load( key:string ):Promise<string|null>{
-		const row = await this.#app.querySingle<{value:string}|null>( `profile( target:${StringUtils.qlString(key)} ){ value }` );
+		const row = await this.#app.querySingle<{value:string}|null>( `profile( url:${StringUtils.qlString(key)} ){ value }` );
 		return row?.value ?? null;
 	}
 	async save( key:string, value:string|null ):Promise<void>{//value null deletes the row.
-		await this.#app.mutate( new Mutation('profile', 0, {target:key, value:value}, MutationType.Update) );
+		await this.#app.mutate( new Mutation('profile', 0, {url:key, value:value}, MutationType.Update) );
 	}
 }

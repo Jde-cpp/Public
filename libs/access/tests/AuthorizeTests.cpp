@@ -29,16 +29,16 @@ namespace Jde::Access::Tests{
 	constexpr ResourcePK _resourcePK{ 1 };
 	const UserPK _user{ 100 };
 	const string _schema{ "unitTest" };
-	const string _target{ "widgets" };
+	const string _slug{ "widgets" };
 
 	Ω createAuthorizer()ε->sp<TestAuthorize>{
 		auto auth = ms<TestAuthorize>();
-		auth->CreateResource( Resource{_resourcePK, jobject{{"schemaName",_schema},{"target",_target}}} );
-		auth->AddResource( _resourcePK, _schema, _target, {} );
+		auth->CreateResource( Resource{_resourcePK, jobject{{"schemaName",_schema},{"slug",_slug}}} );
+		auth->AddResource( _resourcePK, _schema, _slug, {} );
 		auth->CreateUser( _user );
 		return auth;
 	}
-	Ω rights( TestAuthorize& auth )ι->ERights{ return auth.Rights(_schema, _target, _user); }
+	Ω rights( TestAuthorize& auth )ι->ERights{ return auth.Rights(_schema, _slug, _user); }
 
 	TEST( AuthorizeTests, RemoveAclRevokes ){
 		auto auth = createAuthorizer();
@@ -255,21 +255,21 @@ namespace Jde::Access::Tests{
 	TEST( AuthorizeTests, SystemExecuterConsistent ){
 		auto auth = createAuthorizer();
 		const UserPK system{ UserPK::System };
-		ASSERT_EQ( auth->Rights(_schema, _target, system), All );//all three entry points must agree that System is all-access.
-		EXPECT_NO_THROW( auth->Test(_schema, _target, All, system) );
-		EXPECT_NO_THROW( auth->TestAdmin(_target, system) );
+		ASSERT_EQ( auth->Rights(_schema, _slug, system), All );//all three entry points must agree that System is all-access.
+		EXPECT_NO_THROW( auth->Test(_schema, _slug, All, system) );
+		EXPECT_NO_THROW( auth->TestAdmin(_slug, system) );
 
 		const UserPK unknown{ 999 };//...and that an unknown non-System user is not.
-		ASSERT_EQ( auth->Rights(_schema, _target, unknown), None );
-		EXPECT_THROW( auth->Test(_schema, _target, Read, unknown), Exception );
-		EXPECT_THROW( auth->TestAdmin(_target, unknown), Exception );
+		ASSERT_EQ( auth->Rights(_schema, _slug, unknown), None );
+		EXPECT_THROW( auth->Test(_schema, _slug, Read, unknown), Exception );
+		EXPECT_THROW( auth->TestAdmin(_slug, unknown), Exception );
 	}
 
 	//todo.md §12: with no remote registered for the schema, the schema overload returns a pre-completed awaitable any coroutine
 	//can co_await - the denial arrives at the co_await, not at the call. VoidTask return: the awaitable dictates no task type.
 	Ω testAdminAwait( TestAuthorize& auth, UserPK user, bool& threw, bool& completed )->VoidTask{
 		try{
-			auto check = auth.TestAdmin( _schema, _target, "", user );
+			auto check = auth.TestAdmin( _schema, _slug, "", user );
 			co_await *check;
 			threw = false;
 		}
@@ -288,27 +288,27 @@ namespace Jde::Access::Tests{
 		EXPECT_TRUE( threw ) << "an unknown user must fail the admin check through the awaitable";
 	}
 
-	//appserver-review3 #13:  the flat rule behind the admin check when no OpcServer answers for the schema - the (schema,target,
-	//criteria) row when it is active, else the target's root, which an unmapped criteria inherits as an unmapped node does in
+	//appserver-review3 #13:  the flat rule behind the admin check when no OpcServer answers for the schema - the (schema,slug,
+	//criteria) row when it is active, else the slug's root, which an unmapped criteria inherits as an unmapped node does in
 	//OpcAuthorize::UserRights;  neither active is "not enabled", a pass.
-	TEST( AuthorizeTests, TestAdminLocalBySchemaTargetCriteria ){
+	TEST( AuthorizeTests, TestAdminLocalBySchemaSlugCriteria ){
 		auto auth = createAuthorizer();
 		constexpr ResourcePK criteriaPK{ 2 };
 		const string criteria{ "ns=4;i=1" };
-		auth->CreateResource( Resource{criteriaPK, jobject{{"schemaName",_schema},{"target",_target},{"criteria",criteria}}} );
-		auth->AddResource( criteriaPK, _schema, _target, criteria );
+		auth->CreateResource( Resource{criteriaPK, jobject{{"schemaName",_schema},{"slug",_slug},{"criteria",criteria}}} );
+		auth->AddResource( criteriaPK, _schema, _slug, criteria );
 		auth->AddAcl( _user.Value, PermissionPK{10}, Administer, None, _resourcePK );//admin of the root only.
 
-		EXPECT_NO_THROW( auth->TestAdminLocal(_schema, _target, "", _user) );
-		EXPECT_NO_THROW( auth->TestAdminLocal(_schema, _target, "ns=4;i=2", _user) ) << "an unmapped criteria inherits the root";
-		EXPECT_THROW( auth->TestAdminLocal(_schema, _target, criteria, _user), Exception ) << "a mapped criteria is its own resource - root admin holds nothing over it";
-		EXPECT_NO_THROW( auth->TestAdminLocal(_schema, _target, criteria, UserPK{UserPK::System}) );
-		EXPECT_THROW( auth->TestAdminLocal(_schema, _target, "", UserPK{999}), Exception ) << "unknown user";
+		EXPECT_NO_THROW( auth->TestAdminLocal(_schema, _slug, "", _user) );
+		EXPECT_NO_THROW( auth->TestAdminLocal(_schema, _slug, "ns=4;i=2", _user) ) << "an unmapped criteria inherits the root";
+		EXPECT_THROW( auth->TestAdminLocal(_schema, _slug, criteria, _user), Exception ) << "a mapped criteria is its own resource - root admin holds nothing over it";
+		EXPECT_NO_THROW( auth->TestAdminLocal(_schema, _slug, criteria, UserPK{UserPK::System}) );
+		EXPECT_THROW( auth->TestAdminLocal(_schema, _slug, "", UserPK{999}), Exception ) << "unknown user";
 		EXPECT_NO_THROW( auth->TestAdminLocal(_schema, "notEnabled", "x", UserPK{999}) ) << "no active root - not enabled, as Test";
-		EXPECT_NO_THROW( auth->TestAdminLocal("other", _target, "", UserPK{999}) ) << "the schema is part of the key";
+		EXPECT_NO_THROW( auth->TestAdminLocal("other", _slug, "", UserPK{999}) ) << "the schema is part of the key";
 
 		auth->UpdateResourceDeleted( criteriaPK, _schema, jobject{{"id",criteriaPK}}, false );//SchemaResources keeps the entry - the row's own flag has to win.
-		EXPECT_NO_THROW( auth->TestAdminLocal(_schema, _target, criteria, _user) ) << "a deleted criteria row falls back to the root";
+		EXPECT_NO_THROW( auth->TestAdminLocal(_schema, _slug, criteria, _user) ) << "a deleted criteria row falls back to the root";
 	}
 
 	//The gate on standing in for a schema (AddAdminAuthorizer):  Administer on every active criteria-less resource of the
@@ -322,7 +322,7 @@ namespace Jde::Access::Tests{
 		EXPECT_NO_THROW( auth->TestSchemaAdmin(_schema, _user) );
 		EXPECT_NO_THROW( auth->TestSchemaAdmin(_schema, UserPK{UserPK::System}) );
 		constexpr ResourcePK otherPK{ 3 };
-		auth->CreateResource( Resource{otherPK, jobject{{"schemaName",_schema},{"target","gadgets"}}} );
+		auth->CreateResource( Resource{otherPK, jobject{{"schemaName",_schema},{"slug","gadgets"}}} );
 		auth->AddResource( otherPK, _schema, "gadgets", {} );
 		EXPECT_THROW( auth->TestSchemaAdmin(_schema, _user), Exception ) << "every active root, not just one";
 		auth->UpdateResourceDeleted( otherPK, _schema, jobject{{"id",otherPK}}, false );
@@ -363,13 +363,13 @@ namespace Jde::Access::Tests{
 		EXPECT_EQ( "0", auth->UserName(UserPK{0}) );
 	}
 
-	TEST( AuthorizeTests, FindResourceBySchemaTarget ){
+	TEST( AuthorizeTests, FindResourceBySchemaSlug ){
 		auto auth = createAuthorizer();
-		let found = auth->FindResource( Resource{jobject{{"schemaName",_schema},{"target",_target}}} );//no pk - resolve from schema/target.
+		let found = auth->FindResource( Resource{jobject{{"schemaName",_schema},{"slug",_slug}}} );//no pk - resolve from schema/slug.
 		static_assert( std::is_same_v<decltype(found), const optional<Resource>> ); //access-review3 #19: a copy, not a pointer into Resources that outlives the lock.
 		ASSERT_TRUE( found );
 		ASSERT_EQ( found->PK, _resourcePK );
-		EXPECT_FALSE( auth->FindResource(Resource{ResourcePK{99}, {}}) ); //unknown pk, no schema/target to fall back on.
+		EXPECT_FALSE( auth->FindResource(Resource{ResourcePK{99}, {}}) ); //unknown pk, no schema/slug to fall back on.
 	}
 
 	TEST( AuthorizeTests, GroupCycleGuards ){

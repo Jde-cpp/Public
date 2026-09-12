@@ -21,8 +21,8 @@ namespace Jde::Opc::Gateway{
 		α Suspend()ι->void override;
 	private:
 		α Execute( ServerCnnctnPK opcPK )ι->TAwait<vector<ServerCnnctn>>::Task;
-		α Insert( str target )ι->TAwait<jobject>::Task;
-		α Purge( str target )ι->ProviderAwait::Task;
+		α Insert( str slug )ι->TAwait<jobject>::Task;
+		α Purge( str slug )ι->ProviderAwait::Task;
 		α Purge( Access::ProviderPK pk )ι->TAwait<jvalue>::Task;
 
 		bool _insert;

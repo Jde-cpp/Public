@@ -5,7 +5,7 @@
 namespace Jde::Opc::Gateway{
 	flat_map<SessionPK,flat_map<ServerCnnctnNK,Credential>> _sessions; shared_mutex _sessionsMutex;
 	//Nothing but an explicit /logout ever removed an entry, so this was a high-water mark:  every web session that had touched
-	//a target since startup, counted by opcSessions long after the session itself was gone.  (opcConnections never drifted the
+	//a slug since startup, counted by opcSessions long after the session itself was gone.  (opcConnections never drifted the
 	//same way - its _clients drain on the idle ttl.)  Web::Server's store is the authority and trims itself on expiry, so an id
 	//it no longer knows - or knows only as expired, which UpdateExpiration will not revive - has no session behind it.  Called
 	//under the caller's lock at the two growth points and on the read; the map is tiny, so an O(n) sweep is cheaper than a timer.

@@ -66,7 +66,7 @@ namespace Jde::Opc::Hub::Tests{
 	TEST_F( HubRoutingTests, MergedGraphQL ){
 		let sessionId = Web::Server::Sessions::Add( Jde::UserPK{1}, string{Host}, false )->SessionId;
 		let authorization = Ƒ( "{:x}", sessionId );
-		EXPECT_TRUE( QL(AppPort(), "serverConnections{ id target url }").as_object().contains("serverConnections") );
+		EXPECT_TRUE( QL(AppPort(), "serverConnections{ id slug url }").as_object().contains("serverConnections") );
 		EXPECT_TRUE( QL(AppPort(), "connections{ id programName }").as_object().contains("connections") );
 		EXPECT_TRUE( QL(AppPort(), "users{ id name }", authorization).as_object().contains("users") );
 		let status = Json::AsObject( QL(AppPort(), "status{ memory clients monitoredItems }", authorization).as_object(), "status" );

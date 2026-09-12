@@ -4,7 +4,7 @@ import { ISearchProvider, SearchResult } from 'jde-spa';
 import { ENodeClass } from '../model/node';
 import { Gateway, GATEWAY_SERVICE, GatewayService } from './gateway-service';
 
-export type NodeSearchRow = { connection:{ target:string; name:string }; path:string; name:string; nodeClass:number; depth:number };
+export type NodeSearchRow = { connection:{ slug:string; name:string }; path:string; name:string; nodeClass:number; depth:number };
 
 //OPC node names through the gateway's `search` query.  Inside a connection's node tree only that connection is searched;
 //anywhere else every gateway is asked without an `opc`, which answers from the clients this session already holds - a search
@@ -16,7 +16,7 @@ export class NodeSearchProvider implements ISearchProvider{
 	#router = inject( Router );
 	private gatewayService:GatewayService = inject( GATEWAY_SERVICE );
 
-	static readonly columns = '{ connection{ target name } path name nodeClass depth }';
+	static readonly columns = '{ connection{ slug name } path name nodeClass depth }';
 	static readonly currentConnection = /^\/gateways\/([^/?#]+)\/([^/?#]+)/;//app.routes.ts: gateways/:gateway/:connection/**
 
 	async search( text:string, scope:string|undefined, limit:number ):Promise<SearchResult[]>{
@@ -36,12 +36,12 @@ export class NodeSearchProvider implements ISearchProvider{
 				if( s.status=='fulfilled' )
 					hits.push( ...s.value.map( row=>({gateway: gateways[i], row}) ) );
 				else
-					console.warn( `search: gateway '${gateways[i].target}' failed.`, s.reason );//an unreachable gateway must not sink the others.
+					console.warn( `search: gateway '${gateways[i].slug}' failed.`, s.reason );//an unreachable gateway must not sink the others.
 			} );
 		}
 		return hits.slice( 0, limit ).map( ({gateway, row})=>({
 			title: row.name,
-			route: [ '/gateways', gateway.target, row.connection.target, ...row.path.split('/') ],//array form: the router encodes each browse segment, NodeRoute decodes them back.
+			route: [ '/gateways', gateway.slug, row.connection.slug, ...row.path.split('/') ],//array form: the router encodes each browse segment, NodeRoute decodes them back.
 			summary: `${row.connection.name}/${row.path}`,
 			icon: NodeSearchProvider.icon( row.nodeClass ),
 			rank: row.name.toLowerCase().startsWith( text ) ? 0 : 1,

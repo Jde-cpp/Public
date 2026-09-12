@@ -17,8 +17,8 @@ namespace Jde::Access::Tests{
 
 	α GroupTests::SetUpTestCase()->void{
 	}
-	Ω IsMember( str target, GroupPK child, UserPK executer )ε->bool{
-		let group = SelectGroup( target, executer, true );
+	Ω IsMember( str slug, GroupPK child, UserPK executer )ε->bool{
+		let group = SelectGroup( slug, executer, true );
 		if( auto members = FindArray(group, "groupMembers"); members ){
 			for( let& member : *members ){
 				if( GetId(AsObject(member))==child.Value )
@@ -165,7 +165,7 @@ namespace Jde::Access::Tests{
 		const UserPK second{ GetId(GetUser("list-fanout-b", root)) };
 		AddToGroup( group, {first, second}, root );
 
-		let rows = QL().QuerySync<jarray>( "groups( limit:100 ){ id name target }", {}, root );
+		let rows = QL().QuerySync<jarray>( "groups( limit:100 ){ id name slug }", {}, root );
 		uint count{};
 		for( let& row : rows )
 			count += GetId( AsObject(row) )==group.Value;

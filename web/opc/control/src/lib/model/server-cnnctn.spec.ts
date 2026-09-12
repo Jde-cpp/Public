@@ -3,7 +3,7 @@ import { ServerCnnctn, ServerCnnctnProps } from './server-cnnctn';
 
 //defaultBrowseNs was rendered as an editable field but neither compared nor sent - an edit silently never saved.
 const props = ( overrides:Partial<ServerCnnctnProps>={} )=>({
-	id: 7, target: "local", name: "Local", url: "opc.tcp://127.0.0.1:4840", certificateUri: "urn:x", defaultBrowseNs: 1, server: undefined as any,
+	id: 7, slug: "local", name: "Local", url: "opc.tcp://127.0.0.1:4840", certificateUri: "urn:x", defaultBrowseNs: 1, server: undefined as any,
 	...overrides
 } as ServerCnnctnProps);
 
@@ -41,9 +41,9 @@ describe( 'ServerCnnctn.defaultBrowseNs', ()=>{
 	} );
 } );
 
-//url is non-null in the gateway meta; the base canSave only knows name/target, so Save would have lit up for a connection the insert then rejected.
+//url is non-null in the gateway meta; the base canSave only knows name/slug, so Save would have lit up for a connection the insert then rejected.
 describe( 'ServerCnnctn.canSave', ()=>{
-	it( 'needs a url as well as name and target', ()=>{
+	it( 'needs a url as well as name and slug', ()=>{
 		expect( new ServerCnnctn(props()).canSave ).toBe( true );
 		expect( new ServerCnnctn(props({url: ""})).canSave ).toBe( false );
 		expect( new ServerCnnctn(props({url: undefined as any})).canSave ).toBe( false );

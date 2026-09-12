@@ -63,14 +63,14 @@ namespace Jde::Opc::Gateway::Tests{
 	TEST_F( SubscribeTests, Basic ){
 		const NodeId nodeId{ 4, 6017 };
 		let expected = read( _client, nodeId );
-		BlockAwait<ClientSocketAwait<FromServer::SubscriptionAck>,FromServer::SubscriptionAck>( _session->Subscribe(OpcServerTarget, {nodeId}, _listener) );
+		BlockAwait<ClientSocketAwait<FromServer::SubscriptionAck>,FromServer::SubscriptionAck>( _session->Subscribe(OpcServerSlug, {nodeId}, _listener) );
 		Stopwatch sw;
 		while( _value!=expected ){
 			ASSERT_NO_THROW( sw.CheckTimeout(6s, 1ms) );
 		}
 		string q = "updateVariable( opc: $opc, id: $id, value: $value ){ value }";
 		let newValue = _value + 1;
-		const jobject vars{ {"opc", OpcServerTarget}, {"id", nodeId.ToJson()}, {"value", newValue} };
+		const jobject vars{ {"opc", OpcServerSlug}, {"id", nodeId.ToJson()}, {"value", newValue} };
 		let json = BlockAwait<ClientSocketAwait<jvalue>,jvalue>( _session->Query(move(q), vars, true) );
 		TRACE( "write result: {}", serialize(json) );
 		sw.Reset();
@@ -78,7 +78,7 @@ namespace Jde::Opc::Gateway::Tests{
 			ASSERT_NO_THROW( sw.CheckTimeout(6s, 1ms) );
 		}
 		ASSERT_EQ( newValue, json.as_object().at("value").to_number<uint>() );
-		auto result = BlockAwait<ClientSocketAwait<FromServer::UnsubscribeAck>,FromServer::UnsubscribeAck>( _session->Unsubscribe(OpcServerTarget, {nodeId}) );
+		auto result = BlockAwait<ClientSocketAwait<FromServer::UnsubscribeAck>,FromServer::UnsubscribeAck>( _session->Unsubscribe(OpcServerSlug, {nodeId}) );
 		ASSERT_TRUE( result.successes_size()==1 );
 		TRACE( "-------------------------------------------------------------" );
 		//teardown costs the gateway's 1s subscription wait + a 500ms poll tick, so poll rather than fixed-sleep.
@@ -93,16 +93,16 @@ namespace Jde::Opc::Gateway::Tests{
 	TEST_F( SubscribeTests, UnsubscribeSurvivesCredentialCacheLoss ){
 		const NodeId nodeId{ 4, 6017 };
 		let expected = read( _client, nodeId );
-		BlockAwait<ClientSocketAwait<FromServer::SubscriptionAck>,FromServer::SubscriptionAck>( _session->Subscribe(OpcServerTarget, {nodeId}, _listener) );
+		BlockAwait<ClientSocketAwait<FromServer::SubscriptionAck>,FromServer::SubscriptionAck>( _session->Subscribe(OpcServerSlug, {nodeId}, _listener) );
 		Stopwatch sw;//let the initial push land first - the listener writes into this fixture, so nothing may still be in flight when the test returns.
 		while( _value!=expected )
 			ASSERT_NO_THROW( sw.CheckTimeout(6s, 1ms) );
-		let cached = GetCredential( AppClient()->SessionId(), OpcServerTarget );
+		let cached = GetCredential( AppClient()->SessionId(), OpcServerSlug );
 		ASSERT_TRUE( cached );//the suite's shared state: later tests connect through this credential, so it goes back below.
 		Logout( AppClient()->SessionId() );//drops the web session's cached credentials; the UA client itself stays connected.
-		auto result = BlockAwait<ClientSocketAwait<FromServer::UnsubscribeAck>,FromServer::UnsubscribeAck>( _session->Unsubscribe(OpcServerTarget, {nodeId}) );
+		auto result = BlockAwait<ClientSocketAwait<FromServer::UnsubscribeAck>,FromServer::UnsubscribeAck>( _session->Unsubscribe(OpcServerSlug, {nodeId}) );
 		EXPECT_EQ( result.successes_size(), 1 );
-		AddSession( AppClient()->SessionId(), OpcServerTarget, *cached );//or the next connect derives the fallback credential and builds a second client beside _client.
+		AddSession( AppClient()->SessionId(), OpcServerSlug, *cached );//or the next connect derives the fallback credential and builds a second client beside _client.
 		sw.Reset();//as Basic: the monitored item must be gone before the test returns.
 		while( _client->Processing() )
 			ASSERT_NO_THROW( sw.CheckTimeout(6s, 1ms) );
@@ -118,7 +118,7 @@ namespace Jde::Opc::Gateway::Tests{
 		auto session = ms<GatewayClientSocket>( Executor(), ctx );
 		BlockVoidAwait( session->RunSession("localhost", GatewayPort()) );
 		BlockAwait<ClientSocketAwait<uint32>,uint>( session->Connect(AppClient()->SessionId()) );
-		BlockAwait<ClientSocketAwait<FromServer::SubscriptionAck>,FromServer::SubscriptionAck>( session->Subscribe(OpcServerTarget, {nodeId}, _listener) );
+		BlockAwait<ClientSocketAwait<FromServer::SubscriptionAck>,FromServer::SubscriptionAck>( session->Subscribe(OpcServerSlug, {nodeId}, _listener) );
 		ASSERT_EQ( _client->MonitoredNodes().Count(), before+1 );
 
 		BlockVoidAwait( session->Close(false, SRCE_CUR) );
@@ -127,7 +127,7 @@ namespace Jde::Opc::Gateway::Tests{
 			ASSERT_NO_THROW( sw.CheckTimeout(10s, 1ms) );
 	}
 
-	//Sessions racing to connect to the same target coalesce in ConnectAwait::_requests, and a Create() failure fans the
+	//Sessions racing to connect to the same slug coalesce in ConnectAwait::_requests, and a Create() failure fans the
 	//one exception out to all of them.  The fan-out "cloned" with e.Move(), which moves the payload *out of* e, so every
 	//waiter after the first - the last, which takes e itself, included - got the format string with its arguments gone
 	//("Could not find connection:  '{}'") instead of the real message (review3 #5).
@@ -141,7 +141,7 @@ namespace Jde::Opc::Gateway::Tests{
 		auto results = ms<Results>();
 		auto connect = []( sp<Results> r, uint i )ι->TAwait<sp<UAClient>>::Task{
 			try{
-				co_await ConnectAwait{ "claudeNoSuchOpcTarget"s, Credential{} };
+				co_await ConnectAwait{ "claudeNoSuchOpcSlug"s, Credential{} };
 				r->What[i] = "<no exception>";
 			}
 			catch( runtime_error& e ){

@@ -78,9 +78,9 @@ export abstract class ProtoService<Transmission,ResultMessage>{
 
 	toCollectionName( collectionDisplay:string ):string{ return collectionDisplay; }
 	subQueries( typeName: string, id: number ):string[]{ return []; }
-	targetQuery( schema: TableSchema, target: string, showDeleted:boolean, excludedColumns:string[] ):string{
+	slugQuery( schema: TableSchema, slug: string, showDeleted:boolean, excludedColumns:string[] ):string{
 		let fields = this.fieldColumns( schema, showDeleted, excludedColumns );
-		return `${schema.singular}( target:${StringUtils.qlString(target)} ){ ${fields.join(" ")} }`;
+		return `${schema.singular}( slug:${StringUtils.qlString(slug)} ){ ${fields.join(" ")} }`;
 	}
 	protected fieldColumns( schema: TableSchema, showDeleted:boolean, excludedColumns:string[] ):string[]{
 		let columns = [];

@@ -64,18 +64,18 @@ namespace Jde::Access::Tests{
 
 	TEST( MutationVariableTests, ATypoInAQueryFilterIsAnErrorNotZeroRows ){
 		let root = GetRoot();
-		const string target{ "review36-query" };
-		let user = UserPK{ GetId(GetUser(target, root)) };
+		const string slug{ "review36-query" };
+		let user = UserPK{ GetId(GetUser(slug, root)) };
 
-		let control = QL().QuerySync<jarray>( "users( target:$target ){ id target }", jobject{{"target",target}}, root );
+		let control = QL().QuerySync<jarray>( "users( slug:$slug ){ id slug }", jobject{{"slug",slug}}, root );
 		EXPECT_EQ( control.size(), 1u ) << "the fixture query itself found nothing"; //the same query, spelled right.
 		try{
-			QL().QuerySync<jarray>( "users( target:$targt ){ id target }", jobject{{"target",target}}, root );
+			QL().QuerySync<jarray>( "users( slug:$targt ){ id slug }", jobject{{"slug",slug}}, root );
 			ADD_FAILURE() << "the typo returned rows instead of an error";
 		}
 		catch( const Exception& e ){
 			EXPECT_NE( string{e.what()}.find("targt"), string::npos ) << e.what();  //which variable.
-			EXPECT_NE( string{e.what()}.find("target"), string::npos ) << e.what(); //and what was bound.
+			EXPECT_NE( string{e.what()}.find("slug"), string::npos ) << e.what(); //and what was bound.
 		}
 		PurgeUser( user, root );
 	}
@@ -138,11 +138,11 @@ namespace Jde::Access::Tests{
 	//unreachable by the id it was just given.  The pk is not insertable, so 99 was never written anywhere; only the reply lied.
 	TEST( MutationVariableTests, AClientSuppliedIdDoesNotMaskTheAssignedOne ){
 		let root = GetRoot();
-		const string target{ "review54-user" };
-		let y = QL().QuerySync<jobject>( "mutation createUser( name:\""+target+"\", target:\""+target+"\", providerId:1, id:99 ){ id }", {}, root );
+		const string slug{ "review54-user" };
+		let y = QL().QuerySync<jobject>( "mutation createUser( name:\""+slug+"\", slug:\""+slug+"\", providerId:1, id:99 ){ id }", {}, root );
 		let id = GetId( y );
 		EXPECT_NE( id, 99u ) << serialize( y );
-		EXPECT_EQ( GetId(Select("user", id, root, "id target", true)), id );//and the id it answered with finds the row.
+		EXPECT_EQ( GetId(Select("user", id, root, "id slug", true)), id );//and the id it answered with finds the row.
 		PurgeUser( UserPK{id}, root );
 	}
 }

@@ -64,7 +64,7 @@ namespace Jde::QL{
 				return ids;
 			};
 			auto ids = select();
-			if( ids.size()>1 && nullColumns.size() ){ //eg restoreResource(target:x, criteria:null): the mutation's own `is null` predicates pick between rows differing only in the null column.
+			if( ids.size()>1 && nullColumns.size() ){ //eg restoreResource(slug:x, criteria:null): the mutation's own `is null` predicates pick between rows differing only in the null column.
 				for( let& column : nullColumns )
 					where.Add( column, DB::Value{} );
 				ids = select();
@@ -132,7 +132,7 @@ namespace Jde::QL{
 						result = ( *array )[0];
 					let args = m.ExtrapolateVariables();
 					available = result.is_object() ? Json::Combine( result.get_object(), args ) : args;
-					//match every scalar arg that maps to a column - target alone is ambiguous (e.g. resources rows differing only by criteria).
+					//match every scalar arg that maps to a column - slug alone is ambiguous (e.g. resources rows differing only by criteria).
 					//Args only: the result's fields are server-formatted (a `$now` default needn't byte-match what was written) and today carry nothing but id/rowCount anyway.
 					if( !available.contains("id") ){
 						if( let id = findId(m, args); id )

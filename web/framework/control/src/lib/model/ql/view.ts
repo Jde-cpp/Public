@@ -254,7 +254,7 @@ export class View{
 		this.showSelector = config.showSelector;
 		this.sort = config.sort ?? defaultSort ?? [];
 		this.type = ViewType.User;
-		this.appendAlwaysQueried( schema );//toJson only persists displayed fields, so a saved view arrives without id/target
+		this.appendAlwaysQueried( schema );//toJson only persists displayed fields, so a saved view arrives without id/slug
 	}
 	private tableConstructor(config:TableSettings, schema:TableSchema){
 		this.collectionName = schema.collectionName;
@@ -266,9 +266,9 @@ export class View{
 	static toSort( sort:Sort[]|string|undefined ):Sort[]|undefined{
 		return typeof sort=="string" ? [{active: sort, direction: "asc"}] : sort;
 	}
-	//id is the mutation key, target the navigation key (ql-list.onRowActivate) and deleted drives show-deleted - query() asks for them whether or not they are displayed, so every view must carry them
+	//id is the mutation key, slug the navigation key (ql-list.onRowActivate) and deleted drives show-deleted - query() asks for them whether or not they are displayed, so every view must carry them
 	private appendAlwaysQueried( schema:TableSchema ):void{
-		for( let field of schema.fields.filter( f=>["id","deleted","target"].includes(f.name) && !this.fields.find(c=>c.name==f.name) ) ){
+		for( let field of schema.fields.filter( f=>["id","deleted","slug"].includes(f.name) && !this.fields.find(c=>c.name==f.name) ) ){
 			const viewField = new ViewField( {qlField:field, settings: {name: field.name, hidden: true}} );
 			if( field.name=="id" )
 				this.fields.unshift( viewField );
@@ -341,7 +341,7 @@ export class View{
 		if( deletedField )
 				deletedField.displayed = showDeleted;
 
-		let fieldStr = this.fields.filter( f=>f.displayed || f.name=="id" || f.name=="target" ).map( f=>f.queryText ).join(" ");//id/target are queried even when hidden:  id is the mutation key, target the navigation key
+		let fieldStr = this.fields.filter( f=>f.displayed || f.name=="id" || f.name=="slug" ).map( f=>f.queryText ).join(" ");//id/slug are queried even when hidden:  id is the mutation key, slug the navigation key
 		let args = [];
 		let vars:Record<string, DbScalar[]|DbScalar|null> = {};
 		if( this.limit )

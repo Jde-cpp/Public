@@ -69,8 +69,8 @@ namespace Jde::QL{
 				update.Where.Add( table.FindPK(), DB::Value{*id} );
 			else if( let name = table.FindColumn("name") ? Json::FindSV(args, "name") : optional<sv>{}; name )
 				update.Where.Add( table.FindColumn("name"), DB::Value{string{*name}} );
-			else if( let target = table.FindColumn("target") ? Json::FindSV(args, "target") : optional<sv>{}; target )
-				update.Where.Add( table.FindColumn("target"), DB::Value{string{*target}} );
+			else if( let slug = table.FindColumn("slug") ? Json::FindSV(args, "slug") : optional<sv>{}; slug )
+				update.Where.Add( table.FindColumn("slug"), DB::Value{string{*slug}} );
 			else
 				THROW( "Could not get criteria from {}", serialize(args) );
 			rowKey = update.Where.Params()[0];
@@ -101,12 +101,12 @@ namespace Jde::QL{
 		}
 		THROW_IF( update.Where.Empty(), "There is no where clause." );
 		if( update.Values.size() ){
-			//#45: an extension row is keyed by whatever the parent's where clause was keyed by, and on the name/target branches that
+			//#45: an extension row is keyed by whatever the parent's where clause was keyed by, and on the name/slug branches that
 			//is the literal, not the row - `update access_users set … where access_users.identity_id='bob'` matched nothing and the
 			//parent's row count was reported as success.  Resolving the parent pk first would mean a blocking select on the mutation
 			//path, so the shape is refused.  Only when this statement has something to set:  `updateGroup( name:…, description:… )`
 			//touches parent columns only, so no extension statement is emitted and the natural key is still the right way to say it.
-			THROW_IF( pExtendedFromTable && !Json::FindNumber<uint>(input, "id"), "'{}' extends '{}', so setting one of its own columns needs an id - name and target key the parent, not its extension.", table.Name, pExtendedFromTable->Name );
+			THROW_IF( pExtendedFromTable && !Json::FindNumber<uint>(input, "id"), "'{}' extends '{}', so setting one of its own columns needs an id - name and slug key the parent, not its extension.", table.Name, pExtendedFromTable->Name );
 			updates.push_back( move(update) );
 		}
 		return rowKey;
@@ -117,9 +117,9 @@ namespace Jde::QL{
 		let value = _mutation.Type==EMutationQL::Delete ? DB::Value{"$now"} : DB::Value{};
 		update.Add( deleted, value );
 		auto key = _mutation.GetKey();
-		update.Where.Add( key.IsPK() ? deleted->Table->GetPK() : deleted->Table->GetColumnPtr("target"), DB::Value::FromKey(key) );//deleted=main table, table=possibly extension table.
+		update.Where.Add( key.IsPK() ? deleted->Table->GetPK() : deleted->Table->GetColumnPtr("slug"), DB::Value::FromKey(key) );//deleted=main table, table=possibly extension table.
 		for( let& arg : input ){
-			if( arg.key()=="id" || arg.key()=="target" )
+			if( arg.key()=="id" || arg.key()=="slug" )
 				continue;
 			if( let column = table.FindColumn( arg.key() ); column )
 				update.Where.Add( column, DB::Value{column->Type, arg.value()} );

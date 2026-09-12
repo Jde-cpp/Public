@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 
-import { arraysEqual, cloneClassArray, DetailPage, IGraphQL, Properties, QLSelector, TableSettings, TargetRow, toIdArray, Style} from 'jde-framework';
+import { arraysEqual, cloneClassArray, DetailPage, IGraphQL, Properties, QLSelector, TableSettings, SlugRow, toIdArray, Style} from 'jde-framework';
 import { Role, RolePK } from '../../model/role';
 import { PermissionTable } from '../../shared/permissions/permission-table';
 import { Permission } from '../../model/permission';
@@ -25,15 +25,15 @@ export class RoleDetail extends DetailPage<Role>{
 	constructor(){
 		super( 'roleDetail' );
 		effect(() => {
-			if( this.childRoles() && !arraysEqual(TargetRow.idArray(this.row.childRoles), this.childRoles().selected) )
+			if( this.childRoles() && !arraysEqual(SlugRow.idArray(this.row.childRoles), this.childRoles().selected) )
 				this.isChanged.set( true );
 		});
 		effect(() => {
-			if( this.groups() && !arraysEqual(TargetRow.idArray(this.row.groups),this.groups().selected) )
+			if( this.groups() && !arraysEqual(SlugRow.idArray(this.row.groups),this.groups().selected) )
 				this.isChanged.set( true );
 		});
 		effect(() => {
-			if( this.users() && !arraysEqual(TargetRow.idArray(this.row.users),this.users().selected) )
+			if( this.users() && !arraysEqual(SlugRow.idArray(this.row.users),this.users().selected) )
 				this.isChanged.set( true );
 		});
 		effect(() => {
@@ -45,9 +45,9 @@ export class RoleDetail extends DetailPage<Role>{
 	protected override get ctor(){ return Role; }
 	protected override onRow(){
 		this.permissions.set( cloneClassArray(this.row.permissions, Permission) );
-		this.childRoles.set( new SelectionModel<RolePK>(true, TargetRow.idArray(this.row.childRoles)) );
-		this.groups.set( new SelectionModel<GroupPK>(true, TargetRow.idArray(this.row.groups)) );
-		this.users.set( new SelectionModel<UserPK>(true, TargetRow.idArray(this.row.users)) );
+		this.childRoles.set( new SelectionModel<RolePK>(true, SlugRow.idArray(this.row.childRoles)) );
+		this.groups.set( new SelectionModel<GroupPK>(true, SlugRow.idArray(this.row.groups)) );
+		this.users.set( new SelectionModel<UserPK>(true, SlugRow.idArray(this.row.users)) );
 	}
 	protected override upsert():Role{
 		return new Role( {

@@ -13,46 +13,46 @@ namespace Jde::Opc::Gateway::Tests{
 
 	//no connection needed - EnsureCertificate is a static that only touches the cert tree.
 	struct CertFileTests : ::testing::Test{
-		static constexpr sv Target{ "certUriChangeTest" };
+		static constexpr sv Slug{ "certUriChangeTest" };
 		α TearDown()ι->void override{
 			std::error_code ec;
-			fs::remove( UAClient::CryptoSettings(ServerCnnctnNK{Target}).Certificate.Path, ec );
+			fs::remove( UAClient::CryptoSettings(ServerCnnctnNK{Slug}).Certificate.Path, ec );
 		}
 	};
-	//the cert file name keys on the target, its SAN on the certificateUri - editing a connection's uri must re-issue,
+	//the cert file name keys on the slug, its SAN on the certificateUri - editing a connection's uri must re-issue,
 	//or the gateway presents a stale SAN forever and every session is refused BadCertificateUriInvalid.
 	TEST_F( CertFileTests, ReissuesWhenCertificateUriChanges ){
-		let path = UAClient::CryptoSettings( ServerCnnctnNK{Target} ).Certificate.Path;
+		let path = UAClient::CryptoSettings( ServerCnnctnNK{Slug} ).Certificate.Path;
 		let sanUri = [&]{ return Crypto::Certificate{ Crypto::ReadCertificate(path) }.SanUri(); };
 
-		UAClient::EnsureCertificate( ServerCnnctnNK{Target}, "urn:first.application" );
+		UAClient::EnsureCertificate( ServerCnnctnNK{Slug}, "urn:first.application" );
 		ASSERT_TRUE( fs::exists(path) );
 		EXPECT_EQ( sanUri(), "urn:first.application" );
 
-		UAClient::EnsureCertificate( ServerCnnctnNK{Target}, "urn:second.application" );//same file name, different uri.
+		UAClient::EnsureCertificate( ServerCnnctnNK{Slug}, "urn:second.application" );//same file name, different uri.
 		EXPECT_EQ( sanUri(), "urn:second.application" );
 
 		//and it must NOT churn when nothing changed - re-issuing every connect would rotate a cert peers have trusted.
 		let before = Crypto::ReadCertificate( path );
-		UAClient::EnsureCertificate( ServerCnnctnNK{Target}, "urn:second.application" );
+		UAClient::EnsureCertificate( ServerCnnctnNK{Slug}, "urn:second.application" );
 		EXPECT_EQ( Crypto::ReadCertificate(path), before );
 	}
 
 	//web-certs3 #17: an issued OPC client certificate used to be presented until the peer rejected it as expired, with
-	//deleting the PEM the only remedy.  The per-target path now shares ReissueReason with the web certificates.
+	//deleting the PEM the only remedy.  The per-slug path now shares ReissueReason with the web certificates.
 	TEST_F( CertFileTests, ReissuesWhenExpired ){
-		constexpr sv target{ "certExpiryTest" };
+		constexpr sv slug{ "certExpiryTest" };
 		constexpr sv uri{ "urn:expiry.application" };
-		let settings = UAClient::CryptoSettings( ServerCnnctnNK{target}, uri );
+		let settings = UAClient::CryptoSettings( ServerCnnctnNK{slug}, uri );
 		let expiration = [&]{ return Crypto::Certificate{ Crypto::ReadCertificate(settings.Certificate.Path) }.Expiration; };
 
-		UAClient::EnsureCertificate( ServerCnnctnNK{target}, uri );
+		UAClient::EnsureCertificate( ServerCnnctnNK{slug}, uri );
 		Crypto::IssueCertificate( settings, std::chrono::hours{-24} );//what a year of uptime leaves on disk.
 		ASSERT_LT( expiration(), Clock::now() );
 
-		UAClient::EnsureCertificate( ServerCnnctnNK{target}, uri );
+		UAClient::EnsureCertificate( ServerCnnctnNK{slug}, uri );
 		EXPECT_GT( expiration(), Clock::now()+std::chrono::days{364} );
-		EXPECT_EQ( Crypto::Certificate{ Crypto::ReadCertificate(settings.Certificate.Path) }.SanUri(), uri );//re-issued for the same target.
+		EXPECT_EQ( Crypto::Certificate{ Crypto::ReadCertificate(settings.Certificate.Path) }.SanUri(), uri );//re-issued for the same slug.
 
 		std::error_code ec;
 		fs::remove( settings.Certificate.Path, ec );//the key is per CN and shared with the rest of the suite - leave it.
@@ -62,13 +62,13 @@ namespace Jde::Opc::Gateway::Tests{
 	//level up and jsonnet-hidden, so every issued OPC client key silently went to disk in cleartext while the config read as
 	//encrypted - this pins the plumbing, not openssl (OpenSslTests already proves CreateKey encrypts when asked).
 	TEST_F( CertFileTests, PasscodeEncryptsTheIssuedKey ){
-		constexpr sv target{ "passcodeTest" };
+		constexpr sv slug{ "passcodeTest" };
 		let saved = Settings::FindDefaultObject( "/gateway/issuedCerts" );
 		Settings::Set( "/gateway/issuedCerts/privateKey/passcode", "test-passcode" );
-		Settings::Set( "/gateway/issuedCerts/certificate/commonName", "passcodeTest" );//its own key pair:  the key file is per CN and shared by every target, and the rest of the suite opens it without a passcode.
-		let settings = UAClient::CryptoSettings( ServerCnnctnNK{target} );
+		Settings::Set( "/gateway/issuedCerts/certificate/commonName", "passcodeTest" );//its own key pair:  the key file is per CN and shared by every slug, and the rest of the suite opens it without a passcode.
+		let settings = UAClient::CryptoSettings( ServerCnnctnNK{slug} );
 		try{
-			UAClient::EnsureCertificate( ServerCnnctnNK{target}, "urn:passcode.test" );
+			UAClient::EnsureCertificate( ServerCnnctnNK{slug}, "urn:passcode.test" );
 		}
 		catch( ... ){
 			Settings::Set( "/gateway/issuedCerts", saved );
@@ -88,7 +88,7 @@ namespace Jde::Opc::Gateway::Tests{
 	//server-side counterpart to ReissuesWhenCertificateUriChanges: the OpcServer must trust a transport cert re-issued
 	//AFTER its startup snapshot (UATrust rescans on a failed verify) - pre-fix every secured connect fails
 	//BadCertificateUntrusted until the server restarts. IssuedToken auth, not Certificate: certAuth swaps the transport
-	//cert to AppClient()->SslSettings (Configuration()), while every other credential presents the per-target issued
+	//cert to AppClient()->SslSettings (Configuration()), while every other credential presents the per-slug issued
 	//file - the production scenario. (Not Username - the test server doesn't offer that policy.)
 	class TrustReloadTests : public Auth{
 	protected:
@@ -108,7 +108,7 @@ namespace Jde::Opc::Gateway::Tests{
 	α TrustReloadTests::Connect( atomic_flag& flag )ι->ConnectAwait::Task{
 		try{
 			_exception = nullptr;
-			_client = co_await UAClient::GetClient( Connection->Target, Credential{_jwt->Payload()} );//same credential as TokenTests.Authenticate.
+			_client = co_await UAClient::GetClient( Connection->Slug, Credential{_jwt->Payload()} );//same credential as TokenTests.Authenticate.
 		}
 		catch( Exception& e ){
 			_exception = e.Move();
@@ -129,8 +129,8 @@ namespace Jde::Opc::Gateway::Tests{
 		//from the certificate on disk - Connection->CertificateUri is empty here, and an empty uri keeps the config block's
 		//whole SAN, which ReissueReason would read as drift and re-issue again on the next connect (a different DER than the
 		//one this test means the server to reload).
-		let settings = UAClient::CryptoSettings( Connection->Target );
-		Crypto::IssueCertificate( UAClient::CryptoSettings(Connection->Target, Crypto::Certificate{Crypto::ReadCertificate(settings.Certificate.Path)}.SanUri()) );
+		let settings = UAClient::CryptoSettings( Connection->Slug );
+		Crypto::IssueCertificate( UAClient::CryptoSettings(Connection->Slug, Crypto::Certificate{Crypto::ReadCertificate(settings.Certificate.Path)}.SanUri()) );
 
 		atomic_flag second;
 		Connect( second );//no server restart - the verify shim must rescan trustedCertDirs and trust the new file.
@@ -168,9 +168,9 @@ namespace Jde::Opc::Gateway::Tests{
 	α CertTests::Connect( atomic_flag& flag, char id )ι->ConnectAwait::Task{
 		try{
 			TRACE( "Call {}", id );
-			_client = co_await UAClient::GetClient( Connection->Target, Credential{Crypto::PublicKey{}} );
+			_client = co_await UAClient::GetClient( Connection->Slug, Credential{Crypto::PublicKey{}} );
 			ASSERT( _client );
-			//co_await CertAwait{ Client->Target, "localhost", true };
+			//co_await CertAwait{ Client->Slug, "localhost", true };
 			TRACE( "{} returned", id );
 		}
 		catch( Exception& e ){
@@ -182,7 +182,7 @@ namespace Jde::Opc::Gateway::Tests{
 	}
 
 	TEST_F( CertTests, Authenticate ){
-		string opcId{ Connection->Target };
+		string opcId{ Connection->Slug };
 		atomic_flag a,b,c,d;
 		Connect( a, 'a' );//test Connection.
 		Connect( b, 'b' );//test waiting for a.

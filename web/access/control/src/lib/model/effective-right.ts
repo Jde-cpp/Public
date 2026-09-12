@@ -10,7 +10,7 @@ export type PathStep = { id:number; type:"group"|"role"; name?:string };
 export type RightsSource = { permissionId:number; allowed:Rights; denied:Rights; path:PathStep[] };
 export type Names = { groups:Map<number,string>; roles:Map<number,string> };
 //The server's userRights row - Authorize::UserRights, UserRightsAwait.cpp.
-export type UserRightsRow = { resource:{ id:number; schemaName?:string; target?:string; criteria?:string; deleted?:string|null }; allowed:number; denied:number; effective:number; sources:{ permissionId:number; allowed:number; denied:number; path:{id:number; type:"group"|"role"}[] }[] };
+export type UserRightsRow = { resource:{ id:number; schemaName?:string; slug?:string; criteria?:string; deleted?:string|null }; allowed:number; denied:number; effective:number; sources:{ permissionId:number; allowed:number; denied:number; path:{id:number; type:"group"|"role"}[] }[] };
 
 //What a user ends up with on one resource through every path - the read-only twin of Permission for the Effective rights tab.
 export class EffectiveRight{
@@ -27,19 +27,19 @@ export class EffectiveRight{
 	//is a lockout, which is what the first-run admin is looking for, and a silent absence would hide it.  Unenforced
 	//resources without a grant are left out - they are open to everyone, there is nothing to say.
 	//The result is nested:  a criteria row (a node-scoped resource, minted when a role is granted on a node) sits under the
-	//criteria-less row of the same schema+target, its `parent` - OpcAuthorize resolves a node to the nearest configured
+	//criteria-less row of the same schema+slug, its `parent` - OpcAuthorize resolves a node to the nearest configured
 	//ancestor's resource, else that root, so the node row replaces its root for its subtree rather than adding to it.  One
 	//without a root in the list stays top-level.
 	static fromRows( rows:UserRightsRow[], resources:Resource[], names:Names ):EffectiveRight[]{
 		const byId = new Map( resources.map( r=>[r.id, r] ) );
-		const roots = new Map( resources.filter( r=>!r.criteria ).map( r=>[EffectiveRight.key(r.schema, r.target), r] ) );
+		const roots = new Map( resources.filter( r=>!r.criteria ).map( r=>[EffectiveRight.key(r.schema, r.slug), r] ) );
 		const y = rows.map( row=>{
 			const cached = byId.get( row.resource.id );
-			//the row's own schema/target/criteria/deleted win:  loadResources() filters criteria:null, so a node resource is only ever known
-			//from here - and takes its root's name, since its own is the QL target access_role_add coalesced ("nodeIds" under "node_ids")
-			const schema = row.resource.schemaName ?? cached?.schema, target = row.resource.target ?? cached?.target;
-			const name = cached?.name ?? roots.get( EffectiveRight.key(schema, target) )?.name ?? target;
-			const resource = new Resource( { ...(cached ?? {}), id: row.resource.id, schemaName: schema, target, name, criteria: row.resource.criteria || undefined, deleted: row.resource.deleted ?? undefined, availableRights: cached?.availableRights ?? Rights.All } );
+			//the row's own schema/slug/criteria/deleted win:  loadResources() filters criteria:null, so a node resource is only ever known
+			//from here - and takes its root's name, since its own is the QL slug access_role_add coalesced ("nodeIds" under "node_ids")
+			const schema = row.resource.schemaName ?? cached?.schema, slug = row.resource.slug ?? cached?.slug;
+			const name = cached?.name ?? roots.get( EffectiveRight.key(schema, slug) )?.name ?? slug;
+			const resource = new Resource( { ...(cached ?? {}), id: row.resource.id, schemaName: schema, slug, name, criteria: row.resource.criteria || undefined, deleted: row.resource.deleted ?? undefined, availableRights: cached?.availableRights ?? Rights.All } );
 			const sources:RightsSource[] = row.sources.map( s=>({
 				permissionId: s.permissionId,
 				allowed: s.allowed as Rights,
@@ -56,13 +56,13 @@ export class EffectiveRight{
 		y.sort( (a,b)=>(a.resource.schema ?? '').localeCompare(b.resource.schema ?? '') || (a.resource.name ?? '').localeCompare(b.resource.name ?? '') || (a.resource.criteria ?? '').localeCompare(b.resource.criteria ?? '') );
 		return EffectiveRight.nest( y );
 	}
-	static key( schema:string|undefined, target:string|undefined ):string{ return `${schema ?? ''}/${target ?? ''}`; }
-	//criteria rows under the criteria-less row of the same schema+target; the order of `rows` is kept, so children stay sorted
+	static key( schema:string|undefined, slug:string|undefined ):string{ return `${schema ?? ''}/${slug ?? ''}`; }
+	//criteria rows under the criteria-less row of the same schema+slug; the order of `rows` is kept, so children stay sorted
 	static nest( rows:EffectiveRight[] ):EffectiveRight[]{
-		const roots = new Map( rows.filter( r=>!r.resource.criteria ).map( r=>[EffectiveRight.key(r.resource.schema, r.resource.target), r] ) );
+		const roots = new Map( rows.filter( r=>!r.resource.criteria ).map( r=>[EffectiveRight.key(r.resource.schema, r.resource.slug), r] ) );
 		const y:EffectiveRight[] = [];
 		for( const row of rows ){
-			const root = row.resource.criteria ? roots.get( EffectiveRight.key(row.resource.schema, row.resource.target) ) : undefined;
+			const root = row.resource.criteria ? roots.get( EffectiveRight.key(row.resource.schema, row.resource.slug) ) : undefined;
 			if( root ){
 				row.parent = root;
 				root.children.push( row );

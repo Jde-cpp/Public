@@ -15,8 +15,8 @@ namespace Jde::Web::Mock{
 		α LocalQL()Ι->sp<QL::IQL> override{ return nullptr; }
 		α UserPK()Ι->Jde::UserPK override{ return Session() ? Session()->UserPK : Jde::UserPK{}; }
 	private:
-		α WriteException( runtime_error&& e, RequestId requestId )ι->void override;
-		α WriteException( std::string&&, Jde::RequestId )ι->void override{ ASSERT(false); }
+		α WriteException( runtime_error&& e, RequestId requestId, SRCE )ι->void override;
+		α WriteException( std::string&&, Jde::RequestId, SL )ι->void override{ ASSERT(false); }
 		α WriteException( Exception&& e )ι->void{ WriteException( move(e), 0 ); }
 		α WriteSubscription( const jvalue&, RequestId )ι->void override{ ASSERT(false); }
 		β WriteSubscription( uint32 /*appPK*/, uint32 /*appInstancePK*/, const Logging::Entry&, const QL::Subscription& )ι->void override{ ASSERT(false); }

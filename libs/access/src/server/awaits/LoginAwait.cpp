@@ -52,7 +52,7 @@ namespace Jde::Access::Server{
 		DB::InsertClause insert{ AccessSchema().Prefix+"user_insert_key",
 			{ DB::Value{move(modulusHex)}, DB::Value{exponent}, DB::Value{underlying(EProviderType::Key)},
 				DB::Value{ move(name) }, //users.name
-				DB::Value{ move(info.CommonName) }, //users.target
+				DB::Value{ move(info.CommonName) }, //users.slug
 				DB::Value{ move(_description) }, DB::Value{ move(info.Issuer) },
 				DB::Value{ move(info.SubjectAltName) },
 				DB::Value{ move(info.DistinguishedName) },

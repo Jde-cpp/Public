@@ -14,9 +14,9 @@
 				<mat-checkbox disabled=true [checked]=row.resource.deleted></mat-checkbox>
 			</mat-cell>
 		</ng-container>
-		<ng-container matColumnDef="target">
-			<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header>Target</mat-header-cell>
-			<mat-cell *matCellDef="let row"> {{row.resource.target}} </mat-cell>
+		<ng-container matColumnDef="slug">
+			<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header>Slug</mat-header-cell>
+			<mat-cell *matCellDef="let row"> {{row.resource.slug}} </mat-cell>
 		</ng-container>
 		@for( kv of rights | enumKeys; track kv.key; let i = $index; ){
 			<ng-container matColumnDef={{kv.value}}>

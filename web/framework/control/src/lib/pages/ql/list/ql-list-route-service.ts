@@ -17,7 +17,7 @@ export class QLListRouteService extends RouteService implements IRouteService{
 		let y:Routes = [];
 		let thisConfig = this.router.config.find( x=>x.path==urlSegments[urlSegments.length-1].path )!;
 		let childrenConfig = this.router.config.find( x=>x.path==thisConfig.path && x.children?.length )!;
-		const children = childrenConfig.children ? childrenConfig.children.filter(x=> !x.path!.endsWith(":target")) : [];
+		const children = childrenConfig.children ? childrenConfig.children.filter(x=> !x.path!.endsWith(":slug")) : [];
 		for( let child of children ){
 			if( child.path!=":collectionDisplay" )
 				y.push( child );
