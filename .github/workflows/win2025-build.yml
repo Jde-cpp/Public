@@ -133,6 +133,11 @@ jobs:
       # has no NSIS - choco installs it (~30 s); the OpcServer's DI/IA nodesets
       # come from OPCFoundation/UA-Nodeset, pinned to the commit the dev clone is
       # on, the VC++ runtime from Microsoft, and the Web UI from the `web` job.
+      # The runtime is the VS 2026 line (aka.ms/vs/18, 14.5x): the image builds
+      # with the VS 2026 toolset (VC/Tools/MSVC/14.51), and Microsoft's rule is a
+      # redistributable at least as new as the toolset. The VS 2022 line (vs/17,
+      # 14.44) happened to export every symbol the exes import - checked 09-12 -
+      # but only by luck. OpcHubSetup.nsi's version gate (14.50) is the same line.
       - name: Installer inputs
         if: success()
         run: |
@@ -143,7 +148,7 @@ jobs:
             curl.exe -sSfL "$raw/$f" -o "C:/jde/nodesets/$f"
             if ($LASTEXITCODE -ne 0) { throw "download failed: $f" }
           }
-          curl.exe -sSfL https://aka.ms/vs/17/release/vc_redist.x64.exe -o C:/jde/vc_redist.x64.exe
+          curl.exe -sSfL https://aka.ms/vs/18/release/vc_redist.x64.exe -o C:/jde/vc_redist.x64.exe
           if ($LASTEXITCODE -ne 0) { throw 'download failed: vc_redist.x64.exe' }
 
       # The `web` job normally finishes long before the C++ build does; this is the
