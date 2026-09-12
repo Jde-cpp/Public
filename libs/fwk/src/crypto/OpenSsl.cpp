@@ -278,7 +278,7 @@ namespace Jde{
 	α Crypto::ReadCertificate( const fs::path& certificate, SL sl )ε->vector<byte>{
 		X509Ptr cert{ PEM_read_bio_X509(Internal::ReadFile(certificate, sl).get(), nullptr, 0, nullptr), ::X509_free };
 		//not CHECK_NULL:  "null returned" names no file, and a process reads several pems - the web cert, the ua server cert,
-		//one per opc target, every trust anchor - so the path is what tells the operator which one is bad.  A *missing* file
+		//one per opc slug, every trust anchor - so the path is what tells the operator which one is bad.  A *missing* file
 		//already throws IOException(path); this is the parse failure.  The openssl reason ("no start line", "bad base64
 		//decode") rides along from the ERR queue either way.
 		THROW_IFX( !cert, Crypto::OpenSslException(Ƒ("Could not parse certificate '{}'", certificate.string()), sl) );

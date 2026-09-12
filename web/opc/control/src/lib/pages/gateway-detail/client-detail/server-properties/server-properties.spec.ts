@@ -6,7 +6,7 @@ import { ServerProperties } from './server-properties';
 //the server left a field blank, "Uri" against the sibling tab's "URI", and the discovery URLs commented out altogether.
 //the Props types carry the row's audit columns and a getter the constructors never read - `as any` on the two nested literals
 const props = ( overrides:Partial<ServerProps>={} ):ServerProps=>({
-	connection: { id: 7, target: "local", name: "Local", url: "opc.tcp://127.0.0.1:4840", certificateUri: "urn:x", defaultBrowseNs: 1 } as any,
+	connection: { id: 7, slug: "local", name: "Local", url: "opc.tcp://127.0.0.1:4840", certificateUri: "urn:x", defaultBrowseNs: 1 } as any,
 	desc: {
 		applicationName: "Jde-Cpp OpcServer [debug]", applicationUri: "urn:open62541.server.application", applicationType: "Server",
 		productUri: "http://open62541.org", gatewayServerUri: "", discoveryProfileUri: "",

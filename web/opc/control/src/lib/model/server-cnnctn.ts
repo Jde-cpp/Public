@@ -1,10 +1,10 @@
-import { ITargetRow, Mutation, MutationType, PropertyNames, TargetRow, TargetRowProps  } from "jde-framework";
+import { ISlugRow, Mutation, MutationType, PropertyNames, SlugRow, SlugRowProps  } from "jde-framework";
 import { toBrowse } from "./types";
 import { Server } from "./server";
 
 export type CnnctnPK = number;
-export type CnnctnTarget = string;
-export class ServerCnnctn extends TargetRow<ServerCnnctn>{
+export type CnnctnSlug = string;
+export class ServerCnnctn extends SlugRow<ServerCnnctn>{
 	constructor( obj:ServerCnnctnProps ){
 		super(ServerCnnctn.typeName, obj);
 		this.url = obj.url;
@@ -14,9 +14,9 @@ export class ServerCnnctn extends TargetRow<ServerCnnctn>{
 		this.serverError = obj.serverError;
 	}
 
-	override get canSave():boolean{ return super.canSave && this.url?.length>0; }//url is non-null in the gateway meta - the base only knows name/target
+	override get canSave():boolean{ return super.canSave && this.url?.length>0; }//url is non-null in the gateway meta - the base only knows name/slug
 
-	override equals( row:ITargetRow ):boolean{
+	override equals( row:ISlugRow ):boolean{
 		let other = row as ServerCnnctn;
 		return super.equals(row) && this.url==other.url && this.certificateUri==other.certificateUri && ServerCnnctn.toNs(this.defaultBrowseNs)==ServerCnnctn.toNs(other.defaultBrowseNs);//the edited copy still holds the input's raw string
 	}
@@ -51,4 +51,4 @@ export class ServerCnnctn extends TargetRow<ServerCnnctn>{
 	serverError?:string;//the resolver's connect failure, when `server` is unset for an existing row - the Connection tab shows it
 	static typeName = "ServerConnection";
 }
-export type ServerCnnctnProps = TargetRowProps & { url:string; certificateUri:string; defaultBrowseNs?:number; server:Server; serverError?:string };
+export type ServerCnnctnProps = SlugRowProps & { url:string; certificateUri:string; defaultBrowseNs?:number; server:Server; serverError?:string };

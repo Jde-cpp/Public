@@ -19,7 +19,7 @@ namespace Jde::Access{
 		let query = "{ __type(name: \"User\") { fields { name type { name kind ofType{name kind} } } }}";
 		let json = QL().QuerySync( query, {}, GetRoot() );
 		let actual = Str::Replace( serialize(json), '"', '\'' );
-		let expected = "{'name':'User','fields':[{'name':'id','type':{'name':null,'kind':'NON_NULL','ofType':{'name':'ID','kind':'SCALAR'}}},{'name':'name','type':{'name':null,'kind':'NON_NULL','ofType':{'name':'String','kind':'SCALAR'}}},{'name':'provider','type':{'name':'Provider','kind':'ENUM'}},{'name':'target','type':{'name':null,'kind':'NON_NULL','ofType':{'name':'String','kind':'SCALAR'}}},{'name':'attributes','type':{'name':'UInt','kind':'SCALAR'}},{'name':'created','type':{'name':null,'kind':'NON_NULL','ofType':{'name':'DateTime','kind':'SCALAR'}}},{'name':'updated','type':{'name':'DateTime','kind':'SCALAR'}},{'name':'deleted','type':{'name':'DateTime','kind':'SCALAR'}},{'name':'description','type':{'name':'String','kind':'SCALAR'}},{'name':'email','type':{'name':'String','kind':'SCALAR'}},{'name':'loginName','type':{'name':'String','kind':'SCALAR'}},{'name':'modulus','type':{'name':'String','kind':'SCALAR'}},{'name':'exponent','type':{'name':'UInt','kind':'SCALAR'}},{'name':'issuer','type':{'name':'String','kind':'SCALAR'}},{'name':'subjectAlt','type':{'name':'String','kind':'SCALAR'}},{'name':'distinguished','type':{'name':'String','kind':'SCALAR'}},{'name':'expiration','type':{'name':'DateTime','kind':'SCALAR'}},{'name':'fingerprint','type':{'name':'String','kind':'SCALAR'}}]}";
+		let expected = "{'name':'User','fields':[{'name':'id','type':{'name':null,'kind':'NON_NULL','ofType':{'name':'ID','kind':'SCALAR'}}},{'name':'name','type':{'name':null,'kind':'NON_NULL','ofType':{'name':'String','kind':'SCALAR'}}},{'name':'provider','type':{'name':'Provider','kind':'ENUM'}},{'name':'slug','type':{'name':null,'kind':'NON_NULL','ofType':{'name':'String','kind':'SCALAR'}}},{'name':'attributes','type':{'name':'UInt','kind':'SCALAR'}},{'name':'created','type':{'name':null,'kind':'NON_NULL','ofType':{'name':'DateTime','kind':'SCALAR'}}},{'name':'updated','type':{'name':'DateTime','kind':'SCALAR'}},{'name':'deleted','type':{'name':'DateTime','kind':'SCALAR'}},{'name':'description','type':{'name':'String','kind':'SCALAR'}},{'name':'email','type':{'name':'String','kind':'SCALAR'}},{'name':'loginName','type':{'name':'String','kind':'SCALAR'}},{'name':'modulus','type':{'name':'String','kind':'SCALAR'}},{'name':'exponent','type':{'name':'UInt','kind':'SCALAR'}},{'name':'issuer','type':{'name':'String','kind':'SCALAR'}},{'name':'subjectAlt','type':{'name':'String','kind':'SCALAR'}},{'name':'distinguished','type':{'name':'String','kind':'SCALAR'}},{'name':'expiration','type':{'name':'DateTime','kind':'SCALAR'}},{'name':'fingerprint','type':{'name':'String','kind':'SCALAR'}}]}";
 		ASSERT_EQ( actual, expected );
 	}
 
@@ -51,22 +51,22 @@ namespace Jde::Access{
 	}
 
 	TEST_F( UserTests, Crud ){
-		const string target{ "crud" };
-		let existingUser = GetUser( target, GetRoot() );
+		const string slug{ "crud" };
+		let existingUser = GetUser( slug, GetRoot() );
 		auto id = GetId(existingUser);
 		ASSERT_NE( id, 0 );
 
 		let update = Ƒ( "mutation updateUser( \"id\":{}, \"name\":\"{}\" )", id, "newName" );
 		let updateJson = QL().QuerySync<jvalue>( update, {}, GetRoot() );
-		ASSERT_TRUE( AsSV(Tests::GetUser(target, GetRoot()), "name")=="newName" );
+		ASSERT_TRUE( AsSV(Tests::GetUser(slug, GetRoot()), "name")=="newName" );
 
 		let del = Ƒ( "mutation deleteUser(\"id\":{})", id );
 		let deleteJson = QL().QuerySync<jvalue>( del, {}, GetRoot() );
-		ASSERT_TRUE( Tests::SelectUser(target, GetRoot()).empty() );
-		ASSERT_TRUE( !Tests::GetUser(target, GetRoot(), true).empty() );
+		ASSERT_TRUE( Tests::SelectUser(slug, GetRoot()).empty() );
+		ASSERT_TRUE( !Tests::GetUser(slug, GetRoot(), true).empty() );
 
 		PurgeUser( {id}, GetRoot() );
-		ASSERT_TRUE( Tests::SelectUser(target, GetRoot(), true).empty() );
+		ASSERT_TRUE( Tests::SelectUser(slug, GetRoot(), true).empty() );
 	}
 
 	TEST_F( UserTests, MultipleUsersSelect ){
@@ -82,10 +82,10 @@ namespace Jde::Access{
 		PurgeUser( {b}, GetRoot() );
 	}
 	TEST_F( UserTests, NotIn ){
-		auto q = "{users(target:{nin:[\"root\"]}){target} }";
+		auto q = "{users(slug:{nin:[\"root\"]}){slug} }";
 		auto notRoot = QL().QuerySync<jarray>( move(q), {}, GetRoot() );
 		for( auto& user : notRoot )
-			ASSERT_NE( user.at("target").get_string(), "root" );
+			ASSERT_NE( user.at("slug").get_string(), "root" );
 	}
 	TEST_F( UserTests, ProvidersSelect ){
 		let readGroups = "__type(name: \"Provider\") { enumValues { id name } }";

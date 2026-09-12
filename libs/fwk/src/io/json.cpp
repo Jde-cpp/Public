@@ -67,9 +67,9 @@ namespace Jde{
 		if( auto p = o.if_contains("id"); p )
 			return DB::Key{ p->to_number<uint>() };
 
-		if( auto p = o.if_contains("target"); p )
+		if( auto p = o.if_contains("slug"); p )
 			return DB::Key{ string{p->as_string()} };
-		THROWSL( "Could not find 'id' or 'target' in {}.", serialize(o) );
+		THROWSL( "Could not find 'id' or 'slug' in {}.", serialize(o) );
 	}
 
 	α Json::TryReadJsonNet( const fs::path& path, const vector<fs::path>& importPaths, const flat_map<string,string>& extVars, const flat_map<string,string>& tlaCodeVars, SL sl )ι->std::expected<jobject, string>{

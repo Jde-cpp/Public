@@ -41,7 +41,7 @@ namespace Jde::Opc::Server{
 
 	//The AppServer's delegated admin check (ServerSocketSession::TestAdminAwait, appserver-review3 #13):  who may grant on a node
 	//is whoever administers the resource governing it, which only this server can resolve (OpcAuthorize::TestAdminNode).  The
-	//shape is the AppServer's:  adminCheck( user:$user ){ isAdmin resource( resource:$target, criteria:$criteria ) } - a
+	//shape is the AppServer's:  adminCheck( user:$user ){ isAdmin resource( resource:$slug, criteria:$criteria ) } - a
 	//registered system table (Startup), since QL::Parse resolves the client's queries against no schema.
 	//A denial is the answer;  anything else - not ready, an undecodable criteria - fails the query, which the AppServer also
 	//takes as a denial.
@@ -50,16 +50,16 @@ namespace Jde::Opc::Server{
 		let resource = table.FindTable( "resource" );
 		THROW_IFSL( !resource, "adminCheck needs a resource( resource, criteria ) sub-table." );
 		let args = resource->ExtrapolateVariables();
-		let target = Json::AsString( args, "resource" );
+		let slug = Json::AsString( args, "resource" );
 		let criteria = Json::FindString( args, "criteria" ).value_or( string{} );
 		auto& auth = static_cast<OpcAuthorize&>( *GetSchema().Authorizer );//installed by Startup, as UAAccess reads it.
 		bool isAdmin{ true };
 		try{
-			auth.TestAdminNode( target, criteria, user, sl );
+			auth.TestAdminNode( slug, criteria, user, sl );
 		}
 		catch( const Access::AccessException& e ){
 			isAdmin = false;
-			DBGT( ELogTags::Access, "[{}]{}.{}: {}", user.Value, target, criteria, e.what() );
+			DBGT( ELogTags::Access, "[{}]{}.{}: {}", user.Value, slug, criteria, e.what() );
 		}
 		return jobject{ {"adminCheck", jobject{{"isAdmin", isAdmin}}} };
 	}

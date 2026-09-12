@@ -8,7 +8,7 @@ export type GatewayData = {
 	columns: Record<string,string>;
 	pageSettings:PageSettings;
 	profile: PageProfile;
-	results:{ serverConnections: any }|undefined; //{users:ITargetRow[]};
+	results:{ serverConnections: any }|undefined; //{users:ISlugRow[]};
 	routing:AppInstanceRoute;
 	schema: TableSchema;
 };
@@ -43,7 +43,7 @@ export class GatewayResolver implements Resolve<GatewayData> {
 	static async load( gateway:Gateway, data:GatewayData, routeStore:RouteStore, childrenKey:string|UrlSegment[] ):Promise<GatewayData>{
 		const query = data.profile.view.query( data.profile.showDeleted, 0 );//the toggle persists under the collection name (serverConnections), not "gateways"
 		const results = await gateway.query<any>( query.text, query.vars, (m)=>console.log(m) );
-		routeStore.setChildren( childrenKey, results[data.schema.collectionName].map( (r:any)=>{return {title:r.name, path: r.target};}) );
+		routeStore.setChildren( childrenKey, results[data.schema.collectionName].map( (r:any)=>{return {title:r.name, path: r.slug};}) );
 		return {
 			columns: data.columns,
 			pageSettings: data.pageSettings,

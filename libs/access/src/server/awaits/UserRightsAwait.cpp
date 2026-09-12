@@ -20,7 +20,7 @@ namespace Jde::Access::Server{
 				jobject jresource{ {"id", resource.PK} };
 				if( resource.Cached ){
 					jresource["schemaName"] = resource.Cached->Schema;
-					jresource["target"] = resource.Cached->Target;
+					jresource["slug"] = resource.Cached->Slug;
 					jresource["criteria"] = resource.Cached->Criteria;
 					jresource["deleted"] = resource.Cached->IsDeleted ? jvalue{ ToIsoString(*resource.Cached->IsDeleted) } : jvalue{ nullptr };
 				}

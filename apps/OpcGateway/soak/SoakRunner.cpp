@@ -53,8 +53,8 @@ namespace Jde::Opc::Gateway::Soak{
 				if( flag && !Process::FindArg(*flag) )
 					continue;
 				auto& leg = legs.emplace_back();
-				leg.Target = Json::AsString( o, "target" );
-				leg.Name = Json::FindString( o, "name" ).value_or( leg.Target );
+				leg.Slug = Json::AsString( o, "slug" );
+				leg.Name = Json::FindString( o, "name" ).value_or( leg.Slug );
 				leg.Description = Json::FindString( o, "description" ).value_or( "" );
 				leg.CertificateUri = Json::FindString( o, "certificateUri" ).value_or( "" );
 				leg.Url = Json::FindString( o, "url" ).value_or( "" );
@@ -79,7 +79,7 @@ namespace Jde::Opc::Gateway::Soak{
 		}
 		if( legs.empty() ){
 			auto& leg = legs.emplace_back();
-			leg.Target = "OpcSoak"; leg.Name = "Soak test server"; leg.Description = "Soak test connection";
+			leg.Slug = "OpcSoak"; leg.Name = "Soak test server"; leg.Description = "Soak test connection";
 			leg.CertificateUri = "urn:open62541.server.application"; leg.Url = "opc.tcp://127.0.0.1:4840";
 		}
 		if( legs.front().Nodes.empty() )
@@ -89,8 +89,8 @@ namespace Jde::Opc::Gateway::Soak{
 
 	//Where -createCert wrote the leg's client certificate - the file an external server has to trust.  Asks UAClient
 	//rather than re-deriving the layout; the SAN doesn't affect the path, so the uri is not needed here.
-	Ω CertPath( sv target )ι->string{
-		return UAClient::CryptoSettings( ServerCnnctnNK{target} ).Certificate.Path.string();
+	Ω CertPath( sv slug )ι->string{
+		return UAClient::CryptoSettings( ServerCnnctnNK{slug} ).Certificate.Path.string();
 	}
 
 	Ω percentile( const vector<uint32>& latencies, double p )ι->uint{
@@ -115,7 +115,7 @@ namespace Jde::Opc::Gateway::Soak{
 		α Write( ServerLeg& leg, const NodeId& node, uint value )ε->bool;//one write with its retries; false = counted as a WriteFailure (and reconnected if it was the third in a row).
 		α SampleStatus()ι->void;
 		α Reconnect( ServerLeg& leg )ε->void;
-		α FindLeg( sv target )ι->ServerLeg*;
+		α FindLeg( sv slug )ι->ServerLeg*;
 		α Total( uint ServerLeg::* counter )Ι->uint;
 		α AllLatencies()Ι->vector<uint32>;
 		α WriteSummary( sv verdict )ι->void;
@@ -163,7 +163,7 @@ namespace Jde::Opc::Gateway::Soak{
 			let schema = argString( "-opcSchema", "/soak/opcSchema", _debug ? "opc.debug" : "opc.release" );
 			constexpr uint allAccess{ 0x7F };//the UA access-level byte: read|write|historyRead|historyWrite|semanticChange|statusWrite|timestampWrite.
 			client->QuerySync<jvalue>(
-				"createAcl( identity:{id:$userId}, permissionRight:{ allowed:$allowed, denied:0, resource:{schemaName:$schemaName, target:\"nodeIds\"}} )",
+				"createAcl( identity:{id:$userId}, permissionRight:{ allowed:$allowed, denied:0, resource:{schemaName:$schemaName, slug:\"nodeIds\"}} )",
 				{{"userId", client->UserPK().Value}, {"allowed", allAccess}, {"schemaName", schema}} );
 			INFO( "Granted OPC node access for user {} on '{}'.", client->UserPK().Value, schema );
 		}
@@ -187,7 +187,7 @@ namespace Jde::Opc::Gateway::Soak{
 	}
 
 	α SoakRunner::Login( ServerLeg& leg )ε->void{
-		let body = serialize( jobject{ {"opc",leg.Target}, {"user",leg.User}, {"password",leg.Password} } );
+		let body = serialize( jobject{ {"opc",leg.Slug}, {"user",leg.User}, {"password",leg.Password} } );
 		string authorization;
 		try{
 			//ClientHttpAwait::await_resume throws ClientHttpResException on any error status, so a THROW_IF on res.IsError()
@@ -201,53 +201,53 @@ namespace Jde::Opc::Gateway::Soak{
 			let status = (uint)e.Status();//read before the move - argument evaluation order is unspecified.
 			throw Exception{ SRCE_CUR, {}, move(e),
 				"[{}]/login failed for user '{}': http {}. The gateway refused the login or could not open a session on {} - the UA status code is in the gateway log. On a first run against an external server, trust '{}' in its certificate/configuration manager and confirm '{}' may write the configured nodes.",
-				leg.Target, leg.User, status, leg.Url, CertPath(leg.Target), leg.User };
+				leg.Slug, leg.User, status, leg.Url, CertPath(leg.Slug), leg.User };
 		}
 		catch( runtime_error& e ){
-			throw Exception{ SRCE_CUR, {}, move(e), "[{}]/login for user '{}' could not reach the gateway at {}:{}.", leg.Target, leg.User, _host, _port };
+			throw Exception{ SRCE_CUR, {}, move(e), "[{}]/login for user '{}' could not reach the gateway at {}:{}.", leg.Slug, leg.User, _host, _port };
 		}
 		let sessionId = Str::TryTo<SessionPK>( authorization, nullptr, 16 );
-		THROW_IF( !sessionId || !*sessionId, "[{}]/login for user '{}' returned no session id in the Authorization header ('{}').", leg.Target, leg.User, authorization );
+		THROW_IF( !sessionId || !*sessionId, "[{}]/login for user '{}' returned no session id in the Authorization header ('{}').", leg.Slug, leg.User, authorization );
 		leg.SessionId = *sessionId;
 		optional<ssl::context> ctx;
 		leg.Socket = ms<GatewayClientSocket>( Executor(), ctx );
 		BlockVoidAwait( leg.Socket->RunSession(_host, _port) );
 		BlockAwait<ClientSocketAwait<uint32>,uint>( leg.Socket->Connect(leg.SessionId) );
-		INFO( "[{}]Logged in as '{}' - session {:x}.", leg.Target, leg.User, leg.SessionId );
+		INFO( "[{}]Logged in as '{}' - session {:x}.", leg.Slug, leg.User, leg.SessionId );
 	}
 
 	α SoakRunner::EnsureServerConnections()ε->void{
 		for( let& leg : _legs ){
-			let existing = _socket->QuerySync( Ƒ("serverConnection( target: \"{}\" ){{ id url }}", leg.Target) );
+			let existing = _socket->QuerySync( Ƒ("serverConnection( slug: \"{}\" ){{ id url }}", leg.Slug) );
 			if( existing.is_object() && existing.get_object().contains("id") ){
-				INFO( "Server connection '{}' exists: {}.", leg.Target, serialize(existing) );
+				INFO( "Server connection '{}' exists: {}.", leg.Slug, serialize(existing) );
 				continue;
 			}
-			let created = _socket->QuerySync( Ƒ("mutation createServerConnection( target:\"{}\", name:\"{}\", certificateUri:\"{}\", description:\"{}\", url:\"{}\", isDefault:false ){{id}}",
-				leg.Target, leg.Name, leg.CertificateUri, leg.Description, leg.Url) );
-			INFO( "Created server connection '{}': {}.", leg.Target, serialize(created) );
+			let created = _socket->QuerySync( Ƒ("mutation createServerConnection( slug:\"{}\", name:\"{}\", certificateUri:\"{}\", description:\"{}\", url:\"{}\", isDefault:false ){{id}}",
+				leg.Slug, leg.Name, leg.CertificateUri, leg.Description, leg.Url) );
+			INFO( "Created server connection '{}': {}.", leg.Slug, serialize(created) );
 		}
 	}
 
 	α SoakRunner::Subscribe( ServerLeg& leg )ε->void{
 		try{
-			let ack = BlockAwait<ClientSocketAwait<FromServer::SubscriptionAck>,FromServer::SubscriptionAck>( leg.Socket->Subscribe(leg.Target, leg.Nodes, shared_from_this()) );
+			let ack = BlockAwait<ClientSocketAwait<FromServer::SubscriptionAck>,FromServer::SubscriptionAck>( leg.Socket->Subscribe(leg.Slug, leg.Nodes, shared_from_this()) );
 			THROW_IF( (uint)ack.results_size()!=leg.Nodes.size(), "Subscription ack has {} results for {} nodes.", ack.results_size(), leg.Nodes.size() );
 			for( int i=0; i<ack.results_size(); ++i )
 				THROW_IF( ack.results(i).status_code(), "Subscription for node '{}' failed: {:x}.", leg.Nodes[i].ToString(), ack.results(i).status_code() );
-			INFO( "Subscribed to {} node(s) on '{}'.", leg.Nodes.size(), leg.Target );
+			INFO( "Subscribed to {} node(s) on '{}'.", leg.Nodes.size(), leg.Slug );
 		}
 		catch( const std::exception& ){
 			//Connection-level failures (untrusted cert, bad credential) already surfaced in Login; reaching here on an
 			//external leg points at the nodes themselves.
 			if( leg.User.size() )
-				WARN( "[{}]Subscribe failed - confirm the configured nodes exist and '{}' may read them; if the server rejected the client certificate, trust '{}' in its configuration manager.", leg.Target, leg.User, CertPath(leg.Target) );
+				WARN( "[{}]Subscribe failed - confirm the configured nodes exist and '{}' may read them; if the server rejected the client certificate, trust '{}' in its configuration manager.", leg.Slug, leg.User, CertPath(leg.Slug) );
 			throw;
 		}
 	}
 
-	α SoakRunner::FindLeg( sv target )ι->ServerLeg*{
-		auto p = std::ranges::find_if( _legs, [target](let& l){ return l.Target==target; } );
+	α SoakRunner::FindLeg( sv slug )ι->ServerLeg*{
+		auto p = std::ranges::find_if( _legs, [slug](let& l){ return l.Slug==slug; } );
 		return p==_legs.end() ? nullptr : &*p;
 	}
 
@@ -272,7 +272,7 @@ namespace Jde::Opc::Gateway::Soak{
 	α SoakRunner::Reconnect( ServerLeg& leg )ε->void{
 		++_socketDrops;
 		leg.ConsecutiveFailures = 0;
-		WARN( "[{}]Reconnecting to the gateway (drop #{}).", leg.Target, _socketDrops );
+		WARN( "[{}]Reconnecting to the gateway (drop #{}).", leg.Slug, _socketDrops );
 		if( leg.User.empty() ){//shared main-session socket: recreate it and resubscribe every leg on it.
 			if( _socket )
 				_retiredSockets.push_back( move(_socket) );
@@ -301,19 +301,19 @@ namespace Jde::Opc::Gateway::Soak{
 				//no {value} result-request: the subscription push is the round-trip assertion, and the mutation's read-back
 				//never resumes when UA responses land in the same run_iterate (split-process localhost; see soak findings).
 				string q{ "updateVariable( opc: $opc, id: $id, value: $value )" };
-				leg.Socket->QuerySync( move(q), jobject{ {"opc",leg.Target}, {"id",node.ToJson()}, {"value",value} } );
+				leg.Socket->QuerySync( move(q), jobject{ {"opc",leg.Slug}, {"id",node.ToJson()}, {"value",value} } );
 				leg.ConsecutiveFailures = 0;
 				return true;
 			}
 			catch( const std::exception& e ){
 				if( attempt<_writeRetries && !Process::ShuttingDown() ){
 					++leg.WriteRetries;
-					WARN( "[{}]updateVariable failed for {} (attempt {} of {}) - retrying in {}: {}", leg.Target, node.ToString(), attempt+1, _writeRetries+1, Chrono::ToString(_retryDelay), e.what() );
+					WARN( "[{}]updateVariable failed for {} (attempt {} of {}) - retrying in {}: {}", leg.Slug, node.ToString(), attempt+1, _writeRetries+1, Chrono::ToString(_retryDelay), e.what() );
 					std::this_thread::sleep_for( _retryDelay );
 					continue;
 				}
 				++leg.WriteFailures;
-				WARN( "[{}]updateVariable failed for {} after {} attempt(s): {}", leg.Target, node.ToString(), attempt+1, e.what() );
+				WARN( "[{}]updateVariable failed for {} after {} attempt(s): {}", leg.Slug, node.ToString(), attempt+1, e.what() );
 				if( ++leg.ConsecutiveFailures>=3 )
 					Reconnect( leg );
 				return false;
@@ -344,12 +344,12 @@ namespace Jde::Opc::Gateway::Soak{
 			lock.unlock();
 			if( attempt<_missRetries && !Process::ShuttingDown() ){
 				++leg.MissRetries;
-				WARN( "[{}]No data-change push for {} value {} within {} (attempt {} of {}) - re-sending in {}.", leg.Target, node.ToString(), value, Chrono::ToString(_pushTimeout), attempt+1, _missRetries+1, Chrono::ToString(_retryDelay) );
+				WARN( "[{}]No data-change push for {} value {} within {} (attempt {} of {}) - re-sending in {}.", leg.Slug, node.ToString(), value, Chrono::ToString(_pushTimeout), attempt+1, _missRetries+1, Chrono::ToString(_retryDelay) );
 				std::this_thread::sleep_for( _retryDelay );
 				continue;
 			}
 			++leg.Misses;
-			WARN( "[{}]No data-change push for {} value {} within {} after {} attempt(s).", leg.Target, node.ToString(), value, Chrono::ToString(_pushTimeout), attempt+1 );
+			WARN( "[{}]No data-change push for {} value {} within {} after {} attempt(s).", leg.Slug, node.ToString(), value, Chrono::ToString(_pushTimeout), attempt+1 );
 			return;
 		}
 	}
@@ -391,7 +391,7 @@ namespace Jde::Opc::Gateway::Soak{
 			let all = AllLatencies();
 			jobject servers;
 			for( let& l : _legs ){
-				servers[l.Target] = jobject{
+				servers[l.Slug] = jobject{
 					{"writes", l.Writes}, {"pushes", l.Pushes}, {"misses", l.Misses}, {"writeFailures", l.WriteFailures}, {"writeRetries", l.WriteRetries}, {"missRetries", l.MissRetries},
 					{"p50Ms", percentile(l.LatenciesMs, .5)}, {"p99Ms", percentile(l.LatenciesMs, .99)},
 					{"maxMs", l.LatenciesMs.empty() ? 0 : *std::ranges::max_element(l.LatenciesMs)}
@@ -419,7 +419,7 @@ namespace Jde::Opc::Gateway::Soak{
 		if( _csv.tellp()==0 ){
 			_csv << "time,memory,uptimeSeconds,clients,monitoredItems,writes,pushes,misses,writeFailures,writeRetries,missRetries,socketDrops,statusFailures,p50Ms,p99Ms";
 			for( let& l : _legs )
-				_csv << Ƒ( ",writes_{0},pushes_{0},misses_{0},writeFailures_{0},writeRetries_{0},missRetries_{0},p50Ms_{0},p99Ms_{0}", l.Target );
+				_csv << Ƒ( ",writes_{0},pushes_{0},misses_{0},writeFailures_{0},writeRetries_{0},missRetries_{0},p50Ms_{0},p99Ms_{0}", l.Slug );
 			_csv << std::endl;
 		}
 		Connect();
@@ -465,10 +465,10 @@ namespace Jde::Opc::Gateway::Soak{
 		_completed = Clock::now()>=deadline;
 		for( auto& leg : _legs ){
 			try{
-				BlockAwait<ClientSocketAwait<FromServer::UnsubscribeAck>,FromServer::UnsubscribeAck>( leg.Socket->Unsubscribe(leg.Target, leg.Nodes) );
+				BlockAwait<ClientSocketAwait<FromServer::UnsubscribeAck>,FromServer::UnsubscribeAck>( leg.Socket->Unsubscribe(leg.Slug, leg.Nodes) );
 			}
 			catch( const std::exception& e ){
-				WARN( "[{}]Unsubscribe failed: {}", leg.Target, e.what() );
+				WARN( "[{}]Unsubscribe failed: {}", leg.Slug, e.what() );
 			}
 		}
 		SampleStatus();
@@ -477,7 +477,7 @@ namespace Jde::Opc::Gateway::Soak{
 		INFO( "Soak {}: completed={}, writes={}, pushes={}, misses={}, writeFailures={}, writeRetries={}, missRetries={}, socketDrops={}, statusFailures={}, p50={}ms, p99={}ms.",
 			pass ? "PASS" : "FAIL", _completed, Total(&ServerLeg::Writes), Total(&ServerLeg::Pushes), Total(&ServerLeg::Misses), Total(&ServerLeg::WriteFailures), Total(&ServerLeg::WriteRetries), Total(&ServerLeg::MissRetries), _socketDrops, _statusFailures, percentile(AllLatencies(), .5), percentile(AllLatencies(), .99) );
 		for( let& l : _legs )
-			INFO( "  [{}]writes={}, pushes={}, misses={}, writeFailures={}, writeRetries={}, missRetries={}, p50={}ms, p99={}ms.", l.Target, l.Writes, l.Pushes, l.Misses, l.WriteFailures, l.WriteRetries, l.MissRetries, percentile(l.LatenciesMs, .5), percentile(l.LatenciesMs, .99) );
+			INFO( "  [{}]writes={}, pushes={}, misses={}, writeFailures={}, writeRetries={}, missRetries={}, p50={}ms, p99={}ms.", l.Slug, l.Writes, l.Pushes, l.Misses, l.WriteFailures, l.WriteRetries, l.MissRetries, percentile(l.LatenciesMs, .5), percentile(l.LatenciesMs, .99) );
 		return pass ? EXIT_SUCCESS : EXIT_FAILURE;
 	}
 

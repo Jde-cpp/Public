@@ -20,15 +20,15 @@ namespace Jde::Opc::Gateway{
 	}
 	ConnectAwait::ConnectAwait( ServerCnnctnNK opc, SessionPK sessionId, UserPK user, SL sl )ι:
 		base{sl},
-		_opcTarget{ move(opc) },
-		_cred{ SessionCredential(sessionId, user, _opcTarget).value_or(Credential{}) },
+		_opcSlug{ move(opc) },
+		_cred{ SessionCredential(sessionId, user, _opcSlug).value_or(Credential{}) },
 		_sessionId{ sessionId }
 	{}
 	α ConnectAwait::await_resume()ε->sp<UAClient>{
 		auto client = Promise() ? base::await_resume() : _result;
 		//A jwt-backed web session's connect never goes through PasswordAwait, so record it here or opcSessions never sees it. None = anonymous/no user - not a session worth counting.
-		if( client && _sessionId && _cred.Type()!=ETokenType::None && !GetCredential(_sessionId, _opcTarget) )
-			AddSession( _sessionId, _opcTarget, _cred );
+		if( client && _sessionId && _cred.Type()!=ETokenType::None && !GetCredential(_sessionId, _opcSlug) )
+			AddSession( _sessionId, _opcSlug, _cred );
 		return client;
 	}
 	ConnectAwait::ConnectAwait( ServerCnnctnNK opc, const Web::Server::SessionInfo& session, SL sl )ι:
@@ -49,7 +49,7 @@ namespace Jde::Opc::Gateway{
 	}
 
 	α ConnectAwait::Suspend()ι->void{
-		if( auto client = UAClient::Find(_opcTarget, _cred); client ){
+		if( auto client = UAClient::Find(_opcSlug, _cred); client ){
 			TRACET( ((ELogTags)EOpcLogTags::Opc) | ELogTags::Access, "[{}]Found client for cred: {}", hex(client->Handle()), _cred.ToString() );
 			base::Resume( move(client) );
 			return;
@@ -59,8 +59,8 @@ namespace Jde::Opc::Gateway{
 		{
 			lg l{ _requestMutex };
 			//Re-check under _requestMutex: a client can activate and drain _requests between the unlocked Find above and here. StateCallback inserts into _clients *before* Posting the drain (which needs this mutex), so a locked Find cannot miss a client whose drain already ran. Without this, a stale miss registers as the new first handle → duplicate Create() → the second client fails StateCallback's ASSERT(inserted) and is silently dropped.
-			if( client = UAClient::Find(_opcTarget, _cred); !client ){
-				auto opcHandles = _requests.try_emplace( _opcTarget ).first;
+			if( client = UAClient::Find(_opcSlug, _cred); !client ){
+				auto opcHandles = _requests.try_emplace( _opcSlug ).first;
 				auto credHandles = opcHandles->second.try_emplace( _cred ).first;
 				credHandles->second.push_back( _h );
 				create = credHandles->second.size()==1;
@@ -73,8 +73,8 @@ namespace Jde::Opc::Gateway{
 	}
 	α ConnectAwait::Create()ι->TAwait<vector<ServerCnnctn>>::Task{
 		try{
-			auto servers = co_await ServerCnnctnAwait{ _opcTarget };
-			THROW_IFX( servers.empty(), Exception( _sl, {EHttpStatus::NotFound}, "Could not find connection:  '{}'", _opcTarget) );
+			auto servers = co_await ServerCnnctnAwait{ _opcSlug };
+			THROW_IFX( servers.empty(), Exception( _sl, {EHttpStatus::NotFound}, "Could not find connection:  '{}'", _opcSlug) );
 			auto client = ms<UAClient>( move(servers.front()), _cred );
 			client->Connect();
 		}
@@ -82,7 +82,7 @@ namespace Jde::Opc::Gateway{
 			vector<ConnectAwait::Handle> handles;
 			{
 				lg l{ _requestMutex };
-				handles = EraseRequests( _opcTarget, _cred, l );
+				handles = EraseRequests( _opcSlug, _cred, l );
 			}
 			//Copy per waiter, never Move:  Move() moves the payload *out of* e, so the first "clone" hollowed it and every
 			//waiter after it - the last, which takes e itself, included - got the format string with its _args gone
@@ -114,7 +114,7 @@ namespace Jde::Opc::Gateway{
 	}
 
 	α ConnectAwait::Resume( sp<UAClient> client )ι->void{
-		Resume( client->Target(), client->Credential, [client](ConnectAwait::Handle h){ h.promise().Resume(sp<UAClient>(client), h); } );
+		Resume( client->Slug(), client->Credential, [client](ConnectAwait::Handle h){ h.promise().Resume(sp<UAClient>(client), h); } );
 	}
 	α ConnectAwait::Resume( str opcNK, Credential cred, const UAClientException&& e )ι->void{
 		Resume( opcNK, cred, [e2=move(e)](ConnectAwait::Handle h)mutable{ h.promise().ResumeExp(UAClientException{e2}, h); } );

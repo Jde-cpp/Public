@@ -214,11 +214,11 @@ namespace Jde::App::Server{
 		try{
 			THROW_IF( !Session(), "Not logged in to system." );
 			jobject vars{ {"id", UserPK().Value} };
-			let user = co_await QL::QLAwait<jobject>( "user(id:$id){name target}", move(vars), {UserPK::System}, QLPtr() );
+			let user = co_await QL::QLAwait<jobject>( "user(id:$id){name slug}", move(vars), {UserPK::System}, QLPtr() );
 			let info = Web::Server::Sessions::Find( SessionId() );
 			THROW_IF( !info, "Session not found." );
 			let expiration = Chrono::ToClock<Clock,steady_clock>( info->Expiration );
-			Write( FromServer::Jwt(Server::GetJwt(UserPK(), string{user.at("name").as_string()}, string{user.at("target").as_string()}, _userEndpoint.address().to_string(), SessionId(), expiration, {}), requestId) );
+			Write( FromServer::Jwt(Server::GetJwt(UserPK(), string{user.at("name").as_string()}, string{user.at("slug").as_string()}, _userEndpoint.address().to_string(), SessionId(), expiration, {}), requestId) );
 		}
 		catch( runtime_error& e ){
 			WriteException( move(e), requestId );

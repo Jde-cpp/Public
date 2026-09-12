@@ -6,14 +6,14 @@
 namespace Jde::Opc::Gateway::Tests{
 	struct WriteTests : ::testing::Test{
 		Ω SetUpTestCase()->void{
-			if( !SelectServerCnnctn( OpcServerTarget ) )
+			if( !SelectServerCnnctn( OpcServerSlug ) )
 				CreateServerCnnctn();
 		};
 	};
 
 	TEST_F( WriteTests, Enum ){
 		GTEST_SKIP() << "Need to find correct node id.";
-		// jobject vars{ {"opc", OpcServerTarget}, {"id", jobject{{"ns", 4}, {"i", 6001}}} };
+		// jobject vars{ {"opc", OpcServerSlug}, {"id", jobject{{"ns", 4}, {"i", 6001}}} };
 		// let value = BlockAwait<Web::Client::ClientSocketAwait<jvalue>,jvalue>(	Socket().Query("variable( opc: $opc, id: $id ){ value }", vars, true) );
 		// TRACET( ELogTags::Test, "Read enum value: {}.", serialize(value) );
 		// vars["value"] = 2;

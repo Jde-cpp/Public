@@ -12,8 +12,8 @@ namespace Jde::Access::Tests{
 	//the write-up's own case, on the table it used.
 	TEST( KeyColumnUpdateTests, APkColumnCannotBeSetThroughTheGenericUpdate ){
 		let root = GetRoot();
-		const string target{ "review46-resource" };
-		let id = Create( "resource", target, root, "schemaName:\"review46\"" );
+		const string slug{ "review46-resource" };
+		let id = Create( "resource", slug, root, "schemaName:\"review46\"" );
 
 		//and the request is refused rather than reported as a success that did nothing:  with the pk skipped there is no settable
 		//column left, which UpdateAwait already has a message for.
@@ -24,7 +24,7 @@ namespace Jde::Access::Tests{
 		catch( const Exception& e ){
 			EXPECT_NE( string{e.what()}.find("nothing to update"), string::npos ) << e.what();
 		}
-		EXPECT_EQ( GetId(Select("resource", id, root, "id target", true)), id ) << "the row was renumbered";
+		EXPECT_EQ( GetId(Select("resource", id, root, "id slug", true)), id ) << "the row was renumbered";
 		EXPECT_TRUE( Select("resource", id+5000, root, "id", true).empty() ) << "and it is not at the new number either";
 
 		Purge( "resource", id, root );
@@ -35,8 +35,8 @@ namespace Jde::Access::Tests{
 	//identity-only shell has no child.
 	TEST( KeyColumnUpdateTests, APkColumnCannotBeSetThroughAnExtendedTablesParent ){
 		let root = GetRoot();
-		const string target{ "review46-user" };
-		let user = UserPK{ GetId(GetUser(target, root)) };
+		const string slug{ "review46-user" };
+		let user = UserPK{ GetId(GetUser(slug, root)) };
 
 		QL().QuerySync<jvalue>( Ƒ("mutation updateUser( id:{}, identityId:{}, loginName:\"review46-login\" )", user.Value, user.Value+7000), {}, root );
 		let after = Select( "user", user.Value, root, "id loginName", true );
@@ -49,8 +49,8 @@ namespace Jde::Access::Tests{
 	//the control:  an ordinary column of the same table is still settable, which is the whole point of the statement.
 	TEST( KeyColumnUpdateTests, OrdinaryColumnsAreStillUpdateable ){
 		let root = GetRoot();
-		const string target{ "review46-plain" };
-		let id = Create( "resource", target, root, "schemaName:\"review46\"" );
+		const string slug{ "review46-plain" };
+		let id = Create( "resource", slug, root, "schemaName:\"review46\"" );
 
 		QL().QuerySync<jvalue>( Ƒ("mutation updateResource( id:{}, description:\"review46-desc\" )", id), {}, root );
 		EXPECT_EQ( Json::AsSV(Select("resource", id, root, "id description", true), "description"), "review46-desc" );

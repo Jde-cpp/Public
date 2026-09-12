@@ -27,11 +27,11 @@ namespace Jde::DB::Tests{
 	//message without the statement text that what() keeps for the log.
 	TEST( DBExceptionTests, UserErrorOmitsSql ){
 		DB::Sql sql; sql.Text = "exec access_user_insert_key ?,?,?";
-		DBException e{ EDbError::App, move(sql), "Target 'x' already exists.", {ELogLevel::NoLog, {}, 50000} };
+		DBException e{ EDbError::App, move(sql), "Slug 'x' already exists.", {ELogLevel::NoLog, {}, 50000} };
 
 		let userError = e.UserError();
 		EXPECT_FALSE( userError.contains("access_user_insert_key") ) << userError;
-		EXPECT_TRUE( userError.contains("Target 'x' already exists.") ) << userError;
+		EXPECT_TRUE( userError.contains("Slug 'x' already exists.") ) << userError;
 		EXPECT_TRUE( string{e.what()}.contains("access_user_insert_key") ) << e.what(); //the split is the point: the log still gets the statement.
 	}
 

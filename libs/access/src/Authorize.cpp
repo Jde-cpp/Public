@@ -22,22 +22,22 @@ namespace Jde::Access{
 		_adminAuthorizers.cvisit( schemaName, [&](let& pair){ y = pair.second; } );
 		return y;
 	}
-	α Authorize::AddResource( ResourcePK resourcePK, string schema, string resourceTarget, string criteria )ι->void{
+	α Authorize::AddResource( ResourcePK resourcePK, string schema, string resourceSlug, string criteria )ι->void{
 		ul _{ Mutex };
-		SchemaResources[schema][resourceTarget][criteria] = resourcePK;
+		SchemaResources[schema][resourceSlug][criteria] = resourcePK;
 	}
 
-	//A bare target names a schema only when one schema carries it.  An app schema wins outright; an opc schema ("opc.<server>")
-	//answers only when it is the sole live one with the target, since every OpcServer registers the same `nodeIds`.  Callers that
+	//A bare slug names a schema only when one schema carries it.  An app schema wins outright; an opc schema ("opc.<server>")
+	//answers only when it is the sole live one with the slug, since every OpcServer registers the same `nodeIds`.  Callers that
 	//can be specific (the acl/role mutations, which have the resource's PK) should be - this is the fallback for those that cannot.
-	α Authorize::GetSchema( str resourceTarget, SL sl )ε->string{
+	α Authorize::GetSchema( str resourceSlug, SL sl )ε->string{
 		Jde::sl _{ Mutex };
 		optional<string> qualified;
 		bool ambiguous{};
 		for( let& [_,resource] : Resources ){
-			if( resource.Target!=resourceTarget )
+			if( resource.Slug!=resourceSlug )
 				continue;
-			if( !resource.Schema.contains('.') ) //an app schema's target is unique by construction
+			if( !resource.Schema.contains('.') ) //an app schema's slug is unique by construction
 				return resource.Schema;
 			if( resource.IsDeleted )
 				continue;
@@ -46,10 +46,10 @@ namespace Jde::Access{
 			else
 				qualified = resource.Schema;
 		}
-		THROW_IFSL( ambiguous, "Resource target '{}' exists in more than one schema; send the resource 'id' or a 'schemaName'.", resourceTarget );
+		THROW_IFSL( ambiguous, "Resource slug '{}' exists in more than one schema; send the resource 'id' or a 'schemaName'.", resourceSlug );
 		if( qualified )
 			return *qualified;
-		THROWSL( "Schema not found for resource target '{}'.", resourceTarget );
+		THROWSL( "Schema not found for resource slug '{}'.", resourceSlug );
 	}
 	α Authorize::Test( str schemaName, str resourceName, ERights rights, UserPK executer, SL sl )ε->void{
 		Jde::sl l{ Mutex };
@@ -77,9 +77,9 @@ namespace Jde::Access{
 			TestAdmin( resource->second, executer, sl );
 	}
 
-	α Authorize::TestAdmin( str resourceTarget, UserPK executer, SL sl )ε->void{
+	α Authorize::TestAdmin( str resourceSlug, UserPK executer, SL sl )ε->void{
 		Jde::sl l{ Mutex };
-		auto resource = find_if( Resources, [&](let& r){return r.second.Target==resourceTarget && !r.second.Schema.contains('.');} );//exclude opc schemas which can have same target
+		auto resource = find_if( Resources, [&](let& r){return r.second.Slug==resourceSlug && !r.second.Schema.contains('.');} );//exclude opc schemas which can have same slug
 		if( resource!=Resources.end() && !resource->second.IsDeleted )
 			TestAdmin( resource->second, executer, sl );
 	}
@@ -110,14 +110,14 @@ namespace Jde::Access{
 		};
 		auto p = active( criteria );
 		if( !p && criteria.size() )
-			p = active( {} );//an unmapped criteria inherits the target's root, as OpcAuthorize::UserRights does for an unmapped node.
-		if( p )//else permissions are not enabled for the target - passes, as Test does.
+			p = active( {} );//an unmapped criteria inherits the slug's root, as OpcAuthorize::UserRights does for an unmapped node.
+		if( p )//else permissions are not enabled for the slug - passes, as Test does.
 			TestAdmin( *p, executer, sl );
 	}
 	α Authorize::TestSchemaAdmin( str schema, UserPK executer, SL sl )ε->void{
 		Jde::sl l{ Mutex };
-		if( auto targets = SchemaResources.find(schema); targets!=SchemaResources.end() ){
-			for( let& [_, criterias] : targets->second ){
+		if( auto slugs = SchemaResources.find(schema); slugs!=SchemaResources.end() ){
+			for( let& [_, criterias] : slugs->second ){
 				auto root = criterias.find( string{} );
 				auto p = root!=criterias.end() ? Resources.find( root->second ) : Resources.end();
 				if( p==Resources.end() || p->second.IsDeleted )
@@ -133,8 +133,8 @@ namespace Jde::Access{
 		THROW_IFX( user==Users.end(), Access::AccessException(sl, executer, EHttpStatus::Unauthorized, "User not found.") ); //not a known user - anonymous or stale - the one case the client's 401 policy is for.
 		THROW_IFX( user->second.IsDeleted, Access::AccessException(sl, executer, "User is deleted.") );
 		let configured = user->second.ResourceRights( resource.PK );
-		THROW_IFX( !empty(configured.Denied & ERights::Administer), Access::AccessException(sl, executer, "User denied admin access to '{}'.", resource.Target) );
-		THROW_IFX( empty(configured.Allowed & ERights::Administer), Access::AccessException(sl, executer, "User does not have admin access to '{}'.", resource.Target) );
+		THROW_IFX( !empty(configured.Denied & ERights::Administer), Access::AccessException(sl, executer, "User denied admin access to '{}'.", resource.Slug) );
+		THROW_IFX( empty(configured.Allowed & ERights::Administer), Access::AccessException(sl, executer, "User does not have admin access to '{}'.", resource.Slug) );
 	}
 	α Authorize::TestAdminPermission( PermissionPK permissionPK, UserPK userPK, SL sl )ε->void{
 		Jde::sl l{ Mutex };
@@ -320,32 +320,32 @@ namespace Jde::Access{
 	α Authorize::CreateResource( Resource&& resource )ε->void{
 		ul _{ Mutex };
 		if( !resource.IsDeleted )//as Loader::Resources registers every active row:  a row created active is enforced - and found by TestSchemaAdmin - now, not at the next start (appserver-review3 #13).
-			SchemaResources[resource.Schema][resource.Target][resource.Criteria] = resource.PK;
+			SchemaResources[resource.Schema][resource.Slug][resource.Criteria] = resource.PK;
 		Resources[resource.PK] = move( resource );//assignment, not emplace:  sqlite reuses a purged pk, and resource purges are not subscribed, so the entry may be a stale deleted row.
 	}
-	//A pk names one row.  No pk - the fan-out could not pick one, because a by-target delete hit several - names every row of that
-	//schema+target, and the db changed all of them, so the cache does too (access-review3 #22).
+	//A pk names one row.  No pk - the fan-out could not pick one, because a by-slug delete hit several - names every row of that
+	//schema+slug, and the db changed all of them, so the cache does too (access-review3 #22).
 	α Authorize::UpdateResourceDeleted( ResourcePK pk, sv schemaName, const jobject& args, bool restored )ε->void{
 		ul _{ Mutex };
 		if( !pk )
 			pk = Json::FindNumber<ResourcePK>( args, "id" ).value_or( 0 );
-		let target = Json::FindSV( args, "target" );
+		let slug = Json::FindSV( args, "slug" );
 		uint applied{};
 		for( auto&& [resourcePK, resource] : Resources ){ //&&: flat_map iterates a proxy pair.
-			if( pk ? pk!=resource.PK : !((schemaName.empty() || resource.Schema==schemaName) && target && *target==resource.Target) ) //no schema in the mutation means the db matched the target in every schema.
+			if( pk ? pk!=resource.PK : !((schemaName.empty() || resource.Schema==schemaName) && slug && *slug==resource.Slug) ) //no schema in the mutation means the db matched the slug in every schema.
 				continue;
 			++applied;
 			resource.IsDeleted = restored ? optional<DB::DBTimePoint>{} : DB::DBClock::now();
 			if( resource.Criteria.empty() ){
 				if( auto resources = resource.IsDeleted ? SchemaResources.find(resource.Schema) : SchemaResources.end(); resources!=SchemaResources.end() ){
-					resources->second.erase( resource.Target );
-					DBGT( _ptags, "[{}.{}.{}]Deleted from schema resource.", resource.Schema, resource.Target, resource.PK );
+					resources->second.erase( resource.Slug );
+					DBGT( _ptags, "[{}.{}.{}]Deleted from schema resource.", resource.Schema, resource.Slug, resource.PK );
 				}
 				else if( !resource.IsDeleted ){
-					auto& targetResources = SchemaResources.try_emplace( string{resource.Schema} ).first->second;
-					auto& criteras = targetResources.try_emplace( resource.Target ).first->second;
+					auto& slugResources = SchemaResources.try_emplace( string{resource.Schema} ).first->second;
+					auto& criteras = slugResources.try_emplace( resource.Slug ).first->second;
 					criteras.try_emplace( {}, resource.PK );
-					DBGT( _ptags, "[{}.{}.{}]Restored from schema resource.", resource.Schema, resource.Target, resource.PK );
+					DBGT( _ptags, "[{}.{}.{}]Restored from schema resource.", resource.Schema, resource.Slug, resource.PK );
 				}
 			}
 		}
@@ -442,8 +442,8 @@ namespace Jde::Access{
 			resourcePK = p->PK;
 		else if( resource.PK ){ //new resource
 			auto& saved = Resources.emplace( resource.PK, move(resource) ).first->second;
-			ASSERT( saved.Schema.size() && saved.Target.size() );
-			SchemaResources[saved.Schema][saved.Target][saved.Criteria] = saved.PK;
+			ASSERT( saved.Schema.size() && saved.Slug.size() );
+			SchemaResources[saved.Schema][saved.Slug][saved.Criteria] = saved.PK;
 			resourcePK = saved.PK;
 		}
 		if( auto permission = Permissions.find(member); permission!=Permissions.end() ){ //a re-grant, or a purged pk the db reused (sqlite) - the entry outlives PurgeAcl/RemoveRoleChildren, so take the resource from the payload like AddAcl does, not from the stale entry.
@@ -455,7 +455,7 @@ namespace Jde::Access{
 		else if( resourcePK )
 			Permissions.emplace( member, Permission{member, *resourcePK, allowed, denied} );
 		else
-			CRITICAL( "[{}]Resource '{}' not found for role permission.", member, resource.Target );
+			CRITICAL( "[{}]Resource '{}' not found for role permission.", member, resource.Slug );
 		auto role = Roles.try_emplace( rolePK, rolePK, false );
 		role.first->second.Members.emplace( PermissionRole{std::in_place_index<0>, member} );
 		Recalc( l );

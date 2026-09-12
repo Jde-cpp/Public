@@ -22,7 +22,7 @@ namespace Jde::Opc::Gateway{
 		if( _pingTimer )
 			co_return;
 		_pingTimer.emplace( _pingInterval, _strand, SRCE_CUR );
-		DBGT( EOpcLogTags::ProcessingLoop, "Pinging '{}' in '{}'", client->Target(), Chrono::ToString(_pingInterval) );
+		DBGT( EOpcLogTags::ProcessingLoop, "Pinging '{}' in '{}'", client->Slug(), Chrono::ToString(_pingInterval) );
 		auto result = co_await *_pingTimer;//resumes on _strand
 		_pingTimer.reset();
 		if( result )

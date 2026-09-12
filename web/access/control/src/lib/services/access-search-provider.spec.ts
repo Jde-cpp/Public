@@ -2,14 +2,14 @@ import { TestBed } from '@angular/core/testing';
 import { AccessService } from './access-service';
 import { AccessSearchProvider } from './access-search-provider';
 
-const rows:Record<string,{id:number,name:string,target:string}[]> = {
-	users: [ {id:1, name:"John Duffy", target:"Google-johnmduffy@gmail.com"}, {id:2, name:"alice", target:"alice"} ],
-	groups: [ {id:3, name:"ops", target:"ops"} ],
-	roles: [ {id:4, name:"admin", target:"admin"} ]
+const rows:Record<string,{id:number,name:string,slug:string}[]> = {
+	users: [ {id:1, name:"John Duffy", slug:"Google-johnmduffy@gmail.com"}, {id:2, name:"alice", slug:"alice"} ],
+	groups: [ {id:3, name:"ops", slug:"ops"} ],
+	roles: [ {id:4, name:"admin", slug:"admin"} ]
 };
 const access = {
 	queryArray: ( ql:string )=>Promise.resolve( rows[ql.split('{')[0].trim()] ?? [] ),
-	loadResources: ()=>Promise.resolve( [ {id:5, name:"nodes", target:"nodeIds", schema:"opc.nodes"} ] )
+	loadResources: ()=>Promise.resolve( [ {id:5, name:"nodes", slug:"nodeIds", schema:"opc.nodes"} ] )
 };
 
 describe( 'AccessSearchProvider', ()=>{

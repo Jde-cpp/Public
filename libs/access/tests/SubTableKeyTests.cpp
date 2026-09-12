@@ -40,13 +40,13 @@ namespace Jde::Access::Tests{
 	};
 
 	TEST_F( SubTableKeyTests, ChildrenFollowTheirOwnParent ){
-		let idFirst = members( "roles{ id target permissions{ id } }" );//the shipped angular order - correct before the fix too.
+		let idFirst = members( "roles{ id slug permissions{ id } }" );//the shipped angular order - correct before the fix too.
 		ASSERT_TRUE( idFirst.contains(_parentA) && idFirst.contains(_parentB) );
 		EXPECT_EQ( idFirst.at(_parentA), vector<uint>{_childA} );
 		EXPECT_EQ( idFirst.at(_parentB), vector<uint>{_childB} );
 
 		//the same query with the columns the other way round:  the pk is no longer select column 0.
-		let nameFirst = members( "roles{ target id permissions{ id } }" );
+		let nameFirst = members( "roles{ slug id permissions{ id } }" );
 		ASSERT_TRUE( nameFirst.contains(_parentA) && nameFirst.contains(_parentB) );
 		EXPECT_EQ( nameFirst.at(_parentA), vector<uint>{_childA} ) << "parent A got another role's members";
 		EXPECT_EQ( nameFirst.at(_parentB), vector<uint>{_childB} ) << "parent B got another role's members";

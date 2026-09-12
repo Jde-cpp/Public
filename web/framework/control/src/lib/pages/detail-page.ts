@@ -5,7 +5,7 @@ import { ComponentPageTitle, ProfileStore, RouteItem } from 'jde-spa';
 import { SnackbarService } from '../shared/snackbar/snackbar-service';
 import { DetailResolverData } from '../services/detail-resolver';
 import { IGraphQL } from '../services/graphql';
-import { TargetRow } from '../model/ql/target-row';
+import { SlugRow } from '../model/ql/slug-row';
 import { confirm } from '../shared/confirm/confirm-dialog';
 
 //The skeleton user-detail, role-detail, group-detail and client-detail each carried a copy of (review3 C2).  The copies
@@ -14,7 +14,7 @@ import { confirm } from '../shared/confirm/confirm-dialog';
 //differs - the child collections it owns, and the row it builds to save.
 //@Directive() rather than a bare class: Angular refuses to inherit `model()`/`input()` from an undecorated base.
 @Directive()
-export abstract class DetailPage<T extends TargetRow<T> & {properties:Partial<T>}> implements OnInit, OnDestroy{
+export abstract class DetailPage<T extends SlugRow<T> & {properties:Partial<T>}> implements OnInit, OnDestroy{
 	constructor( private readonly profileKey:string ){
 		this.tabIndex.set( ProfileStore.tabIndex(profileKey) );
 		effect( ()=>{
@@ -23,7 +23,7 @@ export abstract class DetailPage<T extends TargetRow<T> & {properties:Partial<T>
 				return;
 			if( !edited.canSave )
 				this.isChanged.set( false );
-			else if( !(<T>edited).equals(<any>this.row.properties) )//`any`: ServerCnnctn.equals is declared over ITargetRow, the others over Partial<T>
+			else if( !(<T>edited).equals(<any>this.row.properties) )//`any`: ServerCnnctn.equals is declared over ISlugRow, the others over Partial<T>
 				this.isChanged.set( true );
 		});
 	}
@@ -46,7 +46,7 @@ export abstract class DetailPage<T extends TargetRow<T> & {properties:Partial<T>
 		this.sideNav.set( this.pageData.routing );
 		this.componentPageTitle.title = this.title;
 		this.onRow();
-		this.isChanged.set( false );//a NEW row, and the router reuses this page across ':target' - an edit abandoned on the
+		this.isChanged.set( false );//a NEW row, and the router reuses this page across ':slug' - an edit abandoned on the
 		//previous one left Save live over values nobody had touched.  Safe here: the dirty-check effects only run after
 		//#load returns, and they raise the flag again if the freshly loaded row really does differ from what is on screen.
 		this.isLoading.set( false );
@@ -83,7 +83,7 @@ export abstract class DetailPage<T extends TargetRow<T> & {properties:Partial<T>
 	//row that is ALREADY soft-deleted - reaching it means passing through Delete and the show-deleted view first, so nothing
 	//live is one click from destruction - and behind a confirmation naming the row.  A page opts in via its template.
 	async onPurgeClick(){
-		const name = this.row.name ?? this.row.target;
+		const name = this.row.name ?? this.row.slug;
 		if( !await confirm(this.dialog, {title: `Purge ${name}?`, message: `${name} will be permanently removed. This cannot be undone - a purged row has no Restore.`, confirm: "Purge", destructive: true}) )
 			return;
 		try{

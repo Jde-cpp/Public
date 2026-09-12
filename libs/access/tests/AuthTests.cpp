@@ -17,7 +17,7 @@ namespace Jde::Access::Tests{
 		if( auto o = QL().QuerySync(Ƒ("provider(name:\"{}\"){{id}}", OpcServer), {}, GetRoot()); !o.empty() )
 			OpcProviderId = GetId( o );
 		else{
-			let createQL = Ƒ( "createProvider( target:\"{}\", providerType:{} ){{id}}", OpcServer, underlying(EProviderType::OpcServer) );
+			let createQL = Ƒ( "createProvider( slug:\"{}\", providerType:{} ){{id}}", OpcServer, underlying(EProviderType::OpcServer) );
 			OpcProviderId = GetId( QL().QuerySync(createQL, {}, GetRoot()) );
 		}
 	}

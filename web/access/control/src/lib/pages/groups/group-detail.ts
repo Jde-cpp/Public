@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 
-import { arraysEqual, cloneClassArray, DetailPage, Properties, IGraphQL, QLSelector, Style, toIdArray, TargetRow} from 'jde-framework';
+import { arraysEqual, cloneClassArray, DetailPage, Properties, IGraphQL, QLSelector, Style, toIdArray, SlugRow} from 'jde-framework';
 
 import { RolePK } from '../../model/role';
 import { Permission } from '../../model/permission';
@@ -25,25 +25,25 @@ export class GroupDetail extends DetailPage<Group>{
 	constructor(){
 		super( 'groupDetail' );
 		effect(() => {
-			if( this.users() && !arraysEqual(TargetRow.idArray(this.row.users ?? []),this.users().selected) )
+			if( this.users() && !arraysEqual(SlugRow.idArray(this.row.users ?? []),this.users().selected) )
 				this.isChanged.set( true );
 		});
 		effect(() => {
-			if( this.childGroups() && !arraysEqual(TargetRow.idArray(this.row.childGroups ?? []),this.childGroups().selected) )
+			if( this.childGroups() && !arraysEqual(SlugRow.idArray(this.row.childGroups ?? []),this.childGroups().selected) )
 				this.isChanged.set( true );
 		});
 		effect(() => {
-			if( this.roles() && !arraysEqual(TargetRow.idArray(this.row.roles), this.roles().selected) )
+			if( this.roles() && !arraysEqual(SlugRow.idArray(this.row.roles), this.roles().selected) )
 				this.isChanged.set( true );
 		});
 	}
 
 	protected override get ctor(){ return Group; }
 	protected override onRow(){
-		this.users.set( new SelectionModel<UserPK>(true, TargetRow.idArray(this.row.users)) );
-		this.childGroups.set( new SelectionModel<GroupPK>(true, TargetRow.idArray(this.row.childGroups)) );
+		this.users.set( new SelectionModel<UserPK>(true, SlugRow.idArray(this.row.users)) );
+		this.childGroups.set( new SelectionModel<GroupPK>(true, SlugRow.idArray(this.row.childGroups)) );
 		this.permissions.set( cloneClassArray(this.row.permissions, Permission) );
-		this.roles.set( new SelectionModel<RolePK>(true, TargetRow.idArray(this.row.roles)) );
+		this.roles.set( new SelectionModel<RolePK>(true, SlugRow.idArray(this.row.roles)) );
 	}
 	protected override upsert():Group{
 		return new Group( {id:this.properties().id, ...this.properties(), permissions: this.permissions(), users: this.users().selected, roles: this.roles().selected, childGroups: toIdArray(this.childGroups().selected)} );
@@ -60,9 +60,9 @@ export class GroupDetail extends DetailPage<Group>{
 export const groupTableSettings = {
 	empty: { title: "No groups yet.", detail: "A group collects users so a role is granted once for all of them; use Add to create one." },
 	excludedColumns: ["isGroup", "members"],
-	columns: [ //without this the list falls back to ListRoute's name/created/updated/deleted/target default.
+	columns: [ //without this the list falls back to ListRoute's name/created/updated/deleted/slug default.
 		{ name:"name", style: new Style(300) },
-		"target",
+		"slug",
 		"description"
 	],
 	collectionName: "groups"

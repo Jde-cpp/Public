@@ -5,8 +5,8 @@ local smallSequenced = common.smallSequenced;
 local pkSequenced = common.pkSequenced;
 local valuesColumns = common.valuesColumns;
 local valuesNK = common.valuesNK;
-local targetColumns = common.targetColumns;
-local targetNKs = common.targetNKs;
+local slugColumns = common.slugColumns;
+local slugNKs = common.slugNKs;
 local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"];
 {
 	local tables = self.tables,
@@ -15,17 +15,17 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 			comment: "Group Members",
 			columns:{
 				groupId: tables.groups.columns.identityId+{ criteria: null },
-				groupTarget: targetColumns.target,
+				groupSlug: slugColumns.slug,
 				memberId: tables.groups.columns.memberId,
 				isGroup: tables.identities.columns.isGroup
-			}+targetColumns,
+			}+slugColumns,
 			naturalKeys: tables.identities.naturalKeys,
 		},
 		providersQL:{
 			columns: {
 				providerId: tables.providers.columns.providerId,
 				providerTypeId: tables.providers.columns.providerTypeId,
-				name: tables.providers.columns.target+{ comment: "if provider_id=OpcServer: the specific opcServer target, otherwise providers[provider_id].name " },
+				name: tables.providers.columns.slug+{ comment: "if provider_id=OpcServer: the specific opcServer slug, otherwise providers[provider_id].name " },
 			},
 			naturalKeys: [["provider_id", "name"]]
 		},
@@ -37,7 +37,7 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				created: tables.identities.columns.created,
 				updated: tables.identities.columns.updated,
 				deleted: tables.identities.columns.deleted,
-				target: tables.identities.columns.target,
+				slug: tables.identities.columns.slug,
 				description: tables.identities.columns.description,
 				providerId: tables.identities.columns.providerId,
 				email: tables.identities.columns.email,
@@ -60,9 +60,9 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				identityId: pkSequenced,
 				providerId: tables.providers.columns.providerId+{ pkTable: "providers", nullable:true, i: 15, sk:null },
 				isGroup: types.bit+{ default: false, i: 101 },
-				email: types.varchar+{ length: 256, nullable: true, comment: "cert SAN rfc822 at key enrollment, login email for Google", i: 110 },//not in targetColumns - roles shares that block.
-			}+targetColumns,
-			naturalKeys:[ ["name","provider_id"], ["target"] ],
+				email: types.varchar+{ length: 256, nullable: true, comment: "cert SAN rfc822 at key enrollment, login email for Google", i: 110 },//not in slugColumns - roles shares that block.
+			}+slugColumns,
+			naturalKeys:[ ["name","provider_id"], ["slug"] ],
 			ops: ["None"]
 		},
 		users:{
@@ -101,9 +101,9 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 			columns: {
 				providerId: smallSequenced,
 				providerTypeId: tables.providerTypes.columns.providerTypeId+{ sk:null, pkTable: "provider_types", i:1 },
-				target: targetColumns.target+{ nullable: true, comment: "Points to target in another table (eg OpcServer)" }
+				slug: slugColumns.slug+{ nullable: true, comment: "Points to slug in another table (eg OpcServer)" }
 			},
-			naturalKeys:[["provider_type_id","target"]],
+			naturalKeys:[["provider_type_id","slug"]],
 			purgeProc: "provider_purge",
 			qlView: "providers_ql",
 			ops: ["None"]
@@ -113,7 +113,7 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				resourceId: smallSequenced,
 				schemaName: types.varchar+{ length: 32, i:1 },
 				name: types.varchar+{ length: 64, i:10 },
-				target:types.varchar+{ length: 32, i:20 },
+				slug:types.varchar+{ length: 32, i:20 },
 				attributes: types.uint16+{ nullable: true, i:30 },
 				created: types.dateTime+{ insertable: false, updateable: false, default: sqlFunctions.now.name, i:40 },
 				updated: types.dateTime+{ nullable: true, insertable: false, updateable: false, i:50 },
@@ -123,7 +123,7 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 				allowed: types.ulong+{ pkTable: "rights", i:101, nullable:true, comment: "available rights for this resource" }
 			},
 			ops: ["Delete", "Subscribe"],
-			naturalKeys: [["schema_name", "target", "criteria"]],
+			naturalKeys: [["schema_name", "slug", "criteria"]],
 		},
 		permissions:{
 			columns: {
@@ -144,12 +144,12 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 		roles:{
 			columns: {
 				roleId: tables.permissions.columns.permissionId+{ insertable:false, pkTable: "permissions", i:0, sk:0 },
-			}+targetColumns,
+			}+slugColumns,
 			customInsertProc: true,
 			purgeProc: "role_purge",
 			addProc: "role_add",
 			removeProc: "role_remove",
-			naturalKeys: targetNKs,
+			naturalKeys: slugNKs,
 			ops: ["Create", "Read", "Update", "Delete", "Purge", "Administer", "Subscribe"],
 		},
 		roleMembers:{
@@ -182,7 +182,7 @@ local defaultOps = ["Create", "Read", "Update", "Delete", "Purge", "Administer"]
 			comment: "Per-user UI profile blobs, keyed by page/component",
 			columns: {
 				identityId: types.uint+{ pkTable: "users", sk: 0, i:0 },
-				target: targetColumns.target+{ sk: 1, i:1, comment: "profile key, e.g. 'favorites', 'logs/views'" },
+				url: slugColumns.slug+{ sk: 1, i:1, comment: "profile key, e.g. 'favorites', 'logs/views'" },
 				value: types.varchar+{ length: 4096, i:2 }
 			},
 			ops: ["None"] //scoped to the executer in Server::CustomQuery/CustomMutation.

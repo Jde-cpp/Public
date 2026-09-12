@@ -11,10 +11,10 @@ namespace Jde::Opc::Gateway::Tests{
 		_jwt = BlockAwait<Web::Client::ClientSocketAwait<Jde::Web::Jwt>,Web::Jwt>( AppClient()->Jwt() );
 		let sessionId = *Str::TryTo<SessionPK>(_jwt->SessionId, nullptr, 16);
 		TRACE( "UserPK: {:x}, SessionId: {:x}", _jwt->UserPK.Value, sessionId );
-		auto con = GetConnection( OpcServerTarget );
+		auto con = GetConnection( OpcServerSlug );
 		Credential cred{ _jwt->Payload() }; cred.SetUserPK( _jwt->UserPK );
-		_client = BlockTAwait<sp<UAClient>>( ConnectAwait{move(con.Target), cred} );
-		AddSession( sessionId, OpcServerTarget, move(cred) );
+		_client = BlockTAwait<sp<UAClient>>( ConnectAwait{move(con.Slug), cred} );
+		AddSession( sessionId, OpcServerSlug, move(cred) );
 	}
 	α ITest::TearDownTestCase()ι->void{
 		if( _client )

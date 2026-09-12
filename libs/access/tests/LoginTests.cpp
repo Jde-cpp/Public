@@ -41,7 +41,7 @@ namespace Jde::Access::Tests{
 		auto key = Crypto::ExtractPublicKey( der, SRCE_CUR );
 		return { move(key), move(der) };
 	}
-	α LoginTests::SetUpTestCase()ε->void{//fresh keys each run - never pre-enrolled. distinct CNs - the CN is the unique identity target.
+	α LoginTests::SetUpTestCase()ε->void{//fresh keys each run - never pre-enrolled. distinct CNs - the CN is the unique identity slug.
 		Untrusted = Generate( "a", "loginTests-untrusted" );
 		Trusted = Generate( "b", "loginTests-trusted", "email:trusted@jde-cpp.com,otherName:1.3.6.1.4.1.311.20.2.3;UTF8:trusted-upn@jde-cpp.com,URI:urn:my.server.application" );
 	}
@@ -72,9 +72,9 @@ namespace Jde::Access::Tests{
 		Server::Trust().AddCertificate( Trusted.Der );
 		let userPK = keyLogin( Trusted.Key, vector<byte>{Trusted.Der} );
 		ASSERT_TRUE( userPK.Value );
-		let user = Select( "users", userPK.Value, GetRoot(), "email issuer subjectAlt distinguished expiration fingerprint" );//the cert is the identity authority: UPN→name, CN→target.
+		let user = Select( "users", userPK.Value, GetRoot(), "email issuer subjectAlt distinguished expiration fingerprint" );//the cert is the identity authority: UPN→name, CN→slug.
 		EXPECT_EQ( Json::AsSV(user, "name"), "trusted-upn@jde-cpp.com" );
-		EXPECT_EQ( Json::AsSV(user, "target"), "loginTests-trusted" );
+		EXPECT_EQ( Json::AsSV(user, "slug"), "loginTests-trusted" );
 		EXPECT_EQ( Json::AsSV(user, "email"), "trusted@jde-cpp.com" );
 		EXPECT_EQ( Json::AsSV(user, "distinguished"), "CN=loginTests-trusted,O=jde-cpp,C=US" );//subject DN.
 		EXPECT_EQ( Json::AsSV(user, "issuer"), Json::AsSV(user, "distinguished") );//self-signed.
@@ -107,18 +107,18 @@ namespace Jde::Access::Tests{
 		let userPK = keyLogin( pair.Key, vector<byte>{pair.Der} );
 		let user = Select( "users", userPK.Value, GetRoot(), "email" );
 		EXPECT_EQ( Json::AsSV(user, "name"), "loginTests-cn" );
-		EXPECT_EQ( Json::AsSV(user, "target"), "loginTests-cn" );
+		EXPECT_EQ( Json::AsSV(user, "slug"), "loginTests-cn" );
 		EXPECT_TRUE( Json::FindSV(user, "email").value_or("").empty() );
 		PurgeUser( userPK, GetRoot() );
 	}
 
-	TEST_F( LoginTests, EmptyCn_Rejected ){//the CN is the identity target - a trusted cert without one cannot enroll.
+	TEST_F( LoginTests, EmptyCn_Rejected ){//the CN is the identity slug - a trusted cert without one cannot enroll.
 		let pair = Generate( "e", "" );
 		Server::Trust().AddCertificate( pair.Der );
 		EXPECT_ANY_THROW( keyLogin(pair.Key, vector<byte>{pair.Der}) );
 	}
 
-	TEST_F( LoginTests, DuplicateCn_Rejected ){//the CN is the identity target - a second key may not claim an enrolled CN.
+	TEST_F( LoginTests, DuplicateCn_Rejected ){//the CN is the identity slug - a second key may not claim an enrolled CN.
 		let first = Generate( "h", "loginTests-duplicate" );
 		Server::Trust().AddCertificate( first.Der );
 		let userPK = keyLogin( first.Key, vector<byte>{first.Der} );
@@ -137,7 +137,7 @@ namespace Jde::Access::Tests{
 		Settings::Set( "/access/trustedCertDirs", jarray{dir.string()} );
 		let userPK = keyLogin( pair.Key, vector<byte>{pair.Der} );
 		let user = Select( "users", userPK.Value, GetRoot(), "email" );
-		EXPECT_EQ( Json::AsSV(user, "target"), "loginTests-dir" );
+		EXPECT_EQ( Json::AsSV(user, "slug"), "loginTests-dir" );
 		PurgeUser( userPK, GetRoot() );
 	}
 }

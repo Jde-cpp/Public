@@ -24,7 +24,7 @@ const routes:Routes = [
 	{ path: 'gateways/:gateway', component: Dummy },
 	{ path: 'gateways/:gateway/:connection', component: Dummy, children: [ {path: '**', component: Dummy} ] },
 	{ path: 'apps/gateways/:instance', component: Dummy, children: [ {path: '', component: Dummy}, {path: ':connection', component: Dummy} ] },
-	{ path: 'access/users/:target', component: Dummy }
+	{ path: 'access/users/:slug', component: Dummy }
 ];
 const instances = [ {host:'localhost', port:1968, instanceName:'A'}, {host:'localhost', port:1969, instanceName:'B'} ];
 
@@ -48,32 +48,32 @@ describe('GatewayService.defaultGateway', () => {
 	//so the first url-suffix guess stuck and every later mutation went to the wrong gateway.
 	it('follows navigation on the /gateways/:gateway routes', async () => {
 		await router.navigateByUrl( '/gateways/B' );
-		expect( service.defaultGateway.target ).toBe( 'B' );
+		expect( service.defaultGateway.slug ).toBe( 'B' );
 		await router.navigateByUrl( '/gateways/A' );
-		expect( service.defaultGateway.target ).toBe( 'A' );
+		expect( service.defaultGateway.slug ).toBe( 'A' );
 	});
 
 	it('reads the gateway out of a node url, past the browse path', async () => {
 		await router.navigateByUrl( '/gateways/B/local/2~DeviceSet/2~Machine' );
-		expect( service.defaultGateway.target ).toBe( 'B' );
+		expect( service.defaultGateway.slug ).toBe( 'B' );
 	});
 
 	it("follows the 'apps/gateways/:instance' routes, which are the ones bound to the 'IGraphQL' token", async () => {
 		await router.navigateByUrl( '/apps/gateways/B' );
-		expect( service.defaultGateway.target ).toBe( 'B' );
+		expect( service.defaultGateway.slug ).toBe( 'B' );
 		await router.navigateByUrl( '/apps/gateways/B/local' );
-		expect( service.defaultGateway.target ).toBe( 'B' );
+		expect( service.defaultGateway.slug ).toBe( 'B' );
 	});
 
 	it('falls back to the first gateway where the url names none', async () => {
 		await router.navigateByUrl( '/gateways/B' );
 		await router.navigateByUrl( '/access/users/Google-someone%40gmail.com' );
-		expect( service.defaultGateway.target ).toBe( 'A' );
+		expect( service.defaultGateway.slug ).toBe( 'A' );
 	});
 
-	it('falls back to the first gateway for an unknown target rather than throwing', async () => {
+	it('falls back to the first gateway for an unknown slug rather than throwing', async () => {
 		await router.navigateByUrl( '/gateways/nosuch' );
-		expect( service.defaultGateway.target ).toBe( 'A' );
+		expect( service.defaultGateway.slug ).toBe( 'A' );
 	});
 });
 
@@ -95,7 +95,7 @@ describe('GatewayService.gateway', () => {
 	it('resolves a registered gateway', async () => {
 		const service = configure( ()=>Promise.resolve(instances) );
 		await service.gateways();
-		expect( (await service.gateway('B')).target ).toBe( 'B' );
+		expect( (await service.gateway('B')).slug ).toBe( 'B' );
 	});
 
 	it('rejects for an unregistered gateway, naming the ones that are', async () => {
@@ -118,6 +118,6 @@ describe('GatewayService.gateway', () => {
 		const service = configure( ()=>new Promise<any[]>( resolve=>{ land = resolve; } ) );
 		const queued = service.gateway( 'B' );
 		land!( instances );
-		expect( (await queued).target ).toBe( 'B' );
+		expect( (await queued).slug ).toBe( 'B' );
 	});
 });

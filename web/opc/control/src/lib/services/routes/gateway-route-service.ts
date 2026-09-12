@@ -15,7 +15,7 @@ export class GatewayRouteService implements IRouteService{
 		let y = [];
 		let gateways = await this._gatewayService.gateways();
 		for( const gateway of gateways )
-			y.push( new RouteItem({path: gateway.target, title: gateway.name, icon: "router"}) );
+			y.push( new RouteItem({path: gateway.slug, title: gateway.name, icon: "router"}) );
 
 		this.routeStore.setChildren( urlSegments, y );
 		return y;
@@ -35,11 +35,11 @@ export class GatewayCnnctnRouteService implements IRouteService{
 	async docItems( urlSegments:UrlSegment[] ):Promise<RouteItem[]>{
 		let y = [];
 		let route = this._route.snapshot.children[0];
-		let gatewayTarget = route.paramMap.get("gateway")!;
-		let gateway = await this._gatewayService.gateway( gatewayTarget );
-		let connections = await gateway.queryArray<any>( `serverConnections{ name target }`,  );
+		let gatewaySlug = route.paramMap.get("gateway")!;
+		let gateway = await this._gatewayService.gateway( gatewaySlug );
+		let connections = await gateway.queryArray<any>( `serverConnections{ name slug }`,  );
 		for( const c of connections )
-			y.push( new RouteItem({path: c.target, title: c.name, icon: "lan"}) );
+			y.push( new RouteItem({path: c.slug, title: c.name, icon: "lan"}) );
 
 		this.routeStore.setChildren( route.url, y );
 		return y;

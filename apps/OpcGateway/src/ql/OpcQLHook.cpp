@@ -24,7 +24,7 @@ namespace Jde::Opc::Gateway{
 		try{
 			DB::Key id = (_op & Operation::Purge)==Operation::Purge
 				? DB::Key{ _mutation.Id<ServerCnnctnPK>() }
-				: DB::Key{ Json::AsString(_mutation.Args, "target") };
+				: DB::Key{ Json::AsString(_mutation.Args, "slug") };
 			optional<uint> rowCount;
 			if( _op==(Operation::Insert | Operation::Failure) ){
 				auto opcServers = co_await ServerCnnctnAwait{ id };

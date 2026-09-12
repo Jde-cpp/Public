@@ -21,7 +21,7 @@ import { View } from '../../../model/ql/view';
 import { PageProfile } from '../../graphql/model/page-settings';
 import { QLList } from './ql-list';
 
-//review3 L6: /access/resources has no 'resources/:target' route, so every row click there dead-ended in a
+//review3 L6: /access/resources has no 'resources/:slug' route, so every row click there dead-ended in a
 //NavigationError - and the try/catch around router.navigate could never report it, navigate being async.
 describe( 'QLList.onRowActivate', ()=>{
 	let navigate:any;
@@ -51,12 +51,12 @@ describe( 'QLList.onRowActivate', ()=>{
 	};
 
 	it( 'navigates for a collection that has a detail route', ()=>{
-		create( {} ).onRowActivate( {target: 'someone'} );
+		create( {} ).onRowActivate( {slug: 'someone'} );
 		expect( navigate ).toHaveBeenCalledWith( ['someone'], expect.anything() );
 	} );
 
 	it( 'does not navigate where canNavigate is off', ()=>{
-		create( {canNavigate: false} ).onRowActivate( {target: 'nodes'} );
+		create( {canNavigate: false} ).onRowActivate( {slug: 'nodes'} );
 		expect( navigate ).not.toHaveBeenCalled();
 	} );
 
@@ -64,7 +64,7 @@ describe( 'QLList.onRowActivate', ()=>{
 	it( 'reports a navigation the router refused', async ()=>{
 		const page = create( {} );
 		navigate.mockResolvedValue( false );
-		page.onRowActivate( {target: 'someone'} );
+		page.onRowActivate( {slug: 'someone'} );
 		await Promise.resolve();
 		expect( error ).toHaveBeenCalledWith( "Could not navigate to 'someone'." );
 	} );
@@ -72,7 +72,7 @@ describe( 'QLList.onRowActivate', ()=>{
 	it( 'reports a navigation that threw', async ()=>{
 		const page = create( {} );
 		navigate.mockRejectedValue( new Error("Cannot match any routes") );
-		page.onRowActivate( {target: 'someone'} );
+		page.onRowActivate( {slug: 'someone'} );
 		await Promise.resolve();
 		await Promise.resolve();
 		expect( exception ).toHaveBeenCalledWith( "Could not navigate to properties", expect.any(Error) );
@@ -88,7 +88,7 @@ describe( 'QLList re-query failures reach the user', ()=>{
 	const schema = new TableSchema( { name: "User", fields: [
 		{ name: "id", type: { kind: "NON_NULL", name: null, ofType: { kind: "SCALAR", name: "ID" } } },
 		{ name: "name", type: { kind: "NON_NULL", name: null, ofType: { kind: "SCALAR", name: "String" } } },
-		{ name: "target", type: { kind: "SCALAR", name: "String" } },
+		{ name: "slug", type: { kind: "SCALAR", name: "String" } },
 		{ name: "deleted", type: { kind: "SCALAR", name: "DateTime" } }
 	] } );
 

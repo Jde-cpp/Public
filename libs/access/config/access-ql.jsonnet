@@ -13,7 +13,7 @@ local NonNullDateTime = { kind:'NON_NULL',name:null, ofType: DateTime };
 				{ name: 'created', type: NonNullDateTime },
 				{ name: 'updated', type: DateTime },
 				{ name: 'deleted', type:DateTime },
-				{ name: 'target',  type:String },
+				{ name: 'slug',  type:String },
 				{ name: 'description', type: String },
 				{ name: 'provider', type: {kind:"ENUM", name:'Provider'} },
 				{ name: 'members', type: {name: null, kind: "LIST", ofType: {name: "Identity", kind: "UNION"}} }
@@ -23,7 +23,7 @@ local NonNullDateTime = { kind:'NON_NULL',name:null, ofType: DateTime };
 				{ name: 'id', type: Id },
 				{ name: 'name', type: NonNullString },
 				{ name: 'provider', type: {kind:"ENUM", name:'Provider'} },
-				{ name: 'target',  type: NonNullString },
+				{ name: 'slug',  type: NonNullString },
 				{ name: 'attributes',type: Attributes },
 				{ name: 'created', type: NonNullDateTime },
 				{ name: 'updated', type: DateTime },

@@ -1,4 +1,4 @@
-import { Mutation, MutationType, TargetRow } from "jde-framework";
+import { Mutation, MutationType, SlugRow } from "jde-framework";
 import { Role } from "./role";
 
 export class Acl {
@@ -9,8 +9,8 @@ export class Acl {
 				y.push( new Mutation(Acl.typeName, undefined, { identity:{id:identityId}, role:{id:change.id} }, type) );
 		}
 
-		getMutations( TargetRow.notSubset(original, modified), MutationType.Purge );
-		getMutations( TargetRow.notSubset(modified, original), MutationType.Create );
+		getMutations( SlugRow.notSubset(original, modified), MutationType.Purge );
+		getMutations( SlugRow.notSubset(modified, original), MutationType.Create );
 
 		return y;
 	}

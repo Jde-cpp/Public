@@ -9,7 +9,7 @@ const schema = new TableSchema( {
 	fields: [
 		{ name: "id", type: { kind: "NON_NULL", name: null, ofType: { kind: "SCALAR", name: "ID" } } },
 		{ name: "name", type: { kind: "NON_NULL", name: null, ofType: { kind: "SCALAR", name: "String" } } },
-		{ name: "target", type: { kind: "NON_NULL", name: null, ofType: { kind: "SCALAR", name: "String" } } },
+		{ name: "slug", type: { kind: "NON_NULL", name: null, ofType: { kind: "SCALAR", name: "String" } } },
 		{ name: "kind", type: { kind: "SCALAR", name: "String" } },
 		{ name: "deleted", type: { kind: "SCALAR", name: "DateTime" } },
 		{ name: "description", type: { kind: "SCALAR", name: "String" } }
@@ -29,7 +29,7 @@ describe( 'QLListResolver.systemViews', ()=>{
 	it( 'names the default view and appends the declared ones, all as system views', ()=>{
 		const settings:TableSettings = { viewName: "all", columns: ["name", "kind", "description"], views: [
 			{ name: "Kinds", columns: ["name", "kind"], filters: [{name: "kind", value: ["a", "b"]}] },
-			{ name: "Newest", sort: "target", filters: [{name: "kind", operator: Operator.NotIn, value: ["<null>"]}] }
+			{ name: "Newest", sort: "slug", filters: [{name: "kind", operator: Operator.NotIn, value: ["<null>"]}] }
 		] };
 		const views = QLListResolver.systemViews( schema, settings );
 		expect( views.map(v=>v.name) ).toEqual( ["all", "Kinds", "Newest"] );
@@ -39,13 +39,13 @@ describe( 'QLListResolver.systemViews', ()=>{
 	it( 'gives a declared view the default columns and sort unless it sets its own', ()=>{
 		const [all, kinds, newest] = QLListResolver.systemViews( schema, { columns: ["name", "kind", "description"], views: [
 			{ name: "Kinds", columns: ["name", "kind"] },
-			{ name: "Newest", sort: "target" }
+			{ name: "Newest", sort: "slug" }
 		] } );
 		expect( displayed(kinds) ).toEqual( ["name", "kind"] );
 		expect( kinds.sort ).toEqual( all.sort );
 		expect( kinds.sort ).not.toBe( all.sort );//its own array - a header sort on one view must not reach the other
 		expect( displayed(newest) ).toEqual( displayed(all) );
-		expect( newest.sort ).toEqual( [{active: "target", direction: "asc"}] );
+		expect( newest.sort ).toEqual( [{active: "slug", direction: "asc"}] );
 	} );
 
 	it( "sorts the default view by the route's own sort, multi-column and all", ()=>{

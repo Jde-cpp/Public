@@ -27,7 +27,7 @@ namespace Jde::Access{
 		}
 
 		let id = Json::FindNumber<uint32>( object, "id" );
-		if( !empty(event & Resources) && (id || object.contains("target")) ){ //no id means the fan-out could not pick one row - a by-target delete that hit several - and the target (with the schema, when the mutation named one) names every row it hit, which UpdateResourceDeleted applies to all of them (access-review3 #22).
+		if( !empty(event & Resources) && (id || object.contains("slug")) ){ //no id means the fan-out could not pick one row - a by-slug delete that hit several - and the slug (with the schema, when the mutation named one) names every row it hit, which UpdateResourceDeleted applies to all of them (access-review3 #22).
 			ResourceChanged( id.value_or(0), event & ~Resources, object );
 			return;
 		}

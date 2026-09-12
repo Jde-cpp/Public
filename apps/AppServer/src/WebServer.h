@@ -16,7 +16,7 @@ namespace Jde::App::Server{
 	α GetAppPK()ι->ProgramPK;
 	α SetAppPKs( std::tuple<ProgramPK, ProgInstPK, ConnectionPK> x )ι->void;
 	α Schemas()ι->const vector<sp<DB::AppSchema>>&;
-	α GetJwt( UserPK userPK, string name, string target, string endpoint, SessionPK sessionId, TimePoint expires, string description )ε->Web::Jwt;
+	α GetJwt( UserPK userPK, string name, string slug, string endpoint, SessionPK sessionId, TimePoint expires, string description )ε->Web::Jwt;
 	α RemoveExisting( str host, PortType port )ι->void;
 	α GetRequestHandler()ι->sp<RequestHandler>;
 	α StartWebServer( jobject&& settings )ε->void;
@@ -43,7 +43,7 @@ namespace Jde::App::Server{
 	struct RequestHandler : IRequestHandler{
 		RequestHandler( jobject&& settings )ι;
 		α HandleRequest( HttpRequest&& req, SRCE )ι->up<IHttpRequestAwait> override{ return mu<HttpRequestAwait>( move(req), sl ); }
-		α Jwt( UserPK userPK, string&& name, string&& target, string&& endpoint, SessionPK sessionId, TimePoint expires, string&& description )ε->Web::Jwt;
+		α Jwt( UserPK userPK, string&& name, string&& slug, string&& endpoint, SessionPK sessionId, TimePoint expires, string&& description )ε->Web::Jwt;
 		α Schemas()ι->const vector<sp<DB::AppSchema>>& override{ return Server::Schemas(); }
 		α WebsocketSession( sp<IRestStream>&& stream, beast::flat_buffer&& buffer, TRequestType req, tcp::endpoint userEndpoint, uint32 connectionIndex )ι->sp<IWebsocketSession> override;
 		α QLServer()ι->sp<QL::IQL> override;

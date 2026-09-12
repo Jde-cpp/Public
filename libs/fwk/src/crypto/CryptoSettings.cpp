@@ -19,7 +19,7 @@ namespace Jde::Crypto{
 		return cn;
 	}
 
-	//certInstance is the OPC Target (settable via createServerConnection) and fileName the subject CN - both become
+	//certInstance is the OPC Slug (settable via createServerConnection) and fileName the subject CN - both become
 	//part of a file name, so separators must not survive.  Substituted, not rejected: getPath's callers are noexcept.
 	Ω safeComponent( sv x )ι->string{
 		string y{ x };

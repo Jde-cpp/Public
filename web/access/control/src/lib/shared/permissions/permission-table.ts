@@ -20,7 +20,7 @@ export class PermissionTable implements OnDestroy{
 	private accessService:AccessService = inject( ACCESS_SERVICE );
 
 	//Built from an effect rather than ngOnInit because the HOST outlives the row:  user-detail and role-detail keep this
-	//table alive across ':target', handing it the next row's permissions with no re-creation, and a one-shot ngOnInit left
+	//table alive across ':slug', handing it the next row's permissions with no re-creation, and a one-shot ngOnInit left
 	//the previous row's checks on screen - which `toggle` would then have saved onto the new row.
 	constructor(){
 		effect( ()=>{
@@ -76,7 +76,7 @@ export class PermissionTable implements OnDestroy{
 	#applySort($event:Sort){
 		this.availablePermissions = this.availablePermissions.sort((a:Permission,b:Permission)=>{
 			let y:number;
-			if( ["schema", "resource", "deleted", "target"].includes($event.active) ){
+			if( ["schema", "resource", "deleted", "slug"].includes($event.active) ){
 				const col:string = $event.active=="resource" ? "name" : $event.active;
 				y = `${(a.resource as any)[col] ?? ''}`.localeCompare( `${(b.resource as any)[col] ?? ''}` );//stringify+default — `deleted` is a Date|undefined
 			}else{

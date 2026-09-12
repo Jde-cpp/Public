@@ -3,8 +3,8 @@ import { ISearchProvider, searchRank, SearchResult } from 'jde-spa';
 import { AccessService } from './access-service';
 
 type Kind = 'user'|'group'|'role'|'resource';
-type Entity = { kind:Kind; name:string; target:string; summary?:string };
-type Row = { id:number; name:string; target:string };
+type Entity = { kind:Kind; name:string; slug:string; summary?:string };
+type Row = { id:number; name:string; slug:string };
 
 const icons:Record<Kind,string> = { user: 'person', group: 'group', role: 'badge', resource: 'lock' };//app.routes.ts' collection icons.
 const collections:Record<Kind,string> = { user: 'users', group: 'groups', role: 'roles', resource: 'resources' };
@@ -34,7 +34,7 @@ export class AccessSearchProvider implements ISearchProvider{
 			.map( ({entity, rank})=>({
 				title: entity.name,
 				prefix: entity.kind,
-				route: entity.kind=='resource' ? `/access/${collections.resource}` : [ '/access', collections[entity.kind], entity.target ],
+				route: entity.kind=='resource' ? `/access/${collections.resource}` : [ '/access', collections[entity.kind], entity.slug ],
 				icon: icons[entity.kind],
 				summary: entity.summary,
 				rank,
@@ -50,8 +50,8 @@ export class AccessSearchProvider implements ISearchProvider{
 		return this.#entities = this.#query().catch( e=>{ this.#entities = undefined; throw e; } );//never cache a failure.
 	}
 	async #query():Promise<Entity[]>{
-		const list = async ( kind:Kind )=>(await this.#access.queryArray<Row>( `${collections[kind]}{ id name target }` )).map( r=>({ kind, name: r.name, target: r.target }) as Entity );
+		const list = async ( kind:Kind )=>(await this.#access.queryArray<Row>( `${collections[kind]}{ id name slug }` )).map( r=>({ kind, name: r.name, slug: r.slug }) as Entity );
 		const [users, groups, roles, resources] = await Promise.all( [ list('user'), list('group'), list('role'), this.#access.loadResources() ] );
-		return [ ...users, ...groups, ...roles, ...resources.map( r=>({ kind: 'resource', name: r.name, target: r.target, summary: r.schema }) as Entity ) ];
+		return [ ...users, ...groups, ...roles, ...resources.map( r=>({ kind: 'resource', name: r.name, slug: r.slug, summary: r.schema }) as Entity ) ];
 	}
 }

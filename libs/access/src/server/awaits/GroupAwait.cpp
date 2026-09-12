@@ -59,7 +59,7 @@ namespace Jde::Access::Server{
 						continue;
 					string groupName = name=="id"
 						? "groupId"
-						: name=="target" ? "group_target" : name;
+						: name=="slug" ? "group_slug" : name;
 					membersQL->Args[groupName] = value;
 				}
 				statement.Where = QL::ToWhereClause( *membersQL, groupTable, membersQL->FindColumn("deleted")!=nullptr );

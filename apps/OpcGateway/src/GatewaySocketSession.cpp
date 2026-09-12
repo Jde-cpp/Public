@@ -73,7 +73,7 @@ namespace Jde::Opc::Gateway{
 			[]( flat_set<NodeId>&& nodes, sp<UAClient> client, RequestId requestId, sp<GatewaySocketSession> session )->TAwait<flat_map<NodeId, Value>>::Task {
 				try{
 					auto values = co_await ReadValueAwait{ move(nodes), client };
-					session->Write( FromServer::ReadValuesTrans(client->Target(), move(values), requestId) );
+					session->Write( FromServer::ReadValuesTrans(client->Slug(), move(values), requestId) );
 				}
 				catch( runtime_error& e ){
 					session->WriteException( move(e), requestId );
@@ -116,11 +116,11 @@ namespace Jde::Opc::Gateway{
 			//By what this session monitors, not by the credential Subscribe connected with:  the cached credential can be
 			//gone (a logout) or a different one (a login on the session after the subscribe), and either miss stranded the
 			//subscription as "Client not found" (soak-findings #5).  A session can only ever drop its own items, so every
-			//live client on the target is asked and the nodes none of them held for this session are the failures.
+			//live client on the slug is asked and the nodes none of them held for this session are the failures.
 			flat_set<NodeId> successes, remaining{ nodes };
 			bool anyClient{};
 			for( let& client : UAClient::LiveClients() ){
-				if( client->Target()!=opcId )
+				if( client->Slug()!=opcId )
 					continue;
 				anyClient = true;
 				if( auto p = remaining.size() ? client->TryMonitoredNodes() : nullptr; p ){

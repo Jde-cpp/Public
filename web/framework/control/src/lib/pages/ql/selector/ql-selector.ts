@@ -7,7 +7,7 @@ import { IGraphQL } from '../../../services/graphql';
 import { CollectionItem, ListRoute, QLListData, QLListResolver } from '../../../services/ql-list-resolver';
 import { MetaObject } from '../../../model/ql/schema/meta-object';
 import { Operator } from '../../../model/ql/view';
-import { QLRow } from '../../../model/ql/target-row';
+import { QLRow } from '../../../model/ql/slug-row';
 import { arraysEqual } from '../../../utils/utils';
 import { QLList } from '../list/ql-list';
 
@@ -15,7 +15,7 @@ import { QLList } from '../list/ql-list';
 //with the rows checked against a caller-owned selection of ids.
 //
 //Everything here is driven by effects rather than ngOnInit because the host OUTLIVES the row it is showing:  user-detail,
-//role-detail and group-detail each keep one selector per tab, and the router reuses the page across ':target', so a live
+//role-detail and group-detail each keep one selector per tab, and the router reuses the page across ':slug', so a live
 //selector is handed the next row's ids (and, for the self-excluding tabs, the next row's exclusions) with no re-creation.
 @Component( {
 	selector: 'ql-selector',

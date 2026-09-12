@@ -30,7 +30,7 @@ export class GraphQLDetail implements OnDestroy, OnInit{
 	private cnsle:SnackbarService = inject( SnackbarService );
 	private graphQL:IGraphQL = inject( IGRAPHQL );
 	constructor(){
-		this.target = this.router.url.substring( this.router.url.lastIndexOf('/')+1 );
+		this.slug = this.router.url.substring( this.router.url.lastIndexOf('/')+1 );
 	}
 
 	ngOnDestroy(){ ProfileStore.setTabIndex("graphQLDetail", this.tabIndex); }
@@ -53,10 +53,10 @@ export class GraphQLDetail implements OnDestroy, OnInit{
 			if(  this.route.routeConfig?.data && this.route.routeConfig.data["excludedColumns"] )
 				schemaData.fields = schemaData.fields.filter( (x)=>!this.route.routeConfig?.data!["excludedColumns"].includes(x.name) );
 			this.schema = schemaData;
-			const columns = ["name", "target"];
+			const columns = ["name", "slug"];
 			if( !columns.includes(display) )
 				columns.push( display );
-			//TODO find out why we are querying 2x, this time only for name/target.
+			//TODO find out why we are querying 2x, this time only for name/slug.
 			const ql = `${this.schema.collectionName}(deleted:null){${columns.join(" ")}}`;
 			const data:any = await this.graphQL.query( ql, {}, (m)=>console.log(m) );
 			const results = data[this.schema.collectionName];
@@ -64,10 +64,10 @@ export class GraphQLDetail implements OnDestroy, OnInit{
 			if( results ){
 				const parent = (this.route.url as any)["value"][0].path;
 				siblings.set( parent, parent.charAt(0).toUpperCase()+parent.slice(1) );
-				results.forEach( (x:any) => siblings.set(x["target"],x[display]) );
+				results.forEach( (x:any) => siblings.set(x["slug"],x[display]) );
 			}
 			this.siblings.next( siblings );
-			if( this.target!='$new' )
+			if( this.slug!='$new' )
 				this.load();
 			else
 				this.viewPromise = Promise.resolve( true );
@@ -81,13 +81,13 @@ export class GraphQLDetail implements OnDestroy, OnInit{
 		if( parts.length<3 )//users->portfolio=2
 			return;
 		console.log( `onNavigationEnd( ${val} )` );
-		this.target = this.router.url.substring( this.router.url.lastIndexOf('/')+1 );//settings
+		this.slug = this.router.url.substring( this.router.url.lastIndexOf('/')+1 );//settings
 		const grandParent = this.route.parent!;
 		const parentUrl = this.route.routeConfig!.path!.substring( 0, this.route.routeConfig!.path!.length-4 );//roles
-		if( this.target==parentUrl || !parts.find((x)=>x.toLowerCase()==parentUrl.toLowerCase()) )//going from groups to roles.
+		if( this.slug==parentUrl || !parts.find((x)=>x.toLowerCase()==parentUrl.toLowerCase()) )//going from groups to roles.
 			return;
 		const parent = grandParent.routeConfig!.children!.find( (x)=>x.path==parentUrl );
-		const paths = [this.target, this.pageSettings.name ];
+		const paths = [this.slug, this.pageSettings.name ];
 		for( let x = grandParent; x.routeConfig?.data && this.pageSettings.name; x = x.parent! )
 			paths.push( x.routeConfig.data["name"] );
 		if( paths[0].toUpperCase()==paths[2].toUpperCase() )
@@ -97,7 +97,7 @@ export class GraphQLDetail implements OnDestroy, OnInit{
 	}
 	load(){
 		const fetch = async ( columns:any )=>{
-			const ql = `${this.fetchName}(filter:{target:{ eq:${StringUtils.qlString(this.target)}}}){ ${columns} }`;
+			const ql = `${this.fetchName}(filter:{slug:{ eq:${StringUtils.qlString(this.slug)}}}){ ${columns} }`;
 			try{
 				const data:any = await this.graphQL.query( ql, {}, (m)=>console.log(m) );
 				if( data==null )
@@ -105,7 +105,7 @@ export class GraphQLDetail implements OnDestroy, OnInit{
 				this.data = data[this.fetchName];
 			}
 			catch( e ){
-				this.cnsle.exception( `${this.target} not found`, e );
+				this.cnsle.exception( `${this.slug} not found`, e );
 			}
 			this.viewPromise = Promise.resolve( true );
 		}
@@ -122,7 +122,7 @@ export class GraphQLDetail implements OnDestroy, OnInit{
 					this.tabs.push( table );
 					columns = columns.concat( ` ${table.collectionName}{${table.columns}}` );
 				}
-				if( this.target=='$new' )
+				if( this.slug=='$new' )
 					this.viewPromise = Promise.resolve(true);
 				else
 					fetch( columns );
@@ -139,12 +139,12 @@ export class GraphQLDetail implements OnDestroy, OnInit{
 	name!:string;
 	copy( x:any ){ return clone(x); }
 	pageSettings!:PageSettings;
-	get propertiesName(){ return this.target=="$new" ? `New ${this.schema.type}` : "Properties"; }
+	get propertiesName(){ return this.slug=="$new" ? `New ${this.schema.type}` : "Properties"; }
 	schema!:TableSchema;
 	siblings: Subject<Map<string,string>> = new Subject<Map<string,string>>();
 	tabs = new Array<TableSchema>();
 	tabIndex:number|undefined;
-	target:string;
+	slug:string;
 	get type():string{ return this.name.substr( 0, this.name.length-1 ); }
 	viewPromise!:Promise<boolean>;
 }

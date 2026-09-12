@@ -13,8 +13,8 @@ export type DetailPageSettings = {
 };
 
 export class DetailRoute extends RouteItem{
-	constructor( target:string, title:string|undefined, siblings:RouteItem[], parent:RouteItem ){
-		super( {path:target, title:title, siblings:siblings, parent:parent} );
+	constructor( slug:string, title:string|undefined, siblings:RouteItem[], parent:RouteItem ){
+		super( {path:slug, title:title, siblings:siblings, parent:parent} );
 		if( parent instanceof ListRoute )//adopt the collection's settings; was never assigned — `routing.tableSettings.excludedColumns` threw and no detail page could resolve
 			this.tableSettings = parent.tableSettings;
 	}
@@ -27,13 +27,13 @@ export type DetailResolverData<T>={
 	routing:DetailRoute;
 };
 
-//A target the server does not have, told apart from a query that failed.  Both used to arrive here as the same throw - the
+//A slug the server does not have, told apart from a query that failed.  Both used to arrive here as the same throw - the
 //server answers {"data":{"role":null}} for a missing row and the null then TypeError'd on obj["id"] in the subQueries loop -
-//so a malformed query (an unknown column, a 500) was reported as "Target not found" and the real error never left the log.
-export class TargetNotFoundError extends Error{
-	constructor( readonly target:string ){
-		super( `Target not found:  '${target}'` );
-		this.name = "TargetNotFoundError";
+//so a malformed query (an unknown column, a 500) was reported as "Slug not found" and the real error never left the log.
+export class SlugNotFoundError extends Error{
+	constructor( readonly slug:string ){
+		super( `Slug not found:  '${slug}'` );
+		this.name = "SlugNotFoundError";
 	}
 }
 
@@ -45,27 +45,27 @@ export class DetailResolver<T> implements Resolve<DetailResolverData<T>> {
 
 	resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot):Promise<DetailResolverData<T>>{
 		let collectionDisplay = route.url.length>1 ? route.url[route.url.length-2].path : route.data["collectionName"]; //users
-		let target = route.paramMap.get( "target" )!;
-		return this.loadProfile( route, collectionDisplay, target );
+		let slug = route.paramMap.get( "slug" )!;
+		return this.loadProfile( route, collectionDisplay, slug );
 	}
 	//The absolute list url the breadcrumb needs is rebuilt from the route below, so the state url this also used to take was never read.
-	private async loadProfile( route: ActivatedRouteSnapshot, collectionDisplay:string, target:string ):Promise<DetailResolverData<T>>{
+	private async loadProfile( route: ActivatedRouteSnapshot, collectionDisplay:string, slug:string ):Promise<DetailResolverData<T>>{
 		//ComponentNav renders each sibling as parent.path + '/' + sibling.path, so the parent must be the absolute list url
 		//('/access/users') and the siblings bare targets — the relative ListRoute path resolved against the sidenav route
-		//('/access/users/users/<target>'), breaking sibling navigation and the routerLinkActive highlight.
+		//('/access/users/users/<slug>'), breaking sibling navigation and the routerLinkActive highlight.
 		let siblings = this.routeStore.getChildren( collectionDisplay ).map( s=>new RouteItem(
 			{path: s.path.startsWith(collectionDisplay+'/') ? s.path.substring(collectionDisplay.length+1) : s.path, title: s.title}) );//pre-fix localStorage entries are collection-prefixed
 		const parent = ListRoute.find( collectionDisplay, route.parent!.routeConfig!.children!.find(x=>x.path==":collectionDisplay")!.data!["collections"] );
 		parent.path = `/${[...route.parent!.url.map(s=>s.path), collectionDisplay].join('/')}`;
-		const routing = new DetailRoute( target, siblings.find(s=>s.path==target)?.title, siblings, parent );
+		const routing = new DetailRoute( slug, siblings.find(s=>s.path==slug)?.title, siblings, parent );
 		try{
-			return await DetailResolver.load<T>( this.ql, this.ql.toCollectionName(collectionDisplay), target, routing );//await inside try — without it, async failures skip the catch entirely
+			return await DetailResolver.load<T>( this.ql, this.ql.toCollectionName(collectionDisplay), slug, routing );//await inside try — without it, async failures skip the catch entirely
 		}
 		catch( e ){
-			if( e instanceof TargetNotFoundError )
+			if( e instanceof SlugNotFoundError )
 				this.snackbar.error( e.message );
 			else
-				this.snackbar.exception( `Could not load '${target}'`, e );//whatever actually failed - a 500 from a malformed query used to be indistinguishable from a missing row
+				this.snackbar.exception( `Could not load '${slug}'`, e );//whatever actually failed - a 500 from a malformed query used to be indistinguishable from a missing row
 			this.router.navigateByUrl( createUrlTreeFromSnapshot(route, ['..']) );//an injected ActivatedRoute is the ROOT route inside a resolver, so relativeTo sent this to '/';  the snapshot is this route.
 			return null as unknown as DetailResolverData<T>;
 		}
@@ -74,13 +74,13 @@ export class DetailResolver<T> implements Resolve<DetailResolverData<T>> {
 	//`vars` is a parameter only so ClientResolver can share this body without changing what goes on the wire (review3 C1):
 	//ql() appends `&variables=` for any TRUTHY vars, so the {} the access pages have always sent is not the same request as
 	//the null the gateway has always had, and the two talk to different servers.  Neither behaviour is proven on the other.
-	static async load<T>( ql:IGraphQL, collectionName:string, target:string, routing:DetailRoute, vars:any={} ):Promise<DetailResolverData<T>>{
+	static async load<T>( ql:IGraphQL, collectionName:string, slug:string, routing:DetailRoute, vars:any={} ):Promise<DetailResolverData<T>>{
 		const schema = await ql.schemaWithEnums( MetaObject.toTypeFromCollection(collectionName), (m)=>console.log(m) );
 		let obj:any = {};
-		if( target && target!="$new" ){//`target &&`: a missing route param must not query for the row named 'undefined'
-			obj = await ql.querySingle( ql.targetQuery(schema, target, ProfileStore.showDeleted(collectionName), routing.tableSettings.excludedColumns), vars, (m)=>console.log(m) );
+		if( slug && slug!="$new" ){//`slug &&`: a missing route param must not query for the row named 'undefined'
+			obj = await ql.querySingle( ql.slugQuery(schema, slug, ProfileStore.showDeleted(collectionName), routing.tableSettings.excludedColumns), vars, (m)=>console.log(m) );
 			if( obj==null )//{"data":{"<singular>":null}} - the row is not there.  Checked before the subQueries loop, whose obj["id"] would otherwise TypeError and hide every other failure behind the same message.
-				throw new TargetNotFoundError( target );
+				throw new SlugNotFoundError( slug );
 			for( let query of ql.subQueries(schema.type, obj["id"]) ){
 				const subRows = await ql.query<any>( query, vars, (m)=>console.log(m) );
 				//"acl":[{"role":{"id":33,"name":"Opc Gateway Permissions","deleted":null},"identity":{"id":1}}]}

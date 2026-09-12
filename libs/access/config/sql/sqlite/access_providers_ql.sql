@@ -5,6 +5,6 @@ create view access_providers_ql as
 	from access_providers join access_provider_types using(provider_type_id)
 	where access_provider_types.name != 'OpcServer'
 	union
-	select access_providers.provider_id, access_providers.provider_type_id, target as name
+	select access_providers.provider_id, access_providers.provider_type_id, slug as name
 	from access_providers join access_provider_types using(provider_type_id)
 	where access_provider_types.name = 'OpcServer';

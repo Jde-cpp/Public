@@ -43,7 +43,7 @@ namespace Jde::Opc::Gateway::Tests{
 
 	TEST_F( PasswordTests, Authenticate ){
 		INFO( "PasswordTests.Authenticate" );
-		string opcId{ Connection->Target };
+		string opcId{ Connection->Slug };
 		AuthenticateTest( opcId );
 		{
 			std::shared_lock l{ mtx };
@@ -73,7 +73,7 @@ namespace Jde::Opc::Gateway::Tests{
 
 	TEST_F( PasswordTests, Authenticate_BadPassword ){
 		INFO( "PasswordTests.Authenticate_BadPassword" );
-		AuthenticateTest( Connection->Target, true );
+		AuthenticateTest( Connection->Slug, true );
 		std::shared_lock l{ mtx };
 		cv.wait( l );
 		EXPECT_TRUE( _exception );

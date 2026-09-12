@@ -36,7 +36,7 @@ export class QLListSettings implements OnInit, OnDestroy{
 			view.name = this.name();
 		let displayCols = this.display.dataSource;
 		const fields = displayCols.filter( c=>c.name!="Selector" ).map( c=>new ViewField(c as ViewField) );
-		for( let field of this.view().fields.filter(f=>!fields.find(c=>c.name==f.name)) )//the list only offers columns(), so excluded-but-queried fields (id/target) would be lost
+		for( let field of this.view().fields.filter(f=>!fields.find(c=>c.name==f.name)) )//the list only offers columns(), so excluded-but-queried fields (id/slug) would be lost
 			fields.push( new ViewField(field) );
 		view.fields = fields;
 		view.showSelector = displayCols[0].displayed;

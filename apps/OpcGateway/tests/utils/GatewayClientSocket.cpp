@@ -124,12 +124,12 @@ namespace Tests{
 	α GatewayClientSocket::QuerySync( string&& query, jobject variables )ε->jvalue{
 		return BlockAwait<await<jvalue>,jvalue>( Query(move(query), move(variables), true) );
 	}
-	α GatewayClientSocket::Subscribe( ServerCnnctnNK target, const vector<NodeId>& nodes, sp<IListener> listener, SL sl )ε->await<FromServer::SubscriptionAck>{
+	α GatewayClientSocket::Subscribe( ServerCnnctnNK slug, const vector<NodeId>& nodes, sp<IListener> listener, SL sl )ε->await<FromServer::SubscriptionAck>{
 		let requestId = NextRequestId();
-		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Subscribe: '{}'.", requestId, target );
+		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Subscribe: '{}'.", requestId, slug );
 		ul _{ _subscriptionRequestMutex };
-		_subscriptionRequests.emplace( requestId, make_tuple(target, nodes, move(listener)) );
-		return await<FromServer::SubscriptionAck>{ FromClientUtils::Subscription(move(target), nodes, requestId), requestId, shared_from_this(), sl };
+		_subscriptionRequests.emplace( requestId, make_tuple(slug, nodes, move(listener)) );
+		return await<FromServer::SubscriptionAck>{ FromClientUtils::Subscription(move(slug), nodes, requestId), requestId, shared_from_this(), sl };
 	}
 
 	flat_map<SubscriptionId, sp<IListener>> _logSubscriptions; shared_mutex _logSubscriptionsMutex;
@@ -142,11 +142,11 @@ namespace Tests{
 		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Subscribe: '{}'.", requestId, query.substr(0, Web::Client::MaxLogLength()) );
 		return await<jarray>{ FromClientUtils::Query(move(query), move(vars), true, requestId), requestId, shared_from_this(), sl };
 	}
-	α GatewayClientSocket::Unsubscribe( ServerCnnctnNK target, const vector<NodeId>& nodeIds, SL sl )ε->await<FromServer::UnsubscribeAck>{
+	α GatewayClientSocket::Unsubscribe( ServerCnnctnNK slug, const vector<NodeId>& nodeIds, SL sl )ε->await<FromServer::UnsubscribeAck>{
 		let requestId = NextRequestId();
-		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Unsubscribe: '{}'.", requestId, target );
-		{ ul _{ _subscriptionRequestMutex }; _unsubscribeRequests.emplace( requestId, make_tuple(target, nodeIds) ); }
-		return await<FromServer::UnsubscribeAck>{ FromClientUtils::Unsubscription(move(target), nodeIds, requestId), requestId, shared_from_this(), sl };
+		LOGSL( ELogLevel::Trace, sl, ELogTags::SocketClientWrite, "[{:x}]Unsubscribe: '{}'.", requestId, slug );
+		{ ul _{ _subscriptionRequestMutex }; _unsubscribeRequests.emplace( requestId, make_tuple(slug, nodeIds) ); }
+		return await<FromServer::UnsubscribeAck>{ FromClientUtils::Unsubscription(move(slug), nodeIds, requestId), requestId, shared_from_this(), sl };
 	}
 	//the acked nodes' listeners go with the subscription - see _unsubscribeRequests.
 	α onUnsubscribeAck( RequestId requestId )ι->void{
@@ -156,12 +156,12 @@ namespace Tests{
 			CRITICALT( ELogTags::SocketClientRead, "[{:x}]No unsubscribe request found.", requestId );
 			return;
 		}
-		auto& [target, nodes] = it->second;
+		auto& [slug, nodes] = it->second;
 		{
 			ul _2{ _subscriptionsMutex };
-			if( auto targetNodes = _subscriptions.find(target); targetNodes!=_subscriptions.end() ){
+			if( auto slugNodes = _subscriptions.find(slug); slugNodes!=_subscriptions.end() ){
 				for( let& nodeId : nodes )
-					targetNodes->second.erase( nodeId );
+					slugNodes->second.erase( nodeId );
 			}
 		}
 		_unsubscribeRequests.erase( it );
@@ -174,9 +174,9 @@ namespace Tests{
 			CRITICALT( ELogTags::SocketClientRead, "[{:x}]No subscription request found.", requestId );
 			return UA_STATUSCODE_BADINTERNALERROR;
 		}
-		auto& [target, nodes, listener] = it->second;
+		auto& [slug, nodes, listener] = it->second;
 		ul _2{ _subscriptionsMutex };
-		auto& targetNodes = _subscriptions[target];
+		auto& slugNodes = _subscriptions[slug];
 		uint resultsSize = result.results_size();
 		ASSERT( nodes.size()==resultsSize );
 		bool added{};
@@ -189,7 +189,7 @@ namespace Tests{
 				DBGT( ELogTags::SocketClientRead, "[{:x}]Subscription for node '{}' failed with status code {}.", requestId, nodeId.ToString(), sc );
 			}
 			else{
-				targetNodes[nodeId].emplace( listener );
+				slugNodes[nodeId].emplace( listener );
 				added = true;
 			}
 		}
@@ -200,14 +200,14 @@ namespace Tests{
 	α onNodeValues( FromServer::NodeValues&& nodeValues )ι->void{
 		sl _{ _subscriptionsMutex };
 		let& opcId = nodeValues.opc_id();
-		auto targetNodes = _subscriptions.find( opcId );
-		if( targetNodes==_subscriptions.end() ){
+		auto slugNodes = _subscriptions.find( opcId );
+		if( slugNodes==_subscriptions.end() ){
 			DBGT( ELogTags::SocketClientRead, "No subscriptions for opcId '{}'.", opcId );
 			return;
 		}
 		let nodeId = ProtoUtils::ToNodeId( nodeValues.node() );
-		let& listeners = targetNodes->second.find( nodeId );
-		if( listeners==targetNodes->second.end() ){
+		let& listeners = slugNodes->second.find( nodeId );
+		if( listeners==slugNodes->second.end() ){
 			DBGT( ELogTags::SocketClientRead, "[{},{}]No subscriptions.", opcId, nodeId.ToString() );
 			return;
 		}

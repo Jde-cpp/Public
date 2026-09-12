@@ -55,7 +55,7 @@ namespace Jde::Opc::Server{
 		{
 			sl _{ Mutex };
 			for( let& [pk,resource] : Resources ){
-				if( resource.IsDeleted || resource.Target!="nodeIds" || resource.Schema!=_app )
+				if( resource.IsDeleted || resource.Slug!="nodeIds" || resource.Schema!=_app )
 					continue;
 				try{
 					baseResources.emplace( resource.Criteria.empty() ? root : NodeId::DecodeJson(resource.Criteria), pk );
@@ -91,7 +91,7 @@ namespace Jde::Opc::Server{
 	}
 
 	α OpcAuthorize::CreateResource( Access::Resource&& resource )ε->void{
-		let mine = resource.Target=="nodeIds" && resource.Schema==_app;
+		let mine = resource.Slug=="nodeIds" && resource.Schema==_app;
 		Access::Authorize::CreateResource( move(resource) );
 		if( mine )
 			ReassignRights( "a nodeIds resource was created" );
@@ -103,15 +103,15 @@ namespace Jde::Opc::Server{
 			ReassignRights( restored ? "a nodeIds resource was restored" : "a nodeIds resource was deleted" );
 	}
 
-	//The base resolves a missing pk from the args the same way;  a by-target change carries the target outright.
+	//The base resolves a missing pk from the args the same way;  a by-slug change carries the slug outright.
 	α OpcAuthorize::IsNodeResource( Access::ResourcePK pk, sv schemaName, const jobject& args )ι->bool{
-		if( let target = Json::FindSV(args, "target"); target )
-			return *target=="nodeIds" && (schemaName.empty() || schemaName==_app);
+		if( let slug = Json::FindSV(args, "slug"); slug )
+			return *slug=="nodeIds" && (schemaName.empty() || schemaName==_app);
 		if( !pk )
 			pk = Json::FindNumber<Access::ResourcePK>( args, "id" ).value_or( 0 );
 		sl _{ Mutex };
 		let p = Resources.find( pk );
-		return p!=Resources.end() && p->second.Target=="nodeIds" && p->second.Schema==_app;
+		return p!=Resources.end() && p->second.Slug=="nodeIds" && p->second.Schema==_app;
 	}
 
 	α OpcAuthorize::ReassignRights( sv why )ι->void{
@@ -124,9 +124,9 @@ namespace Jde::Opc::Server{
 		AssignRights( *ua );//UAServer's operator UA_Server&.
 	}
 
-	α OpcAuthorize::TestAdminNode( str target, str criteria, UserPK user, SL sl )ε->void{
-		if( target!="nodeIds" )
-			return TestAdminLocal( _app, target, criteria, user, sl );
+	α OpcAuthorize::TestAdminNode( str slug, str criteria, UserPK user, SL sl )ε->void{
+		if( slug!="nodeIds" )
+			return TestAdminLocal( _app, slug, criteria, user, sl );
 		THROW_IFSL( !_assigned, "[{}]admin check before AssignRights - not ready.", _app );
 		Access::ResourcePK pk{};
 		{

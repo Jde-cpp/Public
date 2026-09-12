@@ -20,14 +20,14 @@ namespace Jde::Access::Tests{
 		return dbTable.Schema->DS()->ScalerSync<uint>( DB::Sql{Ƒ("select count(*) from {} where {}=?", dbTable.SqlName(), column), {DB::Value{id}}} );
 	}
 
-	Ω upsertProfile( sv target, sv value, UserPK executer )ε->jvalue{
-		return QL().QuerySync<jvalue>( Ƒ("mutation updateProfile( \"target\":\"{}\", \"value\":{} )", target, value), {}, executer );
+	Ω upsertProfile( sv url, sv value, UserPK executer )ε->jvalue{
+		return QL().QuerySync<jvalue>( Ƒ("mutation updateProfile( \"url\":\"{}\", \"value\":{} )", url, value), {}, executer );
 	}
-	Ω deleteProfile( sv target, UserPK executer )ε->jvalue{
-		return QL().QuerySync<jvalue>( Ƒ("mutation updateProfile( \"target\":\"{}\", \"value\":null )", target), {}, executer );
+	Ω deleteProfile( sv url, UserPK executer )ε->jvalue{
+		return QL().QuerySync<jvalue>( Ƒ("mutation updateProfile( \"url\":\"{}\", \"value\":null )", url), {}, executer );
 	}
-	Ω selectProfile( sv target, UserPK executer )ε->jobject{
-		return QL().QuerySync( Ƒ("profile( target:\"{}\" ){{ value }}", target), {}, executer );
+	Ω selectProfile( sv url, UserPK executer )ε->jobject{
+		return QL().QuerySync( Ƒ("profile( url:\"{}\" ){{ value }}", url), {}, executer );
 	}
 
 	TEST_F( ProfileTests, Crud ){
@@ -42,7 +42,7 @@ namespace Jde::Access::Tests{
 		upsertProfile( "testKey", "\"{\\\"a\\\":1}\"", userA );//update path - realistic json blob with embedded quotes
 		ASSERT_EQ( AsSV(selectProfile("testKey", userA), "value"), "{\"a\":1}" );
 
-		upsertProfile( "testKey", "\"vB\"", userB );//same target, different user - separate rows
+		upsertProfile( "testKey", "\"vB\"", userB );//same url, different user - separate rows
 		ASSERT_EQ( AsSV(selectProfile("testKey", userB), "value"), "vB" );
 		ASSERT_EQ( AsSV(selectProfile("testKey", userA), "value"), "{\"a\":1}" );
 
@@ -56,7 +56,7 @@ namespace Jde::Access::Tests{
 	}
 
 	//#10: the save used to be update-then-insert-if-zero.  MySQL's row count is rows *changed*, so re-saving an identical
-	//value answered 0, fell into the insert, and the (identity_id,target) pk turned an idempotent save into a 409 - while
+	//value answered 0, fell into the insert, and the (identity_id,url) pk turned an idempotent save into a 409 - while
 	//sqlite and SQL Server, which count rows *matched*, succeeded.  A save is now one dialect upsert, so the second and
 	//third writes below are no-ops rather than conflicts on every backend.  This passes on sqlite either way; it is the
 	//MySQL path it exists to hold, which no ctest suite reaches.
@@ -96,10 +96,10 @@ namespace Jde::Access::Tests{
 	//and access_provider_purge, which deletes users and identities directly, takes the same children first.
 	TEST_F( ProfileTests, PurgeProviderWithUsersInUse ){
 		let root = GetRoot();
-		constexpr sv providerTarget{ "purgeProviderTest" };
-		auto provider = QL().QuerySync( Ƒ("provider( name:\"{}\" ){{ id }}", providerTarget), {}, root ); //providers_ql has no target column; the insert proc names it after the target.
+		constexpr sv providerSlug{ "purgeProviderTest" };
+		auto provider = QL().QuerySync( Ƒ("provider( name:\"{}\" ){{ id }}", providerSlug), {}, root ); //providers_ql has no slug column; the insert proc names it after the slug.
 		if( provider.empty() )
-			provider = QL().QuerySync( Ƒ("createProvider( target:\"{}\", providerType:{} ){{ id }}", providerTarget, underlying(EProviderType::Key)), {}, root );
+			provider = QL().QuerySync( Ƒ("createProvider( slug:\"{}\", providerType:{} ){{ id }}", providerSlug, underlying(EProviderType::Key)), {}, root );
 		const ProviderPK providerPK{ (ProviderPK)GetId(provider) };
 		const UserPK user{ GetId(GetUser("purgeProviderUser", root, false, providerPK)) };
 		upsertProfile( "purgeKey", "\"v\"", user );
@@ -115,7 +115,7 @@ namespace Jde::Access::Tests{
 	}
 
 	//access-review3 #16:  ProfileAwait scoped every statement to the executer and then handed the mutation to the fan-out, which
-	//delivered its args - target and the whole value blob - to every profileUpdated subscriber, no per-listener identity, no
+	//delivered its args - url and the whole value blob - to every profileUpdated subscriber, no per-listener identity, no
 	//gate (profiles is ops:None, so subscribing is open to anyone logged in).  Profiles are per-user state:  nothing is broadcast.
 	struct ProfileListener final : QL::IListener{
 		ProfileListener()ι: QL::IListener{"ProfileTests"}{}
@@ -127,7 +127,7 @@ namespace Jde::Access::Tests{
 		const UserPK userA{ GetId(GetUser("profileLeakA", root)) };
 		const UserPK userB{ GetId(GetUser("profileLeakB", root)) };
 		auto listener = ms<ProfileListener>();
-		BlockTAwait<vector<QL::SubscriptionId>>( move(*QLPtr()->Subscribe("subscription ProfileUpdated{ profileUpdated(subscriptionId:$id){ target value } }", jobject{{"id",7716}}, listener, userB)) );
+		BlockTAwait<vector<QL::SubscriptionId>>( move(*QLPtr()->Subscribe("subscription ProfileUpdated{ profileUpdated(subscriptionId:$id){ url value } }", jobject{{"id",7716}}, listener, userB)) );
 		upsertProfile( "secret", "\"userA-only\"", userA );
 		EXPECT_EQ( AsSV(selectProfile("secret", userA), "value"), "userA-only" ); //the write itself still lands.
 		QL::Subscriptions::StopListen( listener );
@@ -143,8 +143,8 @@ namespace Jde::Access::Tests{
 	TEST_F( ProfileTests, ScalarFilterArgIsRefusedNotFatal ){
 		let root = GetRoot();
 		const UserPK user{ GetId(GetUser("profileFilter", root)) };
-		EXPECT_THROW( QL().QuerySync<jvalue>("profile( filter:1, target:\"testKey\" ){ value }", {}, user), Exception );
-		EXPECT_THROW( QL().QuerySync<jvalue>("profile( filter:1, target:\"testKey\" ){ value }", {}, UserPK{}), Exception ); //the unauthenticated shape.
+		EXPECT_THROW( QL().QuerySync<jvalue>("profile( filter:1, url:\"testKey\" ){ value }", {}, user), Exception );
+		EXPECT_THROW( QL().QuerySync<jvalue>("profile( filter:1, url:\"testKey\" ){ value }", {}, UserPK{}), Exception ); //the unauthenticated shape.
 		PurgeUser( user, root );
 	}
 }

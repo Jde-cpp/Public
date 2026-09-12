@@ -12,7 +12,7 @@ import { MatIconButton } from '@angular/material/button';
 import { MatTooltip } from '@angular/material/tooltip';
 import { StringUtils } from '../../../utils/string-utils';
 import { ViewField } from '../../../model/ql/view';
-import { QLRow } from '../../../model/ql/target-row';
+import { QLRow } from '../../../model/ql/slug-row';
 
 @Component({
 	selector: 'ql-table',

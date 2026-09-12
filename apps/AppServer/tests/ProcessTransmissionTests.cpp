@@ -205,10 +205,10 @@ namespace Jde::App::Server::Tests{
 	Ω systemQL( string query, jobject vars={} )->jvalue{
 		return BlockAwait<QL::QLAwait<jvalue>,jvalue>( QL::QLAwait<jvalue>{move(query), move(vars), Jde::UserPK{Jde::UserPK::System}, Server::QLPtr()} );
 	}
-	Ω probeUser( sv target )->Jde::UserPK{
-		auto existing = systemQL( Ƒ(R"(user( target:"{0}" ){{id}})", target) );
+	Ω probeUser( sv slug )->Jde::UserPK{
+		auto existing = systemQL( Ƒ(R"(user( slug:"{0}" ){{id}})", slug) );
 		let found = existing.is_object() && existing.get_object().contains( "id" );
-		return Jde::UserPK{ QL::AsId<Jde::UserPK::Type>( found ? existing : systemQL(Ƒ(R"(mutation createUser( target:"{0}", name:"{0}" ){{id}})", target)) ) };
+		return Jde::UserPK{ QL::AsId<Jde::UserPK::Type>( found ? existing : systemQL(Ƒ(R"(mutation createUser( slug:"{0}", name:"{0}" ){{id}})", slug)) ) };
 	}
 	//The positive half:  the schema's root resource is active and the registrant administers it.  The rows are made on the
 	//server's own QL, so the registration also proves the AppServer's cache takes another schema's events (appserver-review3 #13:
@@ -216,9 +216,9 @@ namespace Jde::App::Server::Tests{
 	TEST_F( ProcessTransmissionTests, ASchemaAdminIsDelegated ){
 		constexpr sv schema{ "opc.probe" };
 		let admin = probeUser( "probe-admin" ), nobody = probeUser( "probe-nobody" );
-		if( systemQL(Ƒ(R"(resources( schemaName:"{}", target:"nodeIds" ){{id}})", schema)).as_array().empty() )
-			systemQL( Ƒ(R"(mutation createResource( schemaName:"{}", name:"probe nodes", target:"nodeIds", allowed:255 ))", schema) );
-		systemQL( Ƒ(R"(mutation createAcl( identity:{{id:{}}}, permissionRight:{{ allowed:{}, denied:0, resource:{{schemaName:"{}", target:"nodeIds"}} }} ))", admin.Value, underlying(Access::ERights::Administer), schema) );
+		if( systemQL(Ƒ(R"(resources( schemaName:"{}", slug:"nodeIds" ){{id}})", schema)).as_array().empty() )
+			systemQL( Ƒ(R"(mutation createResource( schemaName:"{}", name:"probe nodes", slug:"nodeIds", allowed:255 ))", schema) );
+		systemQL( Ƒ(R"(mutation createAcl( identity:{{id:{}}}, permissionRight:{{ allowed:{}, denied:0, resource:{{schemaName:"{}", slug:"nodeIds"}} }} ))", admin.Value, underlying(Access::ERights::Administer), schema) );
 
 		let registered = RegisterInstance( *_session, "Tests.AuthResource", "authorizer", "auth-host", 0, 1234, string{schema}, admin );
 		EXPECT_TRUE( registered.AuthResult ) << "the registrant administers the schema's root resource";
@@ -228,10 +228,10 @@ namespace Jde::App::Server::Tests{
 		BlockVoidAwait( other->Close(true, SRCE_CUR) );
 	}
 
-	Ω probeRole( sv target )->Access::RolePK{//find-or-create: roles.target is uniquely indexed, so a persisted db would trip createRole on the second run.
-		auto existing = systemQL( Ƒ(R"(role( target:"{0}" ){{id}})", target) );
+	Ω probeRole( sv slug )->Access::RolePK{//find-or-create: roles.slug is uniquely indexed, so a persisted db would trip createRole on the second run.
+		auto existing = systemQL( Ƒ(R"(role( slug:"{0}" ){{id}})", slug) );
 		let found = existing.is_object() && existing.get_object().contains( "id" );
-		return QL::AsId<Access::RolePK>( found ? existing : systemQL(Ƒ(R"(mutation createRole( target:"{0}", name:"{0}" ){{id}})", target)) );
+		return QL::AsId<Access::RolePK>( found ? existing : systemQL(Ƒ(R"(mutation createRole( slug:"{0}", name:"{0}" ){{id}})", slug)) );
 	}
 	//The delegated admin check end to end:  granting a role rights on ANOTHER schema's resource asks that schema's registered
 	//instance, over the socket, whether the executer may grant it (appserver-review3 #13).  The AppServer parses the `adminCheck`
@@ -240,13 +240,13 @@ namespace Jde::App::Server::Tests{
 	TEST_F( ProcessTransmissionTests, ADelegatedAdminCheckReachesTheInstance ){
 		constexpr sv schema{ "opc.delegate" };
 		let admin = probeUser( "delegate-admin" );
-		if( systemQL(Ƒ(R"(resources( schemaName:"{}", target:"nodeIds" ){{id}})", schema)).as_array().empty() )
-			systemQL( Ƒ(R"(mutation createResource( schemaName:"{}", name:"delegate nodes", target:"nodeIds", allowed:255 ))", schema) );
-		systemQL( Ƒ(R"(mutation createAcl( identity:{{id:{}}}, permissionRight:{{ allowed:{}, denied:0, resource:{{schemaName:"{}", target:"nodeIds"}} }} ))", admin.Value, underlying(Access::ERights::Administer), schema) );
+		if( systemQL(Ƒ(R"(resources( schemaName:"{}", slug:"nodeIds" ){{id}})", schema)).as_array().empty() )
+			systemQL( Ƒ(R"(mutation createResource( schemaName:"{}", name:"delegate nodes", slug:"nodeIds", allowed:255 ))", schema) );
+		systemQL( Ƒ(R"(mutation createAcl( identity:{{id:{}}}, permissionRight:{{ allowed:{}, denied:0, resource:{{schemaName:"{}", slug:"nodeIds"}} }} ))", admin.Value, underlying(Access::ERights::Administer), schema) );
 		let registered = RegisterInstance( *_session, "Tests.Delegate", "delegate", "auth-host", 0, 1234, string{schema}, admin );
 		ASSERT_TRUE( registered.AuthResult ) << "the registrant administers the schema's root resource";
 
-		let grant = Ƒ( R"(addRole( id:{}, permissionRight:{{ allowed:{}, denied:0, resource:{{ schemaName:"{}", target:"nodeIds" }} }} ))", probeRole("delegate-role"), underlying(Access::ERights::Read), schema );
+		let grant = Ƒ( R"(addRole( id:{}, permissionRight:{{ allowed:{}, denied:0, resource:{{ schemaName:"{}", slug:"nodeIds" }} }} ))", probeRole("delegate-role"), underlying(Access::ERights::Read), schema );
 		string failure;
 		std::thread mutation{ [&]{ try{ systemQL( grant ); }catch( const std::exception& e ){ failure = e.what(); } } };//systemQL blocks on the reply this thread has to send.
 		auto query = _session->WaitFor( [](let& m){ return m.value_case()==FromServerMessage::kClientQuery && m.client_query().query().contains("adminCheck"); } );

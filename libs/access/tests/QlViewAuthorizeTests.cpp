@@ -1,5 +1,5 @@
 //ql-review3 #10:  SelectAwait authorized _qlTable.DBTable(), which for a table declaring `qlView` is the *view* - users ->
-//users_ql -> resource "usersQl", a name ResourceLoadAwait never creates (it makes one per table, target ToJson(table->Name)).
+//users_ql -> resource "usersQl", a name ResourceLoadAwait never creates (it makes one per table, slug ToJson(table->Name)).
 //Authorize::Test returns early for a resource it cannot find, so Read on users/providers/connections was never enforced.
 //View now carries an owner back-pointer and tests the owner's name, and SelectAwait authorizes the whole requested tree
 //rather than only its root.  This is the suite with a real authorizer and a real schema, so the coverage lives here.
@@ -43,7 +43,7 @@ namespace Jde::Access::Tests{
 		let wasDeleted = !resource.at( "deleted" ).is_null();
 		if( wasDeleted )
 			Restore( "resources", GetId(resource), GetRoot() );
-		EXPECT_THROW( QL().QuerySync<jarray>("groups{ id target }", {}, _intruder), Exception );
+		EXPECT_THROW( QL().QuerySync<jarray>("groups{ id slug }", {}, _intruder), Exception );
 		if( wasDeleted )
 			Delete( "resources", GetId(resource), GetRoot() );
 	}
@@ -60,7 +60,7 @@ namespace Jde::Access::Tests{
 			Restore( "resources", GetId(resource), GetRoot() );
 		Delete( "resources", _resourcePK, GetRoot() );//the parent is not the point:  let the intruder past the root of the query.
 
-		constexpr sv ql{ "permissionRights{ id resource{ id target } }" };
+		constexpr sv ql{ "permissionRights{ id resource{ id slug } }" };
 		EXPECT_NO_THROW( QL().QuerySync<jarray>(string{ql}, {}, GetRoot()) ) << "the query itself has to be valid, or the throw below proves nothing";
 		try{
 			QL().QuerySync<jarray>( string{ql}, {}, _intruder );

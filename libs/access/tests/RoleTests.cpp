@@ -20,7 +20,7 @@ namespace Jde::Access::Tests{
 	}
 	//AclTests.cpp
 	α CreateAcl( IdentityPK identityPK, ERights allowed, ERights denied, string resource, UserPK executer )ε->PermissionRightsPK;
-	α SelectAcl( IdentityPK identityPK, string resourceTarget )ε->jobject;
+	α SelectAcl( IdentityPK identityPK, string resourceSlug )ε->jobject;
 	α PurgeAcl( IdentityPK identityPK, PermissionRightsPK permissionPK, UserPK executer )ε->void;
 	α CreateAcl( IdentityPK identityPK, RolePK rolePK, UserPK executer )ε->void;
 	α SelectAcl( IdentityPK identityPK, RolePK rolePK )ε->jobject;
@@ -36,13 +36,13 @@ namespace Jde::Access::Tests{
 	}
 	α GetRolePermission( RolePK rolePK, sv resourceName, UserPK executer )ε->jobject{
 		jobject vars{ {"roleId", rolePK}, {"resource", resourceName} };
-		let q = "role( id:$roleId ){permissionRight{id allowed denied resource(target:$resource,criteria:null)} }";
+		let q = "role( id:$roleId ){permissionRight{id allowed denied resource(slug:$resource,criteria:null)} }";
 		let role = BlockTAwait<jvalue>( Server::RoleAwait{QL::ParseQuery(q, vars, Schemas()), executer} ).as_object(); //{"role":{"member":{"id":1,"allowed":[],"denied":[]}}}
 		return Json::FindDefaultObjectPath( role, "permissionRight" );
 	}
 	α GetRoleChild( RolePK parentRolePK, RolePK childRolePK, UserPK userPK )ε->jobject{
 		jobject vars = { {"parent", parentRolePK}, {"child",childRolePK} };
-		let q = "role( id:$parent ){role(id:$child){id target deleted} }";
+		let q = "role( id:$parent ){role(id:$child){id slug deleted} }";
 		auto y = BlockTAwait<jvalue>( Server::RoleAwait{QL::ParseQuery(q, vars, Schemas()), userPK} );
 		return y.is_object() ? Json::FindDefaultObjectPath( y.get_object(), "role" ) : jobject{};
 	}
@@ -60,7 +60,7 @@ namespace Jde::Access::Tests{
 		}
 		else{
 			jobject vars{ {"roleId", rolePK}, {"allowed", underlying(allowed)}, {"denied", underlying(denied)}, {"resource", resourceName} };
-			auto q = "addRole( id:$roleId, permissionRight:{allowed:$allowed, denied:$denied, resource:{target:$resource}} )";
+			auto q = "addRole( id:$roleId, permissionRight:{allowed:$allowed, denied:$denied, resource:{slug:$resource}} )";
 			BlockTAwait<jvalue>( Server::RoleMAwait{QL::ParseM(q, vars, Schemas()), userPK} );
 			permission = GetRolePermission( rolePK, resourceName, userPK );
 		}
@@ -85,7 +85,7 @@ namespace Jde::Access::Tests{
 		TestPurge( "role", pk, GetRoot() );
 	}
 
-	Ω getRole( str target, UserPK executer )ε->jobject{ return Get("role", target, executer); }
+	Ω getRole( str slug, UserPK executer )ε->jobject{ return Get("role", slug, executer); }
 
 	TEST_F( RoleTests, AddRemove ){
 		let rolePK = GetId( getRole("rolePermissionsTest", GetRoot()) );
@@ -178,7 +178,7 @@ namespace Jde::Access::Tests{
 		ASSERT_EQ( Authorizer()->Rights("access", "groups", user), ERights::Read );
 
 		EXPECT_NO_THROW( Purge("role", rolePK, root) ); //used to throw on the acl fk.
-		EXPECT_TRUE( QL().QuerySync<jarray>(R"(roles( target:"rolePurgeAssigned" ){ id })", {}, root).empty() );
+		EXPECT_TRUE( QL().QuerySync<jarray>(R"(roles( slug:"rolePurgeAssigned" ){ id })", {}, root).empty() );
 		EXPECT_EQ( QL().QuerySync<jarray>(Ƒ("acl( identityId:{} ){{ identityId permissionRight{{ id }} }}", user.Value), {}, root).size(), 0u ) << "the grant went with the role";
 		EXPECT_EQ( Authorizer()->Rights("access", "groups", user), ERights::None ); //and the cache dropped it.
 	}
@@ -190,7 +190,7 @@ namespace Jde::Access::Tests{
 
 		EXPECT_NO_THROW( Purge("role", child, root) ); //used to throw on the parent's membership fk.
 		EXPECT_TRUE( GetRoleChild(parent, child, root).empty() ) << "no membership row left pointing at a permission that is no longer a role";
-		EXPECT_FALSE( QL().QuerySync<jarray>(R"(roles( target:"rolePurgeNestedParent" ){ id })", {}, root).empty() ) << "the parent survives";
+		EXPECT_FALSE( QL().QuerySync<jarray>(R"(roles( slug:"rolePurgeNestedParent" ){ id })", {}, root).empty() ) << "the parent survives";
 		Purge( "role", parent, root );
 	}
 	//Purging a role stripped every direct grant of its child roles:  access_role_purge deleted the acl rows of every member of the
@@ -226,21 +226,21 @@ namespace Jde::Access::Tests{
 	}
 
 	//The seed's spelling - libs/access/config/release.roles, applied by DB::SyncData(".roles") through LocalQL::Upsert once the
-	//access server is up:  createRole by target, addRole naming the role and its member roles by target (a file cannot know the
-	//pks it just created), permissions by schema+target.  Upsert skips a createRole whose target exists and always runs an
+	//access server is up:  createRole by slug, addRole naming the role and its member roles by slug (a file cannot know the
+	//pks it just created), permissions by schema+slug.  Upsert skips a createRole whose slug exists and always runs an
 	//addRole - so a second pass over the same text (every -sync start) changes nothing and fails nothing.
-	TEST_F( RoleTests, SeedByTarget ){
+	TEST_F( RoleTests, SeedBySlug ){
 		let root = GetRoot();
-		for( let target : {"seedAdmin", "seedViewer"} ){//a previous run's rows would make the first pass a rerun.
-			for( let& v : QL().QuerySync<jarray>(Ƒ(R"(roles( target:"{}" ){{ id }})", target), {}, root) )
+		for( let slug : {"seedAdmin", "seedViewer"} ){//a previous run's rows would make the first pass a rerun.
+			for( let& v : QL().QuerySync<jarray>(Ƒ(R"(roles( slug:"{}" ){{ id }})", slug), {}, root) )
 				Purge( "role", GetId(Json::AsObject(v)), root );
 		}
 		constexpr sv seed = R"(mutation{
-			createRole( target:"seedViewer", name:"Seed Viewer", description:"seed" )
-			addRole( target:"seedViewer", permissionRight:{ allowed:2, denied:0, resource:{ schemaName:"access", target:"groups" } } )
-			createRole( target:"seedAdmin", name:"Seed Admin", description:"seed" )
-			addRole( target:"seedAdmin", role:{ target:"seedViewer" } )
-			addRole( target:"seedAdmin", permissionRight:{ allowed:32, denied:0, resource:{ schemaName:"access", target:"groups" } } )
+			createRole( slug:"seedViewer", name:"Seed Viewer", description:"seed" )
+			addRole( slug:"seedViewer", permissionRight:{ allowed:2, denied:0, resource:{ schemaName:"access", slug:"groups" } } )
+			createRole( slug:"seedAdmin", name:"Seed Admin", description:"seed" )
+			addRole( slug:"seedAdmin", role:{ slug:"seedViewer" } )
+			addRole( slug:"seedAdmin", permissionRight:{ allowed:32, denied:0, resource:{ schemaName:"access", slug:"groups" } } )
 		})";
 		const UserPK system{ UserPK::System };
 		for( uint pass=0; pass<2; ++pass ){
@@ -271,24 +271,24 @@ namespace Jde::Access::Tests{
 		EXPECT_FALSE( GetRoleChild(sa, viewer, root).empty() );
 		EXPECT_FALSE( GetRoleChild(owner, sa, root).empty() );
 		EXPECT_FALSE( GetRoleChild(owner, viewer, root).empty() );
-		for( let target : {"engineer", "operator", "maint-tech"} )
-			EXPECT_FALSE( GetRoleChild((RolePK)GetId(getRole(target, root)), viewer, root).empty() ) << target;
+		for( let slug : {"engineer", "operator", "maint-tech"} )
+			EXPECT_FALSE( GetRoleChild((RolePK)GetId(getRole(slug, root)), viewer, root).empty() ) << slug;
 		EXPECT_EQ( ToRights(Json::AsArray(GetRolePermission(viewer, "users", root), "allowed")), ERights::Read );
 		EXPECT_EQ( ToRights(Json::AsArray(GetRolePermission(sa, "users", root), "allowed")), ERights::Administer );
 		EXPECT_EQ( ToRights(Json::AsArray(GetRolePermission(owner, "users", root), "allowed")), ERights::Create|ERights::Update|ERights::Delete|ERights::Purge|ERights::Subscribe|ERights::Execute );
 		EXPECT_EQ( ToRights(Json::AsArray(GetRolePermission(owner, "resources", root), "allowed")), ERights::Delete|ERights::Subscribe );
-		for( let target : {"owner", "engineer", "operator", "maint-tech", "sa", "viewer"} )//parents before children - a purge strips the parent's memberships, the children survive.
-			Purge( "role", (RolePK)GetId(getRole(target, root)), root );
+		for( let slug : {"owner", "engineer", "operator", "maint-tech", "sa", "viewer"} )//parents before children - a purge strips the parent's memberships, the children survive.
+			Purge( "role", (RolePK)GetId(getRole(slug, root)), root );
 	}
 
 	//access-review3 #15:  sqlServer/access_role_add.sql inserted the resource name as sent, where mysql and sqlite coalesce it over
-	//the target - and the live grant-a-role-on-this-node path sends no name, into a not-null column.  Source parity, since no
+	//the slug - and the live grant-a-role-on-this-node path sends no name, into a not-null column.  Source parity, since no
 	//sqlServer runs here:  every dialect's insert into access_resources has to coalesce the name parameter.
 	TEST_F( RoleTests, AccessRoleAddCoalescesResourceNameInEveryDialect ){
 		let& scriptPaths = Settings::FindDefaultArray( "/dbServers/scriptPaths" ); //<repo>/libs/access/config/sql/<dialect>
 		ASSERT_FALSE( scriptPaths.empty() );
 		let sqlRoot = fs::path{ string{Json::AsSV(scriptPaths[0])} }.parent_path();
-		for( let& [file, spelling] : std::initializer_list<std::pair<sv,sv>>{ {"mysql/access_role_add.sql", "coalesce(_resourceName, _resourceTarget)"}, {"sqlServer/access_role_add.sql", "coalesce(@resourceName, @resourceTarget)"}, {"sqlite/access_role_add.cpp", "coalesce(?, ?)"} } ){
+		for( let& [file, spelling] : std::initializer_list<std::pair<sv,sv>>{ {"mysql/access_role_add.sql", "coalesce(_resourceName, _resourceSlug)"}, {"sqlServer/access_role_add.sql", "coalesce(@resourceName, @resourceSlug)"}, {"sqlite/access_role_add.cpp", "coalesce(?, ?)"} } ){
 			let text = IO::Load( sqlRoot/file );
 			let insert = text.find( "insert into access_resources(" );
 			ASSERT_NE( insert, string::npos ) << file;
@@ -297,8 +297,8 @@ namespace Jde::Access::Tests{
 		}
 	}
 	//access-review3 #27:  the server-dialect procs declared allowed/denied narrower than the ulong columns they write (tinyint on
-	//sqlServer, and mysql's upsert), and target/criteria wider than theirs - a right above bit 7 would have failed on one dialect
-	//and not the others, and an oversized target was refused at the insert rather than the proc boundary.  Source parity, driven
+	//sqlServer, and mysql's upsert), and slug/criteria wider than theirs - a right above bit 7 would have failed on one dialect
+	//and not the others, and an oversized slug was refused at the insert rather than the proc boundary.  Source parity, driven
 	//by the meta:  every parameter that carries a column is declared at that column's width.
 	TEST_F( RoleTests, ProcParametersMatchTheColumns ){
 		let& rights = *GetTable( "permission_rights" );
@@ -309,8 +309,8 @@ namespace Jde::Access::Tests{
 		ASSERT_FALSE( scriptPaths.empty() );
 		let sqlRoot = fs::path{ string{Json::AsSV(scriptPaths[0])} }.parent_path();
 		const vector<std::pair<string,vector<string>>> expectations{
-			{ "mysql/access_role_add.sql", {"_allowed bigint unsigned", "_denied bigint unsigned", Ƒ("_resourceTarget varchar({})", width("target")), Ƒ("_schema varchar({})", width("schema_name")), Ƒ("_criteria varchar({})", width("criteria"))} },
-			{ "sqlServer/access_role_add.sql", {"@allowed bigint", "@denied bigint", Ƒ("@resourceTarget varchar({})", width("target")), Ƒ("@schema varchar({})", width("schema_name")), Ƒ("@criteria varchar({})", width("criteria"))} },
+			{ "mysql/access_role_add.sql", {"_allowed bigint unsigned", "_denied bigint unsigned", Ƒ("_resourceSlug varchar({})", width("slug")), Ƒ("_schema varchar({})", width("schema_name")), Ƒ("_criteria varchar({})", width("criteria"))} },
+			{ "sqlServer/access_role_add.sql", {"@allowed bigint", "@denied bigint", Ƒ("@resourceSlug varchar({})", width("slug")), Ƒ("@schema varchar({})", width("schema_name")), Ƒ("@criteria varchar({})", width("criteria"))} },
 			{ "mysql/access_ac_upsert_permission.sql", {"_allowed bigint unsigned", "_denied bigint unsigned"} },
 			{ "sqlServer/access_ac_upsert_permission.sql", {"@allowed bigint", "@denied bigint"} }
 		};
@@ -324,20 +324,20 @@ namespace Jde::Access::Tests{
 		}
 	}
 	//and the behaviour itself, on the dialects this suite runs against:  a role permission on a resource nothing has registered
-	//yet, with no name - the resource is created, named after its target.
+	//yet, with no name - the resource is created, named after its slug.
 	TEST_F( RoleTests, AddPermissionOnNewResourceWithoutName ){
 		let root = GetRoot();
 		const UserPK system{ UserPK::System };
-		constexpr sv target{ "parityNew" }, criteria{ "x" };
-		let select = Ƒ( R"(resources( schemaName:"access", target:"{}", criteria:"{}" ){{ id name }})", target, criteria );
+		constexpr sv slug{ "parityNew" }, criteria{ "x" };
+		let select = Ƒ( R"(resources( schemaName:"access", slug:"{}", criteria:"{}" ){{ id name }})", slug, criteria );
 		for( let& v : QL().QuerySync<jarray>(select, {}, root) ) //a previous run's row would make this a no-op.
 			Purge( "resource", GetId(Json::AsObject(v)), root );
 		const RolePK rolePK{ (RolePK)GetId(getRole("roleParityNew", root)) };
-		let q = Ƒ( R"(addRole( id:{}, permissionRight:{{ allowed:2, denied:0, resource:{{ schemaName:"access", target:"{}", criteria:"{}" }} }} ))", rolePK, target, criteria );
+		let q = Ƒ( R"(addRole( id:{}, permissionRight:{{ allowed:2, denied:0, resource:{{ schemaName:"access", slug:"{}", criteria:"{}" }} }} ))", rolePK, slug, criteria );
 		let added = BlockTAwait<jvalue>( Server::RoleMAwait{QL::ParseM(q, {}, Schemas()), root} ).as_object();
 		let resources = QL().QuerySync<jarray>( select, {}, root );
 		ASSERT_EQ( resources.size(), 1u );
-		EXPECT_EQ( Json::AsSV(Json::AsObject(resources[0]), "name"), target ) << "name coalesced over the target";
+		EXPECT_EQ( Json::AsSV(Json::AsObject(resources[0]), "name"), slug ) << "name coalesced over the slug";
 		RemoveRolePermission( rolePK, Json::AsNumber<PermissionPK>(added, "permissionRight/id"), system ); //root holds nothing over the new resource.
 		Purge( "resource", GetId(Json::AsObject(resources[0])), root );
 		Purge( "role", rolePK, root );

@@ -1,5 +1,5 @@
 //ql-review3 #45: an extended table's own row is keyed by whatever the parent's where clause was keyed by
-//(UpdateAwait::CreateUpdate `rowKey = update.Where.Params()[0]`), and on the name/target branches that is the literal - so
+//(UpdateAwait::CreateUpdate `rowKey = update.Where.Params()[0]`), and on the name/slug branches that is the literal - so
 //`updateUser( name:"bob", loginName:… )` emitted `update access_users set … where access_users.identity_id='bob'`, which
 //matches nothing, and reported the *identities* row count as success.  By id it was always right, so the shape is refused.
 //Second half, db-locus: UpdateClause::Move looked for `updated` through Table::FindColumn, which resolves via Extends, so the
@@ -15,8 +15,8 @@ namespace Jde::Access::Tests{
 	//built, so this is not a half-applied mutation the way the old failure was.
 	TEST( ExtendedUpdateTests, UpdatingAnExtendedTableByNameIsRefused ){
 		let root = GetRoot();
-		const string target{ "review45-byName" };
-		let user = UserPK{ GetId(GetUser(target, root)) };
+		const string slug{ "review45-byName" };
+		let user = UserPK{ GetId(GetUser(slug, root)) };
 		let before = Select( "user", user.Value, root, "id name loginName", true );
 
 		try{
@@ -36,8 +36,8 @@ namespace Jde::Access::Tests{
 	//borrowing the parent's `updated`.  The read-back is the point: the extension row really changed.
 	TEST( ExtendedUpdateTests, UpdatingAnExtendedTableByIdChangesTheExtensionRow ){
 		let root = GetRoot();
-		const string target{ "review45-byId" };
-		let user = UserPK{ GetId(GetUser(target, root)) };
+		const string slug{ "review45-byId" };
+		let user = UserPK{ GetId(GetUser(slug, root)) };
 
 		QL().QuerySync<jvalue>( "mutation updateUser( id:"+std::to_string(user.Value)+", loginName:\"review45-login\" )", {}, root );
 		EXPECT_EQ( Json::AsSV(Select("user", user.Value, root, "id loginName", true), "loginName"), "review45-login" );
@@ -55,8 +55,8 @@ namespace Jde::Access::Tests{
 	//Refusing this as well would have cost a working shape to fix a broken one.
 	TEST( ExtendedUpdateTests, AnExtendedTableIsStillUpdateableByNameWhenOnlyParentColumnsChange ){
 		let root = GetRoot();
-		const string target{ "review45-plain" };
-		let group = GroupPK{ GetId(GetGroup(target, root)) };
+		const string slug{ "review45-plain" };
+		let group = GroupPK{ GetId(GetGroup(slug, root)) };
 		let name = string{ Json::AsSV(Select("group", group.Value, root, "id name", true), "name") };
 
 		QL().QuerySync<jvalue>( "mutation updateGroup( name:\""+name+"\", description:\"review45-desc\" )", {}, root );

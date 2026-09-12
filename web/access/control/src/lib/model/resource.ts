@@ -1,9 +1,9 @@
 import { Permission, Rights } from "./permission";
-import { TargetRow } from "jde-framework";
+import { SlugRow } from "jde-framework";
 
 export type ResourcePK=number;
 
-export class Resource extends TargetRow<Resource>{
+export class Resource extends SlugRow<Resource>{
 	static from( resources:Partial<Resource>[] ):Resource[]{
 		return resources.map( r=>new Resource(r) );
 	}

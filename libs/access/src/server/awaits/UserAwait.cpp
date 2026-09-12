@@ -21,7 +21,7 @@ namespace Jde::Access::Server{
 		statement.From+={ pk, memberIdColumn, true };
 		statement.From+={ groupDBTable.SurrogateKeys[0], {}, pk, "groups_", true };
 		if( let key = _query.FindKey(); key )
-			statement.Where.Add( key->IsPK() ? pk : identityTable.GetColumnPtr("target"), DB::Value::FromKey(*key) );
+			statement.Where.Add( key->IsPK() ? pk : identityTable.GetColumnPtr("slug"), DB::Value::FromKey(*key) );
 
 		statement.Where.Add( identityTable.GetColumnPtr("deleted"), DB::Value{} );
 		statement.Select.TryAdd( memberIdColumn );

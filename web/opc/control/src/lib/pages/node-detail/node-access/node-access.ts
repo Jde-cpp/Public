@@ -37,8 +37,8 @@ export class NodeAccess implements OnInit, OnDestroy{
 
 	private async load():Promise<void>{
 		const criteria = this.node().nodeId.uaString();//e.g. "ns=4;i=6020" — the server's resource criteria for this node
-		const vars = { schemaName: `opc.${this.accessResource()}`, target: "nodeIds", criteria };
-		const q = 'roles{ id name permissionRight{ id allowed denied resource(schemaName:$schemaName, criteria:$criteria, target:$target){ id criteria } } }';
+		const vars = { schemaName: `opc.${this.accessResource()}`, slug: "nodeIds", criteria };
+		const q = 'roles{ id name permissionRight{ id allowed denied resource(schemaName:$schemaName, criteria:$criteria, slug:$slug){ id criteria } } }';
 		const db = await this.appService.queryArray<any>( q, vars, (m)=>console.log(m) );
 		const roles:RolePermission[] = db.map( (role:any)=>{
 			const pr = role.permissionRight;//present only where a permission exists for this exact node; allowed/denied are [Right] name arrays
@@ -112,7 +112,7 @@ export class NodeAccess implements OnInit, OnDestroy{
 			if( !role.allowed && !role.denied )
 				mutation = role.permissionId ? new Mutation(Role.typeName, role.roleId, {permissionRight:{id: role.permissionId}}, MutationType.Remove ) : undefined;//permissionId 0 = nothing on the server to remove (a pending Add is dropped by falling through with no mutation)
 			else{
-				let resource:any = role.resourceId ? { id: role.resourceId } : { schemaName: `opc.${this.accessResource()}`, target: "nodeIds" };//was `schema:` — server ignored it and stored schemaName as "opc", putting the permission on the wrong resource
+				let resource:any = role.resourceId ? { id: role.resourceId } : { schemaName: `opc.${this.accessResource()}`, slug: "nodeIds" };//was `schema:` — server ignored it and stored schemaName as "opc", putting the permission on the wrong resource
 				resource["criteria"] = role.criteria ? role.criteria : null;
 				mutation = new Mutation( Role.typeName, role.roleId, { permissionRight: {allowed: role.allowed, denied: role.denied, resource: resource} }, MutationType.Add );
 			}

@@ -1,5 +1,5 @@
 #include <sqlite3.h>
-#include "../src/SqliteProcs.h" //compiled into this target - see CMakeLists.txt.
+#include "../src/SqliteProcs.h" //compiled into this slug - see CMakeLists.txt.
 #include <jde/db/Row.h>
 #include <jde/db/DBException.h>
 #include <jde/db/IDataSource.h>
@@ -91,10 +91,10 @@ namespace Jde::DB::Sqlite::Tests{
 	TEST_P( OpTests, InsertSelectRoundTrip ){
 		let now = DBTimePoint{ std::chrono::floor<std::chrono::seconds>(DBClock::now()) };
 		//provider_id left null - it has an fk to access_providers, and no provider row is seeded here.
-		_ds->ExecuteSync( {"insert into access_identities( name, target, is_group, attributes, description, created ) values( ?, ?, ?, ?, ?, ? )",
+		_ds->ExecuteSync( {"insert into access_identities( name, slug, is_group, attributes, description, created ) values( ?, ?, ?, ?, ?, ? )",
 			{Value{"alice"}, Value{"alice@example.com"}, Value{true}, Value{(uint)42}, Value{}, Value{now}}} );
 
-		let rows = _ds->Select( {"select name, target, is_group, attributes, description, created from access_identities where name=?", {Value{"alice"}}} );
+		let rows = _ds->Select( {"select name, slug, is_group, attributes, description, created from access_identities where name=?", {Value{"alice"}}} );
 		ASSERT_EQ( rows.size(), 1u );
 		let& r = rows[0];
 		EXPECT_EQ( r.GetString(0), "alice" );
@@ -106,15 +106,15 @@ namespace Jde::DB::Sqlite::Tests{
 	}
 
 	TEST_P( OpTests, IdentityAndReturning ){
-		let id1 = _ds->ExecuteScalerSync( {"insert into access_identities( name, target ) values( ?, ? ) returning identity_id", {Value{"bob"}, Value{"bob@example.com"}}}, EValue::UInt64 ).get_number<uint>();
-		let id2 = _ds->ExecuteScalerSync( {"insert into access_identities( name, target ) values( ?, ? ) returning identity_id", {Value{"carol"}, Value{"carol@example.com"}}}, EValue::UInt64 ).get_number<uint>();
+		let id1 = _ds->ExecuteScalerSync( {"insert into access_identities( name, slug ) values( ?, ? ) returning identity_id", {Value{"bob"}, Value{"bob@example.com"}}}, EValue::UInt64 ).get_number<uint>();
+		let id2 = _ds->ExecuteScalerSync( {"insert into access_identities( name, slug ) values( ?, ? ) returning identity_id", {Value{"carol"}, Value{"carol@example.com"}}}, EValue::UInt64 ).get_number<uint>();
 		EXPECT_EQ( id2, id1+1 ); //rowid alias auto-assigns - identity_id omitted from the insert.
 		let last = _ds->ExecuteScalerSync( {"select last_insert_rowid()"}, EValue::UInt64 ).get_number<uint>();
 		EXPECT_EQ( last, id2 );
 	}
 
 	TEST_P( OpTests, DefaultNowApplied ){
-		_ds->ExecuteSync( {"insert into access_identities( name, target ) values( ?, ? )", {Value{"dave"}, Value{"dave@example.com"}}} );
+		_ds->ExecuteSync( {"insert into access_identities( name, slug ) values( ?, ? )", {Value{"dave"}, Value{"dave@example.com"}}} );
 		let rows = _ds->Select( {"select created from access_identities where name=?", {Value{"dave"}}} );
 		ASSERT_EQ( rows.size(), 1u );
 		let created = rows[0].Get<DBTimePoint>( 0 ); //default (unixepoch()) - SqliteSyntax::NowDefault.
@@ -142,10 +142,10 @@ namespace Jde::DB::Sqlite::Tests{
 		//InsertClause built from a proc name dispatches to a twin, so Execute returns ExecuteProc's rows-affected and
 		//never reaches its last_insert_rowid line - the twin's out row is the only source of the new pk.  Pre-fix both
 		//calls returned 1 (sqlite3_changes) and every caller silently shared one pk.
-		//params: [0]=name, [1]=provider_id, [2]=target, [3]=attributes, [4]=description, [5]=is_group, [6]=email.
-		let insert = []( string name, string target ){
+		//params: [0]=name, [1]=provider_id, [2]=slug, [3]=attributes, [4]=description, [5]=is_group, [6]=email.
+		let insert = []( string name, string slug ){
 			return DB::InsertClause{ "access_identity_insert",
-				vector<Value>{Value{move(name)}, Value{}, Value{move(target)}, Value{}, Value{}, Value{false}, Value{}} };
+				vector<Value>{Value{move(name)}, Value{}, Value{move(slug)}, Value{}, Value{}, Value{false}, Value{}} };
 		};
 		let id1 = _ds->InsertSeqSync<uint>( insert("erin", "erin@example.com") );
 		let id2 = _ds->InsertSeqSync<uint>( insert("frank", "frank@example.com") );
@@ -213,17 +213,17 @@ namespace Jde::DB::Sqlite::Tests{
 	TEST_P( OpTests, ConstraintErrorsMapped ){
 		//Constraint violations used to surface as a bare Exception whose code was a crc of "step failed: {} - {}" - the
 		//sqlite result code was dropped. They now carry the extended code and EDbError, so callers branch without knowing sqlite.
-		_ds->ExecuteSync( {"insert into access_identities( name, target ) values( ?, ? )", {Value{"mapped1"}, Value{"mapped@example.com"}}} );
+		_ds->ExecuteSync( {"insert into access_identities( name, slug ) values( ?, ? )", {Value{"mapped1"}, Value{"mapped@example.com"}}} );
 		try{
-			_ds->ExecuteSync( {"insert into access_identities( name, target ) values( ?, ? )", {Value{"mapped2"}, Value{"mapped@example.com"}}} ); //access_identities_nk1 is unique.
-			FAIL() << "duplicate target should have thrown.";
+			_ds->ExecuteSync( {"insert into access_identities( name, slug ) values( ?, ? )", {Value{"mapped2"}, Value{"mapped@example.com"}}} ); //access_identities_nk1 is unique.
+			FAIL() << "duplicate slug should have thrown.";
 		}
 		catch( const DBException& e ){
 			EXPECT_EQ( ToString(e.Error), "duplicate" );
 			EXPECT_EQ( e.Code(), 2067u ); //SQLITE_CONSTRAINT_UNIQUE - the extended code, not the bare SQLITE_CONSTRAINT(19).
 		}
 		try{ //fks are enforced (pragma foreign_keys=on) and no provider row is seeded.
-			_ds->ExecuteSync( {"insert into access_identities( name, target, provider_id ) values( ?, ?, ? )", {Value{"mapped3"}, Value{"mappedFk@example.com"}, Value{(uint)999}}} );
+			_ds->ExecuteSync( {"insert into access_identities( name, slug, provider_id ) values( ?, ?, ? )", {Value{"mapped3"}, Value{"mappedFk@example.com"}, Value{(uint)999}}} );
 			FAIL() << "unknown provider_id should have thrown.";
 		}
 		catch( const DBException& e ){

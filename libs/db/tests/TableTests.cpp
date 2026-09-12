@@ -11,12 +11,12 @@ namespace Jde::DB::Tests{
 
 	TEST( TableTests, FindOwnColumnStopsAtThisTable ){
 		auto identities = ms<Table>( "identities", parse(R"({"columns":{"identityId":{"sk":0,"type":"UInt"},"name":{},"deleted":{"nullable":true}}})") );
-		Table users{ "users", parse(R"({"columns":{"identityId":{"sk":0,"type":"UInt"},"target":{}},"extends":"identities"})") };
+		Table users{ "users", parse(R"({"columns":{"identityId":{"sk":0,"type":"UInt"},"slug":{}},"extends":"identities"})") };
 		ASSERT_TRUE( users.Extends );
 		EXPECT_EQ( users.Extends->Name, "identities" ); //the ctor's placeholder, resolved by Initialize.
 		users.Extends = identities;
 
-		EXPECT_EQ( users.FindOwnColumn("target"), users.Columns[1] );
+		EXPECT_EQ( users.FindOwnColumn("slug"), users.Columns[1] );
 		EXPECT_FALSE( users.FindOwnColumn("name") );                   //identities' column: never through Extends.
 		EXPECT_EQ( users.FindColumn("name"), identities->Columns[1] ); //FindColumn chains.
 		EXPECT_FALSE( users.FindColumn("nothing") );
@@ -25,7 +25,7 @@ namespace Jde::DB::Tests{
 	}
 
 	TEST( TableTests, IdNamesTheLoneSurrogateKey ){
-		Table users{ "users", parse(R"({"columns":{"identityId":{"sk":0,"type":"UInt"},"target":{}}})") };
+		Table users{ "users", parse(R"({"columns":{"identityId":{"sk":0,"type":"UInt"},"slug":{}}})") };
 		ASSERT_EQ( users.SurrogateKeys.size(), 1u );
 		EXPECT_EQ( users.FindOwnColumn("id"), users.SurrogateKeys[0] ); //no column is called "id" - the alias resolves to the sk.
 		EXPECT_EQ( users.FindColumn("id"), users.SurrogateKeys[0] );

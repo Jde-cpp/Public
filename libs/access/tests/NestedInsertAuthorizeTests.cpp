@@ -22,15 +22,15 @@ namespace Jde::Access::Tests{
 			restore( "roles", _roles );
 		}
 		//Puts the resource in the wanted state and reports what it was, so TearDown can put it back:  the suite shares one db.
-		Ω state( str target, bool enforced )ε->bool{
-			let resource = SelectResource( target, GetRoot(), true );
+		Ω state( str slug, bool enforced )ε->bool{
+			let resource = SelectResource( slug, GetRoot(), true );
 			let wasDeleted = !resource.at( "deleted" ).is_null();
 			if( wasDeleted==enforced )//a deleted resource is not enforced.
 				wasDeleted ? Restore( "resources", GetId(resource), GetRoot() ) : Delete( "resources", GetId(resource), GetRoot() );
 			return wasDeleted;
 		}
-		Ω restore( str target, bool wasDeleted )ε->void{
-			let resource = SelectResource( target, GetRoot(), true );
+		Ω restore( str slug, bool wasDeleted )ε->void{
+			let resource = SelectResource( slug, GetRoot(), true );
 			if( !resource.at("deleted").is_null() != wasDeleted )
 				wasDeleted ? Delete( "resources", GetId(resource), GetRoot() ) : Restore( "resources", GetId(resource), GetRoot() );
 		}
@@ -42,7 +42,7 @@ namespace Jde::Access::Tests{
 	//the finding's shape:  a group the intruder may create, carrying a role it may not.
 	TEST_F( NestedInsertAuthorizeTests, NestedInsertNeedsCreateOnTheNestedTable ){
 		try{
-			QL().QuerySync<jvalue>( R"(mutation createGroup( name:"review11-a", target:"review11-a", role:{ name:"evil", target:"evil" } ))", {}, _intruder );
+			QL().QuerySync<jvalue>( R"(mutation createGroup( name:"review11-a", slug:"review11-a", role:{ name:"evil", slug:"evil" } ))", {}, _intruder );
 			ADD_FAILURE() << "the nested role was inserted without Create on roles";
 		}
 		catch( const Exception& e ){
@@ -53,7 +53,7 @@ namespace Jde::Access::Tests{
 
 	//the control:  the same mutation without the nested object still goes through, so the refusal above is the nested table's.
 	TEST_F( NestedInsertAuthorizeTests, PlainInsertIsUnaffected ){
-		EXPECT_NO_THROW( QL().QuerySync<jvalue>(R"(mutation createGroup( name:"review11-b", target:"review11-b" ))", {}, _intruder) );
+		EXPECT_NO_THROW( QL().QuerySync<jvalue>(R"(mutation createGroup( name:"review11-b", slug:"review11-b" ))", {}, _intruder) );
 		let group = Get( "group", "review11-b", GetRoot(), "id", true );
 		ASSERT_FALSE( group.empty() );
 		Purge( "groups", GetId(group), GetRoot() );

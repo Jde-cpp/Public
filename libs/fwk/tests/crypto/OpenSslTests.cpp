@@ -83,7 +83,7 @@ namespace Jde::Crypto{
 		let clear = Settings::FindBool( "/cryptoTests/clear" ).value_or( true );
 		INFO( "clear={}", clear );
 		INFO( "HeaderPayload={}", HeaderPayload );
-		let settings = SslSettings( PublicKeyFile, PrivateKeyFile, CertificateFile, "openSslTests" );//the CN is the identity target - never "localhost".
+		let settings = SslSettings( PublicKeyFile, PrivateKeyFile, CertificateFile, "openSslTests" );//the CN is the identity slug - never "localhost".
 		//key and certificate are one unit.  This used to be two independent exists() checks - keys re-created when
 		//either key was missing, the certificate kept whenever it existed - so a surviving cert.pem could stand against
 		//a freshly minted key pair: a certificate advertising a public key the private key cannot sign for, which is
@@ -202,7 +202,7 @@ namespace Jde::Crypto{
 		EXPECT_THROW( settings.PublicKey.Value(SRCE_CUR), IO::IOException );
 	}
 
-	//the CN is the enrollment identity (access_identities.target, a unique natural key) so it must stay per-host, but
+	//the CN is the enrollment identity (access_identities.slug, a unique natural key) so it must stay per-host, but
 	//it is also the file stem - a hostname change would move the key pair, mint a new one and strand the old identity.
 	TEST_F( OpenSslTests, FileStemDecouplesPathsFromCommonName ){
 		let sslDir = Process::ProgramDataFolder()/Process::CompanyRootDir()/Process::ProductName()/"ssl";
@@ -255,7 +255,7 @@ namespace Jde::Crypto{
 		EXPECT_EQ( overridden.Certificate.SubjectAltName, "URI:urn:x" );
 	}
 
-	//certInstance is the OPC Target, settable through the createServerConnection mutation, and the CN is the stem of
+	//certInstance is the OPC Slug, settable through the createServerConnection mutation, and the CN is the stem of
 	//all three files - neither may escape the ssl tree, or CreateDirectories/IssueCertificate write a PEM anywhere the
 	//service account can reach.
 	TEST_F( OpenSslTests, PathComponentsCannotEscapeTheSslTree ){
@@ -272,7 +272,7 @@ namespace Jde::Crypto{
 		EXPECT_EQ( evilCn.Certificate.Path.parent_path(), sslDir/"certs" );
 		EXPECT_EQ( evilCn.PrivateKey.Path.parent_path(), sslDir/"private" );
 		EXPECT_EQ( evilCn.PublicKey.Path.parent_path(), sslDir/"public" );
-		EXPECT_EQ( evilCn.Certificate.CommonName, "../../../../etc/cron.d/y" );//the CN itself stays intact - it is the X.509 subject and users.target.
+		EXPECT_EQ( evilCn.Certificate.CommonName, "../../../../etc/cron.d/y" );//the CN itself stays intact - it is the X.509 subject and users.slug.
 	}
 	//key+cert are a unit: losing the key must re-issue the certificate, never leave the old one standing against a new
 	//key.  A surviving cert would advertise a public key the new private key cannot sign for - and since access_users

@@ -36,7 +36,7 @@ namespace Jde::Opc::Gateway{
 		Ω Find( str id, const Gateway::Credential& cred )ι->sp<UAClient>;
 		Ω StatusCounts()ι->tuple<uint,uint>;//{connected clients, monitored items} for the status query.
 		Ω ConnectionCounts()ι->flat_map<ServerCnnctnNK,uint32>;
-		//The reason the last connect attempt failed, per target - cleared when one succeeds.  A target with no live client and no
+		//The reason the last connect attempt failed, per slug - cleared when one succeeds.  A slug with no live client and no
 		//entry here was never attempted (or was drained when idle), which is what separates `Idle` from `Error` in serverConnections{connectionStatus}.
 		Ω ConnectErrors()ι->flat_map<ServerCnnctnNK,string>;
 		Ω Find( UA_Client* ua, SRCE )ε->sp<UAClient>;
@@ -71,9 +71,9 @@ namespace Jde::Opc::Gateway{
 		α AddSessionAwait( VoidAwait::Handle h )ι->void;
 		α TriggerSessionAwaitables()ι->void;
 
-		Ω EnsureCertificate( const ServerCnnctnNK& target, sv certificateUri, SRCE )ε->void;//no-op if the cert exists. Callable before any client - the Jde OpcServer rescans trustedCertDirs on a failed verify (UATrust), so pre-start creation only matters for third-party servers that snapshot their trust list.
-		Ω CryptoSettings( const ServerCnnctnNK& target, sv certificateUri={} )ι->Crypto::CryptoSettings; //for soak
-		α Target()Ι->const ServerCnnctnNK&{ return _opcServer.Target; }
+		Ω EnsureCertificate( const ServerCnnctnNK& slug, sv certificateUri, SRCE )ε->void;//no-op if the cert exists. Callable before any client - the Jde OpcServer rescans trustedCertDirs on a failed verify (UATrust), so pre-start creation only matters for third-party servers that snapshot their trust list.
+		Ω CryptoSettings( const ServerCnnctnNK& slug, sv certificateUri={} )ι->Crypto::CryptoSettings; //for soak
+		α Slug()Ι->const ServerCnnctnNK&{ return _opcServer.Slug; }
 		α Name()Ι->str{ return _opcServer.Name; }
 		α Index()ι->NodeIndex&{ return _nodeIndex; }//node names for `search`, crawled on first use;  dies with the client.
 		α EnumTypes()ι->EnumTypeCache&{ return _enumTypes; }//enumeration definitions for `__type(opc,ns,i)`, read on first use;  dies with the client.
@@ -88,8 +88,8 @@ namespace Jde::Opc::Gateway{
 		bool Connected{};
 	private:
 		Ω StateCallback( UA_Client *ua, UA_SecureChannelState channelState, UA_SessionState sessionState, StatusCode connectStatus )ι->void;
-		Ω SetConnectError( const ServerCnnctnNK& target, string message )ι->void;
-		Ω ClearConnectError( const ServerCnnctnNK& target )ι->void;
+		Ω SetConnectError( const ServerCnnctnNK& slug, string message )ι->void;
+		Ω ClearConnectError( const ServerCnnctnNK& slug )ι->void;
 		Ω ServiceNotificationCallback( UA_Client* ua, UA_ApplicationNotificationType type, const UA_KeyValueMap payload )ι->void;
 		α Configuration()ε->UA_ClientConfig*;
 		α Create()ε->UA_Client*;
@@ -98,7 +98,7 @@ namespace Jde::Opc::Gateway{
 		α LogClientEndpoints()ι->void;
 		α ApplicationUri()Ι->string;//the endpoint filter open62541 matches against the server's ApplicationUri - not clientDescription's.
 
-		α CryptoSettings()Ι->Crypto::CryptoSettings{ return CryptoSettings(Target(), _opcServer.CertificateUri); }
+		α CryptoSettings()Ι->Crypto::CryptoSettings{ return CryptoSettings(Slug(), _opcServer.CertificateUri); }
 
 		ServerCnnctn _opcServer;
 
@@ -126,12 +126,12 @@ namespace Jde::Opc::Gateway{
 #define let const auto
 	Ŧ UAClient::Retry( function<void(sp<UAClient>&&, T)> f, UAException&& e, sp<UAClient> client, T h )ι->ConnectAwait::Task{
 		//TODO limit retry attempts.
-		let target = client->Target();
+		let slug = client->Slug();
 		let credential = client->Credential;
 		RemoveClient( move(client) );
 		if( e.Code()==UA_STATUSCODE_BADCONNECTIONCLOSED || e.Code()==UA_STATUSCODE_BADSERVERNOTCONNECTED ){
 			try{
-				client = co_await GetClient( move(target), move(credential) );
+				client = co_await GetClient( move(slug), move(credential) );
 				f( move(client), h );
 			}
 			catch( runtime_error& e ){

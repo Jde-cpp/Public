@@ -11,7 +11,7 @@ import { RouteItem, ProfileStore, RouteStore } from 'jde-spa';
 import { FieldFilter, View, ViewFieldSettings, ViewFilterSettings, ViewSettings } from '../model/ql/view';
 import { Sort } from '@angular/material/sort';
 
-//canNavigate: a collection with no ':target' detail route must not offer the row click-through
+//canNavigate: a collection with no ':slug' detail route must not offer the row click-through
 //viewName: the toggle label of the default view ("default" when unset);  filters: the default view's, same vocabulary as a
 //ViewSettings filter (resources opens on the table rows, criteria null);  views: further system views, see ViewSettings
 //empty: what the page says when the query returns no rows - the default names the collection and, where Add is offered, points at it
@@ -26,13 +26,13 @@ export class ListRoute extends RouteItem{
 		this.path = collection.path;
 		this.collectionName = collection.data?.collectionName ?? this.path;
 		//per-field defaults: routes pass partial settings (e.g. groups/roles set only excludedColumns) and columns must never be undefined.
-		this.tableSettings = { excludedColumns: [], columns: ["name", "created", "updated", "deleted", "target"], sort: [{active:"name", direction:"asc"}], ...collection.data?.tableSettings };
+		this.tableSettings = { excludedColumns: [], columns: ["name", "created", "updated", "deleted", "slug"], sort: [{active:"name", direction:"asc"}], ...collection.data?.tableSettings };
 		this.summary = collection?.data?.summary;
 		this.title = collection.title ?? StringUtils.capitalize( this.path );
 	}
-	static find( target:string, collections:CollectionItem[] ):ListRoute{
-		const collection = collections.find( (c:any)=>((typeof c =="string") && c==target) || c["path"]==target );
-		return new ListRoute( collection ?? target );//unlisted collection - the defaults (QLSelector embeds collections its host's route never declares)
+	static find( path:string, collections:CollectionItem[] ):ListRoute{
+		const collection = collections.find( (c:any)=>((typeof c =="string") && c==path) || c["path"]==path );
+		return new ListRoute( collection ?? path );//unlisted collection - the defaults (QLSelector embeds collections its host's route never declares)
 	}
 	tableSettings:TableSettings;
 	collectionName: string;
@@ -43,7 +43,7 @@ export type QLListData = {
 	fixedFilters?: FieldFilter[];//applied on top of whichever view is current and never shown or saved - QLSelector's excludedIds
 	pageSettings:PageSettings;
 	profile: PageProfile;
-	results: any; //{users:ITargetRow[]};
+	results: any; //{users:ISlugRow[]};
 	routing:ListRoute;
 	schema: TableSchema;
 	error?: unknown;//the rows query was refused (403) or failed:  results is then empty and the page says why instead of showing a bare grid
@@ -153,7 +153,7 @@ export class QLListResolver implements Resolve<QLListData> {
 		const q = view.query( data.profile.showDeleted, 0 );
 		data.results = await ql.query<any>( q.text, q.vars, (m)=>console.log(m) );
 		if( routeStore ){
-			const children = data.results[data.schema.collectionName].map( (r:any)=>({title:r.name, path:`${r.target}`}) );//bare targets, like GatewayResolver — DetailResolver renders them under the absolute list url
+			const children = data.results[data.schema.collectionName].map( (r:any)=>({title:r.name, path:`${r.slug}`}) );//bare targets, like GatewayResolver — DetailResolver renders them under the absolute list url
 			routeStore.setChildren( data.routing.path, children );
 		}
 		return {

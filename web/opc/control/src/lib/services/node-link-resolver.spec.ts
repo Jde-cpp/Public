@@ -9,15 +9,15 @@ import { OpcNodeLinkResolver } from './node-link-resolver';
 //is stubbed:  the pump exists, node 9 answers null (outside the Objects tree), and 'down' cannot even be described.
 describe( 'OpcNodeLinkResolver', ()=>{
 	const queries:string[] = [];
-	const gateway = ( target:string, connections:string[] )=>({
-		target,
-		queryArray: async ()=>connections.map( c=>({target: c}) ),
-		querySingle: async ( ql:string, vars:any )=>{ queries.push( `${target}/${vars.opc}/${new NodeId(vars.id).uaString()}` ); return vars.id.i==5005 ? { name: "Pump 1", path: "pumps/pump1" } : { name: "Type", path: null }; }
+	const gateway = ( slug:string, connections:string[] )=>({
+		slug,
+		queryArray: async ()=>connections.map( c=>({slug: c}) ),
+		querySingle: async ( ql:string, vars:any )=>{ queries.push( `${slug}/${vars.opc}/${new NodeId(vars.id).uaString()}` ); return vars.id.i==5005 ? { name: "Pump 1", path: "pumps/pump1" } : { name: "Type", path: null }; }
 	});
 	const gw1 = gateway( "gw1", ["down", "other"] ), gw2 = gateway( "gw2", ["local"] );
 	const described:string[] = [];
 	const store = { getConnection: async ( g:any, cnnctn:string )=>{
-		described.push( `${g.target}/${cnnctn}` );
+		described.push( `${g.slug}/${cnnctn}` );
 		if( cnnctn=="down" ) throw new Error( "unreachable" );
 		return { accessResource: cnnctn=="local" ? "debug" : "other" };
 	} };

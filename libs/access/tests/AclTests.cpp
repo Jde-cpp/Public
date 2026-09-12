@@ -26,7 +26,7 @@ namespace Jde::Access::Tests{
 	protected:
 		Ω SetUpTestCase()->void;
 
-		α TestEnabeledPermissions( str resourceName, str target, UserPK executer )ε;
+		α TestEnabeledPermissions( str resourceName, str slug, UserPK executer )ε;
 		static flat_map<string,jobject> _users;
 		static flat_map<string,UserPK> _usersPKs;
 		static ResourcePK _resourcePK;
@@ -35,14 +35,14 @@ namespace Jde::Access::Tests{
 	flat_map<string,UserPK> AclTests::_usersPKs;
 	ResourcePK AclTests::_resourcePK;
 
-	α SelectAcl( IdentityPK identityPK, string resourceTarget )ε->jobject{
-		jobject vars{ {"identityId", identityPK.Underlying()}, {"resource", resourceTarget} };
-		let q = "acl( identityId:$identityId ){ identityId permissionRight{ id allowed denied resource(target:$resource){deleted}} }";
+	α SelectAcl( IdentityPK identityPK, string resourceSlug )ε->jobject{
+		jobject vars{ {"identityId", identityPK.Underlying()}, {"resource", resourceSlug} };
+		let q = "acl( identityId:$identityId ){ identityId permissionRight{ id allowed denied resource(slug:$resource){deleted}} }";
 		let acl = BlockTAwait<jvalue>( Server::AclQLSelectAwait{ QL::ParseQuery(q, vars, Schemas()), GetRoot()} ).as_array();
 		return acl.empty() ? jobject{} : Json::AsObject(acl[0], "/permissionRight");
 	}
 	α SelectAcl( IdentityPK identityPK, RolePK rolePK )ε->jobject{
-		let ql = Ƒ( "acl(identityId:{})<identityId role(id:{})<id target deleted>>", identityPK.Underlying(), rolePK );
+		let ql = Ƒ( "acl(identityId:{})<identityId role(id:{})<id slug deleted>>", identityPK.Underlying(), rolePK );
 		let acl = QL().QuerySync<jarray>( Str::Replace(Str::Replace(ql,"<","{"), ">", "}"), {}, GetRoot() );
 		return acl.empty() ? jobject{} : Json::AsObject(acl[0], "/role");
 	}
@@ -91,8 +91,8 @@ namespace Jde::Access::Tests{
 
 	α AclTests::SetUpTestCase()ε->void{
 		array<string,10> users{ "intruder", "creator", "reader", "updater", "deleter", "purger", "admin", "subscriber", "executor", "root" };
-		let resourceTarget = "groups";
-		let resource = SelectResource( resourceTarget, GetRoot(), true );
+		let resourceSlug = "groups";
+		let resource = SelectResource( resourceSlug, GetRoot(), true );
 		_resourcePK = GetId( resource );
 		if( resource.at("deleted").is_null() )
 			Delete( "resources", GetId(resource), GetRoot() );
@@ -102,7 +102,7 @@ namespace Jde::Access::Tests{
 			let& juser = Tests::Get( "user", user, GetRoot() );
 			UserPK userPK{ GetId(juser) };
 			_usersPKs.emplace( user, userPK );
-			let acl = GetAcl( userPK, resourceTarget, allowed, ERights::None );
+			let acl = GetAcl( userPK, resourceSlug, allowed, ERights::None );
 			allowed = allowed==ERights::None
 				? ERights::Create
 				: allowed==ERights::Execute ? ERights::All : (ERights)(underlying(allowed)<<1);
@@ -122,8 +122,8 @@ namespace Jde::Access::Tests{
 		TestPurge( resourceName, groupId, intruderPK );
 	}
 
-	α AclTests::TestEnabeledPermissions( str resourceName, str target, UserPK executer )ε{
-		let groupId = TestUnauthCrud( resourceName, target, executer );
+	α AclTests::TestEnabeledPermissions( str resourceName, str slug, UserPK executer )ε{
+		let groupId = TestUnauthCrud( resourceName, slug, executer );
 		TestUnauthAddRemove( resourceName, groupId, {_usersPKs["intruder"].Value, _usersPKs["creator"].Value, _usersPKs["reader"].Value}, executer );
 		TestUnauthPurge( resourceName, groupId, executer );
 		EXPECT_THROW( CreateAcl(_usersPKs["intruder"], ERights::All, ERights::None, resourceName, executer), Exception );
@@ -191,13 +191,13 @@ namespace Jde::Access::Tests{
 		CreateAcl( userGroupPK, userRolePK, GetRoot() );
 		CreateAcl( adminGroupPK, adminRolePK, GetRoot() );
 
-		string testGroupTarget{ "hierarchyGroupTest" };
-		auto testGroup = SelectGroup( testGroupTarget, hierarchyUser, true );
+		string testGroupSlug{ "hierarchyGroupTest" };
+		auto testGroup = SelectGroup( testGroupSlug, hierarchyUser, true );
 		if( !testGroup.empty() )
 			PurgeGroup( {GetId(testGroup)}, adminPK );
-		EXPECT_THROW( Create(groupResource, testGroupTarget, hierarchyUser), Exception );
-		Create( groupResource, testGroupTarget, adminPK );
-		testGroup = GetGroup( testGroupTarget, hierarchyUser );
+		EXPECT_THROW( Create(groupResource, testGroupSlug, hierarchyUser), Exception );
+		Create( groupResource, testGroupSlug, adminPK );
+		testGroup = GetGroup( testGroupSlug, hierarchyUser );
 		GroupPK testGroupPK{ GetId(testGroup) };
 		TestUnauthUpdateName( groupResource, testGroupPK.Value, hierarchyUser, "newName" );
 		TestUnauthDeleteRestore( groupResource, testGroupPK.Value, hierarchyUser );
@@ -206,7 +206,7 @@ namespace Jde::Access::Tests{
 		TestUnauthPurge( groupResource, testGroupPK.Value, hierarchyUser );
 		PurgeGroup( testGroupPK, adminPK );
 
-		let testGroupPK2 = TestCrud( groupResource, testGroupTarget, adminPK );
+		let testGroupPK2 = TestCrud( groupResource, testGroupSlug, adminPK );
 		TestAdd( groupResource, testGroupPK2, members, adminPK );
 		TestRemove( groupResource, testGroupPK2, {hierarchyUser.Value, adminPK.Value}, adminPK );
 		TestPurge( groupResource, testGroupPK2, adminPK );
@@ -361,11 +361,11 @@ namespace Jde::Access::Tests{
 	TEST_F( AclTests, RegrantOnCriteriaResourceUpserts ){
 		let root = GetRoot();
 		const UserPK system{ UserPK::System }; //grants on a resource root holds no rights over - System early-passes TestAdmin.
-		constexpr sv schema{ "access" }, target{ "aclUpsert" }, criteria{ "nodeId:{ eq: 12 }" }; //in `access` (the resources subscription used to be filtered to it - it takes every schema now); criteria-scoped, so CheckDefaults' criteria:null count is untouched.
-		let select = Ƒ( R"(resources( schemaName:"{}", target:"{}", criteria:"{}" ){{ id }})", schema, target, criteria );
+		constexpr sv schema{ "access" }, slug{ "aclUpsert" }, criteria{ "nodeId:{ eq: 12 }" }; //in `access` (the resources subscription used to be filtered to it - it takes every schema now); criteria-scoped, so CheckDefaults' criteria:null count is untouched.
+		let select = Ƒ( R"(resources( schemaName:"{}", slug:"{}", criteria:"{}" ){{ id }})", schema, slug, criteria );
 		auto resources = QL().QuerySync<jarray>( select, {}, root );
 		if( resources.empty() ){
-			QL().QuerySync<jvalue>( Ƒ(R"(createResource( schemaName:"{}", name:"{}", target:"{}", criteria:"{}", allowed:255 ))", schema, target, target, criteria), {}, system );
+			QL().QuerySync<jvalue>( Ƒ(R"(createResource( schemaName:"{}", name:"{}", slug:"{}", criteria:"{}", allowed:255 ))", schema, slug, slug, criteria), {}, system );
 			resources = QL().QuerySync<jarray>( select, {}, root );
 		}
 		ASSERT_EQ( resources.size(), 1u );

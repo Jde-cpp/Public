@@ -64,7 +64,7 @@ export class NavBar implements OnInit {
   constructor() {
     this.defaultFavorites = this.router.config.filter( x=>
 			x.path!="login"
-			&& x.path!.indexOf(':target')==-1
+			&& x.path!.indexOf(':slug')==-1
 			&& !x.path!.includes('/')
 			&& ( !x.children || x.children.find( y=>!y.path!.length) )
 		).map( x=>({ name: x.title as string, route: '/'+x.path } ));
@@ -125,7 +125,7 @@ export class NavBar implements OnInit {
 	#segmentName( parentUrl:string, segment:string ):string|undefined{//RouteStore writers key inconsistently: "gateways/gw1" (UrlSegments join), '/apps', bare "users"
 		const last = parentUrl.split('/').pop() ?? '';
 		for( const key of [parentUrl, '/'+parentUrl, last] ){
-			const child = this.#routeStore.getChildren( key ).find( c=>c.path==segment || c.path?.endsWith('/'+segment) );//child paths are bare targets or parent-prefixed
+			const child = this.#routeStore.getChildren( key ).find( c=>c.path==segment || c.path?.endsWith('/'+segment) );//child paths are bare slugs or parent-prefixed
 			if( child?.title )
 				return child.title;
 		}

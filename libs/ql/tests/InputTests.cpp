@@ -83,14 +83,14 @@ namespace Jde::QL::Tests{
 		EXPECT_NO_THROW( in.CheckVariables() );
 	}
 	TEST( InputTests, CheckVariablesNamesTheVariableAndTheBindings ){
-		TestInput in{ R"({target: $targt})", jobject{{"target","root"}} };  //the write-up's own typo.
+		TestInput in{ R"({slug: $targt})", jobject{{"slug","root"}} };  //the write-up's own typo.
 		try{
 			in.CheckVariables();
 			ADD_FAILURE() << "the typo passed";
 		}
 		catch( const Exception& e ){
 			EXPECT_NE( string{e.what()}.find("targt"), string::npos ) << e.what();   //which one.
-			EXPECT_NE( string{e.what()}.find("target"), string::npos ) << e.what();  //and what was on offer.
+			EXPECT_NE( string{e.what()}.find("slug"), string::npos ) << e.what();  //and what was on offer.
 		}
 	}
 	//a literal null is a value, not an unbound variable - the distinction the whole finding rests on.
@@ -113,9 +113,9 @@ namespace Jde::QL::Tests{
 	TEST( InputTests, FindKey ){
 		EXPECT_TRUE( TestInput{"{id: 42}"}.FindKey()->IsPK() );
 		EXPECT_EQ( TestInput{"{id: 42}"}.GetKey().PK(), 42u );
-		EXPECT_FALSE( TestInput{R"({target: "bob"})"}.FindKey()->IsPK() );
-		EXPECT_EQ( TestInput{R"({target: "bob"})"}.GetKey().NK(), "bob" );
-		EXPECT_EQ( TestInput{R"({id: 42, target: "bob"})"}.GetKey().PK(), 42u ); //id wins.
+		EXPECT_FALSE( TestInput{R"({slug: "bob"})"}.FindKey()->IsPK() );
+		EXPECT_EQ( TestInput{R"({slug: "bob"})"}.GetKey().NK(), "bob" );
+		EXPECT_EQ( TestInput{R"({id: 42, slug: "bob"})"}.GetKey().PK(), 42u ); //id wins.
 		EXPECT_EQ( TestInput{R"({name: "bob"})"}.FindKey(), nullopt );
 		EXPECT_THROW( TestInput{R"({name: "bob"})"}.GetKey(), Exception );
 	}

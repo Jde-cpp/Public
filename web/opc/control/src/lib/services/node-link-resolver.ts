@@ -24,7 +24,7 @@ export class OpcNodeLinkResolver implements NodeLinkResolver{
 		const node = await placement.gateway.querySingle<{name?:string, path:string|null}>( `node( opc:$opc, id:$id ){ name path }`, {opc: placement.cnnctn, id: NodeId.fromUaString(criteria).toJson()} );
 		if( node?.path==null )
 			return undefined;
-		return { route: [ '/gateways', placement.gateway.target, placement.cnnctn, ...node.path.split('/') ], name: node.name || undefined, path: node.path };
+		return { route: [ '/gateways', placement.gateway.slug, placement.cnnctn, ...node.path.split('/') ], name: node.name || undefined, path: node.path };
 	}
 
 	#connection( accessResource:string ):Promise<Placement|undefined>{
@@ -37,13 +37,13 @@ export class OpcNodeLinkResolver implements NodeLinkResolver{
 	}
 	async #find( accessResource:string ):Promise<Placement|undefined>{
 		for( const gateway of await this.#gateways.gateways() ){
-			for( const c of await gateway.queryArray<{target:string}>(`serverConnections{ target }`) ){
+			for( const c of await gateway.queryArray<{slug:string}>(`serverConnections{ slug }`) ){
 				try{
-					if( (await this.#store.getConnection(gateway, c.target)).accessResource==accessResource )
-						return { gateway, cnnctn: c.target };
+					if( (await this.#store.getConnection(gateway, c.slug)).accessResource==accessResource )
+						return { gateway, cnnctn: c.slug };
 				}
 				catch( e ){
-					console.warn( `node link: '${c.target}' on '${gateway.target}' could not be described.`, e );//one unreachable server must not sink the others
+					console.warn( `node link: '${c.slug}' on '${gateway.slug}' could not be described.`, e );//one unreachable server must not sink the others
 				}
 			}
 		}

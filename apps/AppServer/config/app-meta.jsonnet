@@ -21,7 +21,7 @@ local common = import 'common-meta.libsonnet';
 			columns: {
 				programId: common.smallSequenced,
 				name: common.valuesColumns.name,
-				attributes: common.targetColumns.attributes
+				attributes: common.slugColumns.attributes
 			},
 			customInsertProc: true,
 			ops: ["None"]
@@ -56,8 +56,8 @@ local common = import 'common-meta.libsonnet';
 			columns: {
 				connectionId: common.pkSequenced,
 				instanceId: tables.instances.columns.instanceId+{ pkTable: "instances", i:1, sk:null },
-				created: common.targetColumns.created+{ i:2 },
-				deleted: common.targetColumns.deleted+{ i:3 },
+				created: common.slugColumns.created+{ i:2 },
+				deleted: common.slugColumns.deleted+{ i:3 },
 				pid: common.types.ulong+{ i:4 },
 			},
 			customInsertProc: true,

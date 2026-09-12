@@ -28,7 +28,7 @@ namespace Jde::Opc::Gateway{
 				}
 				else{
 					for( auto& client : UAClient::LiveClients() ){
-						if( client->Credential==SessionCredential(session->SessionId, session->UserPK, client->Target()).value_or(Credential{}) )
+						if( client->Credential==SessionCredential(session->SessionId, session->UserPK, client->Slug()).value_or(Credential{}) )
 							clients.push_back( move(client) );
 					}
 				}
@@ -46,7 +46,7 @@ namespace Jde::Opc::Gateway{
 				catch( runtime_error& e ){
 					if( opcPtr )
 						throw;
-					WARN( "[{}]search skipped '{}': {}", hex(client->Handle()), client->Target(), e.what() );//one dead connection must not sink the fan-out.
+					WARN( "[{}]search skipped '{}': {}", hex(client->Handle()), client->Slug(), e.what() );//one dead connection must not sink the fan-out.
 				}
 			}
 			if( clients.size()>1 ){
@@ -71,8 +71,8 @@ namespace Jde::Opc::Gateway{
 		jobject row;
 		if( auto connectionQL = _query.FindTable("connection"); connectionQL ){
 			jobject connection;
-			if( connectionQL->FindColumn("target") )
-				connection["target"] = client.Target();
+			if( connectionQL->FindColumn("slug") )
+				connection["slug"] = client.Slug();
 			if( connectionQL->FindColumn("name") )
 				connection["name"] = client.Name();
 			row["connection"] = move( connection );

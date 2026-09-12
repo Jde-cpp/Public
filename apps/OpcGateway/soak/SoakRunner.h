@@ -6,7 +6,7 @@ namespace Jde::Opc::Gateway::Tests{ struct GatewayClientSocket; }
 namespace Jde::Opc::Gateway::Soak{
 	//One gateway server-connection driven by the soak: the config row from /soak/servers plus per-leg runtime state.
 	struct ServerLeg{
-		string Target, Name, Description, CertificateUri, Url, User, Password;
+		string Slug, Name, Description, CertificateUri, Url, User, Password;
 		vector<NodeId> Nodes;
 		sp<Tests::GatewayClientSocket> Socket;//legs without a User share the main session's socket; a User leg gets its own logged-in socket.
 		SessionPK SessionId{};

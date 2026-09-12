@@ -43,12 +43,12 @@ namespace Jde::Access::Tests{
 
 	TEST( InsertHookTests, AnInsertAfterHookThatSuspendsStillGetsTheInsertedRow ){
 		let root = GetRoot();
-		const string target{ "review50-user" };
+		const string slug{ "review50-user" };
 		hook().Armed = true;
 		hook().Calls = 0;
 		uint32 id{};
 		try{
-			let y = QL().QuerySync<jobject>( "mutation createUser( name:\""+target+"\", target:\""+target+"\", providerId:1 ){ id }", {}, root );
+			let y = QL().QuerySync<jobject>( "mutation createUser( name:\""+slug+"\", slug:\""+slug+"\", providerId:1 ){ id }", {}, root );
 			id = GetId( y );
 			EXPECT_GT( id, 0u ) << serialize( y ); //the payload survived the suspension - it lives in InsertAfter's own frame now.
 		}
@@ -58,7 +58,7 @@ namespace Jde::Access::Tests{
 		}
 		hook().Armed = false;
 		EXPECT_EQ( hook().Calls, 1u ) << "the hook never ran, so nothing suspended and this proves nothing";
-		EXPECT_EQ( GetId(Select("user", id, root, "id target", true)), id );
+		EXPECT_EQ( GetId(Select("user", id, root, "id slug", true)), id );
 		PurgeUser( UserPK{id}, root );
 	}
 
@@ -66,9 +66,9 @@ namespace Jde::Access::Tests{
 	//which is the state every other test in this binary runs in.
 	TEST( InsertHookTests, TheSameInsertWithNoHookArmed ){
 		let root = GetRoot();
-		const string target{ "review50-plain" };
+		const string slug{ "review50-plain" };
 		hook().Calls = 0;
-		let y = QL().QuerySync<jobject>( "mutation createUser( name:\""+target+"\", target:\""+target+"\", providerId:1 ){ id }", {}, root );
+		let y = QL().QuerySync<jobject>( "mutation createUser( name:\""+slug+"\", slug:\""+slug+"\", providerId:1 ){ id }", {}, root );
 		EXPECT_GT( GetId(y), 0u );
 		EXPECT_EQ( hook().Calls, 0u );
 		PurgeUser( UserPK{GetId(y)}, root );
@@ -82,13 +82,13 @@ namespace Jde::Access::Tests{
 	//and there is nothing to forward.  Pinned as it behaves, so whoever gives InsertAwait a real id sees this turn green.
 	TEST( InsertHookTests, TheHookIsToldTheIdInsertAwaitHas ){
 		let root = GetRoot();
-		const string target{ "review51-user" };
+		const string slug{ "review51-user" };
 		hook().Armed = true;
 		hook().Calls = 0;
 		hook().Pk = 0;
 		uint32 id{};
 		try{
-			id = GetId( QL().QuerySync<jobject>("mutation createUser( name:\""+target+"\", target:\""+target+"\", providerId:1 ){ id }", {}, root) );
+			id = GetId( QL().QuerySync<jobject>("mutation createUser( name:\""+slug+"\", slug:\""+slug+"\", providerId:1 ){ id }", {}, root) );
 		}
 		catch( ... ){
 			hook().Armed = false;

@@ -1,7 +1,7 @@
 import { MutationType } from 'jde-framework';
 import { Permission, Rights } from './permission';
 
-const permission = ( id:number, allowed:Rights, denied:Rights )=>new Permission( {id, allowed, denied, resource:{id:9, target:"nodeIds"}} );
+const permission = ( id:number, allowed:Rights, denied:Rights )=>new Permission( {id, allowed, denied, resource:{id:9, slug:"nodeIds"}} );
 
 //The rule node-access's onToggle was aligned to in angular-review3 #2: Remove-vs-change is decided from the RESULTING
 //row, so clearing ONE side of a two-sided permission is an update, not a delete of the whole permissionRight.
@@ -31,19 +31,19 @@ describe( 'Permission.roleMutations', ()=>{
 	} );
 
 	it( 'adds a row the role did not have', ()=>{
-		const mutations = Permission.roleMutations( 5, [new Permission({allowed:Rights.Read, denied:Rights.None, resource:{id:9, target:"nodeIds"}})], [] );
+		const mutations = Permission.roleMutations( 5, [new Permission({allowed:Rights.Read, denied:Rights.None, resource:{id:9, slug:"nodeIds"}})], [] );
 		expect( mutations[0].type ).toBe( MutationType.Add );
 		expect( mutations[0].args.permissionRight ).toMatchObject( {allowed: Rights.Read, denied: Rights.None} );
 	} );
 
 	//the server's Authorize::GetSchema cannot resolve a bare "nodeIds" - it lives once per opc.<server> schema - so the PK travels.
 	it( 'names the new row\'s resource by PK', ()=>{
-		const mutations = Permission.roleMutations( 5, [new Permission({allowed:Rights.Read, denied:Rights.None, resource:{id:9, schemaName:"opc.default", target:"nodeIds"}})], [] );
+		const mutations = Permission.roleMutations( 5, [new Permission({allowed:Rights.Read, denied:Rights.None, resource:{id:9, schemaName:"opc.default", slug:"nodeIds"}})], [] );
 		expect( (mutations[0].args.permissionRight as any).resource ).toEqual( {id:9} );
 	} );
 
-	it( 'falls back to schemaName+target when the resource has no PK', ()=>{
-		const mutations = Permission.roleMutations( 5, [new Permission({allowed:Rights.Read, denied:Rights.None, resource:{schemaName:"opc.default", target:"nodeIds"}})], [] );
-		expect( (mutations[0].args.permissionRight as any).resource ).toEqual( {schemaName:"opc.default", target:"nodeIds"} );
+	it( 'falls back to schemaName+slug when the resource has no PK', ()=>{
+		const mutations = Permission.roleMutations( 5, [new Permission({allowed:Rights.Read, denied:Rights.None, resource:{schemaName:"opc.default", slug:"nodeIds"}})], [] );
+		expect( (mutations[0].args.permissionRight as any).resource ).toEqual( {schemaName:"opc.default", slug:"nodeIds"} );
 	} );
 } );

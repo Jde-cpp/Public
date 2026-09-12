@@ -48,7 +48,7 @@ namespace Jde::Opc::Gateway::Tests{
 	}
 
 	TEST_F( TokenTests, Authenticate ){
-		let opcId{ Connection->Target };
+		let opcId{ Connection->Slug };
 		atomic_flag a,b,c;
 		authenticateTest( *_jwt, opcId, a );
 		a.wait( false );
@@ -66,7 +66,7 @@ namespace Jde::Opc::Gateway::Tests{
 
 	TEST_F( TokenTests, Authenticate_Bad ){
 		atomic_flag flag;
-		authenticateTest( *_jwt, Connection->Target, flag, true );
+		authenticateTest( *_jwt, Connection->Slug, flag, true );
 		flag.wait( false );
 		EXPECT_TRUE( _exception );
 		EXPECT_TRUE( _exception && string{_exception->what()}.contains("BadIdentityTokenInvalid") );

@@ -1,6 +1,6 @@
 export * from './lib/model/guid';
 export * from './lib/model/ql/row';
-export * from './lib/model/ql/target-row';
+export * from './lib/model/ql/slug-row';
 export * from './lib/model/ql/mutation';
 export * from './lib/model/ql/view';
 export * from './lib/model/ql/schema/meta-object';

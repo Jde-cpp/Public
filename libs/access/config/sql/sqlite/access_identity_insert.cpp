@@ -4,11 +4,11 @@
 
 //Twin of the *generated* access_identity_insert proc - column order/defaults match TableDdl::InsertProcCreateStatement
 //for access_identities: insertable columns in `i` order, created=$now, the sequence column out last.
-//	params: [0]=_name, [1]=_provider_id, [2]=_target, [3]=_attributes, [4]=_description, [5]=_is_group, [6]=_email;
+//	params: [0]=_name, [1]=_provider_id, [2]=_slug, [3]=_attributes, [4]=_description, [5]=_is_group, [6]=_email;
 //	out _identity_id returned as the result row.
 namespace Jde::DB::Sqlite::AccessProcs{
-	α IdentityInsert( IProcs& procs, sqlite3& db, const Value& name, const Value& providerId, const Value& target, const Value& attributes, const Value& description, const Value& isGroup, const Value& email, SL sl )ε->uint{
-		procs.ExecuteStatement( db, "insert into access_identities( name, provider_id, target, attributes, created, description, is_group, email ) values( ?, ?, ?, ?, unixepoch(), ?, ?, ? )", {name, providerId, target, attributes, description, isGroup, email}, nullptr, sl );
+	α IdentityInsert( IProcs& procs, sqlite3& db, const Value& name, const Value& providerId, const Value& slug, const Value& attributes, const Value& description, const Value& isGroup, const Value& email, SL sl )ε->uint{
+		procs.ExecuteStatement( db, "insert into access_identities( name, provider_id, slug, attributes, created, description, is_group, email ) values( ?, ?, ?, ?, unixepoch(), ?, ?, ? )", {name, providerId, slug, attributes, description, isGroup, email}, nullptr, sl );
 		return procs.LastInsertRowId( db );
 	}
 

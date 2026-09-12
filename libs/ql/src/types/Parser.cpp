@@ -321,7 +321,7 @@ namespace Jde::QL{
 					table.Tables.push_back( LoadTable(token, vars, schemas, system || _systemTables.contains(token), sl) );
 				}else{
 					THROW_IF( token==",", "don't separate columns with: ',' '{}' @ '{}'.", _text, Index()-1 );
-					//#43: an argument list written where a column belongs was taken literally - `{ (schema:$schemas)id target }` came back
+					//#43: an argument list written where a column belongs was taken literally - `{ (schema:$schemas)id slug }` came back
 					//as the columns '(', 'schema:$schemas' and ')', which the select then asked the database for and addColumn refused with
 					//a misleading "column not found".  A legitimate `col(args)` never reaches here: the Peek()=="(" branch above takes it.
 					THROW_IF( token=="(" || token==")", "'{}' is an argument list where a column belongs in '{}' @ '{}' - arguments go on the table, before its '{{'.", token, _text, Index()-1 );

@@ -42,7 +42,7 @@ export function matchLiterals( routes:Routes, segments:string[] ):number{
 //"apps" and at the instance but none at "gateways", so the navbar fell back to the raw segment and showed it lowercase
 //beside "Applications".  Url segments are camelCase identifiers by convention (AppResolver derives them from the
 //program name - OpcGateway -> gateways, AppServer -> appServers), so a segment shaped like one is shown as words.
-//Anything else - an instance name ("OpcHub.debug"), a target with a dash, a number - is what the user typed and stays.
+//Anything else - an instance name ("OpcHub.debug"), a slug with a dash, a number - is what the user typed and stays.
 export function segmentDisplay( segment:string ):string{
 	const decoded = decodeURIComponent( segment );
 	if( !/^[a-z][a-z0-9]*(?:[A-Z][a-z0-9]*)*$/.test(decoded) )

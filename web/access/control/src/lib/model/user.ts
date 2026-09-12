@@ -1,4 +1,4 @@
-import { cloneClassArray, Mutation, TargetRow } from "jde-framework";
+import { cloneClassArray, Mutation, SlugRow } from "jde-framework";
 import { Group } from "./group";
 import { Role } from "./role";
 import { Permission } from "./permission";
@@ -6,7 +6,7 @@ import { Acl } from "./acl";
 
 export type UserPK = number;
 
-export class User extends TargetRow<User>{
+export class User extends SlugRow<User>{
 	constructor( obj:any ){
 		super("User", obj);
 		let roles = obj.roles ?? obj.childRoles;

@@ -2,15 +2,15 @@ import { Row } from './row';
 import { Mutation, MutationType } from './mutation';
 import { verify, clone } from '../../utils/utils';
 
-export type Target = string;
-export abstract class ITargetRow extends Row{
-	constructor(type:string,obj:TargetRowProps | number){
+export type Slug = string;
+export abstract class ISlugRow extends Row{
+	constructor(type:string,obj:SlugRowProps | number){
 		super( type );
 		if( typeof obj=="number" )
 			this.id = obj;
 		else{
 			this.id = obj.id;
-			this.target = obj.target;
+			this.slug = obj.slug;
 			this.name = obj.name;
 			this.created = obj.created ? new Date(obj.created) : undefined;
 			this.updated = obj.updated ? new Date(obj.updated) : undefined;
@@ -19,30 +19,30 @@ export abstract class ITargetRow extends Row{
 		}
 	}
 
-	static idArray( from:ITargetRow[] ):number[]{
+	static idArray( from:ISlugRow[] ):number[]{
 		const clone:number[] = [];
 		for( let item of from ?? [] )
 			clone.push( item.id );
 		return clone;
 	}
 
-	override equals( row:Partial<ITargetRow> ):boolean{
-		return this.target==row.target && this.name==row.name && this.description==row.description;
+	override equals( row:Partial<ISlugRow> ):boolean{
+		return this.slug==row.slug && this.name==row.name && this.description==row.description;
 	}
 
-	protected addRemoveMutations<T extends TargetRow<T>>( parentType:string, originalChildren:TargetRow<T>[], modifiedChildren:TargetRow<T>[], input:any ):Mutation[]{
+	protected addRemoveMutations<T extends SlugRow<T>>( parentType:string, originalChildren:SlugRow<T>[], modifiedChildren:SlugRow<T>[], input:any ):Mutation[]{
 		let y = new Array<Mutation>();
-		let getMutations = ( changes:TargetRow<T>[], type:MutationType )=>{
+		let getMutations = ( changes:SlugRow<T>[], type:MutationType )=>{
 			for( let change of changes )
 				y.push( new Mutation(parentType, change.id, input, type) );
 		}
-		getMutations( TargetRow.notSubset(originalChildren, modifiedChildren), MutationType.Remove );
-		getMutations( TargetRow.notSubset(modifiedChildren, originalChildren), MutationType.Add );
+		getMutations( SlugRow.notSubset(originalChildren, modifiedChildren), MutationType.Remove );
+		getMutations( SlugRow.notSubset(modifiedChildren, originalChildren), MutationType.Add );
 
 		return y;
 	}
 
-	protected childMutations( parent:ITargetRow, originalChildren:ITargetRow[]|undefined, modifiedChildren:ITargetRow[]|undefined, input:any={} ):Mutation[]{
+	protected childMutations( parent:ISlugRow, originalChildren:ISlugRow[]|undefined, modifiedChildren:ISlugRow[]|undefined, input:any={} ):Mutation[]{
 		let y = new Array<Mutation>();
 		let addMutations = ( changes:number[], type:MutationType )=>{
 			if( !changes.length )
@@ -61,30 +61,30 @@ export abstract class ITargetRow extends Row{
 		return y;
 	}
 
-	get canSave():boolean{ return this.name?.length>0 && this.target?.length>0; }
+	get canSave():boolean{ return this.name?.length>0 && this.slug?.length>0; }
 
 	readonly id:number;
-	target!:Target;
+	slug!:Slug;
 	name!:string;
 	readonly created:Date|undefined;
 	readonly updated:Date|undefined;
 	readonly deleted:Date|undefined;
 	description:string|undefined;
 }
-export type TargetRowProps = { id:number; target:Target; name:string; created:Date; updated:Date; deleted:Date; description:string; };
-//A row as a ql query returns it - the target-row props it may carry plus whatever other columns the view asked for.  The
-//resolvers hand the tables plain objects, not ITargetRow instances, which is why the model classes do not fit there.
-export type QLRow = Partial<TargetRowProps> & Record<string, unknown>;
+export type SlugRowProps = { id:number; slug:Slug; name:string; created:Date; updated:Date; deleted:Date; description:string; };
+//A row as a ql query returns it - the slug-row props it may carry plus whatever other columns the view asked for.  The
+//resolvers hand the tables plain objects, not ISlugRow instances, which is why the model classes do not fit there.
+export type QLRow = Partial<SlugRowProps> & Record<string, unknown>;
 
-export abstract class TargetRow<T extends TargetRow<T>> extends ITargetRow{
+export abstract class SlugRow<T extends SlugRow<T>> extends ISlugRow{
 	constructor(type:string,obj:any){
 		super(type, obj);
 	}
 
 	mutationArgs( original:T ){
 		let args:Partial<T> = {};
-		if( this.target!=original?.target )
-			args.target = this.target;
+		if( this.slug!=original?.slug )
+			args.slug = this.slug;
 		if( this.name!=original?.name )
 			args.name = this.name;
 		if( this.description!=original?.description )
@@ -97,7 +97,7 @@ export abstract class TargetRow<T extends TargetRow<T>> extends ITargetRow{
 		return Object.keys(args).length ? [new Mutation( this.type, this.id, args, original.id ? MutationType.Update : MutationType.Create )] : [];
 	}
 
-	static notSubset<T extends TargetRow<T>>( a:T[], b:T[] ):T[]{
+	static notSubset<T extends SlugRow<T>>( a:T[], b:T[] ):T[]{
 		let y = [];
 		for( let item of a )
 			if( !b.find( x=>x.id==item.id ) )

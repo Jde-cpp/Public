@@ -4,7 +4,7 @@
 	<mat-tab>
 		<ng-template mat-tab-label>Properties</ng-template><!--was the record's name: the same word as the breadcrumb and the side nav, and it re-titled with every keystroke in Name-->
 		<ng-template matTabContent>
-			<properties [ctor]=ctor [(record)]=properties type=role [schema]=schema [order]=fieldOrder [displayNames]=fieldLabels [readonlyFields]="isNew ? [] : ['target']"></properties>
+			<properties [ctor]=ctor [(record)]=properties type=role [schema]=schema [order]=fieldOrder [displayNames]=fieldLabels [readonlyFields]="isNew ? [] : ['slug']"></properties>
 		</ng-template>
 	</mat-tab>
 	@if( !isNew ){<!--every saved connection, live or not:  the tab says "Not connected" and why, where a missing tab said nothing-->

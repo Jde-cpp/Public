@@ -22,7 +22,7 @@ const routes:Routes = [
 	{ path: 'gateways/:gateway/:connection', component: Dummy, children: [ { path: '**', component: Dummy } ] },
 	{ path: 'access', title: 'Access', component: Dummy, data: {summary: 'Configure User Access', icon: 'admin_panel_settings'} },
 	{ path: 'access', component: Dummy, children: [
-		{ path: 'users/:target', component: Dummy },
+		{ path: 'users/:slug', component: Dummy },
 		{ path: ':collectionDisplay', component: Dummy, data: { collections: [ {path: 'users', data: {icon: 'person'}}, 'roles' ] } },
 	]},
 	{ path: 'apps', title: 'Applications', component: Dummy },
@@ -64,9 +64,9 @@ describe('RouteSearchProvider', () => {
 		expect( find('Lost') ).toBeUndefined();
 	});
 
-	//review3 #7: every Google-provisioned target is '<provider>-<email>'.  Pre-encoding gave the router '%40', which it
-	//encoded again to '%2540', so paramMap yielded '…%40…', targetQuery matched no row and the page bounced.
-	it('hands the router raw segments, so an @ target survives navigation', async () => {
+	//review3 #7: every Google-provisioned slug is '<provider>-<email>'.  Pre-encoding gave the router '%40', which it
+	//encoded again to '%2540', so paramMap yielded '…%40…', slugQuery matched no row and the page bounced.
+	it('hands the router raw segments, so an @ slug survives navigation', async () => {
 		stored.set( 'users', [ new RouteItem({title: 'John', path: 'Google-johnmduffy@gmail.com'}) ] );
 		const item = provider.items().find( i=>i.title=='John' )!;
 		expect( item.route ).toEqual( ['/access', 'users', 'Google-johnmduffy@gmail.com'] );
