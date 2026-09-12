@@ -181,11 +181,12 @@ Section "OPC Hub (Jde.OpcHub)" SEC_HUB
 	File "${SRC_DIR}\apps\OpcGateway\config\opcGateway-meta.jsonnet"
 	File "${SRC_DIR}\libs\db\config\common-meta.libsonnet"
 	;sql\ is installer-owned - recreated, so a seed an older version shipped cannot linger.  Not the gateway's
-	;access-opcGateway.mutation: createGroup/createRole go through the access server's QL, which is configured only after
-	;the sync that applies dataPaths - the process asserts and dies (the dev sqlite hub args leave it out for the same reason).
+	;access-opcGateway.mutation: its createRole( permissionRights:[…] ) shape is not one the seed applies - the roles go in as
+	;access.roles below, the pass the hub runs once the access server is up (appStartup.cpp; the .mutation pass runs before it).
 	RMDir /r "$DataDir\OpcHub\sql"
 	SetOutPath "$DataDir\OpcHub\sql"
 	File /oname=access.mutation "${SRC_DIR}\libs\access\config\release.mutation" ;<schema>*.mutation - the release seed, not the dev one
+	File /oname=access.roles "${SRC_DIR}\libs\access\config\release.roles" ;<schema>*.roles - the roles (Viewer … Owner), applied after the access server is configured
 	File "${SRC_DIR}\apps\AppServer\config\app.mutation"
 	File "${SRC_DIR}\libs\access\config\sql\sqlite\*.sql" ;<schema>_*.sql - the sqlite views; the procs are compiled into the MODULEs
 	File "${SRC_DIR}\apps\AppServer\config\sql\sqlite\*.sql"

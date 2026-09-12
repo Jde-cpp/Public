@@ -35,6 +35,7 @@ namespace Browse{
 		Ω Hierarchical( NodeId&& id, UA_BrowseResultMask mask )ι->Request;//forward HierarchicalReferences (subtypes included), objects/variables/methods only - the NodeIndex crawl.
 		Ω Hierarchical( vector<NodeId>&& ids, UA_BrowseResultMask mask )ι->Request;//the same, for a whole BFS level in one round trip.
 		Ω Properties( NodeId&& id )ι->Request;//forward HasProperty (no subtypes), variables only, browse names - a DataType's EnumValues/EnumStrings (EnumTypeCache).
+		Ω Parents( NodeId&& id )ι->Request;//INVERSE HierarchicalReferences (subtypes included), objects/variables, browse name + class - one step of the walk up to the Objects folder (NodeQLAwait::Path).
 		Request( Request&& x )ι:UA_BrowseRequest{ x }{ UA_BrowseRequest_init( &x );}
 		Request( const Request& x )ι{ UA_BrowseRequest_copy( &x, this ); }
 		~Request(){ UA_BrowseRequest_clear(this); }

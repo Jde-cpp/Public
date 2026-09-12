@@ -10,6 +10,7 @@ import { GraphQLTable } from './graphql-table';
 //The gateway's Connections list: a text column, and the grafted count that reads as a number.
 const schema = new TableSchema( { name: "ServerConnection", enums: new Map(), fields: [
 	{ name: "name", type: {kind: "NON_NULL", ofType: {kind: "SCALAR", name: "String"}} },
+	{ name: "deleted", type: {kind: "SCALAR", name: "DateTime"} },
 	{ name: "opcSessions", type: {kind: "OBJECT", name: "OpcSessions"} }
 ] } );
 
@@ -81,5 +82,42 @@ describe( 'GraphQLTable chip columns', ()=>{
 		const table = create( ["name", {name:"opcSessions", selection:"count"}] );
 		expect( table.chipColumnNames ).toEqual( [] );
 		expect( table.objectColumnNames ).toEqual( ["opcSessions"] );
+	} );
+} );
+
+//The switch a route puts in the row for a table whose soft-delete flag is the feature (resources: a deleted resource is an
+//unenforced one).  Rendered off the row and never off the control's own state, so a mutation that fails cannot leave the
+//cell showing something the server never agreed to.
+describe( 'GraphQLTable live-toggle columns', ()=>{
+	const enforced = {name:"deleted", displayName:"Enforced", liveToggle:{enable:"Enforce", disable:"Stop enforcing"}};
+
+	it( 'is on for a live row and off for a deleted one', ()=>{
+		const table = create( ["name", enforced] );
+		expect( table.isLive("deleted", {deleted:null} as any) ).toBe( true );
+		expect( table.isLive("deleted", {} as any) ).toBe( true );
+		expect( table.isLive("deleted", {deleted:new Date()} as any) ).toBe( false );
+	} );
+
+	it( 'labels the direction a click would take the row, not its current state', ()=>{
+		const table = create( ["name", enforced] );
+		expect( table.liveToggleLabel("deleted", {deleted:null} as any) ).toBe( "Stop enforcing" );
+		expect( table.liveToggleLabel("deleted", {deleted:new Date()} as any) ).toBe( "Enforce" );
+	} );
+
+	it( 'has no label for a column that declared no toggle', ()=>{
+		expect( create(["name"]).liveToggleLabel("name", {name:"a"} as any) ).toBe( "" );
+	} );
+
+	//As the chip bucket: both feed matColumnDef, so a switch column left among the dates is declared twice and mat-table throws.
+	it( 'takes the column out of the date bucket', ()=>{
+		const table = create( ["name", enforced] );
+		expect( table.liveToggleColumnNames ).toEqual( ["deleted"] );
+		expect( table.dateColumnNames ).toEqual( [] );
+	} );
+
+	it( 'leaves deleted a date column when nothing asks for a switch', ()=>{
+		const table = create( ["name", "deleted"] );
+		expect( table.liveToggleColumnNames ).toEqual( [] );
+		expect( table.dateColumnNames ).toEqual( ["deleted"] );
 	} );
 } );

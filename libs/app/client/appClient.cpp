@@ -1,5 +1,6 @@
 #include <jde/app/client/appClient.h>
 #include <jde/fwk/process/execution.h>
+#include <jde/fwk/process/process.h>
 #include <jde/db/meta/AppSchema.h>
 #include <jde/access/Authorize.h>
 #include <jde/access/client/accessClient.h>
@@ -17,6 +18,10 @@ namespace Jde::App{
 	α Client::IsSsl()ι->bool{ return Settings::FindBool("/server/isSsl").value_or( false ); }
 	α Client::Host()ι->string{ return Settings::FindString("/server/host").value_or("localhost"); }
 	α Client::Port()ι->PortType{ return Settings::FindNumber<PortType>("/server/port").value_or(1967); }
+	α Client::InstanceName()ι->string{
+		auto instanceName = Settings::FindString( "/instanceName" ).value_or( "" );
+		return instanceName.empty() ? _debug ? "Debug" : "Release" : instanceName;
+	}
 
 	Ω reloadAccess( sp<Client::IAppClient> appClient )ι->VoidTask{
 		try{
@@ -58,7 +63,10 @@ namespace Jde::App::Client{
 		auto certificate = Crypto::ReadCertificate( cryptoSettings.Certificate.Path );//sole key material - the jwt derives the public key from it; the server's TrustStore chains it at enrollment.
 		const Crypto::Certificate info{ certificate };//the cert is also the identity authority - claims mirror the server's enrollment derivation (name: UPN → email → CN, target: CN) so they can't disagree with what enrollment records.
 		auto name = info.Upn.size() ? info.Upn : info.Email.size() ? info.Email : info.CommonName;
-		return Web::Jwt{ {}, {0}, move(name), info.CommonName, 0, {}, TimePoint::min(), {}, cryptoSettings.PrivateKey, move(certificate) };
+		//what the certificate cannot say:  which program this is and where it runs.  Enrollment records it as users.description
+		//(the cert's own fields have their own columns there); later logins skip the insert, so an admin's edit stays.
+		auto description = Ƒ( "{} '{}' on {}", Process::AppName(), InstanceName(), Process::HostName() );
+		return Web::Jwt{ {}, {0}, move(name), info.CommonName, 0, {}, TimePoint::min(), move(description), cryptoSettings.PrivateKey, move(certificate) };
 	}
 	LoginAwait::LoginAwait( const Crypto::CryptoSettings& cryptoSettings, SL sl )ε:
 		base{sl},

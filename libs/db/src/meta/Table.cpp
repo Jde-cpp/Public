@@ -116,7 +116,8 @@ namespace Jde::DB{
 	α Table::Authorize( Access::ERights rights, UserPK userPK, SL sl )Ε->void{
 		if( let p=Schema->Authorizer; p ){
 			let owner = Owner.lock();//a ql view has no resource of its own - ResourceLoadAwait creates one per table.
-			p->Test( Schema->Name, Names::ToJson(owner ? owner->Name : Name), rights, userPK, sl );
+			if( !empty(rights & Operations) ) // only test if the requested rights intersect with the table's enforced operations
+				p->Test( Schema->Name, Names::ToJson(owner ? owner->Name : Name), rights, userPK, sl );
 		}
 	}
 

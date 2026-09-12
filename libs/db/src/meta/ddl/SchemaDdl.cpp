@@ -174,16 +174,21 @@ namespace Jde::DB{
 		}
 	}
 
-	α SchemaDdl::SyncData( const AppSchema& config, const jobject& initConfig )ε->void{
+	α SchemaDdl::SyncData( const AppSchema& config, const jobject& )ε->void{//the config is re-read by SeedData - the one entry point the app's later ".roles" pass shares.
+		SeedData( config, ".mutation", _ql );
+	}
+	α SchemaDdl::SeedData( const AppSchema& config, sv extension, sp<QL::IQL> ql )ε->void{
+		let json = ConfigurationJson( config );//by value - a reference into it below outlives a temporary.
+		let& initConfig = Json::AsObject( json, "tables" );
 		vector<string> prefixes{ config.Name };
 		if( let& configPrefixes = Json::FindArray(initConfig, "dataPrefixes"); configPrefixes ){
 			auto additional = Json::FromArray<string>( *configPrefixes );
 			move( additional.begin(), additional.end(), std::back_inserter(prefixes) );
 		}
-		forEachDir( "/dbServers/dataPaths", ".mutation", prefixes, [this](const fs::path& file){
+		forEachDir( "/dbServers/dataPaths", extension, prefixes, [&](const fs::path& file){
 			let text = IO::Load( file );
 			INFO( "Mutation: '{}'", file.string() );
-			_ql->Upsert( text, {}, {UserPK::System} );
+			ql->Upsert( text, {}, {UserPK::System} );
 		});
 	}
 

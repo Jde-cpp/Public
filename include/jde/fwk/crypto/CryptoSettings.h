@@ -51,6 +51,7 @@ namespace Jde::Crypto{
 		string Upn;        //SAN otherName 1.3.6.1.4.1.311.20.2.3 (ms UPN), empty if absent.
 		string Email;      //SAN rfc822Name, empty if absent.
 		TimePoint Expiration; //notAfter.
+		string Fingerprint; //sha-256 of the DER, colon-separated upper hex as `openssl x509 -fingerprint -sha256` prints it, der ctor only.  users.fingerprint
 	};
 
 	struct Γ CryptoSettings final{

@@ -429,6 +429,17 @@ namespace Jde::Web{
 		EXPECT_THROW( parseJwt({{"iat", now}, {"exp", now-1}}), Exception );
 	}
 
+	//A token's description is the enrolling client's own account of itself, written to users.description as-is.  It used to fall
+	//back to the key's md5 fingerprint, restating the modulus/exponent stored on the same row; a token without one is empty now.
+	TEST( JwtDescriptionTests, TakenVerbatimOrEmpty ){
+		let now = time( nullptr );
+		EXPECT_EQ( "Jde.OpcGateway 'Debug' on host", parseJwt({{"iat", now}, {"description", "Jde.OpcGateway 'Debug' on host"}}).Description );
+		EXPECT_EQ( "", parseJwt({{"iat", now}}).Description ) << "nothing claimed - nothing invented";
+		let keyed = parseJwt( {{"iat", now}, {"n", Str::Encode64("modulus"s, true)}, {"e", Str::Encode64("\x01\x00\x01"s, true)}} );//a key without a description used to get the fingerprint
+		EXPECT_EQ( "", keyed.Description );
+		EXPECT_FALSE( keyed.UserName.empty() ) << "the fingerprint still names an anonymous key";
+	}
+
 	//web-review3 O4: the parse gate above bounds when a token may be *presented*; Expires() is what bounds the session a consumer
 	//mints from it, and for an exp-less token it answered TimePoint::max().  UAAccess::ActivateSession feeds it straight into
 	//SessionContext::Expiration, so a certificate-login token good for ten minutes bought an OPC session good forever.

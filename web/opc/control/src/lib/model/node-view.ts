@@ -90,6 +90,12 @@ export class NodeView extends View{
 		return variable ? NodeView.accessList( variable ).join( ", " ) : undefined;
 	}
 	//the flags the node grants, in flag order:  the Access cell renders one chip each, and access() joins them into the text the filter and sort work on
+	//a variable the server reports no Read right on for this user - a row that never had a userAccessLevel is not a denial,
+	//and an object has no value to deny.  MVP first-run:  an identity with no role gets userAccessLevel 0 on every node.
+	static readDenied( node:UaNode ):boolean{
+		const level = node.isVariable ? (node as Variable).userAccessLevel : undefined;
+		return level!=undefined && !(level & EAccess.Read);
+	}
 	static accessList( variable:Variable|undefined ):string[]{
 		const level = variable?.userAccessLevel ?? EAccess.None;
 		return NodeView.accessNames.filter( ([flag])=>level & flag ).map( ([,name])=>name );

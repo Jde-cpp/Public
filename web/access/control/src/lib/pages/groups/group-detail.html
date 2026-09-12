@@ -26,15 +26,23 @@
 				<ql-selector type=Role [ql]=ql [(selections)]=roles></ql-selector>
 			</ng-template>
 		</mat-tab>
-		<mat-tab>
-			<ng-template mat-tab-label>Permissions</ng-template>
-			<ng-template matTabContent>
-				<permission-table [(permissions)]=permissions></permission-table>
-			</ng-template>
-		</mat-tab>
+		<!--no Permissions tab (MVP) - user-detail's reason, verbatim:  a direct acl grant bypasses roles;  grant through Roles.
+			The rows still round-trip (`permissions` in upsert) so an existing grant is never dropped by Save.-->
 	}
 </mat-tab-group>
-<div style="display: flex; margin: 20px;border-top: 20px;border-color: primary;">
-	<button tabindex="100" mat-fab extended (click)="onSubmitClick()" [disabled]="!isChanged()"><mat-icon>done</mat-icon>Save</button>
-	<button tabindex="101" mat-fab extended (click)="onCancelClick()" style="margin-left:50px;margin-right:20px"><mat-icon>cancel</mat-icon>Cancel</button>
+<!--user-detail's row.  Two extended fabs gave Cancel the weight of a primary action and the done/cancel icons only
+	restated the labels, so the pair is a plain filled/outlined button row;  the trash can is the one icon kept, because
+	there it IS the warning.  Pushed to the far side: it sat in the click path of the two safe actions.-->
+<div class="jde-detail-actions">
+	<button tabindex="100" matButton="filled" (click)="onSubmitClick()" [disabled]="!isChanged()">Save</button>
+	<button tabindex="101" matButton="outlined" (click)="onCancelClick()">Cancel</button>
+	@if( isDeleted ){
+		<!--only on an already-deleted row, where Restore is the other half of the pair - a live row is never one click from a purge-->
+		<button tabindex="103" matButton="outlined" class="purge" style="margin-left: auto;" (click)="onPurgeClick()" aria-label="Purge">
+			<mat-icon>delete_forever</mat-icon>Purge
+		</button>
+	}
+	<button tabindex="102" matButton="outlined" [style.margin-left]="isDeleted ? null : 'auto'" (click)="onDeleteClick()" [disabled]="isNew" [attr.aria-label]="isDeleted ? 'Restore' : 'Delete'">
+		<mat-icon>{{isDeleted ? "restore" : "delete"}}</mat-icon>{{isDeleted ? "Restore" : "Delete"}}
+	</button>
 </div>

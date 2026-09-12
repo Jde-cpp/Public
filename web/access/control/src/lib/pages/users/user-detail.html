@@ -6,10 +6,10 @@
 			<ng-template mat-tab-label>Properties</ng-template>
 			<ng-template matTabContent>
 				@if( isKeyProvider() ){
-					<key-properties [(record)]=properties [schema]=schema></key-properties>
+					<key-properties [(record)]=properties [schema]=schema [readonlyFields]=readonlyFields></key-properties>
 				}
 				@else{
-					<properties [ctor]=ctor [(record)]=properties type=user [schema]=schema [excludedColumns]=excludedColumns></properties>
+					<properties [ctor]=ctor [(record)]=properties type=user [schema]=schema [excludedColumns]=excludedColumns [order]=fieldOrder [readonlyFields]=readonlyFields></properties>
 				}
 			</ng-template>
 		</mat-tab>
@@ -26,16 +26,29 @@
 					<ql-selector type=Role [ql]=ql [(selections)]=roles ></ql-selector>
 				</ng-template>
 			</mat-tab>
+			<!--no direct Permissions tab (MVP):  a direct acl grant on a user is a third way to the same right that bypasses roles
+				and is invisible from anywhere but this page - rights are granted through Roles, as the node Access tab already
+				does.  The rows still round-trip (`permissions` in upsert) so an existing grant is never dropped by Save.
+				What the user ends up with, direct grants included, is the read-only tab below.-->
 			<mat-tab>
-				<ng-template mat-tab-label>Permissions</ng-template>
+				<ng-template mat-tab-label>Effective rights</ng-template>
 				<ng-template matTabContent>
-					<permission-table [(permissions)]=permissions></permission-table>
+					<effective-rights [userId]="user.id"></effective-rights>
 				</ng-template>
 			</mat-tab>
 		}
 	</mat-tab-group>
-	<div style="display: flex; margin: 20px;border-top: 20px;border-color: primary;">
-		<button tabindex="100" mat-fab extended (click)="onSubmitClick()" [disabled]="!isChanged()"><mat-icon>done</mat-icon>Save</button>
-		<button tabindex="101" mat-fab extended (click)="onCancelClick()" style="margin-left:50px;margin-right:20px"><mat-icon>cancel</mat-icon>Cancel</button>
+	<!--client-detail's row, verbatim.  Two extended fabs and an outlined Delete were three different heights, which read as a
+		mistake rather than as hierarchy, and Material has no outlined extended fab to match them with - the only way to equalise
+		was a third fab, which is the weight Delete must NOT have.  So the whole row drops to matButton: only Save is filled.-->
+	<div class="jde-detail-actions">
+		<button tabindex="100" matButton="filled" (click)="onSubmitClick()" [disabled]="!isChanged()">Save</button>
+		<button tabindex="101" matButton="outlined" (click)="onCancelClick()">Cancel</button>
+		<!--the only icon in the row, so the trash can still reads as a warning - the done/cancel icons Save and Cancel used to
+			carry drowned it out.  It also carries the delete/restore state, and Restore is only reachable from the show-deleted
+			view that returns the column.  Pushed to the far side: it sat in the click path of the two safe actions.-->
+		<button tabindex="102" matButton="outlined" style="margin-left: auto;" (click)="onDeleteClick()" [disabled]="isNew" [attr.aria-label]="isDeleted ? 'Restore' : 'Delete'">
+			<mat-icon>{{isDeleted ? "restore" : "delete"}}</mat-icon>{{isDeleted ? "Restore" : "Delete"}}
+		</button>
 	</div>
 }

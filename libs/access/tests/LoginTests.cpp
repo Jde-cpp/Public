@@ -72,7 +72,7 @@ namespace Jde::Access::Tests{
 		Server::Trust().AddCertificate( Trusted.Der );
 		let userPK = keyLogin( Trusted.Key, vector<byte>{Trusted.Der} );
 		ASSERT_TRUE( userPK.Value );
-		let user = Select( "users", userPK.Value, GetRoot(), "email issuer subjectAlt distinguished expiration" );//the cert is the identity authority: UPN→name, CN→target.
+		let user = Select( "users", userPK.Value, GetRoot(), "email issuer subjectAlt distinguished expiration fingerprint" );//the cert is the identity authority: UPN→name, CN→target.
 		EXPECT_EQ( Json::AsSV(user, "name"), "trusted-upn@jde-cpp.com" );
 		EXPECT_EQ( Json::AsSV(user, "target"), "loginTests-trusted" );
 		EXPECT_EQ( Json::AsSV(user, "email"), "trusted@jde-cpp.com" );
@@ -81,6 +81,11 @@ namespace Jde::Access::Tests{
 		//the SAN, openssl config syntax - the columns hold two different things and must not be interchangeable.
 		EXPECT_EQ( Json::AsSV(user, "subjectAlt"), "email:trusted@jde-cpp.com,otherName:msUPN;UTF8:trusted-upn@jde-cpp.com,URI:urn:my.server.application" );
 		EXPECT_FALSE( user.at("expiration").is_null() );//notAfter - CreateCertificate issues 365-day certs.
+		//the cert's sha-256 in openssl's colon form - what an operator matches the row against.  32 bytes → 64 hex + 31 colons.
+		let fingerprint = Json::AsSV( user, "fingerprint" );
+		EXPECT_EQ( fingerprint, (Crypto::Certificate{Trusted.Der, SRCE_CUR}.Fingerprint) );
+		EXPECT_EQ( fingerprint.size(), 95u ) << fingerprint;
+		EXPECT_EQ( fingerprint[2], ':' ) << fingerprint;
 		let again = keyLogin( Trusted.Key, {} );//existing user bypasses the gate.
 		ASSERT_EQ( userPK.Value, again.Value );
 		PurgeUser( userPK, GetRoot() );

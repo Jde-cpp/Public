@@ -2,7 +2,7 @@
 	<ng-container>
 		<div>
 			@for( field of fields(); track field.name; let tab = $index ){
-				<mat-form-field style="width: 100%;" appearance="fill"><!--required = the schema's NON_NULL: it puts the asterisk on the label, which is the only hint the user gets for why Save stays disabled on a new record-->
+				<mat-form-field style="width: 100%;" appearance="fill" [class.readonly]="isReadonly(field)"><!--required = the schema's NON_NULL: it puts the asterisk on the label, which is the only hint the user gets for why Save stays disabled on a new record-->
 					<mat-label>{{field.displayName}}</mat-label>
 					@if( field.type==InputTypes.Text ){
 						<textarea matInput
@@ -50,13 +50,5 @@
 				</mat-form-field>
 			}
 		</div>
-		<!--<div>
-			@if( record().size ){
-				<span style="margin-left: auto;" >
-					<button tabindex="100" mat-fab extended (click)="saving=true;onSubmitClick()" [disabled]="!enableSubmit"><mat-icon>done</mat-icon>Save</button>
-					<button tabindex="101" mat-fab extended (click)="onCancelClick()" style="margin-left:50px;margin-right:20px"><mat-icon>cancel</mat-icon>Cancel</button>
-				</span>
-			}
-		</div>-->
 	</ng-container>
 }

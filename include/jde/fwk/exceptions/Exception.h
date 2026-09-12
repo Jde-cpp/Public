@@ -90,10 +90,10 @@ namespace Jde{
 		up<exception> _inner;
 		variant<sv,string> _format;
 		vector<string> _args;
-		SL _sl;
 	private:
 		α operator=( Exception&& from )ι->Exception&;
 	public:
+		SL _sl;
 		α Code()Ι->uint32{
 			if( !HasCode() )
 				_code = Calc32RunTime( Format() );

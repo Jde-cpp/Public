@@ -14,6 +14,7 @@ export {ClientResolver} from './lib/services/resolvers/client-resolver';
 export {GatewayRouteService, GatewayCnnctnRouteService} from './lib/services/routes/gateway-route-service';
 export {OpcServerRouteService} from './lib/services/routes/opc-server-route-service';
 export {OpcNodeRouteService} from './lib/services/routes/opc-node-route-service';
+export {OpcNodeLinkResolver} from './lib/services/node-link-resolver';
 export {SettingsRouteService} from './lib/services/routes/settings-route-service';
 export {OPC_STORE, OpcStore} from './lib/services/opc-store';
 export {NodeSearchProvider} from './lib/services/node-search-provider';

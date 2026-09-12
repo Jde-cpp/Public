@@ -8,6 +8,11 @@
 {
 	tables:{},
 	resources:{
-		nodeIds:{ ops:["Create","Read","Update","Delete","Purge","Administer"] } //DB::DefaultOps, the rights the table carried.
+		//DB::DefaultOps - what the table carried - plus Subscribe.  `allowed` is what the permission table offers as
+		//checkboxes (permission-table.ts `resource.availableRights`), and a node acl's whole point is a UA client that
+		//reads, writes and *subscribes*:  without it the emulator's own Read|Update|Subscribe grant (Emulator.cpp
+		//GrantWriteRights) was a mask the UI could not have produced.  It caps nothing server-side - ResourceLoadAwait
+		//never reads the column - so this is purely what an operator is allowed to tick.
+		nodeIds:{ ops:["Create","Read","Update","Delete","Purge","Administer","Subscribe"] }
 	}
 }

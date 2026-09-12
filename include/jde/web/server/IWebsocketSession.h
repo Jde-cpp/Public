@@ -31,8 +31,8 @@ namespace Jde::Web::Server{
 		β WriteSubscription( uint32 appPK, uint32 appInstancePK, const Logging::Entry& e, const QL::Subscription& sub )ι->void=0;
 		β WriteSubscriptionAck( flat_set<QL::SubscriptionId>&& subscriptionIds, RequestId requestId )ι->void=0;
 		β WriteComplete( RequestId requestId )ι->void=0;
-		β WriteException( runtime_error&& e, RequestId requestId )ι->void=0;
-		β WriteException( string&& e, RequestId requestId )ι->void=0;
+		β WriteException( runtime_error&& e, RequestId requestId, SRCE )ι->void=0;
+		β WriteException( string&& e, RequestId requestId, SL sl )ι->void=0;
 		β UserPK()Ι->Jde::UserPK=0;
 		α IsOpen()ι->bool{ return StreamPtr()!=nullptr; }//OnClose nulls Stream, so this is the one place that knows the socket behind a registration is gone.
 		α SessionId()ι{ return _sessionInfo ? _sessionInfo->SessionId : SessionPK{}; }//public: Sessions::Remove has to find the sockets bound to a revoked id (#5).

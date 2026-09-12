@@ -1,0 +1,80 @@
+/* permission-table.scss's inset and row heights - this grid sits on the same tab strip as the selectors and that table did */
+:host{
+	display: block;
+	padding: 16px 24px 0;
+}
+
+mat-table{
+	--mat-table-row-item-container-height: 40px;
+	--mat-table-header-container-height: 44px;
+}
+
+.mat-mdc-header-cell{
+	text-align: center;
+}
+
+.mat-column-schema{
+	flex: 0 0 7em;
+}
+
+.mat-column-resource{
+	flex: 0 0 14em;
+	align-items: center;
+	&.lockout{ color: var(--mat-sys-error); }
+	/* a child row: no name of its own, indented past where the toggle sits on its parent */
+	&.child{ padding-left: 3.5em; }
+}
+.text{
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+.expand{ /* the toggle, sized to the 40px row so it does not stretch it */
+	--mdc-icon-button-state-layer-size: 28px;
+	margin: 0 .25em 0 -.5em;
+	padding: 2px;
+	mat-icon{ font-size: 20px; width: 20px; height: 20px; line-height: 20px; }
+}
+.criteria, .count{ /* a node resource: its name is its table's, the criteria is what tells it apart; the count is the collapsed summary */
+	font-size: smaller;
+	opacity: .7;
+}
+a.node{ /* the node by name, linking to its page, when the app can place it; the browse path and criteria are its title */
+	color: var(--mat-sys-primary);
+	text-decoration: none;
+	cursor: pointer;
+	&:hover{ text-decoration: underline; }
+}
+
+.mat-column-enforced{
+	flex: 0 0 6em;
+	justify-content: center;
+}
+
+.mat-column-permission{
+	display: flex;
+	justify-content: center;
+}
+
+.mat-column-alt{
+	background-color: var(--mat-sys-secondary-container);
+}
+
+mat-icon{
+	cursor: help;
+	&.allowed{ color: var(--mat-sys-primary); }
+	&.denied{ color: var(--mat-sys-error); }
+	&.lockout{ color: var(--mat-sys-error); opacity: .6; }
+}
+
+.empty{
+	opacity: .7;
+}
+
+/* the tooltip renders in the cdk overlay, outside this view - the class matTooltipClass sets has to be reachable from there.
+   One line per source, so the surface keeps the newlines and gets room for a nested path. */
+::ng-deep .effective-rights-tooltip .mdc-tooltip__surface{
+	white-space: pre-line;
+	max-width: 36em;
+	text-align: left;
+}

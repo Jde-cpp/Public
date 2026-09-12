@@ -10,6 +10,7 @@
 #include <jde/access/awaits/ConfigureAwait.h>
 #include <jde/ql/LocalSubscriptions.h>
 #include "globals.h"
+#include "../src/awaits/ResourceLoadAwait.h"
 
 #define let const auto
 
@@ -47,6 +48,43 @@ namespace Jde::Access::Tests{
 		reload( authorizer, listener );
 		EXPECT_FALSE( authorizer->FindActiveResourcePK("reload-test", "stale", "") ) << "the reload merged into the resource maps, so a stale entry survived it";
 		QL::Subscriptions::StopListen( listener );
+	}
+
+	//access-enforce-toggle #1:  the rights load selected the nested resource by id alone, and a select naming no `deleted` column is
+	//"active rows only" - so every grant on an unenforced resource was dropped at load.  Harmless until the Enforced toggle restored
+	//the row live:  enforcement then ran against a map that never held it, and every identity was denied until a restart.  The
+	//regression the review asked for, without OPC:  a soft-deleted resource with a direct grant, loaded, restored through the
+	//listener's path, still resolves the grant.
+	α CreateAcl( IdentityPK identityPK, ERights allowed, ERights denied, string resource, UserPK executer )ε->PermissionRightsPK;
+	α PurgeAcl( IdentityPK identityPK, PermissionRightsPK permissionPK, UserPK executer )ε->void;
+	struct RestoringAuthorize final : Access::Authorize{ using Authorize::Authorize; using Authorize::UpdateResourceDeleted; };//the listener's protected entry, driven by the test.
+	TEST( ConfigureReloadTests, LoadsRightsOnAnUnenforcedResource ){
+		let root = GetRoot();
+		const UserPK system{ UserPK::System };
+		const string target{ "providerTypes" };//a synced table nothing here grants on but root.
+		const UserPK user{ GetId(GetUser("unenforced-grantee", root)) };
+		let resource = SelectResource( target, root, true );
+		ASSERT_FALSE( resource.empty() );
+		const ResourcePK resourcePK{ GetId(resource) };
+		let wasActive = resource.at("deleted").is_null();
+		let grant = CreateAcl( user, ERights::Read, ERights::None, target, root );
+		if( wasActive )
+			Delete( "resources", resourcePK, root );//the shipped state:  every row unenforced.
+
+		let loaded = BlockAwait<ResourceLoadAwait,ResourcePermissions>( ResourceLoadAwait{QLPtr(), Schemas(), {}, system} );
+		EXPECT_TRUE( std::ranges::any_of(loaded.Permissions, [&](let& kv){ return kv.second.ResourcePK==resourcePK; }) ) << "the load dropped the rights on the unenforced resource";
+
+		auto authorizer = ms<RestoringAuthorize>( "access" );
+		auto listener = ms<Access::AccessListener>( QLPtr() );
+		reload( authorizer, listener );
+		authorizer->UpdateResourceDeleted( resourcePK, "access", {}, true );//what AccessListener applies on restoreResource - the Enforced toggle.
+		EXPECT_EQ( authorizer->Rights("access", target, user), ERights::Read ) << "enforced live against rights that were never loaded";
+		EXPECT_NO_THROW( authorizer->Test("access", target, ERights::Read, user) );
+
+		QL::Subscriptions::StopListen( listener );
+		PurgeAcl( user, grant, root );
+		if( wasActive )
+			Restore( "resources", resourcePK, root );
 	}
 }
 #undef let

@@ -77,9 +77,7 @@ namespace Client{
 
 	α AppClientSocketSession::Connect( SessionPK sessionId, SL sl )ι->ClientSocketAwait<Proto::FromServer::ConnectionInfo>{
 		let requestId = NextRequestId();
-		auto instanceName = Settings::FindString( "/instanceName" ).value_or( "" );
-		if( instanceName.empty() )
-			instanceName = _debug ? "Debug" : "Release";
+		let instanceName = Client::InstanceName();
 		LOGSL( ELogLevel::Information, sl, ELogTags::SocketClientWrite, "[{}]Connect: '{}', authResource: '{}'.", hex(requestId), instanceName, _appClient->ResourceSchema );
 		//M10: ResourceSchema is what OpcServer sets to its `opc.*` schema (opcServerStartup, before this connect); the gateway leaves
 		//it empty and asks to authorize nothing.  Until this was passed, the AppServer's `if( instance.auth_resource().size() )` arm

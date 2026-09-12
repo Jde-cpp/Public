@@ -13,7 +13,7 @@
 					<button matIconButton aria-label="Refresh" matTooltip="Refresh" [disabled]="isRefreshing()" (click)="onRefresh()">
 						<mat-icon>refresh</mat-icon>
 					</button>
-					<mat-button-toggle-group class="view-group" aria-label="View" [value]="resolvedData().profile.currentViewIndex" (change)="onChangeView($event.value)">
+					<mat-button-toggle-group class="view-group" aria-label="View" hideSingleSelectionIndicator [value]="resolvedData().profile.currentViewIndex" (change)="onChangeView($event.value)">
 						@for (view of resolvedData().profile.views; track view; let i=$index) {
 							<mat-button-toggle [value]=i [matTooltip]="view.isAdhoc ? 'Unsaved changes' : ''">{{ view.name ?? "default" }}@if( view.isAdhoc ){<span class="adhoc">&nbsp;(edited)</span>}</mat-button-toggle>
 						}
@@ -24,15 +24,36 @@
 				</div>
 				<div class="bar-right">
 					<span class="row-count">{{ data().length }} {{ data().length==1 ? "row" : "rows" }}</span>
-					@if( !selector() ){
+					@if( !selector() && !liveToggleField() ){
 						<mat-checkbox [checked]="showDeleted()" (change)="onToggleShowDeleted()">Show deleted</mat-checkbox>
-					}
+					}<!--a live-toggle page shows every row and switches them in place, so the checkbox has nothing left to offer-->
 				</div>
 			</mat-toolbar>
 			<mat-progress-bar class="refresh-bar" [mode]="isRefreshing() ? 'indeterminate' : 'determinate'" [value]="0"></mat-progress-bar>
 			<div style="align-content: center; margin: auto;  text-align: center">
-				<ql-table [dataSource]=data [displayedFields]=displayedFields() [sort]=sort (onSortChange)=onSortChange($event) (onRowActivate)=onRowActivate($event) [(selections)]=selections></ql-table>
+				<ql-table [dataSource]=data [displayedFields]=displayedFields() [sort]=sort [pendingLive]=pendingLive() (onSortChange)=onSortChange($event) (onRowActivate)=onRowActivate($event) (onToggleLive)=onToggleLive($event) [(selections)]=selections></ql-table>
 			</div>
+			@if( failure(); as f ){
+				<div class="jde-empty" role="alert">
+					<mat-icon aria-hidden="true">{{ f.kind=='forbidden' ? 'lock' : 'error_outline' }}</mat-icon>
+					<p class="title">{{ f.title }}</p>
+					@if( f.detail ){ <p class="detail">{{ f.detail }}</p> }
+					<div class="actions">
+						@if( f.kind!='forbidden' ){
+							<button matButton="tonal" (click)="onRefresh()"><mat-icon>refresh</mat-icon>Retry</button>
+						}
+						@if( helpRoute(); as help ){ <a matButton [routerLink]="help">Help</a> }
+					</div>
+				</div>
+			}
+			@else if( showEmpty() ){
+				<div class="jde-empty" role="status">
+					<mat-icon aria-hidden="true">{{ emptyState().icon }}</mat-icon>
+					<p class="title">{{ emptyState().title }}</p>
+					@if( emptyState().detail ){ <p class="detail">{{ emptyState().detail }}</p> }
+					@if( helpRoute(); as help ){ <div class="actions"><a matButton [routerLink]="help">Help</a></div> }
+				</div>
+			}
 		</ng-container>
 	}
 }

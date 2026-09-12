@@ -123,6 +123,12 @@ namespace Jde::Crypto{
 		THROW_IFX( ::ASN1_TIME_to_tm(::X509_get0_notAfter(cert.get()), &t)!=1, Crypto::OpenSslException("ASN1_TIME_to_tm failed", sl) );
 		using namespace std::chrono;
 		Expiration = sys_days{ year{t.tm_year+1900}/month{(unsigned)t.tm_mon+1}/day{(unsigned)t.tm_mday} } + hours{ t.tm_hour } + minutes{ t.tm_min } + seconds{ t.tm_sec };
+		//the whole DER, not the key:  what openssl and every browser's certificate viewer print, so an operator can match it by eye.
+		unsigned char md[EVP_MAX_MD_SIZE]; unsigned mdLength{};
+		THROW_IFX( ::X509_digest(cert.get(), ::EVP_sha256(), md, &mdLength)!=1, Crypto::OpenSslException("X509_digest failed", sl) );
+		Fingerprint.reserve( mdLength*3 );
+		for( unsigned i = 0; i<mdLength; ++i )
+			Fingerprint += Ƒ( "{}{:02X}", i ? ":" : "", md[i] );
 	}
 
 	//a SAN may carry several entries ("URI:urn:x,DNS:host"); replacing "URI:" across the whole string would hand the
@@ -144,8 +150,8 @@ namespace Jde::Crypto{
 	}
 	α Certificate::ToString()Ι->string{
 		return Ƒ(
-			"issuer: {}, subject: {}, SubjectAltName: {}, CommonName: {}, UPN: {}, Email: {}, Expiration: {}",
-			Issuer, DistinguishedName, SubjectAltName, CommonName, Upn, Email, ToIsoString<days>( Expiration )
+			"issuer: {}, subject: {}, SubjectAltName: {}, CommonName: {}, UPN: {}, Email: {}, Expiration: {}, Fingerprint: {}",
+			Issuer, DistinguishedName, SubjectAltName, CommonName, Upn, Email, ToIsoString<days>( Expiration ), Fingerprint
 		);
 	}
 

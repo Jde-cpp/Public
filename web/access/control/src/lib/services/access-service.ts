@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { IEnvironment } from 'jde-spa';
 import { AppService, AuthStore, IGraphQL, StringUtils, TableSchema } from 'jde-framework';
 import { Resource } from '../model/resource';
+import { EffectiveRight, Names, UserRightsRow } from '../model/effective-right';
 
 
 
@@ -18,9 +19,23 @@ export class AccessService extends AppService implements OnDestroy{
 		return this.#resources ??= this.#queryResources().catch( (e)=>{ this.#resources = undefined; throw e; } );//never cache a failure: a rejected promise would be handed to every later caller
 	}
 	async #queryResources():Promise<Resource[]>{
-		const resources = (await this.queryArray<Partial<Resource>>( `resources(criteria:null){ id schemaName allowed name deleted target }` )).map( (r)=>new Resource(r) );
+		const resources = (await this.queryArray<Partial<Resource>>( `resources(criteria:null){ id schemaName allowed name deleted target }` )).map( (r)=>new Resource(r) );//criteria:null - the node resources are known only through effectiveRights' rows
 		this.#resourceSignal.set( resources );//the public `resources` signal was never written, so it read empty forever
 		return resources;
+	}
+	//What the user ends up with on each resource through every path - the server's answer (userRights, Authorize::UserRights),
+	//joined here to what its cache does not hold:  resource names/available rights from loadResources(), and the group and role
+	//names the paths need, from the two lists.  The executer reads their own freely; another user's takes Read on acl.
+	async effectiveRights( userId:number ):Promise<EffectiveRight[]>{
+		const q = `userRights( id:$id ){ resource{ id schemaName target criteria deleted } allowed denied effective sources{ permissionId allowed denied path{ id type } } }`;
+		const [rows, resources, groups, roles] = await Promise.all( [
+			this.queryArray<UserRightsRow>( q, {id: userId} ),
+			this.loadResources(),
+			this.queryArray<{id:number, name:string}>( `groups{ id name }` ),
+			this.queryArray<{id:number, name:string}>( `roles{ id name }` )
+		] );
+		const names:Names = { groups: new Map( groups.map(g=>[g.id, g.name]) ), roles: new Map( roles.map(r=>[r.id, r.name]) ) };
+		return EffectiveRight.fromRows( rows, resources, names );
 	}
 	async getResource( target:string ):Promise<Resource|undefined>{
 		const resources = await this.loadResources();//was `await this.#resources` - the field, not the loader, so this threw on `.find` unless something else had already loaded

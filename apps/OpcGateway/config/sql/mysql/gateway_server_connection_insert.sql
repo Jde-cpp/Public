@@ -1,4 +1,4 @@
-drop procedure if exists gateway_server_connections_insert;
+drop procedure if exists gateway_server_connection_insert;
 GO
 
 create procedure gateway_server_connection_insert( _name varchar(255), _target varchar(255), _attributes smallint unsigned, _description varchar(2047), _is_default bit, _default_browse_ns smallint unsigned, _certificate_uri varchar(2047), _url varchar(2047), out _server_connection_id int unsigned ) begin

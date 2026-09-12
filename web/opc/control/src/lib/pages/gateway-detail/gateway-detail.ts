@@ -48,6 +48,7 @@ export class GatewayDetail implements OnInit, OnDestroy{
 }
 
 export const gatewayTableSettings:TableSettings = {
+	empty: { title: "No server connections.", detail: "Use Add to connect this gateway to an OPC server." },
 	//Read left to right:  what the connection is (name), how it is doing (status and the two counts that back it), then where it
 	//points (url, and the certificate uri that has to match the server at that url), then the description.  The two uris are the
 	//widest and least often read, so they sit after the state rather than pushing it off the side.

@@ -39,6 +39,12 @@
 				</mat-card>
 			</span>
 		</a>
+	} @empty {
+		<div class="jde-empty" role="status">
+			<mat-icon aria-hidden="true">apps</mat-icon>
+			<p class="title">No application has registered yet.</p>
+			<p class="detail">A gateway, an OPC server or a hub appears here once it starts and registers with this app server.</p>
+		</div>
 	}
 </div>
 </div>

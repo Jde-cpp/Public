@@ -16,7 +16,7 @@
 		</mat-tab>
 	}
 </mat-tab-group>
-<div class="actions"><!--only Save is filled: three extended fabs gave the destructive Delete the same weight as the primary action, and the tonal it had next was a grey pill that read as disabled even with a dirty form-->
+<div class="jde-detail-actions"><!--only Save is filled: three extended fabs gave the destructive Delete the same weight as the primary action, and the tonal it had next was a grey pill that read as disabled even with a dirty form-->
 	<button tabindex="100" matButton="filled" (click)="onSubmitClick()" [disabled]="!isChanged()">Save</button>
 	<button tabindex="101" matButton="outlined" (click)="onCancelClick()">Cancel</button>
 	<!--the only icon in the row, so the trash can still reads as a warning; it also carries the delete/restore state.

@@ -19,7 +19,7 @@
 				<button matIconButton aria-label="Refresh" matTooltip="Refresh" (click)="refresh()">
 					<mat-icon>refresh</mat-icon>
 				</button>
-				<mat-button-toggle-group class="view-group" aria-label="View" [value]="viewIndex()" (change)="onViewChange($event.value)">
+				<mat-button-toggle-group class="view-group" aria-label="View" hideSingleSelectionIndicator [value]="viewIndex()" (change)="onViewChange($event.value)">
 					@for( view of views(); track view; let i=$index ){
 						<mat-button-toggle [value]=i [matTooltip]="view.isAdhoc ? 'Unsaved changes' : ''">{{ view.name ?? "default" }}@if( view.isAdhoc ){<span class="adhoc">&nbsp;(edited)</span>}</mat-button-toggle>
 					}

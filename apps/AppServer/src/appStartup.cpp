@@ -97,16 +97,22 @@ namespace Jde::App::Server{
 			_listener = nullptr;
 		});
 
-		if( Settings::FindBool("/testing/recreateDB").value_or(false) ){
+		let recreate = Settings::FindBool( "/testing/recreateDB" ).value_or( false );
+		let sync = recreate || Settings::FindBool("/dbServers/sync").value_or(false) || accessSchema->DS()->RequiresSync();//decided once:  RequiresSync answers differently once the tables exist.
+		if( recreate ){
 			for( let& schema : schemas )
 				DB::NonProd::Recreate( *schema, QLPtr() );
 		}
-		else if( Settings::FindBool("/dbServers/sync").value_or(false) || accessSchema->DS()->RequiresSync() ){
+		else if( sync ){
 			for( let& schema : schemas )
 				DB::SyncSchema( *schema, QLPtr() );
 		}
 		QL::LoadEnums( schemas );
-		BlockVoidAwait( Access::Server::Configure(move(schemas), QLPtr(), UserPK{UserPK::System}, authorizer, _listener) );//the access load is a coroutine chain; this is the sync api over it.
+		BlockVoidAwait( Access::Server::Configure(vector<sp<DB::AppSchema>>{schemas}, QLPtr(), UserPK{UserPK::System}, authorizer, _listener) );//the access load is a coroutine chain; this is the sync api over it.
+		if( sync ){//the role seeds (<schema>.roles):  createRole/addRole run through the access server's mutations and its acl gate, which Configure just installed - SyncSchema's .mutation pass ran before them, so a role there died with the process (setup/README.md).
+			for( let& schema : schemas )
+				DB::SyncData( *schema, QLPtr(), ".roles" );
+		}
 		endAppInstances();
 	}
 
@@ -117,7 +123,7 @@ namespace Jde::App::Server{
 		Logging::Add<Web::Server::SubscribeLog>( "subscribe", get<0>(pks), get<1>(pks) );
 		SetAppPKs( pks );
 
-		QL::SetSystemTables( {"apps", "connections", "logSetting"} );
+		QL::SetSystemTables( {"adminCheck", "apps", "connections", "logSetting"} );
 		auto appClient = AppClient();
 		Crypto::CryptoSettings sslSettings{ Json::FindDefaultObject(webServerSettings, "ssl") };
 		Crypto::EnsureKeyCertificate( sslSettings );//the listener used to create the key as a side effect, which is why SetPublicKey had to wait for it.

@@ -9,7 +9,7 @@
 				<button matIconButton aria-label="Refresh" matTooltip="Refresh" [disabled]="isRefreshing()" (click)="onRefresh()">
 					<mat-icon>refresh</mat-icon>
 				</button>
-				<mat-button-toggle-group class="view-group" aria-label="View" [value]="viewIndex()" (change)="onChangeView($event.value)">
+				<mat-button-toggle-group class="view-group" aria-label="View" hideSingleSelectionIndicator [value]="viewIndex()" (change)="onChangeView($event.value)">
 					@for( view of views(); track view; let i=$index ){
 						<mat-button-toggle [value]=i [matTooltip]="view.isAdhoc ? 'Unsaved changes' : ''">{{ view.name ?? "default" }}@if( view.isAdhoc ){<span class="adhoc">&nbsp;(edited)</span>}</mat-button-toggle>
 					}
@@ -70,7 +70,10 @@
 				<ng-container matColumnDef="snapshot">
 					<mat-header-cell mat-sort-header *matHeaderCellDef> Snapshot </mat-header-cell>
 					<mat-cell mat-cell *matCellDef="let r">
-						@if( r.dataType==ETypes.Boolean && !r.isArray ){
+						@if( readDenied(r) ){<!--the server answers the read with nothing, and a blank cell read as a null value-->
+							<span class="no-access" title="You have no right to read this node - ask an administrator for a role that can.">no read access</span>
+						}
+						@else if( r.dataType==ETypes.Boolean && !r.isArray ){
 							<mat-checkbox [checked]="r.value" (change)="toggleValue(r, $event);" [disabled]="r.userAccessLevel < EAccess.Write"></mat-checkbox>
 						}
 						@else if( r.isInteger && !r.isArray ){
@@ -123,5 +126,11 @@
 				<mat-row *matRowDef="let row; columns: displayedColumns()"></mat-row>
 			</mat-table>
 		</div>
+		@if( !isRefreshing() && !rows().length ){
+			<div class="jde-empty" role="status">
+				<mat-icon aria-hidden="true">account_tree</mat-icon>
+				<p class="title">{{ nodes().length ? "No node matches this view." : "No child nodes." }}</p>
+			</div>
+		}
 	}
 }

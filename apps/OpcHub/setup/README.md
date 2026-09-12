@@ -76,7 +76,7 @@ C:\ProgramData\Jde-Cpp
     libs\db\config\paths-common.libsonnet
   OpcHub\                                                the product dir (Process::ProductName): created here by the service -> OpcHub.db, ssl\, *.log
     access-meta.jsonnet access-ql.jsonnet app-meta.jsonnet opcGateway-meta.jsonnet common-meta.libsonnet
-    sql\  access.mutation (libs/access/config/release.mutation) app.mutation, the sqlite *_ql.sql views
+    sql\  access.mutation (libs/access/config/release.mutation) access.roles (libs/access/config/release.roles) app.mutation, the sqlite *_ql.sql views
   OpcServer\                                             OpcServer.db, ssl\, *.log
     access-meta.jsonnet access-ql.jsonnet common-meta.libsonnet opcServer-meta.jsonnet
     nodesets\ Opc.Ua.Di.NodeSet2.xml Opc.Ua.IA.NodeSet2.xml Opc.Ua.IA.NodeSet2.examples.xml pumps.NodeSet2.xml
@@ -105,15 +105,19 @@ nodesets the installer put in the product dirs.  Left in place, deliberately: `O
 
 - Reinstalling over an existing install is fine: the services are deregistered and re-registered, the `.db` is kept, the
   installer-owned `sql\` and `nodesets\` are recreated (the settings under `config\` are overwritten - keep a copy of edits).
-- `apps/OpcGateway/config/access-opcGateway.mutation` (the gateway's group/role) is not seeded: `createGroup`/`createRole` run
-  through the access server's QL, which is up only after the schema sync, so it is a post-start step, not a `dataPaths` seed.
+- Roles are seeded by a second pass: `<schema>.roles` files under `dataPaths` are upserted after the access server is
+  configured (`createRole`/`addRole` run through its mutations, which the `.mutation` pass runs too early for).
+  `release.roles` ships Viewer, System Administrator, Owner, Engineer, Operator and Maintenance Technician; `addRole` names
+  roles by `target`, and a rerun on a later `-sync` start changes nothing.  `apps/OpcGateway/config/access-opcGateway.mutation`
+  (the gateway's group/role) is still not seeded: its `createRole( permissionRights:[…] )` shape is not one the seed applies.
 - A split `Jde.AppServer` + `Jde.OpcGateway` pair (`apps/AppServer`, `apps/OpcGateway` - not shipped by this installer) shares
   port 1967 with the hub; the installer stops them and says so.  Deregister them with each exe's `-uninstall`.
 - `JDE_PASSCODE` (the private keys' passphrase, `$(JDE_PASSCODE)` in the configs) is unset for a service under LocalSystem, so
   the keys are written in the clear - the documented behaviour of an empty passcode.  Set it as a system environment variable
   before the first start to change that.
 - `release.mutation` seeds the access schema without the Google provider rows `access.mutation` (the dev seed) carries; the
-  Web UI's Google login needs those added.
+  Web UI's Google login needs those added.  The roles grant on `opc.install`, the schema the installed OpcServer registers
+  its nodes under (`Opc.Server.Install.jsonnet`'s `resource: "install"`).
 - SQL Server instead of sqlite, by hand: `apps/OpcHub/config/args/install-sqlServer/args.libsonnet` is the equivalent profile.
   Copy it to `config\apps\OpcHub\config\args\install-sqlServer\`, put `Jde.DB.Odbc.dll` (from the build's `bin\`) beside the
   exe, create a 64-bit System DSN `jde` ("ODBC Driver 17 for SQL Server", `Trusted_Connection=Yes`) with a database `jde` in

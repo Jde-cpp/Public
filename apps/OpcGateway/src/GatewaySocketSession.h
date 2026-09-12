@@ -17,7 +17,7 @@ namespace Jde::Opc::Gateway{
 		α SendDataChange( const ServerCnnctnNK& opcNK, const NodeId& node, const Value& value )ι->void override;
 		α to_string()Ι->string override{ return Ƒ( "{:x}", Id() ); }
 		α UserPK()Ι->Jde::UserPK override{ return Session() ? Session()->UserPK : Jde::UserPK{}; }
-		α WriteException( runtime_error&& e, Jde::RequestId requestId )ι->void override;
+		α WriteException( runtime_error&& e, Jde::RequestId requestId, SRCE )ι->void override;
 	private:
 		α CreateSubscription( sp<UAClient> client, flat_set<NodeId> nodes, RequestId requestId )ι->VoidAwait::Task;
 		α LocalQL()Ι->sp<QL::IQL> override{ return QLPtr(); }
@@ -35,7 +35,7 @@ namespace Jde::Opc::Gateway{
 		α WriteSubscription( uint32 /*appPK*/, uint32 /*appInstancePK*/, const Logging::Entry& /*e*/, const QL::Subscription& /*sub*/ )ι->void override{ ASSERT(false); }
 		α WriteSubscriptionAck( flat_set<QL::SubscriptionId>&& subscriptionIds, Jde::RequestId requestId )ι->void override;
 		α WriteComplete( Jde::RequestId requestId )ι->void override;
-		α WriteException( string&& e, Jde::RequestId requestId )ι->void override;
+		α WriteException( string&& e, Jde::RequestId requestId, SL sl )ι->void override;
 		α WriteException( Exception&& e )ι->void{ WriteException( move(e), 0 ); }
 
 		α SendAck( uint32 id )ι->void override;

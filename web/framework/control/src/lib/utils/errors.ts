@@ -10,7 +10,11 @@ export function errorText( e:unknown ):string|undefined{
 	if( e instanceof HttpErrorResponse ){
 		if( typeof ProgressEvent!="undefined" && e.error instanceof ProgressEvent )//the global is browser-only:  a bare `instanceof` is a ReferenceError wherever it is not defined, which would replace the error with one of its own
 			return "timeout";
-		return e.error && e.error.message ? e.error.message : `(${e.status})${e.error}`;
+		if( e.error && typeof e.error.message=="string" )
+			return e.error.message;
+		if( e.error && typeof e.error.text=="string" )//HttpClient's wrapper for an error body that is not json - {error: SyntaxError, text} - which is what the server's plain-text 403 arrives as
+			return `(${e.status})${e.error.text}`;
+		return `(${e.status})${e.error}`;
 	}
 	if( typeof e=='object' && e ){
 		const wrapped = (<{error?:{message?:unknown, httpStatus?:unknown}}>e).error;

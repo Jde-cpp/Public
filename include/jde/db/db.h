@@ -13,6 +13,7 @@ namespace Jde::DB{
 	Φ GetCluster( sv configName, sp<Access::IAcl>, SRCE )ε->sp<Cluster>; //resolve a specific cluster by its dbServers key (e.g. two backends configured side by side).
 	Φ GetAppSchema( str name, sp<Access::IAcl>, optional<jobject> dbSettings=nullopt )ε->sp<AppSchema>;
 	Φ SyncSchema( const AppSchema& schema, sp<QL::IQL> ql )ε->void;
+	Φ SyncData( const AppSchema& schema, sp<QL::IQL> ql, sv extension )ε->void;//one more seed pass over /dbServers/dataPaths, files of `extension` - for what SyncSchema's ".mutation" pass runs too early for (the ".roles" files need the access server's role mutations).
 #ifndef PROD
 	namespace NonProd{
 		Φ Recreate( const AppSchema& schema, sp<QL::IQL> ql )ε->void;

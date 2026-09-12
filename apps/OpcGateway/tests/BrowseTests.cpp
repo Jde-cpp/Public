@@ -50,6 +50,30 @@ namespace Jde::Opc::Gateway::Tests{
 		ASSERT_EQ( value.at("name"), "Lamp1" );
 	}
 
+	//The reverse of NodeId above:  a node known only by id answers `path` - the inverse-hierarchical walk up to the Objects
+	//folder (NodeQLAwait::Path), spelled as BrowsePathsToNodeIds and the search index spell a path, so the answer routes
+	//straight back into the path form and into the SPA's node url.  What the Effective rights tab links a node-scoped
+	//resource ("ns=4;i=…") with.  The Objects folder itself has an empty path; a node outside its tree (a type) has none.
+	TEST_F( BrowseTests, PathFromId ){
+		constexpr sv path{ "4~Examples/4~Stacklights/4~ExampleStacklight/4~Lamp1" };
+		auto byPath = QL::Parse( "node( opc: $opc, path:$path ){ id parents{ id } }", jobject{{"opc", OpcServerTarget}, {"path", path}}, Schemas(), true );//parents{}: the lamp hangs off a HasComponent, which the plain translate (Organizes only) cannot follow - the parents walk can, as NodeId above relies on.
+		let lamp = ExNodeId{ BlockAwait<NodeQLAwait, jvalue>( NodeQLAwait{move(byPath.Queries().front()), _client} ) };
+		auto byId = QL::Parse( "node( opc: $opc, id:$id ){ id name path }", jobject{{"opc", OpcServerTarget}, {"id", NodeId{lamp.nodeId}.ToJson()}}, Schemas(), true );
+		let value = BlockAwait<NodeQLAwait, jvalue>( NodeQLAwait{move(byId.Queries().front()), _client} );
+		TRACE( "value: {}", serialize(value) );
+		EXPECT_EQ( Json::AsSV(value.as_object(), "path"), path );
+		EXPECT_EQ( Json::AsSV(value.as_object(), "name"), "Lamp1" ) << "the read still answers alongside";
+		EXPECT_TRUE( ExNodeId{value}.Numeric().has_value() );
+
+		auto objects = QL::Parse( "node( opc: $opc, id:$id ){ path }", jobject{{"opc", OpcServerTarget}, {"id", NodeId::ObjectsFolder().ToJson()}}, Schemas(), true );
+		let objectsValue = BlockAwait<NodeQLAwait, jvalue>( NodeQLAwait{move(objects.Queries().front()), _client} );//locals:  the template comma is one argument too many for the gtest macros
+		EXPECT_EQ( Json::AsSV(objectsValue.as_object(), "path"), "" );
+
+		auto type = QL::Parse( "node( opc: $opc, id:$id ){ path }", jobject{{"opc", OpcServerTarget}, {"id", NodeId{0, UA_NS0ID_BASEOBJECTTYPE}.ToJson()}}, Schemas(), true );
+		let typeValue = BlockAwait<NodeQLAwait, jvalue>( NodeQLAwait{move(type.Queries().front()), _client} );
+		EXPECT_TRUE( typeValue.as_object().at("path").is_null() ) << "the Types tree has no page";
+	}
+
 	//UserMessage() is the client-facing text.  Its combine branch tested _userMessage inside `if( _userMessage.empty() )`,
 	//so it was dead and a 3-arg exception returned the bare description with the UA status stripped (review3 #14).  what()
 	//is checked alongside to pin down why reviving that branch was not the fix:  ExternalException has already folded the

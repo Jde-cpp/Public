@@ -83,7 +83,10 @@ namespace Jde::Web{
 		Host = Json::FindString( Body, "host" ).value_or( "" );
 		SessionId = Json::FindDefaultSV( Body, "sid" );
 
-		Description = Json::FindSV( Body, "description" ).value_or( fpKey ? Ƒ("Public key md5: {}", ToString(*fpKey)) : "" );
+		//no fallback to the key fingerprint:  enrollment writes this straight to users.description, and the modulus/exponent it
+		//would have restated are stored on the same row.  A client that says nothing about itself enrolls with an empty
+		//description, which an admin can fill in - App::Client::getJwt sends the program, instance and host.
+		Description = Json::FindSV( Body, "description" ).value_or( "" );
 	}
 	α Jwt::Payload()Ι->string{
 		auto signature = Str::Encode64( Signature, true );

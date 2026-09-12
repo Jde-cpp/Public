@@ -9,6 +9,7 @@
 #include <jde/access/AccessListener.h>
 #include <jde/access/Authorize.h>
 #include <jde/access/awaits/EventsSubscribeAwait.h>
+#include <jde/access/server/awaits/AuthenticateAwait.h>
 #include <jde/access/server/awaits/RoleAwait.h>
 #include "../src/accessInternal.h"
 #include "globals.h"
@@ -241,6 +242,28 @@ namespace Jde::Access::Tests{
 		catch( const Exception& e ){
 			EXPECT_NE( string{e.what()}.find("987654321"), string::npos ) << e.what();//it was dispatched with the id, not skipped.
 		}
+	}
+
+	//opcserver-review3 #16, the user-snapshot gap:  a user is born on a login (AuthenticateAwait/LoginAwait's stored-proc inserts),
+	//outside the mutation path - so the userCreated event every client's AccessListener subscribes to never fired, and a client
+	//configured before the login never saw the user (denied on a protected node tree until it restarted).  The subscription is
+	//spelled as EventsSubscribeAwait spells it, so this also proves the two shapes match.  A re-login of the same identity inserts
+	//nothing and publishes nothing.
+	TEST( SubscriptionTests, ALoginBornUserIsPublished ){
+		let root = GetRoot();
+		const string loginName{ "subLoginBorn" };
+		let provider = (ProviderPK)EProviderType::Google;
+		if( let previous = SelectUser(loginName, root, provider, true); !previous.empty() )
+			PurgeUser( UserPK{GetId(previous)}, root );
+		auto listener = listenTo( "subscription UserCreated{ userCreated(subscriptionId:$id){id} }" );
+		let userPK = BlockTAwait<UserPK>( Server::AuthenticateAwait{loginName, provider, {}} );
+		ASSERT_EQ( listener->Changes.size(), 1u ) << "the login's insert published no userCreated event";
+		EXPECT_EQ( Json::AsNumber<UserPK::Type>(listener->Resource(0), "id"), userPK.Value );
+		let again = BlockTAwait<UserPK>( Server::AuthenticateAwait{loginName, provider, {}} );
+		EXPECT_EQ( again.Value, userPK.Value );
+		EXPECT_EQ( listener->Changes.size(), 1u ) << "an existing identity's login is not a creation";
+		QL::Subscriptions::StopListen( listener, {} );
+		PurgeUser( userPK, root );
 	}
 
 	//access-review3 #25:  AccessListener::Shutdown unsubscribed through UnsubscribeAwait with IListener::Ids, which nothing ever

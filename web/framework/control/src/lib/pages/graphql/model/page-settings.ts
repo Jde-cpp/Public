@@ -32,7 +32,7 @@ export class PageProfile{
 		this.views.push( ...views );
 	}
 	async removeView( viewName:string, collectionName:string, profileStore:ProfileStore, defaultSettings:TableSettings|undefined ){
-		this.views = this.views.filter( v=>v.name!=viewName );
+		this.views = this.views.filter( v=>!(v.name==viewName && (v.isUser || v.isAdhoc)) );//the saved view and its unsaved twin - never a system view of the same name (a route can declare one, and only user views are deletable)
 		await profileStore.save( `qlList/${collectionName}/views`, this.views.filter(v=>v.isUser).map(v=>v.toJson(defaultSettings)) );
 	}
 	updateView( view:View ){

@@ -1,5 +1,5 @@
 import { CommonModule } from "@angular/common";
-import { AfterViewInit, Component, inject, model, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, effect, inject, model, OnDestroy, signal, untracked, ViewChild } from '@angular/core';
 import { MatCheckbox, MatCheckboxChange } from "@angular/material/checkbox";
 import { MatSortModule, Sort } from "@angular/material/sort";
 import { MatTable, MatTableModule } from "@angular/material/table";
@@ -15,32 +15,53 @@ import { Resource } from "../../model/resource";
 		styleUrls: ['permission-table.scss'],
 		imports: [CommonModule, MatTableModule, MatCheckbox, EnumKeysPipe, MatSortModule],
 })
-export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
+export class PermissionTable implements OnDestroy{
 	private cnsle:SnackbarService = inject( SnackbarService );
 	private accessService:AccessService = inject( ACCESS_SERVICE );
 
-	async ngOnInit(){
-		this.profile = await this.profileStore.load<Profile>( 'permissionTable', PermissionTable.defaultProfile );
-		let resources = await this.accessService.loadResources();
-		for( const resource of resources ){ //.filter(x=>x.allowed!=Rights.None)
-			let permission = this.permissions().find( x=>x.resource?.id==resource.id );
-			if( permission ){
-				permission.resource = resources.find( x=>x.id==resource.id )!;
-				verify( permission.resource, `Resource not found: ${resource.id}` );
-			}else
-				permission =  new Permission( {resource: new Resource( resource )} );
-			this.availablePermissions.push( permission );
-		}
-		this.#sort = {...(this.profile.sort ?? PermissionTable.defaultProfile.sort)};//copy: ProfileStore.load hands back the default OBJECT itself when nothing is stored, and that default is a static shared by every instance
-		if( this.#sort.direction ){//'' is MatSort's unsorted state - leave the rows in load order rather than sorting descending
-			for( const col of this.#sort.active.split(",").filter(x=>this.displayedColumnNames.includes(x)).reverse() )
-				this.#applySort( {active:col, direction: this.#sort.direction} );//not sortData(): that records the user's choice, and the multi-key loop would leave #sort holding only the last column
-		}
-		this.isLoading.set( false );
+	//Built from an effect rather than ngOnInit because the HOST outlives the row:  user-detail and role-detail keep this
+	//table alive across ':target', handing it the next row's permissions with no re-creation, and a one-shot ngOnInit left
+	//the previous row's checks on screen - which `toggle` would then have saved onto the new row.
+	constructor(){
+		effect( ()=>{
+			const permissions = this.permissions();
+			if( permissions===this.#published )
+				return;//one of our own toggles echoing back;  rebuilding would throw the row objects the table is editing away
+			untracked( ()=>this.#build(permissions) );
+		});
 	}
-	async ngAfterViewInit(){
-//		this.profile = new Settings<UserSettings>( UserSettings, "permission-table", this.profileService );
-//		await this.profile.loadedPromise;
+
+	async #build( permissions:Permission[] ):Promise<void>{
+		const build = ++this.#buildId;
+		this.isLoading.set( true );
+		try{
+			if( !this.profile ){//the sort is the user's, not the row's - loaded once and kept across rows
+				this.profile = await this.profileStore.load<Profile>( 'permissionTable', PermissionTable.defaultProfile );
+				this.#sort = {...(this.profile.sort ?? PermissionTable.defaultProfile.sort)};//copy: ProfileStore.load hands back the default OBJECT itself when nothing is stored, and that default is a static shared by every instance
+			}
+			const resources = await this.accessService.loadResources();
+			if( build!=this.#buildId )
+				return;//a newer row overtook this one
+			const rows:Permission[] = [];
+			for( const resource of resources ){ //.filter(x=>x.allowed!=Rights.None)
+				let permission = permissions.find( x=>x.resource?.id==resource.id );
+				if( permission ){
+					permission.resource = resources.find( x=>x.id==resource.id )!;
+					verify( permission.resource, `Resource not found: ${resource.id}` );
+				}else
+					permission =  new Permission( {resource: new Resource( resource )} );
+				rows.push( permission );
+			}
+			this.availablePermissions = rows;//replaced, never appended: a second row would otherwise stack its resources onto the first's
+			if( this.#sort.direction ){//'' is MatSort's unsorted state - leave the rows in load order rather than sorting descending
+				for( const col of this.#sort.active.split(",").filter(x=>this.displayedColumnNames.includes(x)).reverse() )
+					this.#applySort( {active:col, direction: this.#sort.direction} );//not sortData(): that records the user's choice, and the multi-key loop would leave #sort holding only the last column
+			}
+			this.isLoading.set( false );
+		}
+		catch( e ){
+			this.cnsle.exception( "Could not load the permissions.", e );//the load used to be an unawaited ngOnInit, so a failure left the spinner up with nothing said
+		}
 	}
 	ngOnDestroy(){
 		//the component is already going away, so a snackbar would follow the user to the next page:  warn, but never leave the
@@ -85,11 +106,10 @@ export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
 		}
 		let permissions = this.permissions();
 		let existing = permissions.find( x=>x.resource?.id==permission.resource.id );
-		if( existing ){
-			existing = permission;
-			this.permissions.set( [...permissions] );
-		}else
-			this.permissions.set( [...permissions,permission] );
+		//remembered, then published:  the rebuild effect tells "the host handed us a new row" from "we just published a
+		//toggle" by identity, and these rows are the very objects the table is editing.
+		this.#published = existing ? [...permissions] : [...permissions, permission];
+		this.permissions.set( this.#published );
 	}
 
 	removeUnavailable( permission: Permission, allowed:boolean ):void{
@@ -119,6 +139,8 @@ export class PermissionTable implements OnInit, AfterViewInit, OnDestroy{
 	}
 
 	profile!:Profile;
+	#published:Permission[]|undefined;
+	#buildId = 0;
 	static readonly defaultProfile:Profile = { sort: { active: "schema,resource", direction: "asc" } };
 	permissions=model.required<Permission[]>();
 	availablePermissions:Permission[] = [];

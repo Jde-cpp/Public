@@ -47,6 +47,20 @@ namespace Jde::Access{
 
 		α TestAddGroupMember( GroupPK groupPK, flat_set<IdentityPK::Type>&& memberPKs, SRCE )ε->void;
 		α TestAddRoleMember( RolePK parent, RolePK child, SRCE )ε->void;
+
+		//One user's rights source by source - the walk SetUserPermissions makes for everyone, run for one user and kept apart
+		//instead of OR'd into User::Rights (the SPA's Effective rights tab, UserRightsAwait).  Paths run top-down from the acl
+		//identity:  Groups from the granted group to the one holding the user (empty = granted to the user), Roles from the
+		//assigned role to the one holding Permission (empty = a bare acl grant).
+		struct RightsSource final{ PermissionPK Permission; ERights Allowed; ERights Denied; vector<GroupPK> Groups; vector<RolePK> Roles; };
+		struct ResourceRights final{
+			Access::ResourcePK PK{};
+			optional<Access::Resource> Cached;//the Resources row, copied under the lock; nullopt for a pk the cache never saw.
+			AllowedDisallowed Rights{};//the OR over Sources - the same OR User::operator+= makes, so Effective() is what Test/Rights answer.
+			vector<RightsSource> Sources;
+		};
+		α UserRights( UserPK userPK )Ι->vector<ResourceRights>;//empty for an unknown user; by PK.
+		α IsRoleMember( RolePK parent, RolePK child )Ι->bool;//a direct member, as the cache holds it - RoleMAwait::AddRole's no-op check for a re-add (the seed reruns on every -sync start).
 	protected:
 		Ŧ FindResource( const Resource& resource, T& l )Ι->const Resource*;
 		Ŧ FindActiveResourcePK( str schemaName, str resourceName, str criteria, T& l )Ι->optional<ResourcePK>;

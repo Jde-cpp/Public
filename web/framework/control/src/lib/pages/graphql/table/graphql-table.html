@@ -20,7 +20,20 @@
 	@for( column of chipColumnNames; track column ){
 		<ng-container [matColumnDef]="column">
 			<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header [disabled]="!sortable(column)" [style]="columnStyle(column)"> {{columnName(column)}} </mat-header-cell>
-			<mat-cell *matCellDef="let row" [style]="columnStyle(column)"><mat-chip [class]="chipClass(column,row)">{{objectValue(row[column])}}</mat-chip></mat-cell>
+			<mat-cell *matCellDef="let row" [style]="columnStyle(column)">@if( objectValue(row[column]); as value ){<mat-chip [class]="chipClass(column,row)">{{value}}</mat-chip>}</mat-cell><!--no chip for a null value (a user with no provider) - an empty outline reads as a broken cell-->
+		</ng-container>
+	}
+	@for( column of liveToggleColumnNames; track column ){
+		<ng-container [matColumnDef]="column">
+			<mat-header-cell mat-header-cell *matHeaderCellDef mat-sort-header [style]="columnStyle(column)"> {{columnName(column)}} </mat-header-cell>
+			<mat-cell *matCellDef="let row" [style]="columnStyle(column)">
+				<!--stopPropagation, as the select checkbox does: without it the click reaches cellClick and the row navigates out from under the switch-->
+				<button matIconButton class="live-toggle" [class.live]="isLive(column,row)" [disabled]="pendingLive().includes(row.id)"
+					[matTooltip]="liveToggleLabel(column,row)" [attr.aria-label]="liveToggleLabel(column,row)" [attr.aria-pressed]="isLive(column,row)"
+					(click)="$event.stopPropagation(); onToggleLive.emit(row)">
+					<mat-icon>{{ isLive(column,row) ? "toggle_on" : "toggle_off" }}</mat-icon>
+				</button>
+			</mat-cell>
 		</ng-container>
 	}
 	@for( column of stringColumnNames; track column ){

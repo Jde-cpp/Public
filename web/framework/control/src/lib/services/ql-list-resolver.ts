@@ -8,10 +8,15 @@ import { StringUtils } from '../utils/string-utils';
 import { MetaObject } from '../model/ql/schema/meta-object';
 import { Field } from '../model/ql/schema/field';
 import { RouteItem, ProfileStore, RouteStore } from 'jde-spa';
-import { FieldFilter, View, ViewFieldSettings } from '../model/ql/view';
+import { FieldFilter, View, ViewFieldSettings, ViewFilterSettings, ViewSettings } from '../model/ql/view';
 import { Sort } from '@angular/material/sort';
 
-export type TableSettings = {canPurge?:boolean,canAdd?:boolean, canNavigate?:boolean, excludedColumns?:string[], columns?:(string|ViewFieldSettings)[], sort?:Sort[]|string};//canNavigate: a collection with no ':target' detail route must not offer the row click-through
+//canNavigate: a collection with no ':target' detail route must not offer the row click-through
+//viewName: the toggle label of the default view ("default" when unset);  filters: the default view's, same vocabulary as a
+//ViewSettings filter (resources opens on the table rows, criteria null);  views: further system views, see ViewSettings
+//empty: what the page says when the query returns no rows - the default names the collection and, where Add is offered, points at it
+export type EmptyState = { title?:string, detail?:string, icon?:string };
+export type TableSettings = {canPurge?:boolean,canAdd?:boolean, canNavigate?:boolean, excludedColumns?:string[], columns?:(string|ViewFieldSettings)[], sort?:Sort[]|string, viewName?:string, filters?:ViewFilterSettings[], views?:ViewSettings[], empty?:EmptyState};
 export type CollectionItem = string | { path:string, title?:string, data?:{summary:string, collectionName:string, tableSettings:TableSettings} };
 export class ListRoute extends RouteItem{
 	constructor( collection:string|CollectionItem ){
@@ -41,6 +46,7 @@ export type QLListData = {
 	results: any; //{users:ITargetRow[]};
 	routing:ListRoute;
 	schema: TableSchema;
+	error?: unknown;//the rows query was refused (403) or failed:  results is then empty and the page says why instead of showing a bare grid
 };
 
 @Injectable()
@@ -81,7 +87,23 @@ export class QLListResolver implements Resolve<QLListData> {
 	}
 
 	private async load( routing:ListRoute ):Promise<QLListData>{
-		return QLListResolver.load( this.ql, await QLListResolver.data(this.ql, routing, this.profileStore), this.routeStore );
+		let data:QLListData;
+		try{ data = await QLListResolver.data( this.ql, routing, this.profileStore ); }
+		catch( e ){ this.cnsl.exception( `Could not open ${routing.title}.`, e ); throw e; }//no schema, so no page to say it on:  the navigation fails, and this is the only word the user gets
+		return QLListResolver.loadOrFail( this.ql, data, this.routeStore );
+	}
+	//load() for a page:  a refused or failed rows query becomes the page's own state (QLListData.error, no rows) rather than a
+	//rejected resolve, which the router turns into a NavigationError nobody sees - the user stayed on the previous page with
+	//nothing said.  A user without Read on the collection is the common case, and the page has to open to say so.
+	static async loadOrFail( ql:IGraphQL, data:QLListData, routeStore:RouteStore|null ):Promise<QLListData>{
+		try{ return await QLListResolver.load( ql, data, routeStore ); }
+		catch( e ){ return { ...data, results: {[data.schema.collectionName]: []}, error: e }; }
+	}
+	//what an empty list says:  the route's own words, else the collection's name and - where Add is offered - a pointer at it
+	static emptyState( routing:ListRoute ):Required<EmptyState>{
+		const settings = routing.tableSettings;
+		const noun = routing.title.toLowerCase();
+		return { title: settings.empty?.title ?? `No ${noun} yet.`, detail: settings.empty?.detail ?? (settings.canAdd===false ? "" : "Use Add to create the first one."), icon: settings.empty?.icon ?? "inbox" };
 	}
 	//everything but the rows:  the schema, the default view plus the user's saved ones, and the column display names.
 	//QLSelector builds a collection's list the same way, so it lives here rather than in resolve().
@@ -89,17 +111,29 @@ export class QLListResolver implements Resolve<QLListData> {
 		let pageSettings = new PageSettings( routing.tableSettings );
 		const collectionName = routing.collectionName;
 		const schema = await ql.schemaWithEnums( MetaObject.toTypeFromCollection(collectionName), (m)=>console.log(m) );
-		let defaultView = await QLListResolver.defaultView( schema, pageSettings.configColumns );
+		const systemViews = QLListResolver.systemViews( schema, routing.tableSettings );
 		var profile = new PageProfile();
-		profile.views.push( defaultView );
-		await profile.loadViews( collectionName, profileStore, schema, defaultView.sort );
+		profile.views.push( ...systemViews );
+		await profile.loadViews( collectionName, profileStore, schema, systemViews[0].sort );
 		profile.currentViewIndex = ProfileStore.viewIndex( collectionName );
-		profile.showDeleted = ProfileStore.showDeleted( collectionName );
+		//A live-toggle column IS the show-deleted control for its page:  the rows it switches are precisely the deleted ones,
+		//so the page queries them unconditionally rather than opening on a list that looks empty (every `resource` ships
+		//deleted, i.e. unenforced) with the rows hidden behind a checkbox called Show deleted.
+		profile.showDeleted = QLListResolver.hasLiveToggle( routing.tableSettings ) || ProfileStore.showDeleted( collectionName );
 		return {pageSettings, profile, schema, results: null, routing, columns: QLListResolver.columns(schema, routing.tableSettings.columns!, routing.tableSettings.excludedColumns)};
 	}
-	private static async defaultView( schema:TableSchema, configColumns:(string|ViewFieldSettings)[] ):Promise<View>{
-		let defaultView = new View( {configColumns: configColumns, sort: [{active: "name", direction: "asc"}]}, schema );
-		return defaultView;
+	static hasLiveToggle( settings:TableSettings ):boolean{
+		const has = ( columns:(string|ViewFieldSettings)[]|undefined )=>(columns ?? []).some( c=>typeof c!="string" && !!c.liveToggle );
+		return has( settings.columns ) || (settings.views ?? []).some( v=>has(v.columns) );
+	}
+	//the default view first, then the route's declared ones - each falling back to the default's columns and sort for what it leaves unset
+	static systemViews( schema:TableSchema, settings:TableSettings ):View[]{
+		const columns = settings.columns ?? [];
+		const defaultView = new View( {name: settings.viewName, configColumns: columns, sort: View.toSort(settings.sort) ?? [{active: "name", direction: "asc"}], filters: settings.filters}, schema );//settings.sort, not the name default:  a route that declares its own order (resources: schema then name) has to get it
+		const views = [defaultView];
+		for( const v of settings.views ?? [] )
+			views.push( new View({name: v.name, configColumns: v.columns ?? columns, sort: View.toSort(v.sort) ?? [...defaultView.sort], filters: v.filters}, schema) );
+		return views;
 	}
 	static columns( schema:TableSchema, configColumns:(string|ViewFieldSettings)[], excluded: string[] ):Record<string,string>{
 		let columns: Record<string,string> = {};
