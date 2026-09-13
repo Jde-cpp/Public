@@ -4,11 +4,13 @@ Builds OpcHubSetup-<version>.exe from the release build tree - see README.md bes
 
 .DESCRIPTION
 Resolves the inputs the NSIS script takes as /D defines (build tree, Angular dist, UA-Nodeset clone, VC++ redistributable,
-version), checks they exist, and runs makensis.  Optionally signs the result.
+version), checks they exist, and runs makensis.  -Sign signs what ships - the exes and dlls before makensis packs them, the
+uninstaller from inside it (!uninstfinalize) and the installer after - through sign.ps1 (README.md, "Signing").
 
 .EXAMPLE
 .\build-setup.ps1                       # defaults: $env:JDE_RBUILD_DIR\clang++\<repo dir>\release, the repo's web dist, git describe
 .\build-setup.ps1 -SkipWeb -Version 1.0 # no Web UI component
+.\build-setup.ps1 -Sign -PfxPath C:\certs\test.pfx  # signed with a .pfx; -Sign alone signs with Azure Artifact Signing ($env:JDE_SIGN_*)
 #>
 [CmdletBinding()]
 param(
@@ -20,9 +22,8 @@ param(
 	[string]$Version,                    # default: git describe --tags --always
 	[string]$OutDir,                     # default: <BuildDir>\setup - outside the repo
 	[string]$MakeNsis = 'C:\Program Files (x86)\NSIS\makensis.exe',
-	[switch]$Sign,
-	[string]$PfxPath,
-	[string]$SignTool = 'C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe'
+	[switch]$Sign,                       # sign.ps1: Azure Artifact Signing ($env:JDE_SIGN_ENDPOINT/ACCOUNT/PROFILE) or a .pfx ($env:JDE_SIGN_PFX)
+	[string]$PfxPath                     # shorthand for $env:JDE_SIGN_PFX
 )
 $ErrorActionPreference = 'Stop'
 $setupDir = $PSScriptRoot
@@ -56,6 +57,11 @@ foreach( $f in 'DI\Opc.Ua.Di.NodeSet2.xml', 'IA\Opc.Ua.IA.NodeSet2.xml', 'IA\Opc
 }
 if( -not (Test-Path $MakeNsis) ){ throw "makensis not found at $MakeNsis - install NSIS 3.x or pass -MakeNsis" }
 if( -not (Test-Path $VcRedist) ){ Write-Warning "vc_redist.x64.exe not found at $VcRedist - the installer will not bundle the Visual C++ runtime"; $VcRedist = '' }
+$signScript = Join-Path $setupDir 'sign.ps1'
+if( $Sign ){
+	if( $PfxPath ){ $env:JDE_SIGN_PFX = [IO.Path]::GetFullPath( $PfxPath ) }
+	if( -not $env:JDE_SIGN_ENDPOINT -and -not $env:JDE_SIGN_PFX ){ throw '-Sign needs a certificate: JDE_SIGN_ENDPOINT, JDE_SIGN_ACCOUNT and JDE_SIGN_PROFILE (Azure Artifact Signing), or -PfxPath / JDE_SIGN_PFX - see README.md, Signing' }
+}
 
 if( -not $Version ){ $Version = (& git -C $repo describe --tags --always).Trim() }
 # VIProductVersion needs four 16-bit numbers: yyyy.M.d.N from a `yyyy.MM.dd[-N-gsha]` describe, else 0.0.0.0
@@ -66,19 +72,23 @@ if( $Version -match '^(\d{4})\.(\d{1,2})\.(\d{1,2})(?:-(\d+)-g[0-9a-f]+)?$' ){
 }
 New-Item -ItemType Directory -Force $OutDir | Out-Null
 
+if( $Sign ){
+	# the payload, in place, before makensis packs it - what the nsi's File lines take from bin\
+	$payload = @( Get-ChildItem -Path (Join-Path $BuildDir 'bin\Jde.Opc.Hub\*'), (Join-Path $BuildDir 'bin\Jde.Opc.Server\*') -Include *.exe, *.dll -File | ForEach-Object FullName )
+	$payload += 'Jde.DB.Sqlite.dll', 'sqlite3.dll', 'Jde.DB.Sqlite.AppServer.dll', 'Jde.DB.Sqlite.OpcGateway.dll' | ForEach-Object { Join-Path $BuildDir "bin\$_" }
+	& $signScript @payload
+}
+
 $defs = @( "/DBUILD_DIR=$BuildDir", "/DWEB_DIST=$WebDist", "/DUA_NODE_SETS=$UaNodeSets", "/DVERSION=$Version", "/DVI_VERSION=$vi", "/DOUT_DIR=$OutDir" )
 if( $VcRedist ){ $defs += "/DVC_REDIST=$VcRedist" }
 if( $SkipWeb ){ $defs += '/DSKIP_WEB' }
+# the uninstaller's signing hook: sign.ps1, run by the PowerShell this script runs under (the one the ArtifactSigning module is installed for)
+if( $Sign ){ $defs += "/DSIGN_SCRIPT=$signScript", "/DSIGN_HOST=$((Get-Process -Id $PID).Path)" }
 Write-Host "makensis $($defs -join ' ')"
 & $MakeNsis /V2 @defs (Join-Path $setupDir 'OpcHubSetup.nsi')
 if( $LASTEXITCODE -ne 0 ){ throw "makensis failed ($LASTEXITCODE)" }
 $out = Join-Path $OutDir "OpcHubSetup-$Version.exe"
 if( -not (Test-Path $out) ){ throw "makensis succeeded but $out is missing" }
 
-if( $Sign ){
-	if( -not $PfxPath ){ throw '-Sign needs -PfxPath' }
-	if( -not (Test-Path $SignTool) ){ throw "signtool not found at $SignTool" }
-	& $SignTool sign /f $PfxPath /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $out
-	if( $LASTEXITCODE -ne 0 ){ throw "signtool failed ($LASTEXITCODE)" }
-}
+if( $Sign ){ & $signScript $out }
 Write-Host "built $out ($([math]::Round((Get-Item $out).Length/1MB,1)) MB)"

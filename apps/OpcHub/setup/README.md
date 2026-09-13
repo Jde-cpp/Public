@@ -21,7 +21,7 @@ Prerequisites on the build machine:
 ```powershell
 .\build-setup.ps1                              # -> <BuildDir>\setup\OpcHubSetup-<git describe>.exe
 .\build-setup.ps1 -Version 2026.09.08 -SkipWeb
-.\build-setup.ps1 -Sign -PfxPath <cert.pfx>    # signtool from the Windows 10 SDK
+.\build-setup.ps1 -Sign -PfxPath <cert.pfx>    # signed with a .pfx; -Sign alone uses Azure Artifact Signing - see Signing
 ```
 
 Every input is a `/D` define of the script, so `makensis /DBUILD_DIR=… OpcHubSetup.nsi` works without the wrapper.
@@ -29,7 +29,32 @@ Every input is a `/D` define of the script, so `makensis /DBUILD_DIR=… OpcHubS
 CI: the Win2025 workflow (`.github/workflows/win2025-build.yml`) runs `build-setup.ps1` after its release build - the
 nodesets and `vc_redist.x64.exe` are downloaded, the Web UI comes from the workflow's `web` job (an `ubuntu-latest` run of
 `web/opc/scripts/setup.sh`) - and uploads `OpcHubSetup-<version>.exe` as an artifact; a push of a `yyyy.MM.dd` tag runs it
-too and publishes the installer as that tag's GitHub release.
+too and publishes the installer as that tag's GitHub release.  Unsigned - no certificate route yet (Signing, below).
+
+## Signing
+
+`build-setup.ps1 -Sign` Authenticode-signs everything that ships - the exes and dlls before makensis packs them, the
+uninstaller from inside makensis (`!uninstfinalize` in the `.nsi`: the uninstaller is generated at install time from a stub
+built there, so nothing else can sign it) and the installer after - all through [`sign.ps1`](sign.ps1), which takes its
+certificate from the environment (the hook's child process gets nothing else):
+
+| certificate | settings | notes |
+|---|---|---|
+| Azure Artifact Signing | `JDE_SIGN_ENDPOINT` (the account's region, e.g. `https://eus.codesigning.azure.net`), `JDE_SIGN_ACCOUNT`, `JDE_SIGN_PROFILE` | public trust, the key in Microsoft's HSM; `Invoke-ArtifactSigning` (`Install-Module ArtifactSigning`, for the PowerShell that runs `build-setup.ps1`) with whatever Azure credential the process has - `az login` on a dev box, an azure/login OIDC session on a runner; timestamped by Microsoft |
+| a `.pfx` | `JDE_SIGN_PFX` (`-PfxPath`), `JDE_SIGN_PFX_PASSWORD` | signtool from the Windows SDK (`JDE_SIGN_TOOL` overrides the path); a self-signed certificate (`New-SelfSignedCertificate -Type CodeSigningCert`) proves the pipeline end to end and earns no trust anywhere |
+
+CI builds unsigned: no certificate route has been settled.  Azure Artifact Signing was tried on 2026-09-12 and is closed to
+this project - its individual identity validation runs through AU10TIX's Verified ID, which would not verify, and the
+organization route sends its representative through the same step.  Still open: SignPath Foundation (free for OSS; a "Code
+signing policy" page and an application they review; signs the installer on their servers, never the uninstaller), an
+individual OV certificate from a CA that validates individuals (SSL.com's eSigner has a hosted-runner GitHub Action; Certum's
+open-source certificate signs on a dev box or the self-hosted runner), or an EV certificate, which needs a registered
+business.  Until one is chosen, `-Sign -PfxPath` with a self-signed certificate (`New-SelfSignedCertificate -Type
+CodeSigningCert`, then `Export-PfxCertificate`) exercises the whole pipeline on your own machines; the
+`windows-release-binaries` artifact is the raw build tree either way.
+
+SmartScreen: a public-trust certificate takes "Unknown publisher" off the UAC prompt at once; the "Windows protected your PC"
+interstitial fades as the certificate accrues download reputation, which a new one starts without.
 
 ## Install modes
 

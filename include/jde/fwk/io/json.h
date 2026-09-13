@@ -58,7 +58,7 @@ namespace Jde{
 		Ξ FindObject( const jvalue& v, sv path )ι->const jobject*{ auto p = FindValue(v,path); return p ? p->if_object() : nullptr; }
 		Ξ FindSV( const jvalue& v, sv path )ι->optional<sv>{ auto p = FindValue(v,path); return p && p->is_string() ? p->get_string() : optional<sv>{}; }
 		Ξ FindSV( const jobject& o, sv key )ι->optional<sv>{ auto p = o.if_contains(key); return p && p->is_string() ? p->get_string() : optional<sv>{}; }
-		α FindSVPath( const jobject& o, sv path )ι->optional<sv>;
+		Φ FindSVPath( const jobject& o, sv path )ι->optional<sv>;
 
 		Ξ FindString( const jvalue& v, sv path )ι->optional<string>{ auto sv = FindSV(v, path); return sv ? string{ *sv } : optional<string>{}; }
 		Ŧ FindNumber( const jvalue& v, sv path )ι->optional<T>;

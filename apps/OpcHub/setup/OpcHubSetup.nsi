@@ -28,6 +28,13 @@ SetCompressor /SOLID lzma
 !ifndef VC_REDIST
 	!define VC_REDIST "C:\Program Files\Microsoft Visual Studio\18\Professional\VC\Redist\MSVC\v145\vc_redist.x64.exe"
 !endif
+!ifdef SIGN_SCRIPT
+	;build-setup.ps1 -Sign.  The uninstaller is generated at install time from a stub makensis builds here, so this hook is the
+	;only place it can be signed; the payload and the installer are signed by build-setup.ps1 around makensis.  SIGN_HOST is the
+	;PowerShell that ran build-setup.ps1 - the one the ArtifactSigning module is installed for; the certificate settings reach
+	;sign.ps1 through the environment, the only channel this hook has (sign.ps1's header).
+	!uninstfinalize '"${SIGN_HOST}" -NoProfile -ExecutionPolicy Bypass -File "${SIGN_SCRIPT}" "%1"'
+!endif
 !ifndef VERSION
 	!define VERSION "dev"
 !endif

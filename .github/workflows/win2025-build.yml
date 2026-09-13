@@ -9,7 +9,8 @@ name: Win2025
 # Dispatch it manually (Actions -> Win2025 -> Run workflow), picking the
 # branch to build - workflow_dispatch is gated to users with write access, so
 # no fork-PR fence is needed - or push a release tag (yyyy.MM.dd). Every run
-# also builds the Windows installer (apps/OpcHub/setup) as an artifact; a tag
+# also builds the Windows installer (apps/OpcHub/setup) as an artifact -
+# unsigned, no certificate route yet (apps/OpcHub/setup/README.md, "Signing"); a tag
 # run publishes it as that tag's GitHub release. The deps-cache coupling holds
 # for tag runs too: GitHub evicts caches unused for 7 days, so after a quiet
 # stretch re-run "Win2025 Deps" before tagging.
